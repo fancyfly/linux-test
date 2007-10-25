@@ -41,7 +41,8 @@
 
 static int csi_mclk_flag_backup;
 static int video_nr = -1;
-static cam_data *g_cam;
+cam_data *g_cam;
+EXPORT_SYMBOL(g_cam);
 
 /*!
  * Free frame buffers

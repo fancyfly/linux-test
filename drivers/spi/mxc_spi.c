@@ -415,11 +415,10 @@ void mxc_spi_chipselect(struct spi_device *spi, int is_active)
  *
  * @param        irq        the irq number
  * @param        dev_id     the pointer on the device
- * @param        regs       the interrupt parameters
  *
  * @return       The function returns IRQ_HANDLED when handled.
  */
-static irqreturn_t mxc_spi_isr(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mxc_spi_isr(int irq, void *dev_id)
 {
 	struct mxc_spi *master_drv_data = dev_id;
 	irqreturn_t ret = IRQ_NONE;
@@ -534,9 +533,8 @@ int mxc_spi_transfer(struct spi_device *spi, struct spi_transfer *t)
  * @param        spi     the current SPI device.
  *
  */
-void mxc_spi_cleanup(const struct spi_device *spi)
+void mxc_spi_cleanup(struct spi_device *spi)
 {
-	return;
 }
 
 /*!
@@ -782,7 +780,6 @@ static int spi_bitbang_suspend(struct spi_bitbang *bitbang)
 	unsigned limit = 500;
 
 	spin_lock_irqsave(&bitbang->lock, flags);
-	bitbang->shutdown = 0;
 	while (!list_empty(&bitbang->queue) && limit--) {
 		spin_unlock_irqrestore(&bitbang->lock, flags);
 
@@ -797,8 +794,6 @@ static int spi_bitbang_suspend(struct spi_bitbang *bitbang)
 	}
 	spin_unlock_irqrestore(&bitbang->lock, flags);
 
-	bitbang->shutdown = 1;
-
 	return 0;
 }
 
@@ -808,7 +803,6 @@ static void spi_bitbang_resume(struct spi_bitbang *bitbang)
 	INIT_LIST_HEAD(&bitbang->queue);
 
 	bitbang->busy = 0;
-	bitbang->shutdown = 0;
 }
 
 /*!

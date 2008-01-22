@@ -78,7 +78,7 @@ struct pcd_instance *REMOVE_pcd_instance;
 #if !defined(CONFIG_USB_HOST)
 extern struct pcd_ops pcd_ops;
 #else /* !defined(CONFIG_USB_HOST) */
-irqreturn_t mxc_pcd_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t mxc_pcd_int_hndlr (int irq, void *dev_id)
 {
         return IRQ_HANDLED;
 }
@@ -92,7 +92,7 @@ struct hcd_instance *hcd_instance;
 extern struct hcd_ops hcd_ops;
 
 #else /* defined(CONFIG_OTG_USB_HOST) || defined(CONFIG_OTG_USB_PERIPHERAL_OR_HOST)|| defined(CONFIG_OTG_DEVICE) */
-irqreturn_t hcd_hw_int_hndlr(int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t hcd_hw_int_hndlr(int irq, void *dev_id)
 {
         return IRQ_HANDLED;
 }

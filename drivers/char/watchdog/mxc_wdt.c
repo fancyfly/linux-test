@@ -274,7 +274,7 @@ static int __init mxc_wdt_probe(struct platform_device *pdev)
 
 	mxc_wdt_users = 0;
 
-	mxc_wdt_miscdev.dev = &pdev->dev;
+	mxc_wdt_miscdev.this_device = &pdev->dev;
 
 	mxc_wdt_clk = clk_get(NULL, "wdog_clk");
 	clk_enable(mxc_wdt_clk);

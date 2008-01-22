@@ -732,7 +732,7 @@ static int mxc_irda_sir_rxirq(struct mxc_irda *si, struct net_device *dev)
 
 }
 
-static irqreturn_t mxc_irda_irq(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mxc_irda_irq(int irq, void *dev_id)
 {
 	struct net_device *dev = dev_id;
 	struct mxc_irda *si = dev->priv;
@@ -753,7 +753,7 @@ static irqreturn_t mxc_irda_irq(int irq, void *dev_id, struct pt_regs *regs)
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t mxc_irda_tx_irq(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mxc_irda_tx_irq(int irq, void *dev_id)
 {
 
 	struct net_device *dev = dev_id;
@@ -764,7 +764,7 @@ static irqreturn_t mxc_irda_tx_irq(int irq, void *dev_id, struct pt_regs *regs)
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t mxc_irda_rx_irq(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mxc_irda_rx_irq(int irq, void *dev_id)
 {
 
 	struct net_device *dev = dev_id;
@@ -788,7 +788,7 @@ static void mxc_irda_rx_task(unsigned long tparam)
 
 	si->tskb = NULL;
 	if (lskb) {
-		lskb->mac.raw = lskb->data;
+		lskb->mac_header = lskb->data;
 		lskb->protocol = htons(ETH_P_IRDA);
 		netif_rx(lskb);
 	}

@@ -89,7 +89,6 @@ static int mx27_pm_finish(suspend_state_t state)
 }
 
 struct pm_ops mx27_pm_ops = {
-	.pm_disk_mode = 0,
 	.prepare = mx27_pm_prepare,
 	.enter = mx27_pm_enter,
 	.finish = mx27_pm_finish,

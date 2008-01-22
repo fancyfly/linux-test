@@ -32,6 +32,7 @@
 #include <linux/interrupt.h>
 #include <linux/jiffies.h>
 #include <linux/device.h>
+#include <linux/sysdev.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
 
@@ -236,7 +237,7 @@ static int init_dvfs_controller(void)
 	return 0;
 }
 
-static irqreturn_t dvfs_irq(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t dvfs_irq(int irq, void *dev_id)
 {
 	u32 pmcr0 = __raw_readl(MXC_CCM_PMCR0);
 	u32 fsvai = (pmcr0 & MXC_CCM_PMCR0_FSVAI_MASK) >>

@@ -36,12 +36,10 @@ static int buffer_ready = 0;
  *
  * @param irq       int irq line
  * @param dev_id    void * device id
- * @param regs      struct pt_regs *
  *
  * @return status   IRQ_HANDLED for handled
  */
-static irqreturn_t
-prpvf_sdc_vsync_callback(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t prpvf_sdc_vsync_callback(int irq, void *dev_id)
 {
 	pr_debug("buffer_ready %d buffer_num %d\n", buffer_ready, buffer_num);
 	if (buffer_ready > 0) {
@@ -57,12 +55,10 @@ prpvf_sdc_vsync_callback(int irq, void *dev_id, struct pt_regs *regs)
  *
  * @param irq       int irq line
  * @param dev_id    void * device id
- * @param regs      struct pt_regs *
  *
  * @return status   IRQ_HANDLED for handled
  */
-static irqreturn_t
-prpvf_vf_eof_callback(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t prpvf_vf_eof_callback(int irq, void *dev_id)
 {
 	pr_debug("buffer_ready %d buffer_num %d\n", buffer_ready, buffer_num);
 

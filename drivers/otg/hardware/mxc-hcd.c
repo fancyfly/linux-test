@@ -47,7 +47,6 @@
  * @ingroup HCD
  */
 
-#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
@@ -1343,9 +1342,8 @@ static int num_host_interrupts = 0;
  * mxc_hcd_hw_int_hndlr() - interrupt handler for hcd controller
  * @param irq
  * @param dev_id
- * @param regs
  */
-irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id)
 {
         struct mxc_hcd  *mxc_hcd = hcd_instance->privdata;      // XXX this should come from dev_id
 

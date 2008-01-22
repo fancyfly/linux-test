@@ -370,8 +370,7 @@ static void mxcfb_update_region(struct fb_info *fbi, uint32_t statl,
 	ipu_enable_irq(IPU_IRQ_ADC_SYS1_EOF);
 }
 
-static irqreturn_t mxcfb_sys2_eof_irq_handler(int irq, void *dev_id,
-					      struct pt_regs *regs)
+static irqreturn_t mxcfb_sys2_eof_irq_handler(int irq, void *dev_id)
 {
 	struct fb_info *fbi = dev_id;
 	uint32_t stat[2];
@@ -384,8 +383,7 @@ static irqreturn_t mxcfb_sys2_eof_irq_handler(int irq, void *dev_id,
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t mxcfb_sys1_eof_irq_handler(int irq, void *dev_id,
-					      struct pt_regs *regs)
+static irqreturn_t mxcfb_sys1_eof_irq_handler(int irq, void *dev_id)
 {
 	struct fb_info *fbi = dev_id;
 	uint32_t stat[2];

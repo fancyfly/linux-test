@@ -13,7 +13,7 @@
 #ifndef __ASM_ARCH_MXC_MMC_H__
 #define __ASM_ARCH_MXC_MMC_H__
 
-#include <linux/mmc/protocol.h>
+#include <linux/mmc/host.h>
 
 struct mxc_mmc_platform_data {
 	unsigned int ocr_mask;	/* available voltages */

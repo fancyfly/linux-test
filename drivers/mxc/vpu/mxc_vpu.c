@@ -97,7 +97,7 @@ static int vpu_free_buffers(void)
 /*!
  * @brief vpu interrupt handler
  */
-static irqreturn_t vpu_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t vpu_irq_handler(int irq, void *dev_id)
 {
 	struct vpu_t *dev;
 	dev = (struct vpu_t *)dev_id;
@@ -178,8 +178,13 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 			if (!rec)
 				return -ENOMEM;
 
-			copy_from_user(&(rec->mem), (vpu_mem_desc *) arg,
-				       sizeof(vpu_mem_desc));
+			ret = copy_from_user(&(rec->mem), (vpu_mem_desc *) arg,
+					     sizeof(vpu_mem_desc));
+			if (ret) {
+				kfree(rec);
+				return -EFAULT;
+			}
+
 			pr_debug("[ALLOC] mem alloc size = 0x%x\n",
 				 rec->mem.size);
 			rec->mem.cpu_addr = (unsigned long)
@@ -191,13 +196,19 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 			pr_debug("[ALLOC] mem alloc cpu_addr = 0x%x\n",
 				 rec->mem.cpu_addr);
 			if ((void *)(rec->mem.cpu_addr) == NULL) {
+				kfree(rec);
 				printk(KERN_ERR
 				       "Physical memory allocation error!\n");
 				ret = -1;
 				break;
 			}
-			copy_to_user((void __user *)arg, &(rec->mem),
-				     sizeof(vpu_mem_desc));
+			ret = copy_to_user((void __user *)arg, &(rec->mem),
+					   sizeof(vpu_mem_desc));
+			if (ret) {
+				kfree(rec);
+				ret = -EFAULT;
+				break;
+			}
 
 			spin_lock(&vpu_lock);
 			list_add(&rec->list, &head);
@@ -210,8 +221,11 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 			struct memalloc_record *rec, *n;
 			vpu_mem_desc vpu_mem;
 
-			copy_from_user(&vpu_mem, (vpu_mem_desc *) arg,
-				       sizeof(vpu_mem_desc));
+			ret = copy_from_user(&vpu_mem, (vpu_mem_desc *) arg,
+					     sizeof(vpu_mem_desc));
+			if (ret)
+				return -EACCES;
+
 			pr_debug("[FREE] mem freed cpu_addr = 0x%x\n",
 				 vpu_mem.cpu_addr);
 			if ((void *)vpu_mem.cpu_addr != NULL) {
@@ -403,10 +417,11 @@ static int vpu_dev_probe(struct platform_device *pdev)
 		goto err_out_class;
 	}
 
-	request_irq(INT_VPU, vpu_irq_handler, 0, "VPU_CODEC_IRQ",
-		    (void *)(&vpu_data));
+	err = request_irq(INT_VPU, vpu_irq_handler, 0, "VPU_CODEC_IRQ",
+			  (void *)(&vpu_data));
+	if (err)
+		goto err_out_class;
 
-	err = 0;
 	printk(KERN_INFO "VPU initialized\n");
 	goto out;
 

@@ -32,6 +32,7 @@
 #include <linux/input.h>
 #include <linux/init.h>
 #include <linux/delay.h>
+#include <linux/freezer.h>
 #include <asm/arch/pmic_external.h>
 #include <asm/arch/pmic_adc.h>
 
@@ -72,7 +73,6 @@ static int __init mxc_ts_init(void)
 		return -ENOMEM;
 	}
 
-	init_input_dev(mxc_inputdev);
 	mxc_inputdev->name = MXC_TS_NAME;
 	mxc_inputdev->evbit[0] = BIT(EV_KEY) | BIT(EV_ABS);
 	mxc_inputdev->keybit[LONG(BTN_TOUCH)] |= BIT(BTN_TOUCH);

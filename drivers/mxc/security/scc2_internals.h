@@ -416,7 +416,7 @@ static int scc_init(void);
 static void scc_cleanup(void);
 
 /* Forward defines of internal functions */
-static irqreturn_t scc_irq(int irq, void *dev_id, struct pt_regs *regs);
+static irqreturn_t scc_irq(int irq, void *dev_id);
 /** Perform callbacks registered by #scc_monitor_security_failure().
  *
  *  Make sure callbacks only happen once...  Since there may be some reason why

@@ -50,7 +50,7 @@ unsigned int active_events[MAX_ACTIVE_EVENTS];
  */
 static void pmic_pdev_register(void);
 static void pmic_pdev_unregister(void);
-void pmic_bh_handler(void *param);
+void pmic_bh_handler(struct work_struct *work);
 
 /* 
  * Platform device structure for PMIC client drivers 
@@ -86,7 +86,7 @@ extern void gpio_pmic_active(void);
 /*! 
  * Bottom half handler of PMIC event handling.
  */
-DECLARE_WORK(pmic_ws, pmic_bh_handler, (void *)NULL);
+DECLARE_WORK(pmic_ws, pmic_bh_handler);
 
 /*! 
  * This function registers platform device structures for 
@@ -120,11 +120,10 @@ static void pmic_pdev_unregister(void)
  *
  * @param        irq        the irq number
  * @param        dev_id     the pointer on the device
- * @param        regs       the interrupt parameters
  *
  * @return       The function returns IRQ_HANDLED when handled.
  */
-static irqreturn_t pmic_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t pmic_irq_handler(int irq, void *dev_id)
 {
 	/* prepare a task */
 	schedule_work(&pmic_ws);
@@ -137,7 +136,7 @@ static irqreturn_t pmic_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
  * It checks for active events and launches callback for the
  * active events.
  */
-void pmic_bh_handler(void *param)
+void pmic_bh_handler(struct work_struct *work)
 {
 	unsigned int loop;
 	unsigned int count = 0;

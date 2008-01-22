@@ -245,7 +245,6 @@ static int set_ata_bus_timing(int speed, enum ata_mode mode)
  */
 static void mxc_ide_selectproc(ide_drive_t * drive)
 {
-	return;
 }
 
 /*!
@@ -334,14 +333,10 @@ static int mxc_ide_set_speed(ide_drive_t * drive, u8 xfer_mode)
  * Called when the IDE layer is disabling DMA on a drive.
  *
  * @param       drive       Specifies the drive
- *
- * @return      0 if successful
  */
-static int mxc_ide_dma_off_quietly(ide_drive_t * drive)
+static void mxc_ide_dma_off_quietly(ide_drive_t * drive)
 {
 	drive->using_dma = 0;
-
-	return 0;
 }
 
 /*!
@@ -386,8 +381,7 @@ static int mxc_ide_dma_on(ide_drive_t * drive)
 	blk_queue_max_hw_segments(drive->queue, MXC_IDE_DMA_BD_NR);
 	blk_queue_max_segment_size(drive->queue, MXC_IDE_DMA_BD_SIZE_MAX);
 
-	if (HWIF(drive)->ide_dma_host_on(drive))
-		return 1;
+	HWIF(drive)->dma_host_on(drive);
 	return 0;
 }
 
@@ -421,7 +415,8 @@ static int mxc_ide_dma_check(ide_drive_t * drive)
 		if (__ide_dma_good_drive(drive))
 			return HWIF(drive)->ide_dma_on(drive);
 	}
-	return HWIF(drive)->ide_dma_off_quietly(drive);
+	HWIF(drive)->dma_off_quietly(drive);
+	return 0;
 }
 
 /*!
@@ -813,24 +808,18 @@ static int mxc_ide_dma_test_irq(ide_drive_t * drive)
  * anything special, leaving the DMA channel allocated for future attempts.
  *
  * @param       drive       The drive we're servicing
- *
- * @return      0 if successful, non-zero otherwise
  */
-static int mxc_ide_dma_host_off(ide_drive_t * drive)
+static void mxc_ide_dma_host_off(ide_drive_t * drive)
 {
-	return 0;
 }
 
 /*!
  * Called to turn on DMA on this drive's controller.
  *
  * @param       drive       The drive we're servicing
- *
- * @return      0 if successful, non-zero otherwise
  */
-static int mxc_ide_dma_host_on(ide_drive_t * drive)
+static void mxc_ide_dma_host_on(ide_drive_t * drive)
 {
-	return 0;
 }
 
 /*!
@@ -904,7 +893,7 @@ static void mxc_ide_dma_init(ide_hwif_t * hwif)
 	hwif->swdma_mask = 0x07;
 	hwif->udma_four = 1;
 
-	hwif->ide_dma_off_quietly = mxc_ide_dma_off_quietly;
+	hwif->dma_off_quietly = mxc_ide_dma_off_quietly;
 	hwif->ide_dma_on = mxc_ide_dma_on;
 	hwif->ide_dma_check = mxc_ide_dma_check;
 	hwif->dma_setup = mxc_ide_dma_setup;
@@ -912,8 +901,8 @@ static void mxc_ide_dma_init(ide_hwif_t * hwif)
 	hwif->dma_start = mxc_ide_dma_start;
 	hwif->ide_dma_end = mxc_ide_dma_end;
 	hwif->ide_dma_test_irq = mxc_ide_dma_test_irq;
-	hwif->ide_dma_host_off = mxc_ide_dma_host_off;
-	hwif->ide_dma_host_on = mxc_ide_dma_host_on;
+	hwif->dma_host_off = mxc_ide_dma_host_off;
+	hwif->dma_host_on = mxc_ide_dma_host_on;
 	hwif->ide_dma_timeout = mxc_ide_dma_timeout;
 	hwif->ide_dma_lostirq = mxc_ide_dma_lost_irq;
 
@@ -969,7 +958,7 @@ mxc_ide_register(unsigned long base, unsigned int aux, int irq,
 	hw.ack_intr = &mxc_ide_ack_intr;
 
 	*hwifp = hwif;
-	ide_register_hw(&hw, hwifp);
+	ide_register_hw(&hw, 0, hwifp);
 
 	hwif->selectproc = &mxc_ide_selectproc;
 	hwif->tuneproc = &mxc_ide_tune;

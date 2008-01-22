@@ -93,7 +93,7 @@ static int dptc_mx27_open(struct inode *inode, struct file *filp);
 static int dptc_mx27_release(struct inode *inode, struct file *filp);
 static int dptc_mx27_ioctl(struct inode *inode, struct file *filp,
 			   unsigned int cmd, unsigned long arg);
-static irqreturn_t dptc_mx27_irq(int irq, void *dev_id, struct pt_regs *regs);
+static irqreturn_t dptc_mx27_irq(int irq, void *dev_id);
 
 /*
  * Global variables
@@ -410,7 +410,7 @@ static void set_dptc_wp(int new_wp)
 
 }
 
-static void dptc_workqueue_handler(void *arg)
+static void dptc_workqueue_handler(struct work_struct *work)
 {
 	if (dptc_intr_status & 0x4) {
 		/* Chip working point has increased dramatically,
@@ -681,7 +681,7 @@ static void init_dptc_log(dptc_log_s * dptc_log)
  */
 static int init_dptc_controller(void)
 {
-	INIT_WORK(&dptc_work, dptc_workqueue_handler, NULL);
+	INIT_WORK(&dptc_work, dptc_workqueue_handler);
 
 	if (create_proc_read_entry(PROC_NODE_NAME, 0,
 				   NULL, read_log, &dptc_params) == NULL) {
@@ -1240,14 +1240,12 @@ static int dptc_mx27_ioctl(struct inode *inode, struct file *filp,
  *
  * @param   irq      The Interrupt number
  * @param   dev_id   Driver private data
- * @param   regs     Holds a snapshot of the processors context before the
- *                   processor entered the interrupt code
  *
  * @result    The function returns \b IRQ_RETVAL(1) if interrupt was handled,
  *            returns \b IRQ_RETVAL(0) if the interrupt was not handled.
  *            \b IRQ_RETVAL is defined in include/linux/interrupt.h.
  */
-static irqreturn_t dptc_mx27_irq(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t dptc_mx27_irq(int irq, void *dev_id)
 {
 	if (dptc_params.dptc_is_active == TRUE) {
 		dptc_intr_status = __raw_readl(IO_ADDRESS(MX27_PMCR_BASE_ADDR));
@@ -1262,7 +1260,7 @@ static irqreturn_t dptc_mx27_irq(int irq, void *dev_id, struct pt_regs *regs)
 		if (dptc_intr_status != 0) {
 			dptc_mask_dptc_int();
 			dptc_disable_dptc();
-			schedule_delayed_work(&dptc_work, 0);
+			schedule_work(&dptc_work);
 		}
 	}
 

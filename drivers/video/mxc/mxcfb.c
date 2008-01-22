@@ -128,8 +128,7 @@ extern void gpio_lcd_inactive(void);
 
 extern int fs453_ioctl(unsigned int cmd, void *arg);
 #endif
-static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id,
-				     struct pt_regs *regs);
+static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id);
 static int mxcfb_blank(int blank, struct fb_info *info);
 static int mxcfb_map_video_memory(struct fb_info *fbi, bool use_internal_ram);
 static int mxcfb_unmap_video_memory(struct fb_info *fbi);
@@ -825,7 +824,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 
 	spin_lock_irqsave(&mxc_fbi->fb_lock, lock_flags);
 
-	dev_dbg(info->device, "Updating SDC BG buf %ld address=0x%08X\n",
+	dev_dbg(info->device, "Updating SDC BG buf %d address=0x%08lX\n",
 		mxc_fbi->cur_ipu_buf, base);
 
 	mxc_fbi->cur_ipu_buf = !mxc_fbi->cur_ipu_buf;
@@ -837,8 +836,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		ipu_enable_irq(mxc_fbi->ipu_ch_irq);
 	} else {
 		dev_err(info->device,
-			"Error updating SDC buf %d to address=0x%08X\n",
-			mxc_fbi->cur_ipu_buf, (uint32_t) base);
+			"Error updating SDC buf %d to address=0x%08lX\n",
+			mxc_fbi->cur_ipu_buf, base);
 	}
 
 	spin_unlock_irqrestore(&mxc_fbi->fb_lock, lock_flags);
@@ -941,8 +940,7 @@ static struct fb_ops mxcfb_ovl_ops = {
 	.fb_blank = mxcfb_blank_ovl,
 };
 
-static irqreturn_t mxcfb_vsync_irq_handler(int irq, void *dev_id,
-					   struct pt_regs *regs)
+static irqreturn_t mxcfb_vsync_irq_handler(int irq, void *dev_id)
 {
 	struct mxcfb_data *fb_data = dev_id;
 
@@ -953,8 +951,7 @@ static irqreturn_t mxcfb_vsync_irq_handler(int irq, void *dev_id,
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id,
-				     struct pt_regs *regs)
+static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id)
 {
 	struct fb_info *fbi = dev_id;
 	struct mxcfb_info *mxc_fbi = fbi->par;

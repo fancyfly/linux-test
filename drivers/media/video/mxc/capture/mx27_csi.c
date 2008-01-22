@@ -38,7 +38,7 @@ static csi_irq_callback_t g_callback = 0;
 static void *g_callback_data = 0;
 static struct clk csi_mclk;
 
-static irqreturn_t csi_irq_handler(int irq, void *data, struct pt_regs *pt)
+static irqreturn_t csi_irq_handler(int irq, void *data)
 {
 	unsigned long status = __raw_readl(CSI_CSISR);
 
@@ -46,7 +46,7 @@ static irqreturn_t csi_irq_handler(int irq, void *data, struct pt_regs *pt)
 	if (g_callback)
 		g_callback(g_callback_data, status);
 
-	pr_debug("CSI status = 0x%08X\n", status);
+	pr_debug("CSI status = 0x%08lX\n", status);
 
 	return IRQ_HANDLED;
 }

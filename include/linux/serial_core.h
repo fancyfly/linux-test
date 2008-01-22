@@ -133,9 +133,6 @@
 
 #define PORT_S3C2412	73
 
-/* Freescale Semiconductor MXC fmaily */
-#define PORT_MXC        74
-
 /* Xilinx uartlite */
 #define PORT_UARTLITE	74
 
@@ -144,6 +141,9 @@
 
 /* Micrel KS8695 */
 #define PORT_KS8695	76
+
+/* Freescale Semiconductor MXC fmaily */
+#define PORT_MXC        77
 
 
 #ifdef __KERNEL__

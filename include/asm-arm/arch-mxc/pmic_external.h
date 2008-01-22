@@ -36,6 +36,14 @@
 #include <asm/ioctl.h>
 #include <asm/arch/pmic_status.h>
 
+#ifndef __KERNEL__
+typedef _Bool bool;
+enum {
+	false = 0,
+	true = 1
+};
+#endif
+
 /*!
  * This is the enumeration of versions of PMIC
  */

@@ -46,7 +46,7 @@ typedef enum {
 	IP_MAXDEV
 } INPUT_DEVICES;
 
-extern int mxc_alsa_create_ctl(snd_card_t * card, void *p_value);
+extern int mxc_alsa_create_ctl(struct snd_card *card, void *p_value);
 
 extern int set_mixer_output_device(PMIC_AUDIO_HANDLE handle, OUTPUT_SOURCE src,
 				   OUTPUT_DEVICES dev, bool enable);

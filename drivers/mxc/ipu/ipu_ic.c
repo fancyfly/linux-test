@@ -570,8 +570,8 @@ static bool _calc_resize_coeffs(uint32_t inSize, uint32_t outSize,
 		*resizeCoeff = 0x3FFF;
 	}
 
-	dev_dbg(g_ipu_dev, "resizing from %d -> %d pixels, "
-		"downsize=%d, resize=%d.%d (reg=%d)\n", inSize, outSize,
+	dev_dbg(g_ipu_dev, "resizing from %u -> %u pixels, "
+		"downsize=%u, resize=%u.%lu (reg=%u)\n", inSize, outSize,
 		*downsizeCoeff, (*resizeCoeff >= 8192L) ? 1 : 0,
 		((*resizeCoeff & 0x1FFF) * 10000L) / 8192L, *resizeCoeff);
 

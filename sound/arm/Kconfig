@@ -46,7 +46,6 @@ config SND_MXC_PMIC
 	  To compile this driver as a module, choose M here: the module
 	  will be called snd-mc13783.
 
-
 config  SND_MXC_PLAYBACK_MIXING
         bool "Playback Stream Mixing"
         depends on (!ARCH_MX27) && (!ARCH_MXC91131) && ARCH_MXC && MXC_DAM && MXC_SSI && \
@@ -59,7 +58,5 @@ config  SND_MXC_PLAYBACK_MIXING
 	  Analog mixng as well as Digital mixing can be tested on these platforms.
 	  As of now , mixing of mono files only are supported in Digital Mixing since it is done on VCODEC. 
 	  SSI 2 channel mode is used to mix 2 streams on a single SSI.  This is supported on all platforms except imx27ads(imx27ads - Analog mixing only).
-
-
 
 endmenu

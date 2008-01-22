@@ -77,7 +77,8 @@ static void __init mxcuart_console_write_char(struct uart_port *port, int ch)
  * @param   s     the log message to be written to the UART
  * @param   count length of the message
  */
-void early_mxcuart_console_write(struct console *co, const char *s, u_int count)
+void __init early_mxcuart_console_write(struct console *co, const char *s,
+					u_int count)
 {
 	struct uart_port *port = &mxc_early_device.port;
 	volatile unsigned int status, oldcr1, oldcr2, oldcr3, cr2, cr3;

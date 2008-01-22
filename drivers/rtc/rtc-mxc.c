@@ -312,14 +312,10 @@ static int rtc_update_alarm(struct device *dev, struct rtc_time *alrm)
  *
  * @param  irq          RTC IRQ number
  * @param  dev_id       device ID which is not used
- * @param  regs         pointer to a structure containing the processor
- *                      registers and state prior to servicing the interrupt.
- *                      It is not used in this function.
  *
  * @return IRQ_HANDLED as defined in the include/linux/interrupt.h file.
  */
-static irqreturn_t mxc_rtc_interrupt(int irq, void *dev_id,
-				     struct pt_regs *regs)
+static irqreturn_t mxc_rtc_interrupt(int irq, void *dev_id)
 {
 	struct platform_device *pdev = dev_id;
 	struct rtc_plat_data *pdata = platform_get_drvdata(pdev);
@@ -352,7 +348,7 @@ static irqreturn_t mxc_rtc_interrupt(int irq, void *dev_id,
 	}
 
 	spin_unlock(&rtc_lock);
-	rtc_update_irq(&pdata->rtc->class_dev, 1, events);
+	rtc_update_irq(pdata->rtc, 1, events);
 	return IRQ_HANDLED;
 }
 

@@ -520,12 +520,7 @@ static void inline otg_task_proc(struct work_struct *work)
                 if (task->taskdebug)
                         printk(KERN_INFO"%s: WORKING %s\n", __FUNCTION__, task->name);
 
-                #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
                 task->proc(task->data);
-                #else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
-                task->proc(work);
-                #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
-                
         } while (!task->terminate);
         if (task->taskdebug)
                 printk(KERN_INFO"%s: TERMINATING %s\n", __FUNCTION__, task->name);
@@ -1159,18 +1154,20 @@ static void inline otg_tasklet_exit(struct otg_tasklet *tasklet)
             _work->pending = 0;
             init_timer(&_work->timer);
             #else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+            *work_data_bits(_work) = (long)_data;
             #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
         }
     #endif
     //#undef PREPARE_WORK
     typedef void (* WORK_PROC)(void *);
 
-    #define SET_WORK_ARG(__item, __data) (__item).data = __data
+    #define SET_WORK_ARG(__item, __data) (*work_data_bits(&(__item)) = (long)__data)
 
     #define SCHEDULE_DELAYED_WORK(item) schedule_delayed_work(&item, 0)
     #define SCHEDULE_IMMEDIATE_WORK(item) SCHEDULE_WORK((item))
-    #define PENDING_WORK_ITEM(item) (item.pending != 0)
-    #define NO_WORK_DATA(item) (!item.data)
+    #define PENDING_WORK_ITEM(item) (work_pending(&(item)))
+    #define NO_WORK_DATA(item) (!(*work_data_bits(&(item))))
+    #define WORK_DATA(item) (*work_data_bits(&(item)))
     //#define _MOD_DEC_USE_COUNT   //Not used in 2.6
     //#define _MOD_INC_USE_COUNT   //Not used in 2.6
 

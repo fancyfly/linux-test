@@ -44,7 +44,6 @@
 #define DP_PULL_DOWN		(1 << 1)	/* enable DP Pull Down */
 #define ID_PULL_UP		(1 << 0)	/* enable ID Pull Up */
 
-#ifdef DEBUG
 /*!
  * read ULPI register 'reg' thru VIEWPORT register 'view'
  *
@@ -73,7 +72,6 @@ static u8 isp1504_read(int reg, volatile u32 * view)
 
 	return (u8) (data >> ULPIVW_RDATA_SHIFT) & ULPIVW_RDATA_MASK;
 }
-#endif
 
 /*!
  * set bits into OTG ISP1504 register 'reg' thru VIEWPORT register 'view'

@@ -115,7 +115,7 @@ static const char *part_probes[] = { /* "RedBoot", */ "cmdlinepart", NULL };
 
 static wait_queue_head_t irq_waitq;
 
-static irqreturn_t mxc_nfc_irq(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mxc_nfc_irq(int irq, void *dev_id)
 {
 	NFC_CONFIG1 |= NFC_INT_MSK;	/* Disable interrupt */
 	wake_up(&irq_waitq);
@@ -1059,14 +1059,14 @@ static int mxc_nand_scan_bbt(struct mtd_info *mtd)
 	struct nand_chip *this = mtd->priv;
 
 	/* Config before scanning */
-	if (mtd->writesize == NAND_PAGESIZE_2KB) {
+	if (mtd->writesize == 2048) {
 		NFMS |= (1 << NFMS_BIT);
 	}
 
 	this->bbt_td = NULL;
 	this->bbt_md = NULL;
 	if (!this->badblock_pattern) {
-		if (mtd->writesize == NAND_PAGESIZE_2KB)
+		if (mtd->writesize == 2048)
 			this->badblock_pattern = &smallpage_memorybased;
 		else
 			this->badblock_pattern = (mtd->writesize > 512) ?

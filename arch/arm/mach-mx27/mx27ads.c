@@ -386,8 +386,7 @@ static u32 mxc_card_state_changed(u32 mask, u32 s0, u32 s1)
  * Interrupt handler for the expio (CPLD) to deal with interrupts from
  * FEC, external UART, CS8900 Ethernet and SD cards, etc.
  */
-static void mxc_expio_irq_handler(u32 irq, struct irqdesc *desc,
-				  struct pt_regs *regs)
+static void mxc_expio_irq_handler(u32 irq, struct irq_desc *desc)
 {
 	u32 imr, card_int, i;
 	u32 int_valid;
@@ -423,7 +422,7 @@ static void mxc_expio_irq_handler(u32 irq, struct irqdesc *desc,
 
 	expio_irq = MXC_EXP_IO_BASE;
 	for (; int_valid != 0; int_valid >>= 1, expio_irq++) {
-		struct irqdesc *d;
+		struct irq_desc *d;
 		if ((int_valid & 1) == 0)
 			continue;
 		d = irq_desc + expio_irq;
@@ -432,7 +431,7 @@ static void mxc_expio_irq_handler(u32 irq, struct irqdesc *desc,
 			       expio_irq);
 			BUG();	/* oops */
 		}
-		d->handle_irq(expio_irq, d, regs);
+		d->handle_irq(expio_irq, d);
 	}
 
       out:
@@ -442,8 +441,7 @@ static void mxc_expio_irq_handler(u32 irq, struct irqdesc *desc,
 
 #ifdef MXC_CARD_DEBUG
 
-static irqreturn_t mxc_sd_test_handler(int irq, void *desc,
-				       struct pt_regs *regs)
+static irqreturn_t mxc_sd_test_handler(int irq, void *desc)
 {
 	int s = -1;
 
@@ -536,7 +534,7 @@ static void expio_unmask_irq(u32 irq)
 	}
 }
 
-static struct irqchip expio_irq_chip = {
+static struct irq_chip expio_irq_chip = {
 	.ack = expio_ack_irq,
 	.mask = expio_mask_irq,
 	.unmask = expio_unmask_irq,
@@ -583,7 +581,7 @@ static int __init mxc_expio_init(void)
 	for (i = MXC_EXP_IO_BASE; i < (MXC_EXP_IO_BASE + MXC_MAX_EXP_IO_LINES);
 	     i++) {
 		set_irq_chip(i, &expio_irq_chip);
-		set_irq_handler(i, do_level_IRQ);
+		set_irq_handler(i, handle_level_irq);
 		set_irq_flags(i, IRQF_VALID);
 	}
 	set_irq_type(EXPIO_PARENT_INT, IRQT_HIGH);
@@ -681,7 +679,7 @@ static void __inline mxc_init_pmic_audio(void)
 }
 #endif
 
-static void mxc_board_init(void)
+static __init void mxc_board_init(void)
 {
 	pr_info("AIPI VA base: 0x%x\n", IO_ADDRESS(AIPI_BASE_ADDR));
 	mxc_cpu_common_init();

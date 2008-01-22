@@ -390,7 +390,7 @@ static void setup_dmac(mxc_dma_channel_t * dma)
 /*!
  * @brief interrupt handler of dma channel
  */
-static irqreturn_t dma_irq_handler(int irq, void *dev_id, struct pt_regs *reg)
+static irqreturn_t dma_irq_handler(int irq, void *dev_id)
 {
 	mxc_dma_channel_t *dma = (mxc_dma_channel_t *) dev_id;
 	mx2_dma_priv_t *priv = (mx2_dma_priv_t *) (dma ? dma->private : NULL);
@@ -558,7 +558,8 @@ static inline int __init_dma_channel(mxc_dma_channel_t * chan,
 	mask_dma_interrupt(chan->channel);
 	ret =
 	    request_irq(dma_private->dma_irq, dma_irq_handler,
-			SA_INTERRUPT | SA_SHIRQ, chan->dev_name, (void *)chan);
+			IRQF_DISABLED | IRQF_SHARED, chan->dev_name,
+			(void *)chan);
 	if (ret) {
 		printk(KERN_ERR
 		       "%s: unable to request IRQ %d for DMA channel\n",

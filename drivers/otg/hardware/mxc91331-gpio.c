@@ -61,12 +61,11 @@ BOOL zasevb_int_disabled = FALSE;
  * zasevb_gpio_int_hndlr() - gpio interrupt handler
  * @param irq
  * @param dev_id
- * @param regs
  * @return interrupt handler status
  * This disables the gpio interrup and schedules the isp1301 bottom half handler.
  *
  */
-static irqreturn_t zasevb_gpio_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t zasevb_gpio_int_hndlr (int irq, void *dev_id)
 {
         disable_irq(irq);
         zasevb_int_disabled = TRUE;

@@ -19,7 +19,6 @@
  * @ingroup PM
  */
 
-#include <linux/config.h>
 #include <asm/arch/pmic_power.h>
 #include <asm/arch/hardware.h>
 

@@ -116,11 +116,11 @@ static const char proc_filename[] = "arcusb";
  * @param data
  * @param r
  */
-irqreturn_t arc_udc_isr(int irq, void *data, struct pt_regs *r)
+irqreturn_t arc_udc_isr(int irq, void *data)
 {
 
 //	printk(KERN_INFO"%s: --\n", __FUNCTION__);
-        return otg_dev_isr(irq, data, r);
+        return otg_dev_isr(irq, data);
 }
 
 

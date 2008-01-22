@@ -235,8 +235,6 @@ void __init init_sdma_pool(void)
 	INIT_LIST_HEAD(&buf_map);
 }
 
-EXPORT_SYMBOL(init_sdma_pool);
-
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("MXC Linux SDMA API");
 MODULE_LICENSE("GPL");

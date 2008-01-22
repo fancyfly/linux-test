@@ -374,7 +374,7 @@ mx31ads_common_pcmcia_set_io_map(struct pcmcia_socket *sock,
 	struct mx31ads_pcmcia_socket *skt = to_mx31ads_pcmcia_socket(sock);
 	unsigned short speed = map->speed;
 
-	pr_debug("map %u  speed %u start 0x%08x stop 0x%08x\n",
+	pr_debug("map %u  speed %u start 0x%08lx stop 0x%08lx\n",
 		 map->map, map->speed, map->start, map->stop);
 	pr_debug("flags: %s%s%s%s%s%s%s%s\n",
 		 (map->flags == 0) ? "<NONE>" : "",
@@ -439,7 +439,7 @@ mx31ads_common_pcmcia_set_mem_map(struct pcmcia_socket *sock,
 
 	pr_debug
 	    (KERN_INFO
-	     "map %u speed %u card_start %08x flags%08x static_start %08x\n",
+	     "map %u speed %u card_start %08x flags%08x static_start %08lx\n",
 	     map->map, map->speed, map->card_start, map->flags,
 	     map->static_start);
 	pr_debug(KERN_INFO "flags: %s%s%s%s%s%s%s%s\n",
@@ -575,7 +575,7 @@ mx31ads_pcmcia_socket_state(struct mx31ads_pcmcia_socket *skt,
 	unsigned long pins;
 
 	pins = _reg_PCMCIA_PIPR;
-	pr_debug(KERN_INFO "_reg_PCMCIA_PIPR = 0x%08x\n", pins);
+	pr_debug(KERN_INFO "_reg_PCMCIA_PIPR = 0x%08lx\n", pins);
 
 	state->ready = (pins & PCMCIA_PIPR_RDY) ? 1 : 0;
 	state->bvd2 = (pins & PCMCIA_PIPR_BVD2) ? 1 : 0;
@@ -937,10 +937,11 @@ dump_bits(char **p, const char *prefix, unsigned int val, struct bittbl *bits,
  *
  * Returns: the number of characters added to the buffer
  */
-static ssize_t show_status(struct class_device *class_dev, char *buf)
+static ssize_t show_status(struct device *dev, struct device_attribute *attr,
+			   char *buf)
 {
 	struct mx31ads_pcmcia_socket *skt =
-	    container_of(class_dev, struct mx31ads_pcmcia_socket, socket.dev);
+	    container_of(dev, struct mx31ads_pcmcia_socket, socket.dev);
 	char *p = buf;
 
 	p += sprintf(p, "slot     : %d\n", skt->nr);
@@ -961,7 +962,7 @@ static ssize_t show_status(struct class_device *class_dev, char *buf)
 	return p - buf;
 }
 
-static CLASS_DEVICE_ATTR(status, S_IRUGO, show_status, NULL);
+static DEVICE_ATTR(status, S_IRUGO, show_status, NULL);
 
 static void mx31ads_common_check_status(struct mx31ads_pcmcia_socket *skt)
 {
@@ -1001,8 +1002,7 @@ static void mx31ads_common_check_status(struct mx31ads_pcmcia_socket *skt)
  * handling code performs scheduling operations which cannot be
  * executed from within an interrupt context.
  */
-static irqreturn_t mx31ads_common_pcmcia_interrupt(int irq, void *dev,
-						   struct pt_regs *regs)
+static irqreturn_t mx31ads_common_pcmcia_interrupt(int irq, void *dev)
 {
 	struct mx31ads_pcmcia_socket *skt = dev;
 	volatile u32 pscr, pgsr;
@@ -1058,7 +1058,6 @@ static int mx31ads_common_drv_pcmcia_probe(struct platform_device *pdev,
 	 */
 	skt->socket.ops = &mx31ads_common_pcmcia_operations;
 	skt->socket.owner = ops->owner;
-	skt->socket.dev.dev = &pdev->dev;
 	skt->socket.driver_data = skt;
 
 	init_timer(&skt->poll_timer);
@@ -1131,7 +1130,7 @@ static int mx31ads_common_drv_pcmcia_probe(struct platform_device *pdev,
 		goto out_err_6;
 
 	ret = request_irq(skt->irq, mx31ads_common_pcmcia_interrupt,
-			  SA_SHIRQ | SA_INTERRUPT, "PCMCIA IRQ", skt);
+			  IRQF_SHARED | IRQF_DISABLED, "PCMCIA IRQ", skt);
 	if (ret)
 		goto out_err_6;
 	set_irq_type(skt->irq, IRQT_NOEDGE);
@@ -1163,12 +1162,15 @@ static int mx31ads_common_drv_pcmcia_probe(struct platform_device *pdev,
 
 	add_timer(&skt->poll_timer);
 
-	class_device_create_file(&skt->socket.dev, &class_device_attr_status);
+	ret = device_create_file(&skt->socket.dev, &dev_attr_status);
+	if (ret < 0)
+		goto out_err_8;
 
 	platform_set_drvdata(pdev, skt);
 	ret = 0;
 	goto out;
 
+      out_err_8:
 	del_timer_sync(&skt->poll_timer);
 	pcmcia_unregister_socket(&skt->socket);
 

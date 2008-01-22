@@ -27,7 +27,6 @@
 #define DUMP_QUEUES
 #endif
 
-#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/ioport.h>
@@ -43,13 +42,13 @@
 #include <linux/proc_fs.h>
 #include <linux/mm.h>
 #include <linux/platform_device.h>
-#include <linux/usb_ch9.h>
+#include <linux/usb/ch9.h>
 #include <linux/usb_gadget.h>
-#include <linux/usb_otg.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
 #include <linux/fsl_devices.h>
 #include <linux/usb/fsl_xcvr.h>
+#include <linux/usb/otg.h>
 
 #include <asm/byteorder.h>
 #include <asm/io.h>
@@ -2190,7 +2189,7 @@ static void reset_irq(struct arcotg_udc *udc)
 	}
 }
 
-static irqreturn_t arcotg_udc_irq(int irq, void *_udc, struct pt_regs *r)
+static irqreturn_t arcotg_udc_irq(int irq, void *_udc)
 {
 	struct arcotg_udc *udc = _udc;
 	u32 irq_src;
@@ -2913,7 +2912,7 @@ static int __devinit arcotg_udc_probe(struct platform_device *pdev)
 
 	/* request irq and disable DR  */
 	tmp_status = request_irq(pdev->resource[1].start, arcotg_udc_irq,
-				 SA_SHIRQ, driver_name, udc);
+				 0, driver_name, udc);
 	if (tmp_status != 0) {
 		printk(KERN_ERR "cannot request irq %d err %d \n",
 		       (int)pdev->resource[1].start, tmp_status);
@@ -2969,10 +2968,10 @@ static int __devinit arcotg_udc_probe(struct platform_device *pdev)
 	}
 
 	create_proc_file();
-	device_add(&udc->gadget.dev);
+	tmp_status = device_add(&udc->gadget.dev);
 	pr_debug("udc: back from device_add ");
 
-	return 0;
+	return tmp_status;
 }
 
 /*! 

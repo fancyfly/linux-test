@@ -789,7 +789,7 @@ static int _map_video_memory(struct fb_info *info)
 		dev_err(info->device, "Unable to allocate fb memory\n");
 		return -EBUSY;
 	}
-	dev_dbg(info->device, "Allocated fb @ paddr=0x%08X, size=%d.\n",
+	dev_dbg(info->device, "Allocated fb @ paddr=0x%08lX, size=%d.\n",
 		info->fix.smem_start, info->fix.smem_len);
 
 	info->screen_size = info->fix.smem_len;
@@ -1105,7 +1105,7 @@ static void _set_brightness(unsigned char level)
 /*
  * @brief LCDC interrupt handler
  */
-static irqreturn_t mx2fb_isr(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mx2fb_isr(int irq, void *dev_id)
 {
 	struct fb_event event;
 	unsigned long status = __raw_readl(LCDC_REG(LCDC_LISR));

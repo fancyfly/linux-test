@@ -40,7 +40,6 @@
 #include <linux/clk.h>
 #include <linux/workqueue.h>
 #include <linux/platform_device.h>
-#include <linux/config.h>
 
 #include <asm/arch/clock.h>
 #include <asm/arch/gpio.h>
@@ -61,7 +60,7 @@ int turbo_mode_active;
 
 static int curr_wp;
 static u32 ptvai;
-static struct work_struct dptc_work;
+static struct delayed_work dptc_work;
 static struct dptc_wp *dptc_wp_allfreq;
 static struct device *dptc_dev;
 static struct clk *cpu_clk;
@@ -103,7 +102,7 @@ static void update_dptc_wp(u32 wp)
 		 dptc_wp_allfreq[wp].dcvr3, dptc_wp_allfreq[wp].voltage);
 }
 
-static irqreturn_t dptc_irq(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t dptc_irq(int irq, void *dev_id)
 {
 	u32 pmcr0 = __raw_readl(MXC_CCM_PMCR0);
 
@@ -121,7 +120,7 @@ static irqreturn_t dptc_irq(int irq, void *dev_id, struct pt_regs *regs)
 	return IRQ_RETVAL(1);
 }
 
-static void dptc_workqueue_handler(void *arg)
+static void dptc_workqueue_handler(struct work_struct *work)
 {
 	u32 pmcr0 = __raw_readl(MXC_CCM_PMCR0);
 
@@ -281,7 +280,7 @@ static int __devinit mxc_dptc_probe(struct platform_device *pdev)
 	int res = 0;
 	u32 pmcr0 = __raw_readl(MXC_CCM_PMCR0);
 
-	INIT_WORK(&dptc_work, dptc_workqueue_handler, 0);
+	INIT_DELAYED_WORK(&dptc_work, dptc_workqueue_handler);
 
 	/* request the DPTC interrupt */
 	res = request_irq(INT_CCM, dptc_irq, IRQF_DISABLED, "mxc-dptc", NULL);

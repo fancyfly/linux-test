@@ -11,7 +11,6 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/kernel.h>
@@ -643,7 +642,7 @@ static void fsl_otg_event(void *ptr)
  * intact.  It needs to have knowledge of some USB interrupts
  * such as port change.
  */
-irqreturn_t fsl_otg_isr(int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t fsl_otg_isr(int irq, void *dev_id)
 {
 	struct otg_fsm *fsm = &((struct fsl_otg *)dev_id)->fsm;
 	struct otg_transceiver *otg = &((struct fsl_otg *)dev_id)->otg;
@@ -797,8 +796,7 @@ int usb_otg_start(struct platform_device *pdev)
 	}
 	p_otg->irq = res->start;
 	DBG("requesting irq %d", p_otg->irq);
-	status = request_irq(p_otg->irq, fsl_otg_isr, SA_SHIRQ, "fsl_arc",
-			     p_otg);
+	status = request_irq(p_otg->irq, fsl_otg_isr, 0, "fsl_arc", p_otg);
 	if (status) {
 		dev_dbg(p_otg->otg.dev, "can't get IRQ %d, error %d\n",
 			p_otg->irq, status);

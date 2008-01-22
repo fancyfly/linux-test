@@ -44,8 +44,8 @@
   *
   */
 /* Output device control*/
-static int pmic_mixer_output_info(snd_kcontrol_t * kcontrol,
-				  snd_ctl_elem_info_t * uinfo)
+static int pmic_mixer_output_info(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_info *uinfo)
 {
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -55,8 +55,8 @@ static int pmic_mixer_output_info(snd_kcontrol_t * kcontrol,
 	uinfo->value.integer.step = 1;
 	return 0;
 }
-static int pmic_mixer_output_put(snd_kcontrol_t * kcontrol,
-				 snd_ctl_elem_value_t * uvalue)
+static int pmic_mixer_output_put(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *uvalue)
 {
 	int dev, i;
 	dev = uvalue->value.integer.value[0];
@@ -69,8 +69,8 @@ static int pmic_mixer_output_put(snd_kcontrol_t * kcontrol,
 	}
 	return 0;
 }
-static int pmic_mixer_output_get(snd_kcontrol_t * kcontrol,
-				 snd_ctl_elem_value_t * uvalue)
+static int pmic_mixer_output_get(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *uvalue)
 {
 	int val, ret = 0, i = 0;
 	for (i = OP_EARPIECE; i < OP_MAXDEV; i++) {
@@ -90,8 +90,8 @@ static int pmic_mixer_output_get(snd_kcontrol_t * kcontrol,
 }
 
 /* Input gain control*/
-static int pmic_cap_volume_info(snd_kcontrol_t * kcontrol,
-				snd_ctl_elem_info_t * uinfo)
+static int pmic_cap_volume_info(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_info *uinfo)
 {
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -101,8 +101,8 @@ static int pmic_cap_volume_info(snd_kcontrol_t * kcontrol,
 	uinfo->value.integer.step = 1;
 	return 0;
 }
-static int pmic_cap_volume_get(snd_kcontrol_t * kcontrol,
-			       snd_ctl_elem_value_t * uvalue)
+static int pmic_cap_volume_get(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *uvalue)
 {
 	int val;
 	val = get_mixer_input_gain();
@@ -111,8 +111,8 @@ static int pmic_cap_volume_get(snd_kcontrol_t * kcontrol,
 	return 0;
 }
 
-static int pmic_cap_volume_put(snd_kcontrol_t * kcontrol,
-			       snd_ctl_elem_value_t * uvalue)
+static int pmic_cap_volume_put(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *uvalue)
 {
 
 	int vol;
@@ -123,8 +123,8 @@ static int pmic_cap_volume_put(snd_kcontrol_t * kcontrol,
 }
 
 /* Mono adder control*/
-static int pmic_pb_monoconfig_info(snd_kcontrol_t * kcontrol,
-				   snd_ctl_elem_info_t * uinfo)
+static int pmic_pb_monoconfig_info(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_info *uinfo)
 {
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -134,16 +134,16 @@ static int pmic_pb_monoconfig_info(snd_kcontrol_t * kcontrol,
 	uinfo->value.integer.step = 1;
 	return 0;
 }
-static int pmic_pb_monoconfig_put(snd_kcontrol_t * kcontrol,
-				  snd_ctl_elem_value_t * uvalue)
+static int pmic_pb_monoconfig_put(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_value *uvalue)
 {
 	int mono;
 	mono = uvalue->value.integer.value[0];
 	set_mixer_output_mono_adder(mono);
 	return 0;
 }
-static int pmic_pb_monoconfig_get(snd_kcontrol_t * kcontrol,
-				  snd_ctl_elem_value_t * uvalue)
+static int pmic_pb_monoconfig_get(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_value *uvalue)
 {
 	uvalue->value.integer.value[0] = get_mixer_output_mono_adder();
 	return 0;
@@ -155,8 +155,8 @@ static int pmic_pb_monoconfig_get(snd_kcontrol_t * kcontrol,
   */
 
 /* Input device control*/
-static int pmic_cap_input_info(snd_kcontrol_t * kcontrol,
-			       snd_ctl_elem_info_t * uinfo)
+static int pmic_cap_input_info(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_info *uinfo)
 {
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -166,8 +166,8 @@ static int pmic_cap_input_info(snd_kcontrol_t * kcontrol,
 	uinfo->value.integer.step = 1;
 	return 0;
 }
-static int pmic_cap_input_put(snd_kcontrol_t * kcontrol,
-			      snd_ctl_elem_value_t * uvalue)
+static int pmic_cap_input_put(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *uvalue)
 {
 	int dev, i;
 	dev = uvalue->value.integer.value[0];
@@ -180,8 +180,8 @@ static int pmic_cap_input_put(snd_kcontrol_t * kcontrol,
 	}
 	return 0;
 }
-static int pmic_cap_input_get(snd_kcontrol_t * kcontrol,
-			      snd_ctl_elem_value_t * uvalue)
+static int pmic_cap_input_get(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *uvalue)
 {
 	int val, ret = 0, i = 0;
 	for (i = IP_HANDSET; i < IP_MAXDEV; i++) {
@@ -198,8 +198,8 @@ static int pmic_cap_input_get(snd_kcontrol_t * kcontrol,
 }
 
 /* Volume control*/
-static int pmic_pb_volume_put(snd_kcontrol_t * kcontrol,
-			      snd_ctl_elem_value_t * uvalue)
+static int pmic_pb_volume_put(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *uvalue)
 {
 	int volume;
 	volume = uvalue->value.integer.value[0];
@@ -207,8 +207,8 @@ static int pmic_pb_volume_put(snd_kcontrol_t * kcontrol,
 	set_mixer_output_volume(NULL, volume, OP_NODEV);
 	return 0;
 }
-static int pmic_pb_volume_info(snd_kcontrol_t * kcontrol,
-			       snd_ctl_elem_info_t * uinfo)
+static int pmic_pb_volume_info(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_info *uinfo)
 {
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -219,8 +219,8 @@ static int pmic_pb_volume_info(snd_kcontrol_t * kcontrol,
 	return 0;
 }
 
-static int pmic_pb_volume_get(snd_kcontrol_t * kcontrol,
-			      snd_ctl_elem_value_t * uvalue)
+static int pmic_pb_volume_get(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *uvalue)
 {
 	int val;
 	val = get_mixer_output_volume();
@@ -230,8 +230,8 @@ static int pmic_pb_volume_get(snd_kcontrol_t * kcontrol,
 }
 
 /* Balance control start */
-static int pmic_pb_balance_info(snd_kcontrol_t * kcontrol,
-				snd_ctl_elem_info_t * uinfo)
+static int pmic_pb_balance_info(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_info *uinfo)
 {
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -242,15 +242,15 @@ static int pmic_pb_balance_info(snd_kcontrol_t * kcontrol,
 	return 0;
 }
 
-static int pmic_pb_balance_get(snd_kcontrol_t * kcontrol,
-			       snd_ctl_elem_value_t * uvalue)
+static int pmic_pb_balance_get(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *uvalue)
 {
 	uvalue->value.integer.value[0] = get_mixer_output_balance();
 	return 0;
 
 }
-static int pmic_pb_balance_put(snd_kcontrol_t * kcontrol,
-			       snd_ctl_elem_value_t * uvalue)
+static int pmic_pb_balance_put(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *uvalue)
 {
 	int bal;
 	bal = uvalue->value.integer.value[0];
@@ -261,7 +261,7 @@ static int pmic_pb_balance_put(snd_kcontrol_t * kcontrol,
 /* Balance control end */
 
 /* Kcontrol structure definitions */
-snd_kcontrol_new_t pmic_control_pb_vol __devinitdata = {
+struct snd_kcontrol_new pmic_control_pb_vol __devinitdata = {
 	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 	.name = "Master Playback Volume",
 	.index = 0x00,
@@ -271,7 +271,7 @@ snd_kcontrol_new_t pmic_control_pb_vol __devinitdata = {
 	.private_value = 0xffab1,
 };
 
-snd_kcontrol_new_t pmic_control_pb_bal __devinitdata = {
+struct snd_kcontrol_new pmic_control_pb_bal __devinitdata = {
 	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 	.name = "Master Balance Playback Volume",
 	.index = 0x00,
@@ -280,7 +280,7 @@ snd_kcontrol_new_t pmic_control_pb_bal __devinitdata = {
 	.put = pmic_pb_balance_put,
 	.private_value = 0xffab2,
 };
-snd_kcontrol_new_t pmic_control_pb_monoconfig __devinitdata = {
+struct snd_kcontrol_new pmic_control_pb_monoconfig __devinitdata = {
 	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 	.name = "Master Monoconfig Playback Volume",
 	.index = 0x00,
@@ -289,7 +289,7 @@ snd_kcontrol_new_t pmic_control_pb_monoconfig __devinitdata = {
 	.put = pmic_pb_monoconfig_put,
 	.private_value = 0xffab2,
 };
-snd_kcontrol_new_t pmic_control_op_sw __devinitdata = {
+struct snd_kcontrol_new pmic_control_op_sw __devinitdata = {
 	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 	.name = "Master Output Playback Volume",
 	.index = 0x00,
@@ -299,7 +299,7 @@ snd_kcontrol_new_t pmic_control_op_sw __devinitdata = {
 	.private_value = 0xffab4,
 };
 
-snd_kcontrol_new_t pmic_control_cap_vol __devinitdata = {
+struct snd_kcontrol_new pmic_control_cap_vol __devinitdata = {
 	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 	.name = "Master Capture Volume",
 	.index = 0x00,
@@ -308,7 +308,7 @@ snd_kcontrol_new_t pmic_control_cap_vol __devinitdata = {
 	.put = pmic_cap_volume_put,
 	.private_value = 0xffab5,
 };
-snd_kcontrol_new_t pmic_control_ip_sw __devinitdata = {
+struct snd_kcontrol_new pmic_control_ip_sw __devinitdata = {
 	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 	.name = "Master Input Capture Volume",
 	.index = 0x00,
@@ -326,7 +326,7 @@ snd_kcontrol_new_t pmic_control_ip_sw __devinitdata = {
   *
   * @return              0 on success, -ve otherwise.
   */
-int mxc_alsa_create_ctl(snd_card_t * card, void *p_value)
+int mxc_alsa_create_ctl(struct snd_card *card, void *p_value)
 {
 	int err = 0;
 

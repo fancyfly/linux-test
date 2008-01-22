@@ -37,8 +37,8 @@
 #include <linux/err.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
-#include <linux/usb_otg.h>
 #include <linux/fsl_devices.h>
+#include <linux/usb/otg.h>
 #include <linux/usb/fsl_xcvr.h>
 #include <asm/arch/arc_otg.h>
 

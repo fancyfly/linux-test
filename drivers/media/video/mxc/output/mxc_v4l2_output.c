@@ -297,8 +297,7 @@ static void mxc_v4l2out_timer_handler(unsigned long arg)
 	spin_unlock_irqrestore(&g_lock, lock_flags);
 }
 
-static irqreturn_t mxc_v4l2out_pp_in_irq_handler(int irq, void *dev_id,
-						 struct pt_regs *regs)
+static irqreturn_t mxc_v4l2out_pp_in_irq_handler(int irq, void *dev_id)
 {
 	int last_buf;
 	int index;
@@ -879,8 +878,14 @@ static int mxc_v4l2out_s_fmt(vout_data * vout, struct v4l2_format *f)
 	}
 
 	vout->v2f.fmt.pix = f->fmt.pix;
-	copy_from_user(&vout->offset, (void *)vout->v2f.fmt.pix.priv,
-		       sizeof(vout->offset));
+	if (vout->v2f.fmt.pix.priv != 0) {
+		if (copy_from_user(&vout->offset,
+				   (void *)vout->v2f.fmt.pix.priv,
+				   sizeof(vout->offset))) {
+			retval = -EFAULT;
+			goto err0;
+		}
+	}
 
 	retval = 0;
       err0:
@@ -1222,7 +1227,7 @@ mxc_v4l2out_do_ioctl(struct inode *inode, struct file *file,
 				}
 				vout->output_timer.expires = timeout;
 				dev_dbg(vdev->dev,
-					"QBUF: frame #%u timeout @ %u jiffies, current = %u\n",
+					"QBUF: frame #%u timeout @ %lu jiffies, current = %lu\n",
 					vout->frame_count, timeout, jiffies);
 				add_timer(&vout->output_timer);
 				vout->state = STATE_STREAM_ON;
@@ -1460,7 +1465,7 @@ static int mxc_v4l2out_mmap(struct file *file, struct vm_area_struct *vma)
 	int res = 0;
 	vout_data *vout = video_get_drvdata(vdev);
 
-	dev_dbg(vdev->dev, "pgoff=0x%x, start=0x%x, end=0x%x\n",
+	dev_dbg(vdev->dev, "pgoff=0x%lx, start=0x%lx, end=0x%lx\n",
 		vma->vm_pgoff, vma->vm_start, vma->vm_end);
 
 	/* make this _really_ smp-safe */
@@ -1676,7 +1681,7 @@ static void mxc_v4l2out_clean(void)
 module_init(mxc_v4l2out_init);
 module_exit(mxc_v4l2out_clean);
 
-module_param(video_nr, int, -1);
+module_param(video_nr, int, 0444);
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("V4L2-driver for MXC video output");
 MODULE_LICENSE("GPL");

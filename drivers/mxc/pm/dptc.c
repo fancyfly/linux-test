@@ -69,7 +69,7 @@
  */
 static dvfs_dptc_params_s *dvfs_dptc_params;
 
-static struct work_struct dptc_work;
+static struct delayed_work dptc_work;
 
 #ifndef CONFIG_MXC_DVFS_SDMA
 static unsigned long ptvai;
@@ -286,19 +286,19 @@ int disable_ref_circuits(dvfs_dptc_params_s * params, unsigned char rc_state)
 	return ret_val;
 }
 
-static void dptc_workqueue_handler(void *arg)
+static void dptc_workqueue_handler(struct work_struct *work)
 {
 	dvfs_dptc_params_s *params;
 
-	params = (dvfs_dptc_params_s *) arg;
+	params = (dvfs_dptc_params_s *) work_data_bits(work);
 
-	pr_debug("In %s: PTVAI = %d\n", __FUNCTION__, dptc_get_ptvai());
-	pr_debug("PMCR0 = 0x%x ", mxc_ccm_get_reg(MXC_CCM_PMCR0));
-	pr_debug("DCVR0 = 0x%x ", mxc_ccm_get_reg(MXC_CCM_DCVR0));
-	pr_debug("DCVR1 = 0x%x ", mxc_ccm_get_reg(MXC_CCM_DCVR1));
-	pr_debug("DCVR2 = 0x%x ", mxc_ccm_get_reg(MXC_CCM_DCVR2));
-	pr_debug("DCVR3 = 0x%x ", mxc_ccm_get_reg(MXC_CCM_DCVR3));
-	pr_debug("PTVAI = 0x%x\n", ptvai);
+	pr_debug("In %s: PTVAI = %lu\n", __FUNCTION__, dptc_get_ptvai());
+	pr_debug("PMCR0 = 0x%lx ", mxc_ccm_get_reg(MXC_CCM_PMCR0));
+	pr_debug("DCVR0 = 0x%lx ", mxc_ccm_get_reg(MXC_CCM_DCVR0));
+	pr_debug("DCVR1 = 0x%lx ", mxc_ccm_get_reg(MXC_CCM_DCVR1));
+	pr_debug("DCVR2 = 0x%lx ", mxc_ccm_get_reg(MXC_CCM_DCVR2));
+	pr_debug("DCVR3 = 0x%lx ", mxc_ccm_get_reg(MXC_CCM_DCVR3));
+	pr_debug("PTVAI = 0x%lx\n", ptvai);
 
 	if ((params->suspended == 0 && params->turbo_mode_active == 1)
 	    || !(cpu_is_mxc91321())) {
@@ -355,12 +355,10 @@ void dptc_irq(void)
 #ifndef CONFIG_MXC_DVFS_SDMA
 	ptvai = dptc_get_ptvai();
 
-	pr_debug("ptvai = 0x%x (0x%x)!!!!!!!\n", ptvai,
+	pr_debug("ptvai = 0x%lx (0x%x)!!!!!!!\n", ptvai,
 		 __raw_readl(MXC_CCM_PMCR0));
 #ifdef CONFIG_ARCH_MXC91321
-	pr_debug("REF CIRCUIT: %d\n",
-		 ((mxc_ccm_get_reg(MXC_CCM_DPTCDBG) & MXC_CCM_DPTCDBG_RCCR_MASK)
-		  >> MXC_CCM_DPTCDBG_RCCR_OFFSET));
+	pr_debug("REF CIRCUIT: %lu\n", mxc_ccm_get_reg(MXC_CCM_DPTCDBG));
 #endif
 	if (ptvai != 0) {
 		dptc_mask_dptc_int();
@@ -410,7 +408,7 @@ void set_pmic_voltage(dvfs_dptc_tables_s * dvfs_dptc_tables_ptr, int wp)
 #endif
 
 	if (cpu_is_mx31()) {
-		pr_debug("DPVV = 0x%x (0x%x)\n",
+		pr_debug("DPVV = 0x%lx (0x%lx)\n",
 			 mxc_ccm_get_reg(MXC_CCM_PMCR0) & MXC_CCM_PMCR0_DPVV,
 			 mxc_ccm_get_reg(MXC_CCM_PMCR0));
 	}
@@ -866,7 +864,7 @@ int __init init_dptc_controller(dvfs_dptc_params_s * params)
 {
 	dvfs_dptc_params = params;
 
-	INIT_WORK(&dptc_work, dptc_workqueue_handler, params);
+	INIT_DELAYED_WORK(&dptc_work, dptc_workqueue_handler);
 
 	if (create_proc_read_entry(PROC_NODE_NAME, 0,
 				   NULL, read_log, params) == NULL) {

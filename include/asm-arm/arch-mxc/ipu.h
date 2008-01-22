@@ -699,7 +699,7 @@ void ipu_enable_irq(uint32_t irq);
 void ipu_disable_irq(uint32_t irq);
 void ipu_clear_irq(uint32_t irq);
 int ipu_request_irq(uint32_t irq,
-		    irqreturn_t(*handler) (int, void *, struct pt_regs *),
+		    irqreturn_t(*handler) (int, void *),
 		    uint32_t irq_flags, const char *devname, void *dev_id);
 void ipu_free_irq(uint32_t irq, void *dev_id);
 bool ipu_get_irq_status(uint32_t irq);
@@ -809,7 +809,7 @@ typedef struct _ipu_channel_info {
 
 typedef struct ipu_irq_info {
 	uint32_t irq;
-	 irqreturn_t(*handler) (int, void *, struct pt_regs *);
+	 irqreturn_t(*handler) (int, void *);
 	uint32_t irq_flags;
 	char *devname;
 	void *dev_id;
@@ -926,40 +926,40 @@ typedef struct _ipu_event_info {
 
 /* IOCTL commands */
 
-#define IPU_INIT_CHANNEL              _IOW('I',0xA,ipu_channel_parm)
-#define IPU_UNINIT_CHANNEL            _IOW('I',0x1,ipu_channel_t)
-#define IPU_INIT_CHANNEL_BUFFER       _IOW('I',0x1,ipu_channel_buf_parm)
-#define IPU_UPDATE_CHANNEL_BUFFER     _IOW('I',0x5,ipu_channel_buf_parm)
-#define IPU_SELECT_CHANNEL_BUFFER     _IOW('I',0x9,ipu_channel_buf_parm)
-#define IPU_LINK_CHANNELS             _IOW('I',0x11,ipu_channel_link)
-#define IPU_UNLINK_CHANNELS           _IOW('I',0x9,ipu_channel_link)
-#define IPU_ENABLE_CHANNEL            _IOW('I',0x2,ipu_channel_t)
-#define IPU_DISABLE_CHANNEL           _IOW('I',0x3,ipu_channel_info)
-#define IPU_ENABLE_IRQ                _IOW('I',0x5,int)
-#define IPU_DISABLE_IRQ               _IOW('I',0x6,int)
-#define IPU_CLEAR_IRQ                 _IOW('I',0x7,int)
-#define IPU_FREE_IRQ                  _IOW('I',0x1,ipu_irq_info)
-#define IPU_REQUEST_IRQ_STATUS        _IOW('I',0x8,int)
-#define IPU_SDC_INIT_PANEL            _IOW('I',0x1,ipu_sdc_panel_info)
-#define IPU_SDC_SET_WIN_POS           _IOW('I',0x5,ipu_sdc_window_pos)
-#define IPU_SDC_SET_GLOBAL_ALPHA      _IOW('I',0x6,ipu_sdc_global_alpha)
-#define IPU_SDC_SET_COLOR_KEY         _IOW('I',0x1,ipu_sdc_color_key)
-#define IPU_SDC_SET_BRIGHTNESS        _IOW('I',0x9,int)
-#define IPU_ADC_WRITE_TEMPLATE        _IOW('I',0x3,ipu_adc_template)
-#define IPU_ADC_UPDATE                _IOW('I',0x3,ipu_adc_update)
-#define IPU_ADC_SNOOP                 _IOW('I',0x2,ipu_adc_snoop)
-#define IPU_ADC_CMD                   _IOW('I',0x2,ipu_adc_cmd)
-#define IPU_ADC_INIT_PANEL            _IOW('I',0x3,ipu_adc_panel)
-#define IPU_ADC_IFC_TIMING            _IOW('I',0x1,ipu_adc_ifc_timing)
-#define IPU_CSI_INIT_INTERFACE        _IOW('I',0x2,ipu_csi_interface)
-#define IPU_CSI_ENABLE_MCLK           _IOW('I',0x4,ipu_csi_mclk)
-#define IPU_CSI_READ_MCLK_FLAG        _IOR('I',0x1,ipu_csi_mclk)
-#define IPU_CSI_FLASH_STROBE          _IOW('I',0x5,ipu_csi_mclk)
-#define IPU_CSI_GET_WIN_SIZE          _IOR('I',0x3,ipu_csi_window_size)
-#define IPU_CSI_SET_WIN_SIZE          _IOW('I',0x1,ipu_csi_window_size)
-#define IPU_CSI_SET_WINDOW            _IOW('I',0x7,ipu_csi_window)
-#define IPU_PF_SET_PAUSE_ROW          _IOW('I',0xB, uint32_t)
-#define IPU_REGISTER_GENERIC_ISR      _IOW('I',0x4,ipu_event_info)
-#define IPU_GET_EVENT                 _IOR('I',0x1,ipu_event_info)
+#define IPU_INIT_CHANNEL              _IOW('I',0x1,ipu_channel_parm)
+#define IPU_UNINIT_CHANNEL            _IOW('I',0x2,ipu_channel_t)
+#define IPU_INIT_CHANNEL_BUFFER       _IOW('I',0x3,ipu_channel_buf_parm)
+#define IPU_UPDATE_CHANNEL_BUFFER     _IOW('I',0x4,ipu_channel_buf_parm)
+#define IPU_SELECT_CHANNEL_BUFFER     _IOW('I',0x5,ipu_channel_buf_parm)
+#define IPU_LINK_CHANNELS             _IOW('I',0x6,ipu_channel_link)
+#define IPU_UNLINK_CHANNELS           _IOW('I',0x7,ipu_channel_link)
+#define IPU_ENABLE_CHANNEL            _IOW('I',0x8,ipu_channel_t)
+#define IPU_DISABLE_CHANNEL           _IOW('I',0x9,ipu_channel_info)
+#define IPU_ENABLE_IRQ                _IOW('I',0xA,int)
+#define IPU_DISABLE_IRQ               _IOW('I',0xB,int)
+#define IPU_CLEAR_IRQ                 _IOW('I',0xC,int)
+#define IPU_FREE_IRQ                  _IOW('I',0xD,ipu_irq_info)
+#define IPU_REQUEST_IRQ_STATUS        _IOW('I',0xE,int)
+#define IPU_SDC_INIT_PANEL            _IOW('I',0xF,ipu_sdc_panel_info)
+#define IPU_SDC_SET_WIN_POS           _IOW('I',0x10,ipu_sdc_window_pos)
+#define IPU_SDC_SET_GLOBAL_ALPHA      _IOW('I',0x11,ipu_sdc_global_alpha)
+#define IPU_SDC_SET_COLOR_KEY         _IOW('I',0x12,ipu_sdc_color_key)
+#define IPU_SDC_SET_BRIGHTNESS        _IOW('I',0x13,int)
+#define IPU_ADC_WRITE_TEMPLATE        _IOW('I',0x14,ipu_adc_template)
+#define IPU_ADC_UPDATE                _IOW('I',0x15,ipu_adc_update)
+#define IPU_ADC_SNOOP                 _IOW('I',0x16,ipu_adc_snoop)
+#define IPU_ADC_CMD                   _IOW('I',0x17,ipu_adc_cmd)
+#define IPU_ADC_INIT_PANEL            _IOW('I',0x18,ipu_adc_panel)
+#define IPU_ADC_IFC_TIMING            _IOW('I',0x19,ipu_adc_ifc_timing)
+#define IPU_CSI_INIT_INTERFACE        _IOW('I',0x1A,ipu_csi_interface)
+#define IPU_CSI_ENABLE_MCLK           _IOW('I',0x1B,ipu_csi_mclk)
+#define IPU_CSI_READ_MCLK_FLAG        _IOR('I',0x1C,ipu_csi_mclk)
+#define IPU_CSI_FLASH_STROBE          _IOW('I',0x1D,ipu_csi_mclk)
+#define IPU_CSI_GET_WIN_SIZE          _IOR('I',0x1E,ipu_csi_window_size)
+#define IPU_CSI_SET_WIN_SIZE          _IOW('I',0x1F,ipu_csi_window_size)
+#define IPU_CSI_SET_WINDOW            _IOW('I',0x20,ipu_csi_window)
+#define IPU_PF_SET_PAUSE_ROW          _IOW('I',0x21, uint32_t)
+#define IPU_REGISTER_GENERIC_ISR      _IOW('I',0x22,ipu_event_info)
+#define IPU_GET_EVENT                 _IOR('I',0x23,ipu_event_info)
 
 #endif

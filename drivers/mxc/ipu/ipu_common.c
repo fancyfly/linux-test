@@ -39,7 +39,7 @@
  * associated with the ISR and the actual ISR function pointer.
  */
 struct ipu_irq_node {
-	irqreturn_t(*handler) (int, void *, struct pt_regs *);	/*!< the ISR */
+	irqreturn_t(*handler) (int, void *);	/*!< the ISR */
 	const char *name;	/*!< device associated with the interrupt */
 	void *dev_id;		/*!< some unique information for the ISR */
 	__u32 flags;		/*!< not used */
@@ -64,7 +64,7 @@ static uint32_t g_channel_init_mask_backup = 0;
 static bool g_csi_used = false;
 
 /* Static functions */
-static irqreturn_t ipu_irq_handler(int irq, void *desc, struct pt_regs *regs);
+static irqreturn_t ipu_irq_handler(int irq, void *desc);
 static void _ipu_pf_init(ipu_channel_params_t * params);
 static void _ipu_pf_uninit(void);
 
@@ -121,7 +121,7 @@ int ipu_probe(struct platform_device *pdev)
 	/* Enable IPU and CSI clocks */
 	/* Get IPU clock freq */
 	g_ipu_clk = clk_get(&pdev->dev, "ipu_clk");
-	dev_dbg(g_ipu_dev, "ipu_clk = %d\n", clk_get_rate(g_ipu_clk));
+	dev_dbg(g_ipu_dev, "ipu_clk = %lu\n", clk_get_rate(g_ipu_clk));
 
 	g_ipu_csi_clk = clk_get(&pdev->dev, "csi_clk");
 
@@ -1214,7 +1214,7 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 }
 
 static
-irqreturn_t ipu_irq_handler(int irq, void *desc, struct pt_regs *regs)
+irqreturn_t ipu_irq_handler(int irq, void *desc)
 {
 	uint32_t line_base = 0;
 	uint32_t line;
@@ -1233,8 +1233,7 @@ irqreturn_t ipu_irq_handler(int irq, void *desc, struct pt_regs *regs)
 		int_stat &= ~(1UL << (line - 1));
 		line += line_base - 1;
 		result |=
-		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id,
-					       regs);
+		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id);
 	}
 
 	line_base = 32;
@@ -1245,8 +1244,7 @@ irqreturn_t ipu_irq_handler(int irq, void *desc, struct pt_regs *regs)
 		int_stat &= ~(1UL << (line - 1));
 		line += line_base - 1;
 		result |=
-		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id,
-					       regs);
+		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id);
 	}
 
 	line_base = 64;
@@ -1257,8 +1255,7 @@ irqreturn_t ipu_irq_handler(int irq, void *desc, struct pt_regs *regs)
 		int_stat &= ~(1UL << (line - 1));
 		line += line_base - 1;
 		result |=
-		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id,
-					       regs);
+		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id);
 	}
 
 	line_base = 96;
@@ -1269,8 +1266,7 @@ irqreturn_t ipu_irq_handler(int irq, void *desc, struct pt_regs *regs)
 		int_stat &= ~(1UL << (line - 1));
 		line += line_base - 1;
 		result |=
-		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id,
-					       regs);
+		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id);
 	}
 
 	line_base = 128;
@@ -1281,8 +1277,7 @@ irqreturn_t ipu_irq_handler(int irq, void *desc, struct pt_regs *regs)
 		int_stat &= ~(1UL << (line - 1));
 		line += line_base - 1;
 		result |=
-		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id,
-					       regs);
+		    ipu_irq_list[line].handler(line, ipu_irq_list[line].dev_id);
 	}
 
 	if (g_ipu_irq[1]) {
@@ -1386,7 +1381,7 @@ bool ipu_get_irq_status(uint32_t irq)
  *              fail.
  */
 int ipu_request_irq(uint32_t irq,
-		    irqreturn_t(*handler) (int, void *, struct pt_regs *),
+		    irqreturn_t(*handler) (int, void *),
 		    uint32_t irq_flags, const char *devname, void *dev_id)
 {
 	unsigned long lock_flags;

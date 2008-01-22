@@ -65,7 +65,7 @@ int register_ipu_device(void);
 
 int get_events(event_type * p)
 {
-	unsigned int flags;
+	unsigned long flags;
 	int ret = 0;
 	spin_lock_irqsave(&queue_lock, flags);
 	if (pending_events != 0) {
@@ -82,8 +82,7 @@ int get_events(event_type * p)
 	return ret;
 }
 
-static irqreturn_t mxc_ipu_generic_handler(int irq, void *dev_id,
-					   struct pt_regs *regs)
+static irqreturn_t mxc_ipu_generic_handler(int irq, void *dev_id)
 {
 	event_type e;
 	e.irq = irq;
@@ -380,19 +379,17 @@ static int mxc_ipu_ioctl(struct inode *inode, struct file *file,
 			event_type ev;
 			int r = -1;
 			r = get_events(&ev);
-			if (-1 != r) {
-
-			} else {
+			if (r == -1) {
 				wait_event_interruptible(waitq,
 							 (pending_events != 0));
 				r = get_events(&ev);
 			}
+			ret = -1;
 			if (r == 0) {
-				ret = 0;
-				copy_to_user((event_type *) arg, &ev,
-					     sizeof(event_type));
-			} else {
-				ret = -1;
+				if (!copy_to_user((event_type *) arg, &ev,
+						  sizeof(event_type))) {
+					ret = 0;
+				}
 			}
 		}
 		break;

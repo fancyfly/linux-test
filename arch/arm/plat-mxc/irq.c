@@ -178,7 +178,7 @@ static int mxc_set_wake_irq(unsigned int irq, unsigned int enable)
 	return 0;
 }
 
-static struct irqchip mxc_avic_chip = {
+static struct irq_chip mxc_avic_chip = {
 	.name = "MXC_AVIC",
 	.ack = mxc_mask_irq,
 	.mask = mxc_mask_irq,
@@ -215,26 +215,26 @@ static int mxc_edio_set_type(u32 irq, u32 type)
 	switch (type) {
 	case IRQT_RISING:
 		mxc_irq_set_edio_level(irq, 1);
-		set_irq_handler(irq, do_edge_IRQ);
+		set_irq_handler(irq, handle_edge_irq);
 		break;
 	case IRQT_FALLING:
 		mxc_irq_set_edio_level(irq, 2);
-		set_irq_handler(irq, do_edge_IRQ);
+		set_irq_handler(irq, handle_edge_irq);
 		break;
 	case IRQT_BOTHEDGE:
 		mxc_irq_set_edio_level(irq, 3);
-		set_irq_handler(irq, do_edge_IRQ);
+		set_irq_handler(irq, handle_edge_irq);
 		break;
 	case IRQT_LOW:
 		mxc_irq_set_edio_level(irq, 0);
-		set_irq_handler(irq, do_level_IRQ);
+		set_irq_handler(irq, handle_level_irq);
 		break;
 	case IRQT_HIGH:
 		/* EDIO doesn't really support high-level interrupts,
 		 * so we're faking it
 		 */
 		mxc_irq_set_edio_level(irq, 1);
-		set_irq_handler(irq, do_level_IRQ);
+		set_irq_handler(irq, handle_level_irq);
 		break;
 	default:
 		return -EINVAL;
@@ -243,7 +243,7 @@ static int mxc_edio_set_type(u32 irq, u32 type)
 	return 0;
 }
 
-static struct irqchip mxc_edio_chip = {
+static struct irq_chip mxc_edio_chip = {
 	.name = "MXC_EDIO",
 	.ack = mxc_ack_edio,
 	.mask = mxc_mask_irq,
@@ -365,7 +365,7 @@ void __init mxc_init_irq(void)
 		{
 			set_irq_chip(i, &mxc_avic_chip);
 		}
-		set_irq_handler(i, do_level_IRQ);
+		set_irq_handler(i, handle_level_irq);
 		set_irq_flags(i, IRQF_VALID);
 	}
 

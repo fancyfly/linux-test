@@ -292,7 +292,7 @@ void mxc_ocd_init(struct otg_instance *otg, u8 flag)
 struct ocd_ops ocd_ops;
 
 extern irqreturn_t mxc_pcd_int_hndlr (void);
-extern irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id, struct pt_regs *regs);
+extern irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id);
 
 extern void mxc_func_clock_on(void);
 extern void mxc_func_clock_off(void);
@@ -301,7 +301,7 @@ extern void mxc_main_clock_off(void);
 extern void mxc_set_hw_mode(int);
 
 #if defined(CONFIG_OTG_USB_PERIPHERAL) || defined(CONFIG_OTG_BDEVICE_WITH_SRP)
-irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id)
 {
         return IRQ_HANDLED;
 }
@@ -313,9 +313,8 @@ irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id, struct pt_regs *regs)
  * ocd_hnp_int_hndlr() - HNP interrupt handler
  * @param irq
  * @param dev_id
- * @param regs
  */
-irqreturn_t ocd_hnp_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t ocd_hnp_int_hndlr (int irq, void *dev_id)
 {
         u32 hint_stat = fs_rl(OTG_CORE_HINT_STAT);
         u32 hnp_cstat = fs_rl(OTG_CORE_HNP_CSTAT);
@@ -333,9 +332,8 @@ irqreturn_t ocd_hnp_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
  * pcd_bwkup_int_hndlr() - wakeup interrupt
  * @param irq
  * @param dev_id
- * @param regs
  */
-static irqreturn_t pcd_bwkup_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t pcd_bwkup_int_hndlr (int irq, void *dev_id)
 {
         u32 sys_ctrl = fs_rl(OTG_SYS_CTRL);
         //static int bwkup_count = 0;
@@ -357,9 +355,8 @@ static irqreturn_t pcd_bwkup_int_hndlr (int irq, void *dev_id, struct pt_regs *r
  * ocd_dma_int_hndlr() - DMA interrupt
  * @param irq
  * @param dev_id
- * @param regs
  */
-static irqreturn_t ocd_dma_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t ocd_dma_int_hndlr (int irq, void *dev_id)
 {
         u32 dint_stat = fs_rl(OTG_DMA_DINT_STAT);
         u32 etd_err = fs_rl(OTG_DMA_ETD_ERR);
@@ -390,14 +387,13 @@ static irqreturn_t ocd_dma_int_hndlr (int irq, void *dev_id, struct pt_regs *reg
  * hcd_host_int_hndlr() - Host interrupt
  * @param irq
  * @param dev_id
- * @param regs
  */
-static irqreturn_t hcd_host_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t hcd_host_int_hndlr (int irq, void *dev_id)
 {
         u32 sint_stat = fs_rl(OTG_HOST_SINT_STAT);
         static u32 hcd_interrupts = 0;
         //printk(KERN_INFO"%s: %d\n", __FUNCTION__, hcd_interrupts++);
-        mxc_hcd_hw_int_hndlr(irq, NULL, regs);
+        mxc_hcd_hw_int_hndlr(irq, NULL);
         return IRQ_HANDLED;
 }
 
@@ -406,9 +402,8 @@ static irqreturn_t hcd_host_int_hndlr (int irq, void *dev_id, struct pt_regs *re
  * Process USBOTG related interrupts.
  * @param irq
  * @param dev_id
- * @param regs
  */
-static irqreturn_t ocd_ctrl_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t ocd_ctrl_int_hndlr (int irq, void *dev_id)
 {
         u32 sys_ctrl = fs_rl(OTG_SYS_CTRL);            // C.f. 23.8 USB Control Register
         u32 cint_stat = fs_rl(OTG_CORE_CINT_STAT);     // C.f. 23.9.2 USBOTG Module Interrupt Status Register
@@ -451,7 +446,7 @@ static irqreturn_t ocd_ctrl_int_hndlr (int irq, void *dev_id, struct pt_regs *re
 
                 //fs_wl_set(OCD, OTG_CORE_HINT_STAT, hint_stat);
                 fs_wl(OTG_CORE_HINT_STAT, hint_stat);
-                ocd_hnp_int_hndlr(irq, dev_id, regs);
+                ocd_hnp_int_hndlr(irq, dev_id);
         }
         if (cint_stat & MODULE_ASFCINT) {                               // Asynchronous Function interrupt, enable Func clock
                 //TRACE_MSG1(OCD, "MODULE_ASFCINT %08x", cint_stat);
@@ -465,14 +460,14 @@ static irqreturn_t ocd_ctrl_int_hndlr (int irq, void *dev_id, struct pt_regs *re
         }
 
         if ((cint_stat & MODULE_HNPINT) || hint_stat)                                  // HNP interrupt
-                ocd_hnp_int_hndlr(irq, dev_id, regs);
+                ocd_hnp_int_hndlr(irq, dev_id);
 
         if (cint_stat & MODULE_FCINT)
                 mxc_pcd_int_hndlr();
 
         if (cint_stat & MODULE_HCINT) {
                 //TRACE_MSG1(OCD, "MODULE_HCINT %08x", cint_stat);
-                mxc_hcd_hw_int_hndlr(irq, NULL, regs);
+                mxc_hcd_hw_int_hndlr(irq, NULL);
         }
 
         return IRQ_HANDLED;
@@ -483,37 +478,34 @@ static irqreturn_t ocd_ctrl_int_hndlr (int irq, void *dev_id, struct pt_regs *re
  * pcd_bwkup_int_hndlr_isr() - main bwkkup interrupt handler
  * @param irq
  * @param dev_id
- * @param regs
  */
-irqreturn_t pcd_bwkup_int_hndlr_isr (int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t pcd_bwkup_int_hndlr_isr (int irq, void *dev_id)
 {
         //pcd_instance->otg->interrupts++;
         //TRACE_MSG0(OCD, "--");
         //printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return pcd_bwkup_int_hndlr (irq, dev_id, regs);
+        return pcd_bwkup_int_hndlr (irq, dev_id);
 }
 
 /*!
  * ocd_hnp_int_hndlr_isr() - main ocd hnp interrupt handler
  * @param irq
  * @param dev_id
- * @param regs
  */
-irqreturn_t ocd_hnp_int_hndlr_isr (int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t ocd_hnp_int_hndlr_isr (int irq, void *dev_id)
 {
         //pcd_instance->otg->interrupts++;
         //TRACE_MSG0(OCD, "--");
         //printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return ocd_hnp_int_hndlr (irq, dev_id, regs);
+        return ocd_hnp_int_hndlr (irq, dev_id);
 }
 
 /*!
  * pcd_func_int_hndlr_isr() - main pcd function interrupt handler
  * @param irq
  * @param dev_id
- * @param regs
  */
-irqreturn_t pcd_func_int_hndlr_isr (int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t pcd_func_int_hndlr_isr (int irq, void *dev_id)
 {
         //pcd_instance->otg->interrupts++;
         //TRACE_MSG0(OCD, "--");
@@ -527,41 +519,38 @@ irqreturn_t pcd_func_int_hndlr_isr (int irq, void *dev_id, struct pt_regs *regs)
  * hcd_host_int_hndlr_isr() - main hcd host interrupt handler
  * @param irq
  * @param dev_id
- * @param regs
  */
-irqreturn_t hcd_host_int_hndlr_isr (int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t hcd_host_int_hndlr_isr (int irq, void *dev_id)
 {
         //pcd_instance->otg->interrupts++;
         //TRACE_MSG0(OCD, "--");
         //printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return hcd_host_int_hndlr (irq, dev_id, regs);
+        return hcd_host_int_hndlr (irq, dev_id);
 }
 
 /*!
  * ocd_ctrl_hndlr_isr() - main ocd controller interrupt handler
  * @param irq
  * @param dev_id
- * @param regs
  */
-irqreturn_t ocd_ctrl_int_hndlr_isr (int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t ocd_ctrl_int_hndlr_isr (int irq, void *dev_id)
 {
         //pcd_instance->otg->interrupts++;
         //TRACE_MSG0(OCD, "--");
         //printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return ocd_ctrl_int_hndlr (irq, dev_id, regs);
+        return ocd_ctrl_int_hndlr (irq, dev_id);
 }
 
 /*!
  * ocd_dma_int_hndlr_isr() - main dma interrupt handler
  * @param irq
  * @param dev_id
- * @param regs
  */
-irqreturn_t ocd_dma_int_hndlr_isr (int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t ocd_dma_int_hndlr_isr (int irq, void *dev_id)
 {
         //pcd_instance->otg->interrupts++;
         //TRACE_MSG0(OCD, "--");
-        return ocd_dma_int_hndlr (irq, dev_id, regs);
+        return ocd_dma_int_hndlr (irq, dev_id);
 }
 
 /* ********************************************************************************************* */

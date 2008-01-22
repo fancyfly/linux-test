@@ -59,8 +59,7 @@ static struct class *mxc_pf_class;
  * Function definitions
  */
 
-static irqreturn_t mxc_pf_irq_handler(int irq, void *dev_id,
-				      struct pt_regs *regs)
+static irqreturn_t mxc_pf_irq_handler(int irq, void *dev_id)
 {
 	struct mxc_pf_data *pf = dev_id;
 
@@ -775,8 +774,8 @@ static int mxc_pf_ioctl(struct inode *inode, struct file *filp,
 							       wait_mask),
 							      1 * HZ)) {
 				pr_debug
-				    ("PF_IOCTL_WAIT: timeout, done_flag = %d\n",
-				     pf_data.done_flag);
+				    ("PF_IOCTL_WAIT: timeout, done_mask = %d\n",
+				     pf_data.done_mask);
 				retval = -ETIME;
 				break;
 			} else if (signal_pending(current)) {
@@ -842,7 +841,7 @@ static int mxc_pf_mmap(struct file *file, struct vm_area_struct *vma)
 	unsigned long size = vma->vm_end - vma->vm_start;
 	int res = 0;
 
-	pr_debug("pgoff=0x%x, start=0x%x, end=0x%x\n",
+	pr_debug("pgoff=0x%lx, start=0x%lx, end=0x%lx\n",
 		 vma->vm_pgoff, vma->vm_start, vma->vm_end);
 
 	/* make this _really_ smp-safe */
@@ -886,7 +885,7 @@ int mxc_pf_fsync(struct file *filp, struct dentry *dentry, int datasync)
 {
 	if (pf_data.buffer_dirty) {
 		flush_cache_all();
-		l2_flush_all();
+//              l2_flush_all();
 	}
 	pf_data.buffer_dirty = false;
 

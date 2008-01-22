@@ -23,7 +23,6 @@
 #include <linux/module.h>
 #endif
 #include <linux/delay.h>
-#include <linux/config.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/list.h>

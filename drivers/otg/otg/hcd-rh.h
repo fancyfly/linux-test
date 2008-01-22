@@ -63,6 +63,6 @@ extern void hcd_rh_exit(struct bus_hcpriv *bus_hcpriv);
  * For the hardware specific root hub component.
  *===========================================================================*/
 
-extern irqreturn_t hcd_rh_int_hndlr(int irq, void *dev_id, struct pt_regs *regs);
+extern irqreturn_t hcd_rh_int_hndlr(int irq, void *dev_id);
 
 #endif

@@ -161,7 +161,7 @@ static int __init do_dsp_params(char *param, char *val)
  *              Returns 0 if dspboot option = 'off'
  *              Returns 0 if dspboot option does not exist
  */
-int dsp_parse_cmdline(const char *cmdline)
+int __init dsp_parse_cmdline(const char *cmdline)
 {
 	char tmp_cmdline[COMMAND_LINE_SIZE];
 

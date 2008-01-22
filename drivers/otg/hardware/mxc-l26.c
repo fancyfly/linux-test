@@ -40,7 +40,6 @@
  * @ingroup LINUXOS
  */
 
-#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>

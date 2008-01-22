@@ -17,7 +17,7 @@
 #include <linux/clk.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
-#include <asm/hardware.h>
+#include <asm/div64.h>
 
 #include "crm_regs.h"
 

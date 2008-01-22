@@ -454,15 +454,13 @@ static void mxc_mu_gphandler(unsigned long chnum)
  *
  * @param   irq     the interrupt number
  * @param   dev_id  driver private data
- * @param   regs    holds a snapshot of the processor's context before the
- *                  processor entered the interrupt code
  *
  * @return          The function returns \b IRQ_RETVAL(1) if interrupt was
  *                  handled, returns \b IRQ_RETVAL(0) if the interrupt was
  *                  not handled.
  *                  \b IRQ_RETVAL is defined in \b include/linux/interrupt.h.
  */
-static irqreturn_t mxc_mu_mcugphand(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mxc_mu_mcugphand(int irq, void *dev_id)
 {
 	int handled = 0;
 	unsigned int sreg1, sreg2, status = 0;
@@ -500,15 +498,13 @@ static irqreturn_t mxc_mu_mcugphand(int irq, void *dev_id, struct pt_regs *regs)
  *
  * @param   irq     the interrupt number
  * @param   dev_id  driver private data
- * @param   regs    holds a snapshot of the processor's context before the
- *                  processor entered the interrupt code
  *
  * @return          The function returns \b IRQ_RETVAL(1) if interrupt was
  *                  handled, returns \b IRQ_RETVAL(0) if the interrupt was
  *                  not handled.
  *                  \b IRQ_RETVAL is defined in \b include/linux/interrupt.h.
  */
-static irqreturn_t mxc_mu_mcurxhand(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mxc_mu_mcurxhand(int irq, void *dev_id)
 {
 	int handled = 0;
 	unsigned int sreg1, sreg2, control;
@@ -547,15 +543,13 @@ static irqreturn_t mxc_mu_mcurxhand(int irq, void *dev_id, struct pt_regs *regs)
  *
  * @param   irq     the interrupt number
  * @param   dev_id  driver private data
- * @param   regs    holds a snapshot of the processor's context before the
- *                  processor entered the interrupt code
  *
  * @return          The function returns \b IRQ_RETVAL(1) if interrupt was
  *                  handled, returns \b IRQ_RETVAL(0) if the interrupt was
  *                  not handled.
  *                  \b IRQ_RETVAL is defined in \b include/linux/interrupt.h.
  */
-static irqreturn_t mxc_mu_mcutxhand(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mxc_mu_mcutxhand(int irq, void *dev_id)
 {
 	int handled = 0;
 	unsigned int sreg1, sreg2, control;

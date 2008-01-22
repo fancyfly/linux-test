@@ -29,11 +29,12 @@
 /* Note: this file is #included by ehci-hcd.c */
 
 #include <linux/platform_device.h>
-#include <linux/usb_otg.h>
 #include <linux/fsl_devices.h>
+#include <linux/usb/otg.h>
 #include <linux/usb/fsl_xcvr.h>
-#include "ehci-fsl.h"
 #include <asm/arch/fsl_usb.h>
+
+#include "ehci-fsl.h"
 
 #undef dbg
 #undef vdbg
@@ -130,7 +131,7 @@ static int usb_hcd_fsl_probe(const struct hc_driver *driver,
 	 */
 	fsl_platform_set_host_mode(hcd);
 
-	retval = usb_add_hcd(hcd, irq, SA_SHIRQ);
+	retval = usb_add_hcd(hcd, irq, 0);
 	if (retval != 0) {
 		pr_debug("failed with usb_add_hcd\n");
 		goto err2;

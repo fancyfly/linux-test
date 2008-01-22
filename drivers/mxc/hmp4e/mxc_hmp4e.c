@@ -99,7 +99,7 @@ u32 io_regs[64];
 static s32 hmp4e_map_buffer(struct file *filp, struct vm_area_struct *vma);
 static s32 hmp4e_map_hwregs(struct file *filp, struct vm_area_struct *vma);
 static void hmp4e_reset(hmp4e_t * dev);
-irqreturn_t hmp4e_isr(s32 irq, void *dev_id, struct pt_regs *regs);
+irqreturn_t hmp4e_isr(s32 irq, void *dev_id);
 
 /*!
  * This funtion is called to write h/w register.
@@ -479,12 +479,11 @@ static s32 hmp4e_map_hwregs(struct file *filp, struct vm_area_struct *vma)
  *
  * @param   irq		the irq number
  * @param   dev_id	driver data when ISR was regiatered
- * @param   regs	pointer to struct pt_regs
  *
  * @return  The return value is IRQ_HANDLED.
  *
  */
-irqreturn_t hmp4e_isr(s32 irq, void *dev_id, struct pt_regs * regs)
+irqreturn_t hmp4e_isr(s32 irq, void *dev_id)
 {
 	hmp4e_t *dev = (hmp4e_t *) dev_id;
 	u32 offset = dev->intr_offset;

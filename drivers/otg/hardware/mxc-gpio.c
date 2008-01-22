@@ -69,12 +69,11 @@ BOOL zasevb_int_disabled = FALSE;
  * zasevb_gpio_int_hndlr() - gpio interrupt handler
  * @param irq
  * @param dev_id
- * @param regs
  * @return interrupt handler status
  * This disables the gpio interrup and schedules the isp1301 bottom half handler.
  *
  */
-static irqreturn_t zasevb_gpio_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t zasevb_gpio_int_hndlr (int irq, void *dev_id)
 {
         gpio_config_int_en(ZGPIO_PORT, ZGPIO_PIN, FALSE);
         zasevb_int_disabled = TRUE;
@@ -141,7 +140,7 @@ int mxc_iomux_gpio_isp1301_set (struct otg_instance *otg, int usb_mode)
         //Settung interrupt for ISP1301
         gpio_config(ZGPIO_PORT, ZGPIO_PIN, false, GPIO_INT_FALL_EDGE);
         gpio = gpio_request_irq(ZGPIO_PORT, ZGPIO_PIN, GPIO_HIGH_PRIO, zasevb_gpio_int_hndlr,
-                        SA_SHIRQ, "ISP1301", (void *) &ocd_ops);
+                        0, "ISP1301", (void *) &ocd_ops);
         THROW_IF(gpio, error);
         gpio_config_int_en(ZGPIO_PORT, ZGPIO_PIN, TRUE);  // XXX this might not be needed
 

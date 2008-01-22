@@ -21,6 +21,7 @@
 #include <linux/init.h>
 #include <asm/hardware.h>
 #include <asm/io.h>
+#include <asm/hardware/cache-l2x0.h>
 
 /*!
  * CPU initialization. It is called by fixup_mxc_board()
@@ -42,7 +43,14 @@ void __init mxc_cpu_init(void)
  */
 static int __init post_cpu_init(void)
 {
+	void *l2_base;
 	volatile unsigned long aips_reg;
+
+	/* Initialize L2 cache */
+	l2_base = ioremap(L2CC_BASE_ADDR, SZ_4K);
+	if (l2_base) {
+		l2x0_init(l2_base, 0x00030024, 0x00000000);
+	}
 
 	/*
 	 * S/W workaround: Clear the off platform peripheral modules

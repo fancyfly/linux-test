@@ -436,7 +436,7 @@ static spinlock_t lock = SPIN_LOCK_UNLOCKED;
 static DECLARE_MUTEX(mutex);
 
 /* Prototype for the connectivity driver tasklet function. */
-static void pmic_convity_tasklet(void *arg);
+static void pmic_convity_tasklet(struct work_struct *work);
 
 /*!
  * @brief Tasklet handler for the connectivity driver.
@@ -448,7 +448,7 @@ static void pmic_convity_tasklet(void *arg);
  * ADC driver to measure voltages as well as calling any user-registered
  * callback functions.
  */
-DECLARE_WORK(convityTasklet, pmic_convity_tasklet, 0);
+DECLARE_WORK(convityTasklet, pmic_convity_tasklet);
 
 /*!
  * @brief Global variable to track currently active interrupt events.
@@ -2320,7 +2320,7 @@ static void pmic_convity_event_handler(void *param)
  * @param   arg                The parameter that was provided above in
  *                                  the DECLARE_TASKLET() macro (unused).
  */
-static void pmic_convity_tasklet(void *arg)
+static void pmic_convity_tasklet(struct work_struct *work)
 {
 
 	PMIC_CONVITY_EVENTS activeEvents = 0;

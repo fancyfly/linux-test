@@ -27,7 +27,7 @@
 #include <asm/io.h>
 #include "mxc_nd3.h"
 
-#define IS_2K_PAGE_NAND	  (mtd->writesize == NAND_PAGESIZE_2KB)
+#define IS_2K_PAGE_NAND	  (mtd->writesize == 2048)
 
 #define DVR_VER "2.2"
 static void mxc_swap_2k_bi_main_sp(void);
@@ -123,7 +123,7 @@ static const char *part_probes[] = { "cmdlinepart", NULL };
 
 static wait_queue_head_t irq_waitq;
 
-static irqreturn_t mxc_nfc_irq(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t mxc_nfc_irq(int irq, void *dev_id)
 {
 	NFC_CONFIG2 |= NFC_INT_MSK;	/* Disable interrupt */
 	wake_up(&irq_waitq);

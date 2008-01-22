@@ -21,13 +21,6 @@
  */
 
 /*!
- * Define bool type if it is not defined.
- */
-#ifndef bool
-#define bool int
-#endif
-
-/*!
  * @enum PMIC_STATUS
  * @brief Define return values for all PMIC APIs.
  *

@@ -26,6 +26,8 @@
  */
 
 #include "mxc_rtic.h"
+#include <asm/arch/clock.h>
+#include <asm/io.h>
 
 #include <linux/platform_device.h>
 #include <linux/clk.h>

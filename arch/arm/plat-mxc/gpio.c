@@ -320,8 +320,7 @@ void mxc_free_gpio(iomux_pin_name_t pin)
  * line's interrupt handler has been run, we may miss some nested
  * interrupts.
  */
-static void mxc_gpio_irq_handler(u32 irq, struct irq_desc *desc,
-				 struct pt_regs *regs)
+static void mxc_gpio_irq_handler(u32 irq, struct irq_desc *desc)
 {
 	u32 isr_reg = 0, imr_reg = 0, imr_val;
 	u32 int_valid;
@@ -361,13 +360,12 @@ static void mxc_gpio_irq_handler(u32 irq, struct irq_desc *desc,
 			       port->num, gpio_irq);
 			BUG();	/* oops */
 		}
-		d->handle_irq(gpio_irq, d, regs);
+		d->handle_irq(gpio_irq, d);
 	}
 }
 
 #ifdef MXC_MUX_GPIO_INTERRUPTS
-static void mxc_gpio_mux_irq_handler(u32 irq, struct irq_desc *desc,
-				     struct pt_regs *regs)
+static void mxc_gpio_mux_irq_handler(u32 irq, struct irq_desc *desc)
 {
 	int i;
 	u32 isr_reg = 0, imr_reg = 0, imr_val;
@@ -384,7 +382,7 @@ static void mxc_gpio_mux_irq_handler(u32 irq, struct irq_desc *desc,
 
 		if (int_valid) {
 			set_irq_data(irq, (void *)port);
-			mxc_gpio_irq_handler(irq, desc, regs);
+			mxc_gpio_irq_handler(irq, desc);
 		}
 	}
 }
@@ -444,25 +442,25 @@ static int gpio_set_irq_type(u32 irq, u32 type)
 	case IRQT_RISING:
 		_set_gpio_edge_ctrl(port, GPIO_TO_INDEX(gpio),
 				    GPIO_INT_RISE_EDGE);
-		set_irq_handler(irq, do_edge_IRQ);
+		set_irq_handler(irq, handle_edge_irq);
 		port->irq_is_level_map &= ~(1 << GPIO_TO_INDEX(gpio));
 		break;
 	case IRQT_FALLING:
 		_set_gpio_edge_ctrl(port, GPIO_TO_INDEX(gpio),
 				    GPIO_INT_FALL_EDGE);
-		set_irq_handler(irq, do_edge_IRQ);
+		set_irq_handler(irq, handle_edge_irq);
 		port->irq_is_level_map &= ~(1 << GPIO_TO_INDEX(gpio));
 		break;
 	case IRQT_LOW:
 		_set_gpio_edge_ctrl(port, GPIO_TO_INDEX(gpio),
 				    GPIO_INT_LOW_LEV);
-		set_irq_handler(irq, do_level_IRQ);
+		set_irq_handler(irq, handle_level_irq);
 		port->irq_is_level_map |= 1 << GPIO_TO_INDEX(gpio);
 		break;
 	case IRQT_HIGH:
 		_set_gpio_edge_ctrl(port, GPIO_TO_INDEX(gpio),
 				    GPIO_INT_HIGH_LEV);
-		set_irq_handler(irq, do_level_IRQ);
+		set_irq_handler(irq, handle_level_irq);
 		port->irq_is_level_map |= 1 << GPIO_TO_INDEX(gpio);
 		break;
 	case IRQT_BOTHEDGE:
@@ -542,7 +540,7 @@ static int __init _mxc_gpio_init(void)
 		for (j = port->virtual_irq_start;
 		     j < port->virtual_irq_start + gpio_count; j++) {
 			set_irq_chip(j, &gpio_irq_chip);
-			set_irq_handler(j, do_edge_IRQ);
+			set_irq_handler(j, handle_edge_irq);
 			set_irq_flags(j, IRQF_VALID);
 		}
 #ifndef MXC_MUX_GPIO_INTERRUPTS

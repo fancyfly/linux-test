@@ -1076,9 +1076,9 @@ void acm_wait_task(struct usbd_function_instance *function_instance, OLD_WORK_IT
         TRACE_MSG1(TTY,"acm: %x", (int)acm);
         RETURN_UNLESS(acm);
 
-        TRACE_MSG1(TTY,"entered data=%p",queue->data);
-        RETURN_IF(!queue->data);
-        queue->data = NULL;
+        TRACE_MSG1(TTY,"entered data=%p",WORK_DATA(*queue));
+        RETURN_IF(NO_WORK_DATA(*queue));
+        SET_WORK_ARG(*queue, NULL);
 #if defined(LINUX24)
         while (queue->sync) {
                 TRACE_MSG1(TTY,"waiting for queue: %p",queue);

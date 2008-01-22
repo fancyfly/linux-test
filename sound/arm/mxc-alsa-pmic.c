@@ -324,7 +324,7 @@ typedef struct audio_stream {
 	/*!
 	 * Alsa substream pointer
 	 */
-	snd_pcm_substream_t *stream;
+	struct snd_pcm_substream *stream;
 } audio_stream_t;
 
 /*!
@@ -335,12 +335,12 @@ typedef struct snd_card_mxc_pmic_audio {
 	/*!
 	 * ALSA sound card handle
 	 */
-	snd_card_t *card;
+	struct snd_card *card;
 
 	/*!
 	 * ALSA pcm driver type handle
 	 */
-	snd_pcm_t *pcm[MXC_ALSA_MAX_PCM_DEV];
+	struct snd_pcm *pcm[MXC_ALSA_MAX_PCM_DEV];
 
 	/*!
 	 * playback & capture streams handle
@@ -396,7 +396,7 @@ static unsigned int capture_rates[] = {
   * this structure represents the sample rates supported
   * by PMIC for playback operations on StDac.
   */
-static snd_pcm_hw_constraint_list_t hw_playback_rates_stereo = {
+static struct snd_pcm_hw_constraint_list hw_playback_rates_stereo = {
 	.count = ARRAY_SIZE(playback_rates_stereo),
 	.list = playback_rates_stereo,
 	.mask = 0,
@@ -406,7 +406,7 @@ static snd_pcm_hw_constraint_list_t hw_playback_rates_stereo = {
   * this structure represents the sample rates supported
   * by PMIC for playback operations on Voice codec.
   */
-static snd_pcm_hw_constraint_list_t hw_playback_rates_mono = {
+static struct snd_pcm_hw_constraint_list hw_playback_rates_mono = {
 	.count = ARRAY_SIZE(playback_rates_mono),
 	.list = playback_rates_mono,
 	.mask = 0,
@@ -416,7 +416,7 @@ static snd_pcm_hw_constraint_list_t hw_playback_rates_mono = {
   * this structure represents the sample rates supported
   * by PMIC for capture operations on Codec.
   */
-static snd_pcm_hw_constraint_list_t hw_capture_rates = {
+static struct snd_pcm_hw_constraint_list hw_capture_rates = {
 	.count = ARRAY_SIZE(capture_rates),
 	.list = capture_rates,
 	.mask = 0,
@@ -494,7 +494,7 @@ void configure_dam_pmic_master(int ssi)
   *
   * @param	substream	pointer to the structure of the current stream.
   */
-void configure_ssi_rx(snd_pcm_substream_t * substream)
+void configure_ssi_rx(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
 	audio_stream_t *s;
@@ -572,11 +572,11 @@ void configure_ssi_rx(snd_pcm_substream_t * substream)
   *
   * @param	substream	pointer to the structure of the current stream.
   */
-void configure_ssi_tx(snd_pcm_substream_t * substream)
+void configure_ssi_tx(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
 	audio_stream_t *s;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_runtime *runtime;
 	int ssi;
 	int device, stream_id = -1;
 	device = substream->pcm->device;
@@ -699,12 +699,12 @@ int adapt_speed(int speed)
   *
   * @param	substream	pointer to the structure of the current stream.
   */
-void normalize_speed_for_pmic(snd_pcm_substream_t * substream)
+void normalize_speed_for_pmic(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
 	audio_stream_t *s;
 	pmic_audio_device_t *pmic_device;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_runtime *runtime;
 	int device, stream_id = -1;
 	device = substream->pcm->device;
 	if (device == 0) {
@@ -799,11 +799,11 @@ void normalize_speed_for_pmic(snd_pcm_substream_t * substream)
   * @param	substream	pointer to the structure of the current stream.
   *
   */
-void set_pmic_channels(snd_pcm_substream_t * substream)
+void set_pmic_channels(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
 	audio_stream_t *s;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_runtime *runtime;
 	int device = -1, stream_id = -1;
 
 	chip = snd_pcm_substream_chip(substream);
@@ -1331,7 +1331,7 @@ int get_mixer_output_device()
   * @param	substream	pointer to the structure of the current stream.
   * @param	stream_id	index into the audio_stream array.
   */
-void configure_codec(snd_pcm_substream_t * substream, int stream_id)
+void configure_codec(struct snd_pcm_substream *substream, int stream_id)
 {
 	mxc_pmic_audio_t *chip;
 	audio_stream_t *s;
@@ -1385,7 +1385,7 @@ void configure_codec(snd_pcm_substream_t * substream, int stream_id)
   *
   * @param	substream	pointer to the structure of the current stream.
   */
-void configure_stereodac(snd_pcm_substream_t * substream)
+void configure_stereodac(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
 	int stream_id;
@@ -1393,7 +1393,7 @@ void configure_stereodac(snd_pcm_substream_t * substream)
 	pmic_audio_device_t *pmic;
 	int ssi_bus;
 	PMIC_AUDIO_HANDLE handle;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_runtime *runtime;
 
 	chip = snd_pcm_substream_chip(substream);
 	stream_id = substream->pstr->stream;
@@ -1468,7 +1468,7 @@ void disable_stereodac(void)
   *
   * @return		0 on success, -1 otherwise.
   */
-int configure_pmic_recording(snd_pcm_substream_t * substream)
+int configure_pmic_recording(struct snd_pcm_substream *substream)
 {
 
 	configure_codec(substream, 1);
@@ -1484,7 +1484,7 @@ int configure_pmic_recording(snd_pcm_substream_t * substream)
   * @return              0 on success, -1 otherwise.
   */
 
-int configure_pmic_playback(snd_pcm_substream_t * substream, int stream_id)
+int configure_pmic_playback(struct snd_pcm_substream *substream, int stream_id)
 {
 	if (stream_id == 0) {
 		configure_stereodac(substream);
@@ -1675,8 +1675,8 @@ static void audio_dma_free(audio_stream_t * s)
   */
 static u_int audio_get_capture_dma_pos(audio_stream_t * s)
 {
-	snd_pcm_substream_t *substream;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_substream *substream;
+	struct snd_pcm_runtime *runtime;
 	unsigned int offset;
 
 	substream = s->stream;
@@ -1710,8 +1710,8 @@ static u_int audio_get_capture_dma_pos(audio_stream_t * s)
   */
 static u_int audio_get_playback_dma_pos(audio_stream_t * s)
 {
-	snd_pcm_substream_t *substream;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_substream *substream;
+	struct snd_pcm_runtime *runtime;
 	unsigned int offset;
 
 	substream = s->stream;
@@ -1744,8 +1744,8 @@ static u_int audio_get_playback_dma_pos(audio_stream_t * s)
 static void audio_playback_stop_dma(audio_stream_t * s)
 {
 	unsigned long flags;
-	snd_pcm_substream_t *substream;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_substream *substream;
+	struct snd_pcm_runtime *runtime;
 	unsigned int dma_size;
 	unsigned int offset;
 
@@ -1780,8 +1780,8 @@ static void audio_playback_stop_dma(audio_stream_t * s)
 static void audio_capture_stop_dma(audio_stream_t * s)
 {
 	unsigned long flags;
-	snd_pcm_substream_t *substream;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_substream *substream;
+	struct snd_pcm_runtime *runtime;
 	unsigned int dma_size;
 	unsigned int offset;
 
@@ -1816,8 +1816,8 @@ static void audio_capture_stop_dma(audio_stream_t * s)
   */
 static void audio_playback_dma(audio_stream_t * s)
 {
-	snd_pcm_substream_t *substream;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_substream *substream;
+	struct snd_pcm_runtime *runtime;
 	unsigned int dma_size = 0;
 	unsigned int offset;
 	int ret = 0;
@@ -2070,8 +2070,8 @@ static void audio_playback_dma(audio_stream_t * s)
   */
 static void audio_capture_dma(audio_stream_t * s)
 {
-	snd_pcm_substream_t *substream;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_substream *substream;
+	struct snd_pcm_runtime *runtime;
 	unsigned int dma_size;
 	unsigned int offset;
 	int ret = 0;
@@ -2181,8 +2181,8 @@ static void audio_playback_dma_callback(void *data, int error,
 					unsigned int count)
 {
 	audio_stream_t *s;
-	snd_pcm_substream_t *substream;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_substream *substream;
+	struct snd_pcm_runtime *runtime;
 	unsigned int dma_size;
 	unsigned int previous_period;
 	unsigned int offset;
@@ -2233,8 +2233,8 @@ static void audio_capture_dma_callback(void *data, int error,
 				       unsigned int count)
 {
 	audio_stream_t *s;
-	snd_pcm_substream_t *substream;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_substream *substream;
+	struct snd_pcm_runtime *runtime;
 	unsigned int dma_size;
 	unsigned int previous_period;
 	unsigned int offset;
@@ -2284,7 +2284,7 @@ static void audio_capture_dma_callback(void *data, int error,
   * @return              0 on success, -1 otherwise.
   */
 static int
-snd_mxc_audio_playback_trigger(snd_pcm_substream_t * substream, int cmd)
+snd_mxc_audio_playback_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	mxc_pmic_audio_t *chip;
 	int stream_id;
@@ -2362,7 +2362,7 @@ snd_mxc_audio_playback_trigger(snd_pcm_substream_t * substream, int cmd)
   * @return              0 on success, -1 otherwise.
   */
 static int
-snd_mxc_audio_capture_trigger(snd_pcm_substream_t * substream, int cmd)
+snd_mxc_audio_capture_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	mxc_pmic_audio_t *chip;
 	int stream_id;
@@ -2429,7 +2429,7 @@ snd_mxc_audio_capture_trigger(snd_pcm_substream_t * substream, int cmd)
   *
   * @return              0 on success, -1 otherwise.
   */
-static int snd_mxc_audio_playback_prepare(snd_pcm_substream_t * substream)
+static int snd_mxc_audio_playback_prepare(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
 	audio_stream_t *s;
@@ -2482,7 +2482,8 @@ static int snd_mxc_audio_playback_prepare(snd_pcm_substream_t * substream)
   *
   */
 static
-snd_pcm_uframes_t snd_mxc_audio_capture_pointer(snd_pcm_substream_t * substream)
+snd_pcm_uframes_t snd_mxc_audio_capture_pointer(struct snd_pcm_substream
+						*substream)
 {
 	mxc_pmic_audio_t *chip;
 
@@ -2498,7 +2499,7 @@ snd_pcm_uframes_t snd_mxc_audio_capture_pointer(snd_pcm_substream_t * substream)
   *
   */
 static snd_pcm_uframes_t
-snd_mxc_audio_playback_pointer(snd_pcm_substream_t * substream)
+snd_mxc_audio_playback_pointer(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
 	int device;
@@ -2519,7 +2520,7 @@ snd_mxc_audio_playback_pointer(snd_pcm_substream_t * substream)
   * in capture mode.
   * It is used by ALSA framework.
   */
-static snd_pcm_hardware_t snd_mxc_pmic_capture = {
+static struct snd_pcm_hardware snd_mxc_pmic_capture = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED |
 		 SNDRV_PCM_INFO_BLOCK_TRANSFER |
 		 SNDRV_PCM_INFO_MMAP |
@@ -2545,7 +2546,7 @@ static snd_pcm_hardware_t snd_mxc_pmic_capture = {
   * in playback mode for ST-Dac.
   * It is used by ALSA framework.
   */
-static snd_pcm_hardware_t snd_mxc_pmic_playback_stereo = {
+static struct snd_pcm_hardware snd_mxc_pmic_playback_stereo = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED |
 		 SNDRV_PCM_INFO_BLOCK_TRANSFER |
 		 SNDRV_PCM_INFO_MMAP |
@@ -2571,7 +2572,7 @@ static snd_pcm_hardware_t snd_mxc_pmic_playback_stereo = {
   * in playback mode for Voice-codec.
   * It is used by ALSA framework.
   */
-static snd_pcm_hardware_t snd_mxc_pmic_playback_mono = {
+static struct snd_pcm_hardware snd_mxc_pmic_playback_mono = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED |
 		 SNDRV_PCM_INFO_BLOCK_TRANSFER |
 		 SNDRV_PCM_INFO_MMAP |
@@ -2600,10 +2601,10 @@ static snd_pcm_hardware_t snd_mxc_pmic_playback_mono = {
   *
   * @return              0 on success, -1 otherwise.
   */
-static int snd_card_mxc_audio_playback_open(snd_pcm_substream_t * substream)
+static int snd_card_mxc_audio_playback_open(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_runtime *runtime;
 	int stream_id = -1;
 	int err;
 	PMIC_AUDIO_HANDLE temp_handle;
@@ -2721,7 +2722,8 @@ static int snd_card_mxc_audio_playback_open(snd_pcm_substream_t * substream)
   *
   * @return              0 on success, -1 otherwise.
   */
-static int snd_card_mxc_audio_playback_close(snd_pcm_substream_t * substream)
+static int snd_card_mxc_audio_playback_close(struct snd_pcm_substream
+					     *substream)
 {
 	mxc_pmic_audio_t *chip;
 	audio_stream_t *s;
@@ -2784,7 +2786,7 @@ static int snd_card_mxc_audio_playback_close(snd_pcm_substream_t * substream)
   *
   * @return              0 on success, -1 otherwise.
   */
-static int snd_card_mxc_audio_capture_close(snd_pcm_substream_t * substream)
+static int snd_card_mxc_audio_capture_close(struct snd_pcm_substream *substream)
 {
 	PMIC_AUDIO_HANDLE handle;
 	mxc_pmic_audio_t *chip;
@@ -2822,10 +2824,10 @@ static int snd_card_mxc_audio_capture_close(snd_pcm_substream_t * substream)
   *
   * @return              0 on success, -1 otherwise.
   */
-static int snd_mxc_audio_hw_params(snd_pcm_substream_t * substream,
-				   snd_pcm_hw_params_t * hw_params)
+static int snd_mxc_audio_hw_params(struct snd_pcm_substream *substream,
+				   struct snd_pcm_hw_params *hw_params)
 {
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_runtime *runtime;
 	int ret;
 
 	runtime = substream->runtime;
@@ -2853,7 +2855,7 @@ static int snd_mxc_audio_hw_params(snd_pcm_substream_t * substream,
   *
   * @return              0 on success, -1 otherwise.
   */
-static int snd_mxc_audio_hw_free(snd_pcm_substream_t * substream)
+static int snd_mxc_audio_hw_free(struct snd_pcm_substream *substream)
 {
 	return snd_pcm_lib_free_pages(substream);
 }
@@ -2866,7 +2868,7 @@ static int snd_mxc_audio_hw_free(snd_pcm_substream_t * substream)
   *
   * @return              0 on success, -1 otherwise.
   */
-static int snd_mxc_audio_capture_prepare(snd_pcm_substream_t * substream)
+static int snd_mxc_audio_capture_prepare(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
 	audio_stream_t *s;
@@ -2910,10 +2912,10 @@ static int snd_mxc_audio_capture_prepare(snd_pcm_substream_t * substream)
   *
   * @return              0 on success, -1 otherwise.
   */
-static int snd_card_mxc_audio_capture_open(snd_pcm_substream_t * substream)
+static int snd_card_mxc_audio_capture_open(struct snd_pcm_substream *substream)
 {
 	mxc_pmic_audio_t *chip;
-	snd_pcm_runtime_t *runtime;
+	struct snd_pcm_runtime *runtime;
 	int stream_id;
 	int err;
 	PMIC_AUDIO_HANDLE temp_handle;
@@ -2977,7 +2979,7 @@ static int snd_card_mxc_audio_capture_open(snd_pcm_substream_t * substream)
   * This structure is the list of operation that the driver
   * must provide for the capture interface
   */
-static snd_pcm_ops_t snd_card_mxc_audio_capture_ops = {
+static struct snd_pcm_ops snd_card_mxc_audio_capture_ops = {
 	.open = snd_card_mxc_audio_capture_open,
 	.close = snd_card_mxc_audio_capture_close,
 	.ioctl = snd_pcm_lib_ioctl,
@@ -2992,7 +2994,7 @@ static snd_pcm_ops_t snd_card_mxc_audio_capture_ops = {
   * This structure is the list of operation that the driver
   * must provide for the playback interface
   */
-static snd_pcm_ops_t snd_card_mxc_audio_playback_ops = {
+static struct snd_pcm_ops snd_card_mxc_audio_playback_ops = {
 	.open = snd_card_mxc_audio_playback_open,
 	.close = snd_card_mxc_audio_playback_close,
 	.ioctl = snd_pcm_lib_ioctl,
@@ -3206,7 +3208,7 @@ void mxc_pmic_audio_init(mxc_pmic_audio_t * mxc_audio, int device)
 static int __init snd_card_mxc_audio_pcm(mxc_pmic_audio_t * mxc_audio,
 					 int device)
 {
-	snd_pcm_t *pcm;
+	struct snd_pcm *pcm;
 	int err;
 
 	/*
@@ -3329,7 +3331,7 @@ static int snd_mxc_audio_resume(struct platform_device *dev)
   *
   * @return              0 on success, -1 otherwise.
   */
-void snd_mxc_audio_free(snd_card_t * card)
+void snd_mxc_audio_free(struct snd_card *card)
 {
 	mxc_pmic_audio_t *chip;
 
@@ -3351,7 +3353,7 @@ void snd_mxc_audio_free(snd_card_t * card)
 static int __init mxc_alsa_audio_probe(struct platform_device *dev)
 {
 	int err;
-	snd_card_t *card;
+	struct snd_card *card;
 
 	/* register the soundcard */
 	card = snd_card_new(-1, id, THIS_MODULE, sizeof(mxc_pmic_audio_t));

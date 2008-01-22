@@ -390,8 +390,7 @@ static inline void mxc_init_fb(void)
 }
 #endif
 
-static void mxc_expio_irq_handler(u32 irq, struct irqdesc *desc,
-				  struct pt_regs *regs)
+static void mxc_expio_irq_handler(u32 irq, struct irq_desc *desc)
 {
 	u32 imr_val;
 	u32 int_valid;
@@ -410,7 +409,7 @@ static void mxc_expio_irq_handler(u32 irq, struct irqdesc *desc,
 
 	expio_irq = MXC_EXP_IO_BASE;
 	for (; int_valid != 0; int_valid >>= 1, expio_irq++) {
-		struct irqdesc *d;
+		struct irq_desc *d;
 		if ((int_valid & 1) == 0)
 			continue;
 		d = irq_desc + expio_irq;
@@ -419,7 +418,7 @@ static void mxc_expio_irq_handler(u32 irq, struct irqdesc *desc,
 			       expio_irq);
 			BUG();	/* oops */
 		}
-		d->handle_irq(expio_irq, d, regs);
+		d->handle_irq(expio_irq, d);
 	}
 
       out:
@@ -462,7 +461,7 @@ static void expio_unmask_irq(u32 irq)
 	__raw_writew(1 << expio, PBC_INTMASK_SET_REG);
 }
 
-static struct irqchip expio_irq_chip = {
+static struct irq_chip expio_irq_chip = {
 	.ack = expio_ack_irq,
 	.mask = expio_mask_irq,
 	.unmask = expio_unmask_irq,
@@ -490,7 +489,7 @@ static int __init _mxc_expio_init(void)
 	for (i = MXC_EXP_IO_BASE; i < (MXC_EXP_IO_BASE + MXC_MAX_EXP_IO_LINES);
 	     i++) {
 		set_irq_chip(i, &expio_irq_chip);
-		set_irq_handler(i, do_level_IRQ);
+		set_irq_handler(i, handle_level_irq);
 		set_irq_flags(i, IRQF_VALID);
 	}
 	set_irq_type(EXPIO_PARENT_INT, IRQT_HIGH);

@@ -1681,7 +1681,7 @@ static int mxc_mmap(struct file *file, struct vm_area_struct *vma)
 	int res = 0;
 	cam_data *cam = dev->priv;
 
-	pr_debug("pgoff=0x%x, start=0x%x, end=0x%x\n",
+	pr_debug("pgoff=0x%lx, start=0x%lx, end=0x%lx\n",
 		 vma->vm_pgoff, vma->vm_start, vma->vm_end);
 
 	/* make this _really_ smp-safe */
@@ -2070,7 +2070,7 @@ static void __exit camera_exit(void)
 module_init(camera_init);
 module_exit(camera_exit);
 
-module_param(video_nr, int, -1);
+module_param(video_nr, int, 0444);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("V4L2 capture driver for Mxc based cameras");

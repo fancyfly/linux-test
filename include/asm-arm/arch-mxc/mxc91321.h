@@ -66,8 +66,6 @@
  * L2CC.
  */
 #define L2CC_BASE_ADDR          0x30000000
-#define L2CC_BASE_ADDR_VIRT     0xD1000000
-#define L2CC_SIZE               SZ_64K
 
 /*
  * SMC
@@ -257,7 +255,6 @@
  */
 #define IO_ADDRESS(x)   \
         (((x >= IRAM_BASE_ADDR) && (x < (IRAM_BASE_ADDR + IRAM_SIZE))) ? IRAM_IO_ADDRESS(x):\
-        ((x >= L2CC_BASE_ADDR) && (x < (L2CC_BASE_ADDR + L2CC_SIZE))) ? L2CC_IO_ADDRESS(x):\
         ((x >= SMC_BASE_ADDR) && (x < (SMC_BASE_ADDR + SMC_SIZE))) ? SMC_IO_ADDRESS(x):\
         ((x >= SIRF_BASE_ADDR) && (x < (SIRF_BASE_ADDR + SIRF_SIZE))) ? SIRF_IO_ADDRESS(x):\
         ((x >= AIPS1_BASE_ADDR) && (x < (AIPS1_BASE_ADDR + AIPS1_SIZE))) ? AIPS1_IO_ADDRESS(x):\
@@ -276,9 +273,6 @@
 
 #define IRAM_IO_ADDRESS(x)  \
         (((x) - IRAM_BASE_ADDR) + IRAM_BASE_ADDR_VIRT)
-
-#define L2CC_IO_ADDRESS(x)  \
-        (((x) - L2CC_BASE_ADDR) + L2CC_BASE_ADDR_VIRT)
 
 #define SMC_IO_ADDRESS(x)   \
         (((x) - SMC_BASE_ADDR) + SMC_BASE_ADDR_VIRT)

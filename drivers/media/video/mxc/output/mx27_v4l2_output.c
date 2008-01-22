@@ -332,8 +332,7 @@ static void mxc_v4l2out_timer_handler(unsigned long arg)
 	spin_unlock_irqrestore(&g_lock, lock_flags);
 }
 
-irqreturn_t mxc_v4l2out_pp_in_irq_handler(int irq, void *dev_id,
-					  struct pt_regs *regs)
+irqreturn_t mxc_v4l2out_pp_in_irq_handler(int irq, void *dev_id)
 {
 	int last_buf;
 	int index;
@@ -1440,7 +1439,7 @@ static void mxc_v4l2out_clean(void)
 module_init(mxc_v4l2out_init);
 module_exit(mxc_v4l2out_clean);
 
-module_param(video_nr, int, 16);
+module_param(video_nr, int, 0444);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("V4L2-driver for MXC video output");

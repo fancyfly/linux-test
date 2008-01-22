@@ -24,11 +24,11 @@
  * @ingroup MXC_Security
  */
 
-#include "mxc_hacc.h"
 #include <linux/clk.h>
 #ifdef CONFIG_MXC_HAC_TEST_DEBUG
 #include <linux/module.h>
 #endif				/* CONFIG_MXC_HAC_TEST_DEBUG */
+#include "mxc_hacc.h"
 
 /*!
  * This variable indicates whether HAC module is in suspend or in resume

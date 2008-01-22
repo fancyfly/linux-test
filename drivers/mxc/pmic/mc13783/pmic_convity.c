@@ -436,7 +436,7 @@ static spinlock_t lock = SPIN_LOCK_UNLOCKED;
 static DECLARE_MUTEX(mutex);
 
 /* Prototype for the connectivity driver tasklet function. */
-static void pmic_convity_tasklet(void *work);
+static void pmic_convity_tasklet(struct work_struct *work);
 
 /*!
  * @brief Tasklet handler for the connectivity driver.
@@ -2320,12 +2320,11 @@ static void pmic_convity_event_handler(void *param)
  * @param   arg                The parameter that was provided above in
  *                                  the DECLARE_TASKLET() macro (unused).
  */
-static void pmic_convity_tasklet(void *work)
+static void pmic_convity_tasklet(struct work_struct *work)
 {
 
 	PMIC_CONVITY_EVENTS activeEvents = 0;
 	unsigned long flags = 0;
-	unsigned int reg_val = 0;
 
 	/* Check the interrupt sense bits to determine exactly what
 	 * event just occurred.

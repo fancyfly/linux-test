@@ -91,6 +91,7 @@ struct pm_ops mxc_pm_ops = {
 	.prepare = mxc_pm_prepare,
 	.enter = mxc_pm_enter,
 	.finish = mxc_pm_finish,
+	.valid = pm_valid_only_mem,
 };
 
 static int __init mxc_pm_init(void)

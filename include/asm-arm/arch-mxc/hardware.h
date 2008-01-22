@@ -125,13 +125,6 @@ static inline int type## _rev (int rev)		\
 #define cpu_is_mx32()		(0)
 #endif
 
-#ifdef CONFIG_ARCH_MX33
-#include <asm/arch/mx33.h>
-#define cpu_is_mx33()   (1)
-#else
-#define cpu_is_mx33()   (0)
-#endif
-
 #ifdef CONFIG_ARCH_MX21
 #include <asm/arch/mx21.h>
 #define cpu_is_mx21()		(1)

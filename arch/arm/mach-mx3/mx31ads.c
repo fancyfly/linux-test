@@ -227,17 +227,17 @@ static struct mtd_partition mxc_nor_partitions[] = {
 	 .mask_flags = MTD_WRITEABLE	/* force read-only */
 	 },
 	{
-	 .name = "Kernel",
+	 .name = "nor.Kernel",
 	 .size = 2 * 1024 * 1024,
 	 .offset = MTDPART_OFS_APPEND,
 	 .mask_flags = 0},
 	{
-	 .name = "userfs",
+	 .name = "nor.userfs",
 	 .size = 14 * 1024 * 1024,
 	 .offset = MTDPART_OFS_APPEND,
 	 .mask_flags = 0},
 	{
-	 .name = "rootfs",
+	 .name = "nor.rootfs",
 	 .size = 12 * 1024 * 1024,
 	 .offset = MTDPART_OFS_APPEND,
 	 .mask_flags = MTD_WRITEABLE},

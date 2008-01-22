@@ -7,3 +7,8 @@ obj-$(CONFIG_BACKLIGHT_HP680)	+= hp680_bl.o
 obj-$(CONFIG_BACKLIGHT_LOCOMO)	+= locomolcd.o
 obj-$(CONFIG_BACKLIGHT_PROGEAR) += progear_bl.o
 obj-$(CONFIG_BACKLIGHT_CARILLO_RANCH) += cr_bllcd.o
+
+obj-$(CONFIG_BACKLIGHT_MXC_LCDC) += mxc_lcdc_bl.o
+obj-$(CONFIG_BACKLIGHT_MXC_IPU)	+= mxc_ipu_bl.o
+obj-$(CONFIG_BACKLIGHT_MXC_PMIC) += mxc_pmic_bl.o
+

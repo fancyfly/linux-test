@@ -390,6 +390,47 @@ static inline void mxc_init_fb(void)
 }
 #endif
 
+#if defined(CONFIG_BACKLIGHT_MXC)
+static struct platform_device mxcbl_devices[] = {
+#if defined(CONFIG_BACKLIGHT_MXC_PMIC) || defined(CONFIG_BACKLIGHT_MXC_PMIC_MODULE)
+	{
+	 .name = "mxc_pmic_bl",
+	 .id = 0,
+	 .dev = {
+		 .platform_data = (void *)-1,	/* DISP # for this backlight */
+		 },
+	 },
+	{
+	 .name = "mxc_pmic_bl",
+	 .id = 1,
+	 .dev = {
+		 .platform_data = (void *)0,	/* DISP # for this backlight */
+		 },
+	 },
+#endif
+#if defined(CONFIG_BACKLIGHT_MXC_IPU) || defined(CONFIG_BACKLIGHT_MXC_IPU_MODULE)
+	{
+	 .name = "mxc_ipu_bl",
+	 .id = 0,
+	 .dev = {
+		 .platform_data = (void *)3,	/* DISP # for this backlight */
+		 },
+	 },
+#endif
+};
+static inline void mxc_init_bl(void)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(mxcbl_devices); i++) {
+		platform_device_register(&mxcbl_devices[i]);
+	}
+}
+#else
+static inline void mxc_init_bl(void)
+{
+}
+#endif
+
 #if defined(CONFIG_MXC_FIR) || defined(CONFIG_MXC_FIR_MODULE)
 /*!
  * Resource definition for the FIR
@@ -671,6 +712,7 @@ static void __init mxc_board_init(void)
 				ARRAY_SIZE(mxc_spi_board_info));
 
 	mxc_init_fb();
+	mxc_init_bl();
 	mxc_init_ir();
 }
 

@@ -305,6 +305,47 @@ static inline void mxc_init_fb(void)
 }
 #endif
 
+#if defined(CONFIG_BACKLIGHT_MXC)
+static struct platform_device mxcbl_devices[] = {
+#if defined(CONFIG_BACKLIGHT_MXC_PMIC) || defined(CONFIG_BACKLIGHT_MXC_PMIC_MODULE)
+	{
+	 .name = "mxc_pmic_bl",
+	 .id = 0,
+	 .dev = {
+		 .platform_data = (void *)-1,	/* DISP # for this backlight */
+		 },
+	 },
+	{
+	 .name = "mxc_pmic_bl",
+	 .id = 1,
+	 .dev = {
+		 .platform_data = (void *)0,	/* DISP # for this backlight */
+		 },
+	 },
+#endif
+#if defined(CONFIG_BACKLIGHT_MXC_LCDC) || defined(CONFIG_BACKLIGHT_MXC_LCDC_MODULE)
+	{
+	 .name = "mxc_lcdc_bl",
+	 .id = 0,
+	 .dev = {
+		 .platform_data = (void *)3,	/* DISP # for this backlight */
+		 },
+	 },
+#endif
+};
+static inline void mxc_init_bl(void)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(mxcbl_devices); i++) {
+		platform_device_register(&mxcbl_devices[i]);
+	}
+}
+#else
+static inline void mxc_init_bl(void)
+{
+}
+#endif
+
 static struct spi_board_info mxc_spi_board_info[] __initdata = {
 	{
 	 .modalias = "pmic_spi",
@@ -702,6 +743,7 @@ static __init void mxc_board_init(void)
 				ARRAY_SIZE(mxc_spi_board_info));
 
 	mxc_init_fb();
+	mxc_init_bl();
 }
 
 static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,

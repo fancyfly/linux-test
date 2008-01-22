@@ -494,19 +494,6 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 #endif
 			break;
 		}
-	case MXCFB_SET_BRIGHTNESS:
-		{
-			uint8_t level;
-			if (copy_from_user(&level, (void *)arg, sizeof(level))) {
-				retval = -EFAULT;
-				break;
-			}
-
-			mxcfb_drv_data.backlight_level = level;
-			retval = ipu_sdc_set_brightness(level);
-			dev_dbg(fbi->device, "Set brightness to %d\n", level);
-			break;
-		}
 #ifdef CONFIG_FB_MXC_TVOUT
 	case ENCODER_GET_CAPABILITIES:
 		{
@@ -703,7 +690,6 @@ static int mxcfb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_NORMAL:
 		ipu_disable_channel(MEM_SDC_BG, true);
 		gpio_lcd_inactive();
-		ipu_sdc_set_brightness(0);
 #ifdef CONFIG_FB_MXC_TVOUT
 		if (fb_mode) {
 			int enable = 0;
@@ -718,7 +704,6 @@ static int mxcfb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_UNBLANK:
 		gpio_lcd_active();
 		ipu_enable_channel(MEM_SDC_BG);
-		ipu_sdc_set_brightness(mxcfb_drv_data.backlight_level);
 #ifdef CONFIG_FB_MXC_TVOUT
 		if (fb_mode) {
 			unsigned long mode = 0;
@@ -1009,7 +994,6 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 #else
 		ipu_disable_channel(MEM_SDC_BG, true);
 		gpio_lcd_inactive();
-		ipu_sdc_set_brightness(0);
 #endif
 #ifdef CONFIG_FB_MXC_TVOUT
 		if (fb_mode) {
@@ -1050,9 +1034,8 @@ static int mxcfb_resume(struct platform_device *pdev)
 					  mxc_fbi->cur_ipu_buf);
 		}
 #else
-		ipu_enable_channel(MEM_SDC_BG);
 		gpio_lcd_active();
-		ipu_sdc_set_brightness(drv_data->backlight_level);
+		ipu_enable_channel(MEM_SDC_BG);
 #endif
 #ifdef CONFIG_FB_MXC_TVOUT
 		if (fb_mode) {
@@ -1272,7 +1255,6 @@ static int mxcfb_probe(struct platform_device *pdev)
 	mxcfbi->cur_ipu_buf = 0;
 	mxcfbi->ipu_ch = MEM_SDC_BG;
 
-	ipu_sdc_set_brightness(255);
 	ipu_sdc_set_global_alpha(true, 0xFF);
 	ipu_sdc_set_color_key(MEM_SDC_BG, false, 0);
 

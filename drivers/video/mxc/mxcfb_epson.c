@@ -41,12 +41,6 @@
 #include <asm/mach-types.h>
 #include <asm/uaccess.h>
 #include <asm/arch/ipu.h>
-
-#if defined(CONFIG_MXC_MC13783_LIGHT) && defined(CONFIG_MXC_MC13783_POWER)
-#include <asm/arch/pmic_power.h>
-#include <asm/arch/pmic_light.h>
-#endif
-
 #include <asm/arch/mxcfb.h>
 
 #define PARTIAL_REFRESH
@@ -100,7 +94,6 @@ struct mxcfb_data {
 	wait_queue_head_t vsync_wq;
 	wait_queue_head_t suspend_wq;
 	bool suspended;
-	int backlight_level;
 };
 
 static struct mxcfb_data mxcfb_drv_data;
@@ -577,16 +570,6 @@ static int mxcfb_open(struct fb_info *fbi, int user)
 		return retval;
 	}
 
-	if (mxc_fbi->open_count == 0) {
-#if defined(CONFIG_MXC_MC13783_LIGHT) && defined(CONFIG_MXC_MC13783_POWER)
-		pmic_power_regulator_on(SW_SW3);
-		pmic_power_regulator_set_lp_mode(SW_SW3, LOW_POWER_CTRL_BY_PIN);
-
-		pmic_bklit_tcled_master_enable();
-		pmic_bklit_enable_edge_slow();
-		pmic_bklit_set_cycle_time(0);
-#endif
-	}
 	mxc_fbi->open_count++;
 
 	retval = mxcfb_blank(FB_BLANK_UNBLANK, fbi);
@@ -614,11 +597,6 @@ static int mxcfb_release(struct fb_info *fbi, int user)
 	--mxc_fbi->open_count;
 	if (mxc_fbi->open_count == 0) {
 		retval = mxcfb_blank(FB_BLANK_POWERDOWN, fbi);
-
-#if defined(CONFIG_MXC_MC13783_LIGHT) && defined(CONFIG_MXC_MC13783_POWER)
-		pmic_power_regulator_off(SW_SW3);
-		pmic_power_regulator_set_lp_mode(SW_SW3, LOW_POWER_CTRL_BY_PIN);
-#endif
 	}
 	return retval;
 }
@@ -824,52 +802,6 @@ mxcfb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 }
 
 /*
- * Function to handle custom ioctls for MXC framebuffer.
- *
- * @param       inode   inode struct
- *
- * @param       file    file struct
- *
- * @param       cmd     Ioctl command to handle
- *
- * @param       arg     User pointer to command arguments
- *
- * @param       fbi     framebuffer information pointer
- */
-static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
-{
-	int retval = 0;
-
-	if ((retval = wait_event_interruptible(mxcfb_drv_data.suspend_wq,
-					       (mxcfb_drv_data.suspended ==
-						false))) < 0) {
-		return retval;
-	}
-
-	switch (cmd) {
-	case MXCFB_SET_BRIGHTNESS:
-		{
-			uint8_t level;
-			if (copy_from_user(&level, (void *)arg, sizeof(level))) {
-				retval = -EFAULT;
-				break;
-			}
-			mxcfb_drv_data.backlight_level = level;
-#if defined(CONFIG_MXC_MC13783_LIGHT) && defined(CONFIG_MXC_MC13783_POWER)
-			pmic_bklit_set_current(BACKLIGHT_LED2,
-					       mxcfb_drv_data.backlight_level);
-			pmic_bklit_set_dutycycle(BACKLIGHT_LED2, 15);
-#endif
-			dev_dbg(fbi->device, "Set brightness to %d\n", level);
-			break;
-		}
-	default:
-		retval = -EINVAL;
-	}
-	return retval;
-}
-
-/*
  * mxcfb_blank():
  *      Blank the display.
  */
@@ -894,17 +826,9 @@ static int mxcfb_blank(int blank, struct fb_info *fbi)
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_NORMAL:
 		mxcfb_set_refresh_mode(fbi, MXCFB_REFRESH_OFF, NULL);
-#if defined(CONFIG_MXC_MC13783_LIGHT) && defined(CONFIG_MXC_MC13783_POWER)
-		pmic_bklit_set_current(BACKLIGHT_LED2, 0);
-		pmic_bklit_set_dutycycle(BACKLIGHT_LED2, 0);
-#endif
 		break;
 	case FB_BLANK_UNBLANK:
 		mxcfb_set_refresh_mode(fbi, MXCFB_REFRESH_DEFAULT, NULL);
-#if defined(CONFIG_MXC_MC13783_LIGHT) && defined(CONFIG_MXC_MC13783_POWER)
-		pmic_bklit_set_current(BACKLIGHT_LED2, 7);
-		pmic_bklit_set_dutycycle(BACKLIGHT_LED2, 15);
-#endif
 		break;
 	}
 	return 0;
@@ -926,7 +850,6 @@ static struct fb_ops mxcfb_ops = {
 	.fb_copyarea = cfb_copyarea,
 	.fb_imageblit = cfb_imageblit,
 	.fb_blank = mxcfb_blank,
-	.fb_ioctl = mxcfb_ioctl,
 };
 
 /*!
@@ -1070,9 +993,6 @@ static int mxcfb_probe(struct platform_device *pdev)
 	mxcfb_drv_data.fbi = fbi;
 	mxc_fbi = fbi->par;
 
-#if defined(CONFIG_MXC_MC13783_LIGHT) && defined(CONFIG_MXC_MC13783_POWER)
-	mxcfb_drv_data.backlight_level = 7;
-#endif
 	mxcfb_drv_data.suspended = false;
 	init_waitqueue_head(&mxcfb_drv_data.suspend_wq);
 
@@ -1132,10 +1052,6 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 
 	if (mxc_fbi->blank == FB_BLANK_UNBLANK)
 		mxcfb_set_refresh_mode(fbi, MXCFB_REFRESH_OFF, NULL);
-#if defined(CONFIG_MXC_MC13783_LIGHT) && defined(CONFIG_MXC_MC13783_POWER)
-	pmic_bklit_set_current(BACKLIGHT_LED2, 0);
-	pmic_bklit_set_dutycycle(BACKLIGHT_LED2, 0);
-#endif
 	/* Display OFF */
 	ipu_adc_write_cmd(mxc_fbi->disp_num, CMD, DISOFF, 0, 0);
 
@@ -1161,10 +1077,6 @@ static int mxcfb_resume(struct platform_device *pdev)
 
 	if (mxc_fbi->blank == FB_BLANK_UNBLANK)
 		mxcfb_set_refresh_mode(fbi, MXCFB_REFRESH_DEFAULT, NULL);
-#if defined(CONFIG_MXC_MC13783_LIGHT) && defined(CONFIG_MXC_MC13783_POWER)
-	pmic_bklit_set_current(BACKLIGHT_LED2, drv_data->backlight_level);
-	pmic_bklit_set_dutycycle(BACKLIGHT_LED2, 15);
-#endif
 	wake_up_interruptible(&drv_data->suspend_wq);
 
 	return 0;

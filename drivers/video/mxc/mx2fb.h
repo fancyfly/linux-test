@@ -85,7 +85,6 @@ struct mx2fb_color_key {
 #define MX2FB_SET_GBL_ALPHA	_IOW('M', 0, struct mx2fb_gbl_alpha)
 #define MX2FB_SET_CLR_KEY	_IOW('M', 1, struct mx2fb_color_key)
 #define MX2FB_WAIT_FOR_VSYNC	_IOW('F', 0x20, u_int32_t)
-#define MX2FB_SET_BRIGHTNESS	_IOW('M', 3, __u8)
 
 #ifdef __KERNEL__
 

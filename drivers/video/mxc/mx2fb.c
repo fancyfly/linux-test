@@ -49,7 +49,6 @@ extern void board_power_lcd(int on);
 static char *fb_mode = 0;
 static int fb_enabled = 0;
 static unsigned long default_bpp = 16;
-static unsigned char brightness = 255;
 static ATOMIC_NOTIFIER_HEAD(mx2fb_notifier_list);
 static struct clk *lcdc_clk;
 /*!
@@ -96,7 +95,6 @@ static void _disable_lcdc(struct fb_info *info);
 static void _enable_graphic_window(struct fb_info *info);
 static void _disable_graphic_window(struct fb_info *info);
 static void _update_lcdc(struct fb_info *info);
-static void _set_brightness(unsigned char level);
 static void _request_irq(void);
 static void _free_irq(void);
 
@@ -509,7 +507,6 @@ static int mx2fb_ioctl(struct fb_info *info, unsigned int cmd,
 	struct mx2fb_info *mx2fbi = (struct mx2fb_info *)info->par;
 	struct mx2fb_gbl_alpha ga;
 	struct mx2fb_color_key ck;
-	unsigned char level;
 
 	switch (cmd) {
 	case MX2FB_SET_GBL_ALPHA:
@@ -550,12 +547,6 @@ static int mx2fb_ioctl(struct fb_info *info, unsigned int cmd,
 			_enable_graphic_window(info);
 		else
 			_disable_graphic_window(info);
-		break;
-	case MX2FB_SET_BRIGHTNESS:
-		if (copy_from_user((void *)&level, (void *)arg, sizeof(level)))
-			return -EFAULT;
-		brightness = level;
-		_set_brightness(level);
 		break;
 	case FBIOGET_GWINFO:
 		if (mx2fbi->type != MX2FB_TYPE_GW)
@@ -844,7 +835,6 @@ static void _enable_lcdc(struct fb_info *info)
 		clk_enable(lcdc_clk);
 		gpio_lcdc_active();
 		board_power_lcd(1);
-		_set_brightness(brightness);
 		fb_enabled++;
 #ifdef CONFIG_FB_MXC_TVOUT
 		if (fb_mode) {
@@ -877,7 +867,6 @@ static void _disable_lcdc(struct fb_info *info)
 		if (fb_enabled) {
 			gpio_lcdc_inactive();
 			board_power_lcd(0);
-			_set_brightness(0);
 			clk_disable(lcdc_clk);
 			fb_enabled = 0;
 		}
@@ -1087,20 +1076,19 @@ static void _update_lcdc(struct fb_info *info)
 		__raw_writel(0x00040060, LCDC_REG(LCDC_LDCR));
 	else
 		__raw_writel(0x00020010, LCDC_REG(LCDC_LDCR));
-
-	/* PWM contrast control register */
-	_set_brightness(brightness);
 }
 
 /*!
  * @brief Set LCD brightness
  * @param level	brightness level
  */
-static void _set_brightness(unsigned char level)
+void mx2fb_set_brightness(uint8_t level)
 {
 	/* Set LCDC PWM contract control register */
 	__raw_writel(0x00A90300 | level, LCDC_REG(LCDC_LPCCR));
 }
+
+EXPORT_SYMBOL(mx2fb_set_brightness);
 
 /*
  * @brief LCDC interrupt handler

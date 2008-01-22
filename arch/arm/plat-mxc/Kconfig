@@ -1,0 +1,145 @@
+if ARCH_MXC
+
+menu "Freescale MXC Implementations"
+
+choice
+	prompt "MXC/iMX System Type"
+	default ARCH_MXC91321
+
+config ARCH_MXC91321
+	bool "MXC91321-based"
+	select MXC_DSP_BRINGUP
+
+config ARCH_MXC92323
+	bool "MXC92323-based"
+	select MXC_DSP_BRINGUP
+	select MXC_FB_IRAM
+	select USB_ARCH_HAS_EHCI
+
+config ARCH_MXC91311
+	bool "MXC91311-based"
+	select MXC_DSP_BRINGUP
+	select MXC_FB_IRAM
+	select USB_ARCH_HAS_EHCI
+
+config ARCH_MXC91231
+	bool "MXC91231-based"
+	select MXC_DSP_BRINGUP
+	select MXC_FB_IRAM
+
+config ARCH_MXC91221
+	bool "MXC91221-based"
+	select MXC_DSP_BRINGUP
+	select MXC_FB_IRAM
+	select USB_ARCH_HAS_EHCI
+
+config ARCH_MXC91131
+	bool "MXC91131-based"
+	select MXC_DSP_BRINGUP
+
+config ARCH_MX33
+        bool "MX33-based"
+        help
+          This enables support for systems based on Freescale i.MX33
+
+config ARCH_MX3
+	bool "MX31-based"
+	select USB_ARCH_HAS_EHCI
+	help
+	  This enables support for systems based on Freescale i.MX31
+
+config ARCH_MX27
+	bool "MX27-based"
+	select MXC_EMMA
+	select USB_ARCH_HAS_EHCI
+	help
+	  This enables support for systems based on Freescale i.MX27
+
+config ARCH_MX21
+	bool "MX21-based"
+	select MXC_EMMA
+	help
+	  This enables support for systems based on Freescale i.MX21
+
+endchoice
+
+source "arch/arm/mach-mx27/Kconfig"
+
+source "arch/arm/mach-mx21/Kconfig"
+
+source "arch/arm/mach-mx3/Kconfig"
+
+source "arch/arm/mach-mx33/Kconfig"
+
+source "arch/arm/mach-mxc91321/Kconfig"
+
+
+
+
+
+
+endmenu
+
+config MXC_DSP_BRINGUP
+	bool
+	depends on ARCH_MXC
+
+config MXC_EMMA
+	bool
+	depends on ARCH_MXC
+
+config MXC_FB_IRAM
+	bool
+	depends on ARCH_MXC
+
+config ISP1504_MXC
+	bool "ISP1504 transceiver support"
+	depends on USB_ARCH_HAS_EHCI
+	help
+	  Support for the ISP1504 USB transceiver on MXC platforms.
+
+choice
+	prompt "Select serial USB transceiver"
+	depends on USB_EHCI_ARC_OTGFS || USB_GADGET_ARC_OTGFS
+
+config ISP1301_MXC
+	bool "ISP1301 transceiver support"
+	select I2C_MXC
+	help
+	  Support for the ISP1301 USB transceiver on MXC platforms.
+
+config MC13783_MXC
+	bool "MC13783 transceiver support"
+	select SPI_MXC
+	help
+	  Support for the MC13783 USB transceiver on MXC platforms.
+endchoice
+
+choice
+	prompt "Select serial USB mode"
+	depends on ISP1301_MXC || MC13783_MXC
+
+config MXC_USB_SB3
+	bool "USB Single End Bidirection Mode"
+	help
+	  If you say yes to this option, the serial tranceiver is on SB3 mode
+
+config MXC_USB_SU6
+	bool "USB Single End Unidirection Mode"
+	help
+	  If you say yes to this option, the serial tranceiver is on SU6 mode
+
+config MXC_USB_DB4
+	bool "USB Differential Bidirection Mode"
+	help
+	  If you say yes to this option, the serial tranceiver is on DB4 mode
+
+config MXC_USB_DU6
+	bool "USB Differential Unidirection Mode"
+	help
+	  If you say yes to this option, the serial tranceiver is on DU6 mode
+
+endchoice
+
+endif
+

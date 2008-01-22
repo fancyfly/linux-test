@@ -2912,7 +2912,7 @@ static int __devinit arcotg_udc_probe(struct platform_device *pdev)
 
 	/* request irq and disable DR  */
 	tmp_status = request_irq(pdev->resource[1].start, arcotg_udc_irq,
-				 0, driver_name, udc);
+				 IRQF_SHARED, driver_name, udc);
 	if (tmp_status != 0) {
 		printk(KERN_ERR "cannot request irq %d err %d \n",
 		       (int)pdev->resource[1].start, tmp_status);

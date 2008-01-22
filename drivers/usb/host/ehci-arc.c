@@ -131,7 +131,7 @@ static int usb_hcd_fsl_probe(const struct hc_driver *driver,
 	 */
 	fsl_platform_set_host_mode(hcd);
 
-	retval = usb_add_hcd(hcd, irq, 0);
+	retval = usb_add_hcd(hcd, irq, IRQF_SHARED);
 	if (retval != 0) {
 		pr_debug("failed with usb_add_hcd\n");
 		goto err2;

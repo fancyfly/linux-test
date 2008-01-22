@@ -28,6 +28,15 @@
 #include "ssi_types.h"
 
 /*!
+ * This function gets the SSI fifo address.
+ *
+ * @param        ssi                 ssi number               
+ * @param        direction           To indicate playback / recording               
+ * @return       This function returns the SSI fifo address.
+ */
+unsigned int get_ssi_fifo_addr(unsigned int ssi, int direction);
+
+/*!
  * This function controls the AC97 frame rate divider.
  *
  * @param        module               the module number

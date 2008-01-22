@@ -78,6 +78,11 @@ struct mxc_ir_platform_data {
 struct mxc_i2c_platform_data {
 	u32 i2c_clk;
 };
+/*This struct is to define the number of SSIs on a platform and the DAM source port config*/
+struct mxc_audio_platform_data {
+	int ssi_num;
+	int src_port;
+};
 
 extern void mxc_wd_reset(void);
 extern void mxc_kick_wd(void);

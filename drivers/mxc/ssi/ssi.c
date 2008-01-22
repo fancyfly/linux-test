@@ -22,6 +22,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <asm/uaccess.h>
 #include <asm/arch/clock.h>
@@ -30,6 +31,7 @@
 #include "ssi.h"
 
 static spinlock_t ssi_lock;
+struct mxc_audio_platform_data *ssi_platform_data;
 
 EXPORT_SYMBOL(ssi_ac97_frame_rate_divider);
 EXPORT_SYMBOL(ssi_ac97_get_command_address_register);
@@ -95,16 +97,42 @@ EXPORT_SYMBOL(ssi_tx_mask_time_slot);
 EXPORT_SYMBOL(ssi_tx_prescaler_modulus);
 EXPORT_SYMBOL(ssi_tx_shift_direction);
 EXPORT_SYMBOL(ssi_tx_word_length);
+EXPORT_SYMBOL(get_ssi_fifo_addr);
+
+struct resource *res;
+void *base_addr_1;
+void *base_addr_2;
+
+unsigned int get_ssi_fifo_addr(unsigned int ssi, int direction)
+{
+	unsigned int fifo_addr;
+	if (direction == 1) {
+		if (ssi_platform_data->ssi_num == 2) {
+			fifo_addr =
+			    (ssi ==
+			     SSI1) ? (int)(base_addr_1 +
+					   MXC_SSI1STX0) : (int)(base_addr_2 +
+								 MXC_SSI2STX0);
+		} else {
+			fifo_addr = (int)(base_addr_1 + MXC_SSI1STX0);
+		}
+	} else {
+		fifo_addr = (int)(base_addr_1 + MXC_SSI1SRX0);
+	}
+	return fifo_addr;
+}
 
 unsigned int get_ssi_base_addr(unsigned int ssi)
 {
-	unsigned int base_addr;
-#if !defined(CONFIG_ARCH_MXC91221) && !defined(CONFIG_ARCH_MXC91311 ) && !defined(CONFIG_ARCH_MXC92323)
-	base_addr = (ssi == SSI1) ? IO_ADDRESS(SSI1_BASE_ADDR) :
-	    IO_ADDRESS(SSI2_BASE_ADDR);
-#else
-	base_addr = IO_ADDRESS(SSI1_BASE_ADDR);
-#endif
+	int base_addr;
+	if (ssi_platform_data->ssi_num == 2) {
+		base_addr =
+		    (ssi ==
+		     SSI1) ? IO_ADDRESS((int)base_addr_1) : IO_ADDRESS((int)
+								       base_addr_2);
+	} else {
+		base_addr = IO_ADDRESS((int)base_addr_1);
+	}
 	return base_addr;
 }
 
@@ -1129,6 +1157,56 @@ void ssi_tx_word_length(ssi_mod module, ssi_word_length length)
 }
 
 /*!
+ * This function initializes the driver in terms of memory of the soundcard
+ * and some basic HW clock settings.
+ *
+ * @return              0 on success, -1 otherwise.
+ */
+static int __init ssi_probe(struct platform_device *pdev)
+{
+	int ret = -1;
+	ssi_platform_data =
+	    (struct mxc_audio_platform_data *)pdev->dev.platform_data;
+	if (!ssi_platform_data) {
+		dev_err(&pdev->dev, "can't get the platform data for SSI\n");
+		return -EINVAL;
+	}
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+
+	if (!res) {
+		dev_err(&pdev->dev, "can't get platform resource -  SSI\n");
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	if (pdev->id == 0) {
+		base_addr_1 = (void *)res->start;
+	} else if (pdev->id == 1) {
+		base_addr_2 = (void *)res->start;
+	}
+
+	printk(KERN_INFO "SSI %d module loaded successfully \n", pdev->id + 1);
+
+	return 0;
+      err:
+	return -1;
+
+}
+
+static int ssi_remove(struct platform_device *dev)
+{
+	return 0;
+}
+
+static struct platform_driver mxc_ssi_driver = {
+	.probe = ssi_probe,
+	.remove = ssi_remove,
+	.driver = {
+		   .name = "mxc_ssi",
+		   },
+};
+
+/*!
  * This function implements the init function of the SSI device.
  * This function is called when the module is loaded.
  *
@@ -1137,8 +1215,8 @@ void ssi_tx_word_length(ssi_mod module, ssi_word_length length)
 static int __init ssi_init(void)
 {
 	spin_lock_init(&ssi_lock);
-	printk(KERN_INFO "SSI module loaded successfully\n");
-	return 0;
+	return platform_driver_register(&mxc_ssi_driver);
+
 }
 
 /*!
@@ -1148,6 +1226,7 @@ static int __init ssi_init(void)
  */
 static void __exit ssi_exit(void)
 {
+	platform_driver_unregister(&mxc_ssi_driver);
 	printk(KERN_INFO "SSI module unloaded successfully\n");
 }
 

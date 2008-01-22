@@ -100,6 +100,7 @@ static char *id = NULL;
 #define MXC_ALSA_MAX_PLAYBACK 3
 #define MXC_ALSA_MAX_CAPTURE 1
 
+struct mxc_audio_platform_data *audio_data;
 /*!
   * This structure is the global configuration of the soundcard
   * that are accessed by the mixer as well as by the playback/recording
@@ -498,12 +499,8 @@ static void HSCallback(const PMIC_HS_STATE hs_st)
 		if (audio_mixer_control.old_prof & (SOUND_MASK_PCM)) {
 			set_mixer_output_device(NULL, MIXER_OUT, OP_LINEOUT, 0);
 		}
-#ifdef CONFIG_HEADSET_DETECT_ENABLE
 		/*This is a temporary workaround which should be removed later */
 		set_mixer_output_device(NULL, MIXER_OUT, OP_MONO, 1);
-#else
-		set_mixer_output_device(NULL, MIXER_OUT, OP_HEADSET, 1);
-#endif
 
 	}
 }
@@ -521,14 +518,9 @@ void configure_dam_pmic_master(int ssi)
 	int target_port;
 
 	if (ssi == SSI1) {
-		if (!cpu_is_mxc91221() && !cpu_is_mxc91311()
-		    && !cpu_is_mxc92323()) {
-			pr_debug("DAM: port 1 -> port 4\n");
-			source_port = port_1;
-		} else {
-			pr_debug("DAM: port 2 -> port 4\n");
-			source_port = port_2;
-		}
+		pr_debug("DAM: port 1 -> port 4\n");
+		source_port = audio_data->src_port;
+
 		target_port = port_4;
 	} else {
 		pr_debug("DAM: port 2 -> port 5\n");
@@ -1537,7 +1529,11 @@ void configure_stereodac(struct snd_pcm_substream *substream)
 	pmic_audio_output_enable_mono_adder(handle,
 					    audio_mixer_control.
 					    mixer_mono_adder);
+#ifdef CONFIG_HEADSET_DETECT_ENABLE
 	set_mixer_output_device(handle, MIXER_OUT, OP_MONO, 1);
+#else
+	set_mixer_output_device(handle, MIXER_OUT, OP_NODEV, 1);
+#endif
 	pmic_audio_enable(handle);
 
 }
@@ -1635,8 +1631,7 @@ configure_write_channel(audio_stream_t * s, mxc_dma_callback_t callback,
 #endif
 
 	if (stream_id == 0) {
-		if (!cpu_is_mxc91221() && !cpu_is_mxc91311()
-		    && !cpu_is_mxc92323()) {
+		if (audio_data->ssi_num == 2) {
 			channel =
 			    mxc_dma_request(MXC_DMA_SSI2_16BIT_TX0,
 					    "ALSA TX DMA");
@@ -1983,16 +1978,11 @@ static void audio_playback_dma(audio_stream_t * s)
 								    dma_size,
 								    DMA_TO_DEVICE));
 		if (stream_id == 0) {
-#if !defined(CONFIG_ARCH_MXC91221) && !defined(CONFIG_ARCH_MXC91311) && !defined(CONFIG_ARCH_MXC92323)
 			dma_request.dst_addr =
-			    (dma_addr_t) (SSI2_BASE_ADDR + MXC_SSI2STX0);
-#else
-			dma_request.dst_addr =
-			    (dma_addr_t) (SSI1_BASE_ADDR + MXC_SSI1STX0);
-#endif
+			    (dma_addr_t) get_ssi_fifo_addr(s->ssi, 1);
 		} else if (stream_id == 2) {
 			dma_request.dst_addr =
-			    (dma_addr_t) (SSI1_BASE_ADDR + MXC_SSI1STX0);
+			    (dma_addr_t) get_ssi_fifo_addr(s->ssi, 1);
 		}
 		dma_request.num_of_bytes = dma_size;
 		pr_debug("MXC: Start DMA offset (%d) size (%d)\n", offset,
@@ -2029,13 +2019,8 @@ static void audio_playback_dma(audio_stream_t * s)
 			    (dma_addr_t) (dma_map_single
 					  (NULL, runtime->dma_area + offset,
 					   dma_size, DMA_TO_DEVICE));
-#if !defined(CONFIG_ARCH_MXC91221) && !defined(CONFIG_ARCH_MXC91311) && !defined(CONFIG_ARCH_MXC92323)
 			dma_request.dst_addr =
-			    (dma_addr_t) (SSI1_BASE_ADDR + MXC_SSI1STX0);
-#else
-			dma_request.dst_addr =
-			    (dma_addr_t) (SSI1_BASE_ADDR + MXC_SSI1STX0);
-#endif
+			    (dma_addr_t) get_ssi_fifo_addr(s->ssi, 1);
 			dma_request.num_of_bytes = dma_size;
 			pr_debug("MXC: Start DMA offset (%d) size (%d)\n",
 				 offset, runtime->dma_bytes);
@@ -2072,7 +2057,7 @@ static void audio_playback_dma(audio_stream_t * s)
 					  (NULL, runtime->dma_area + offset1,
 					   dma_size1, DMA_TO_DEVICE));
 			dma_request1.dst_addr =
-			    (dma_addr_t) (SSI1_BASE_ADDR + MXC_SSI1STX1);
+			    (dma_addr_t) get_ssi_fifo_addr(s->ssi, 1);
 			dma_request1.num_of_bytes = dma_size1;
 
 			pr_debug("MXC: Start DMA offset (%d) size (%d)\n",
@@ -2207,7 +2192,7 @@ static void audio_capture_dma(audio_stream_t * s)
 								    dma_size,
 								    DMA_FROM_DEVICE));
 		dma_request.src_addr =
-		    (dma_addr_t) (SSI1_BASE_ADDR + MXC_SSI1SRX0);
+		    (dma_addr_t) get_ssi_fifo_addr(s->ssi, 0);
 		dma_request.num_of_bytes = dma_size;
 
 		pr_debug("MXC: Start DMA offset (%d) size (%d)\n", offset,
@@ -2729,8 +2714,7 @@ static int snd_card_mxc_audio_playback_open(struct snd_pcm_substream *substream)
 	err = -1;
 
 	if (stream_id == 0) {
-		if ((cpu_is_mxc91221() || cpu_is_mxc91311()
-		     || cpu_is_mxc92323())
+		if ((audio_data->ssi_num == 1)
 		    && (audio_mixer_control.codec_playback_active
 			|| audio_mixer_control.codec_capture_active)) {
 			return -EBUSY;
@@ -2745,7 +2729,7 @@ static int snd_card_mxc_audio_playback_open(struct snd_pcm_substream *substream)
 			return -EBUSY;
 		}
 	} else if (stream_id == 2) {
-		if ((cpu_is_mxc91221())
+		if ((audio_data->ssi_num == 1)
 		    && (audio_mixer_control.stdac_playback_active)) {
 			return -EBUSY;
 		}
@@ -3029,7 +3013,7 @@ static int snd_card_mxc_audio_capture_open(struct snd_pcm_substream *substream)
 	stream_id = substream->pstr->stream;
 	err = -1;
 
-	if ((cpu_is_mxc91221() || cpu_is_mxc91311() || cpu_is_mxc92323())
+	if ((audio_data->ssi_num == 1)
 	    && (audio_mixer_control.stdac_playback_active)) {
 		return -EBUSY;
 	}
@@ -3172,8 +3156,7 @@ void init_device_playback(mxc_pmic_audio_t * mxc_audio, int device)
 	 * the device (codec or stereodac)
 	 */
 	if (device == 0) {
-		if (!cpu_is_mxc91221() && !cpu_is_mxc91311()
-		    && !cpu_is_mxc92323()) {
+		if (audio_data->ssi_num == 2) {
 			audio_stream->ssi = SSI2;
 			audio_stream->dam_port = DAM_PORT_5;
 			pmic_device->ssi = SSI2;
@@ -3454,11 +3437,16 @@ void snd_mxc_audio_free(struct snd_card *card)
   *
   * @return              0 on success, -1 otherwise.
   */
-static int __init mxc_alsa_audio_probe(struct platform_device *dev)
+static int __init mxc_alsa_audio_probe(struct platform_device *pdev)
 {
 	int err;
 	struct snd_card *card;
 
+	audio_data = (struct mxc_audio_platform_data *)pdev->dev.platform_data;
+	if (!audio_data) {
+		dev_err(&pdev->dev, "Can't get the platform data for ALSA\n");
+		return -EINVAL;
+	}
 	/* register the soundcard */
 	card = snd_card_new(-1, id, THIS_MODULE, sizeof(mxc_pmic_audio_t));
 	if (card == NULL) {
@@ -3474,7 +3462,7 @@ static int __init mxc_alsa_audio_probe(struct platform_device *dev)
 	card->private_free = snd_mxc_audio_free;
 
 	mxc_audio->card = card;
-	card->dev = &dev->dev;
+	card->dev = &pdev->dev;
 	if ((err = snd_card_mxc_audio_pcm(mxc_audio, 0)) < 0) {
 		goto nodev;
 	}
@@ -3499,7 +3487,7 @@ static int __init mxc_alsa_audio_probe(struct platform_device *dev)
 
 	if ((err = snd_card_register(card)) == 0) {
 		pr_debug(KERN_INFO "MXC audio support initialized\n");
-		platform_set_drvdata(dev, card);
+		platform_set_drvdata(pdev, card);
 		return 0;
 	}
 
@@ -3517,8 +3505,6 @@ static int mxc_alsa_audio_remove(struct platform_device *dev)
 	return 0;
 }
 
-#define mxc_ALSA "mxc_ALSA"
-
 static struct platform_driver mxc_alsa_audio_driver = {
 	.probe = mxc_alsa_audio_probe,
 	.remove = mxc_alsa_audio_remove,
@@ -3527,27 +3513,13 @@ static struct platform_driver mxc_alsa_audio_driver = {
 	.resume = snd_mxc_audio_resume,
 #endif
 	.driver = {
-		   .name = "mxc_ALSA",
+		   .name = "mxc_alsa",
 		   },
 };
 
 static int __init mxc_alsa_audio_init(void)
 {
-	int err;
-	if ((err = platform_driver_register(&mxc_alsa_audio_driver)) < 0)
-		return err;
-	device = platform_device_register_simple(mxc_ALSA, -1, NULL, 0);
-	if (!IS_ERR(device)) {
-		if (platform_get_drvdata(device))
-			return 0;
-		platform_device_unregister(device);
-		platform_driver_unregister(&mxc_alsa_audio_driver);
-		err = -ENODEV;
-	} else
-		err = PTR_ERR(device);
-
-	platform_driver_unregister(&mxc_alsa_audio_driver);
-	return err;
+	return platform_driver_register(&mxc_alsa_audio_driver);
 }
 
 /*!

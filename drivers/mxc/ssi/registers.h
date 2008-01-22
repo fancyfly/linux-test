@@ -154,14 +154,9 @@
 #define SSI_MIN_PRESCALER_MODULUS_RATIO      1
 #define SSI_MAX_PRESCALER_MODULUS_RATIO    256
 #define SSI_WORD_LENGTH_MASK                15
-/*!
- * SISR Register definition
- */
-#ifndef CONFIG_ARCH_MXC91221
-#define SSI_IRQ_STATUS_NUMBER        19
-#else
+
 #define SSI_IRQ_STATUS_NUMBER        25
-#endif
+
 /*!
  * SFCSR Register bit shift definitions
  */

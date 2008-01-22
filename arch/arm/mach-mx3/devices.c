@@ -65,6 +65,7 @@ EXPORT_SYMBOL(mxc_device_disable);
 extern struct dptc_wp dptc_wp_allfreq_26ckih[DPTC_WP_SUPPORTED];
 extern struct dptc_wp dptc_wp_allfreq_27ckih[DPTC_WP_SUPPORTED];
 extern struct dptc_wp dptc_wp_allfreq_26ckih_TO_2_0[DPTC_WP_SUPPORTED];
+extern struct dptc_wp dptc_wp_allfreq_27ckih_TO_2_0[DPTC_WP_SUPPORTED];
 /*
  * Clock structures 
  */
@@ -858,7 +859,11 @@ static inline void mxc_init_dptc(void)
 		   && mxc_cpu_is_rev(CHIP_REV_2_0)) {
 		mxc_dptc_device.dev.platform_data =
 		    &dptc_wp_allfreq_26ckih_TO_2_0;
-	}
+	}else if (clk_get_rate(ckih_clk) == 27000000
+		   && mxc_cpu_is_rev(CHIP_REV_2_0)) {
+		mxc_dptc_device.dev.platform_data =
+		    &dptc_wp_allfreq_27ckih_TO_2_0;
+		}
 
 	(void)platform_device_register(&mxc_dptc_device);
 }

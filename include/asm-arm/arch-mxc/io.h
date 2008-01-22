@@ -1,5 +1,5 @@
 /*
- *  Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -42,5 +42,24 @@
  * Convert PCI memory space to a CPU physical address
  */
 #define iomem_to_phys(iomem)	(iomem)
+
+/*!
+ * This function is called to read a CPLD register over CSPI.
+ *
+ * @param        offset    number of the cpld register to be read
+ *
+ * @return       Returns 0 on success -1 on failure.
+ */
+unsigned int spi_cpld_read(unsigned int offset);
+
+/*!
+ * This function is called to write to a CPLD register over CSPI.
+ *
+ * @param        offset    number of the cpld register to be written
+ * @param        reg_val   value to be written
+ *
+ * @return       Returns 0 on success -1 on failure.
+ */
+unsigned int spi_cpld_write(unsigned int offset, unsigned int reg_val);
 
 #endif

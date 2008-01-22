@@ -518,7 +518,7 @@ scc_crypt(unsigned long count_in_bytes, uint8_t * data_in,
 	if (crypto_mode == SCC_CBC_MODE) {
 		scm_command |= SCM_CCMD_CBC;	/* change default of ECB */
 		/* Put in Initial Context.  Vector registers are contiguous */
-		copy_to_scc(init_vector, scc_base + SCM_AES_CBC_IV0_REG,
+		copy_to_scc(init_vector,(uint32_t)(scc_base + SCM_AES_CBC_IV0_REG),
 			    SCC_BLOCK_SIZE_BYTES(), NULL);
 	}
 

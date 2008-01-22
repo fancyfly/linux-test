@@ -26,6 +26,8 @@ source "drivers/ata/Kconfig"
 
 source "drivers/cdrom/Kconfig"
 
+source "drivers/pmic/Kconfig"
+
 source "drivers/md/Kconfig"
 
 source "drivers/message/fusion/Kconfig"

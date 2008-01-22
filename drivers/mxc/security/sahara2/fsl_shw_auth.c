@@ -26,6 +26,10 @@ EXPORT_SYMBOL(fsl_shw_gen_encrypt);
 EXPORT_SYMBOL(fsl_shw_auth_decrypt);
 #endif
 
+/* Remove warning */
+#define SUPPORT_SSL     0
+
+
 /*! Size of buffer to repetively sink useless CBC output */
 #define CBC_BUF_LEN 4096
 

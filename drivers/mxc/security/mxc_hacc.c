@@ -24,6 +24,7 @@
  * @ingroup MXC_Security
  */
 
+#include <linux/io.h>
 #include <linux/clk.h>
 #ifdef CONFIG_MXC_HAC_TEST_DEBUG
 #include <linux/module.h>

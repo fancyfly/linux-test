@@ -25,6 +25,7 @@
  * @ingroup MXC_Security
  */
 
+#include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #ifdef CONFIG_MXC_RTIC_TEST_DEBUG

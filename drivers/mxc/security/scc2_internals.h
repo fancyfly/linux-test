@@ -31,7 +31,6 @@
  *
  */
 
-
 #include <linux/version.h>          /* Current version Linux kernel */
 #include <linux/module.h>           /* Basic support for loadable modules,
                                        printk */

@@ -12,7 +12,7 @@
  */
 /*
  * otg/otgcore/otg.c - OTG state machine
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otgcore/otg.c|20070616020745|62496
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otgcore/otg.c|20070919232149|63517
  *
  *      Copyright (c) 2004-2005 Belcarra
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -1106,8 +1106,8 @@ void otg_get_trace_info(struct otg_instance *otg, otg_trace_t *p)
         // XXX if (pcd_instance_private.active) p->hcd_pcd |= 0x2;
 
         #if 1
-        p->ticks = (otg_ocd_ops_ticks) ? otg_ocd_ops_ticks () : 0;
-        p->interrupts = otg_interrupts ? *otg_interrupts : 0;
+        p->ticks = (otg && otg_ocd_ops_ticks) ? otg_ocd_ops_ticks () : 0;
+        p->interrupts = (otg && otg_interrupts) ? *otg_interrupts : 0;
         p->h_framenum = ((otg && otg_hcd_ops_framenum) ? otg_hcd_ops_framenum(otg) : 0);
         p->p_framenum = ((otg && otg_pcd_ops_framenum) ? otg_pcd_ops_framenum(otg) : 0);
         #else

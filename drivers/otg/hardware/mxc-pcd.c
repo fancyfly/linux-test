@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/mxc-pcd.c -- Freescale USBOTG Peripheral Controller driver
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/mxc/mxc-pcd.c|20070620205914|51935
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/mxc/mxc-pcd.c|20070822214154|21475
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp
@@ -1214,7 +1214,7 @@ void mxc_pcd_disable(struct pcd_instance *pcd)
 
 /* mxc_pcd_disable_ep -
  */
-void mxc_pcd_disable_ep(struct pcd_instance *pcd, unsigned int ep)
+void mxc_pcd_disable_ep(struct pcd_instance *pcd, unsigned int ep, struct usbd_endpoint_instance * ep_instance)
 {
         TRACE_MSG0(pcd->TAG, "--");
 }
@@ -1224,6 +1224,9 @@ void mxc_pcd_disable_ep(struct pcd_instance *pcd, unsigned int ep)
 #if defined(CONFIG_OTG_NOC99)
 struct usbd_pcd_ops usbd_pcd_ops;
 
+extern pcd_ops pcd_ops;
+
+#if 0
 #if defined(CONFIG_OTG_LNX) && defined(LINUX26)
 int mxc_pcd_mod_init_l26(void);
 void mxc_pcd_mod_exit_l26(void);
@@ -1234,6 +1237,7 @@ int mxc_pcd_mod_init(struct otg_instance *otg);
 void mxc_pcd_mod_exit(struct otg_instance *otg);
 struct pcd_ops pcd_ops = { mxc_pcd_mod_init, mxc_pcd_mod_exit, };
 #endif /* defined(CONFIG_OTG_LNX) && defined(LINUX26) */
+#endif
 
 /*!
  * mxc_pcd_global_init() - initialize globals
@@ -1275,25 +1279,6 @@ mxc_pcd_global_init(void)
         usbd_pcd_ops.cancel_out_irq = mxc_pcd_cancel_out_irq;
         usbd_pcd_ops.max_endpoints = 8;
 
-        ZERO(pcd_ops);
-        pcd_ops.pcd_en_func = mxc_pcd_en_func;
-        pcd_ops.pcd_init_func = pcd_init_func;
-        #ifdef CONFIG_OTG_REMOTE_WAKEUP
-        pcd_ops.remote_wakeup_func = mxc_remote_wakeup;
-        #endif /* CONFIG_OTG_REMOTE_WAKEUP */
-        pcd_ops.framenum = mxc_pcd_framenum;
-#if defined(CONFIG_OTG_LNX) && defined(LINUX26)
-        pcd_ops.mod_init = mxc_pcd_mod_init_l26;               // called for module init
-#ifdef MODULE
-        pcd_ops.mod_exit = mxc_pcd_mod_exit_l26;               // called for module exit
-#endif
-
-#else /* defined(CONFIG_OTG_LNX) && defined(LINUX26) */
-        pcd_ops.mod_init = mxc_pcd_mod_init;               // called for module init
-#ifdef MODULE
-        pcd_ops.mod_exit = mxc_pcd_mod_exit;               // called for module exit
-#endif
-#endif /* defined(CONFIG_OTG_LNX) && defined(LINUX26) */
 }
 /* ********************************************************************************************* */
 #else /* defined(CONFIG_OTG_NOC99) */
@@ -1336,6 +1321,7 @@ usbd_pcd_ops usbd_pcd_ops = {
                 .max_endpoints = 8,
 };
 
+#if 0
 #if defined(CONFIG_OTG_LNX) && defined(LINUX26)
 int mxc_pcd_mod_init_l26(struct otg_instance *otg);
 void mxc_pcd_mod_exit_l26(struct otg_instance *otg);
@@ -1366,8 +1352,40 @@ struct pcd_ops pcd_ops = {
         .framenum = mxc_pcd_framenum,
 };
 #endif /* defined(CONFIG_OTG_LNX) && defined(LINUX26) */
+#endif
+
 
 #endif /* defined(CONFIG_OTG_NOC99) */
+
+int mxc_pcd_mod_init_l26(struct otg_instance *otg);
+void mxc_pcd_mod_exit_l26(struct otg_instance *otg);
+
+/*!
+ * mxc_pcd_ops_init() - initialize globals
+ */
+void
+mxc_pcd_ops_init(void)
+{
+        ZERO(pcd_ops);
+        pcd_ops.pcd_en_func = mxc_pcd_en_func;
+        pcd_ops.pcd_init_func = pcd_init_func;
+        #ifdef CONFIG_OTG_REMOTE_WAKEUP
+        pcd_ops.remote_wakeup_func = mxc_remote_wakeup;
+        #endif /* CONFIG_OTG_REMOTE_WAKEUP */
+        pcd_ops.framenum = mxc_pcd_framenum;
+        #if defined(CONFIG_OTG_LNX) && defined(LINUX26)
+        pcd_ops.mod_init = mxc_pcd_mod_init_l26;               // called for module init
+        #ifdef MODULE
+        pcd_ops.mod_exit = mxc_pcd_mod_exit_l26;               // called for module exit
+        #endif
+
+        #else /* defined(CONFIG_OTG_LNX) && defined(LINUX26) */
+        pcd_ops.mod_init = mxc_pcd_mod_init;               // called for module init
+        #ifdef MODULE
+        pcd_ops.mod_exit = mxc_pcd_mod_exit;               // called for module exit
+        #endif
+        #endif /* defined(CONFIG_OTG_LNX) && defined(LINUX26) */
+}
 
 /* ********************************************************************************************* */
 
@@ -1477,7 +1495,9 @@ mxc_pcd_suspend(struct device *dev, u32 state, u32 phase)
 }
 
 static int
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18)
+mxc_pcd_resume(struct platform_device *dev)
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
 mxc_pcd_resume(struct platform_device *dev, pm_message_t state)
 #else
 mxc_pcd_resume(struct device *dev, u32 phase)

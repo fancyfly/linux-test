@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/acm/tty-if.c
- * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/tty-if.c|20070717190926|35439
+ * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/tty-if.c|20070911235624|35439
  *
  *      Copyright (c) 2003-2005 Belcarra
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp

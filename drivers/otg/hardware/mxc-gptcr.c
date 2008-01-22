@@ -42,6 +42,7 @@
 
 #include <linux/pci.h>
 #include <asm/arch/gpio.h>
+#include <asm/arch/board.h>
 #include <asm/system.h>
 #include <asm/io.h>
 #include <asm/irq.h>
@@ -181,8 +182,9 @@ int mxc_gptcr_start_timer(struct otg_instance *otg, int usec)
  * mxc_gptcr_timer_int_hndlr() - timer interrupt
  * @param irq
  * @param dev_id
+ * @param regs
  */
-irqreturn_t mxc_gptcr_timer_int_hndlr (int irq, void *dev_id)
+irqreturn_t mxc_gptcr_timer_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
 {
         u32 gptsr = *_reg_GPT_GPTSR;
 

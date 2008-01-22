@@ -12,7 +12,7 @@
  */
 /*
  * otg/otg/usbp-bus.h - USB Device Bus Interface Driver Interface
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/usbp-bus.h|20070222200902|45685
+ * @(#) balden@belcarra.com/seth2.rillanon.org|otg/otg/usbp-bus.h|20070810200302|45685
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp

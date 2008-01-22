@@ -12,7 +12,7 @@
  */
 /*
  * otg/otg/core-init-l24.c - OTG Peripheral Controller Driver Module Initialization
- * @(#) balden@belcarra.com/seth2.rillanon.org|otg/otgcore/core-init-lnx.c|20070711193627|56995
+ * @(#) balden@belcarra.com/seth2.rillanon.org|otg/otgcore/core-init-lnx.c|20070808203850|03038
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -51,7 +51,7 @@
 #include <otg/otg-pcd.h>
 #include <otg/otg-ocd.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
 #include <linux/platform_device.h>
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12) */
 
@@ -210,7 +210,6 @@ int usbd_device_modexit(void);
 
 /* ************************************************************************************* */
 //#if defined(LINUX26)
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,12)
 /*! otg_match - check if the device and driver match
  * 
  * @param dev - pointer to device
@@ -224,109 +223,9 @@ static int otg_match (struct device *dev, struct device_driver *drv)
         return 0;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16)
-/*! otg_hotplug - perform hotplug operation
- *
- * @param dev - pointer to device
- * @param envp
- * @param num_envp
- * @param  buffer - space for hotplug command string
- * @param buffer_size 
- * @return int
- */
-
-static int otg_hotplug (struct device *dev, char **envp, int num_envp, char *buffer, int buffer_size)
-{
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return 0;
-}
-#endif
-
-/*! otg_suspend - supend otg device
- * 
- * @param dev - pointer to otg device
- * @param state - current device state
- * @return int
- */
-//#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16)
-//typedef int device_suspend_callback(struct device *dev, pm_message_t status);
-//#else
-typedef int device_suspend_callback(struct device *dev, u32 status);
-//#endif
-
-static int otg_suspend(struct device *dev, u32 state)
-{
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return 0;
-}
-
-/*! otg_resume - resume otg device
- *
- * @param dev - pointer to otg device
- * @return int
- */
-static int otg_resume(struct device *dev)
-{
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return 0;
-}
-
-
-/*! \var struct bus_type otg_bus_type */
-struct bus_type otg_bus_type = {
-        .name =         "otg",
-        .match =        otg_match,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16)
-        .hotplug =      otg_hotplug,
-#endif
-        .suspend =      (device_suspend_callback *)&otg_suspend,
-        .resume =       otg_resume,
-};
-
-/*! otg_remove  - remove otg device
- *
- * @param dev - pointer to device
- * @return int 
- */
-
-static int __init_or_module
-otg_remove(struct device *dev)
-{
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return 0;
-}
-
-/*! otg_probe - called by kernel when driver is loaded
- *
- * @param dev - pointer to device
- * @return int 
- */
-static int __init
-otg_probe(struct device *dev)
-{
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return 0;
-}
-
-/*!  struct device_driver otg_driver */
-static struct device_driver otg_driver = {
-        .name =         "otg",
-        .bus =          &otg_bus_type,
-        .probe =        otg_probe,
-        .remove =       otg_remove,
-};
-
-OTG_EXPORT_SYMBOL(otg_bus_type);
-
 void otg_unregister(void)
 {
         printk(KERN_INFO"%s: \n", __FUNCTION__);
-
-        //#if defined(LINUX26)
-        driver_unregister(&otg_driver);
-        bus_unregister(&otg_bus_type);
-        //#endif
-
         usbd_device_modexit();
         otg_trace_modexit_lnx();
         printk(KERN_INFO"%s: otg_mallocs: %d\n", __FUNCTION__, otg_mallocs); 
@@ -340,124 +239,12 @@ int otg_register(void)
 
         THROW_IF(usbd_device_modinit(), error);
 
-        //#if defined(LINUX26)
-        THROW_IF((bus_registered = bus_register(&otg_bus_type)), error);
-        THROW_IF((driver_registered = driver_register(&otg_driver)), error);
-        //#endif
 
         CATCH(error) {
-                //#if defined(LINUX26)
-                if (driver_registered) driver_unregister(&otg_driver);
-                if (bus_registered) bus_unregister(&otg_bus_type);
-                //#endif
                 return -EINVAL;
         }
         return 0;
 }
-/* ************************************************************************************* */
-
-#else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,12) */
-
-
-/*! otg_suspend - supend otg device
- * 
- * @param dev - pointer to otg device
- * @param state - current device state
- * @return int
- */
-typedef int device_suspend_callback(struct platform_device *dev, u32 status);
-
-static int otg_suspend(struct platform_device *dev, u32 state)
-{
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return 0;
-}
-
-/*! otg_resume - resume otg device
- *
- * @param dev - pointer to otg device
- * @return int
- */
-static int otg_resume(struct platform_device *dev)
-{
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return 0;
-}
-
-
-/*! @var struct bus_type otg_bus_type */
-struct bus_type otg_bus_type = {
-        .name =         "otg",
-        //.suspend =      (device_suspend_callback *)&otg_suspend,
-        //.resume =       otg_resume,
-};
-
-/*! otg_remove  - remove otg device
- *
- * @param dev - pointer to device
- * @return int 
- */
-
-static int __init_or_module
-otg_remove(struct platform_device *dev)
-{
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return 0;
-}
-
-/*! otg_probe - called by kernel when driver is loaded
- *
- * @param dev - pointer to device
- * @return int 
- */
-static int __init
-otg_probe(struct platform_device *dev)
-{
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
-        return 0;
-}
-
-/*! @var struct platform_driver otg_driver */
-static struct platform_driver otg_driver = {
-        .driver = {
-                .name = "otg", 
-        },
-        .probe =        otg_probe,
-        .remove =       otg_remove,
-};
-
-OTG_EXPORT_SYMBOL(otg_bus_type);
-void otg_unregister(void)
-{
-        printk(KERN_INFO"%s: \n", __FUNCTION__);
-
-        platform_driver_unregister(&otg_driver);
-        bus_unregister(&otg_bus_type);
-
-        usbd_device_modexit();
-        otg_trace_modexit_lnx();
-        printk(KERN_INFO"%s: otg_mallocs: %d\n", __FUNCTION__, otg_mallocs); 
-}
-int otg_register(void)
-{
-        int bus_registered = 0;
-        int driver_registered = 0;
-
-        RETURN_EINVAL_IF(otg_trace_modinit_lnx());
-
-        THROW_IF(usbd_device_modinit(), error);
-
-        THROW_IF((bus_registered = bus_register(&otg_bus_type)), error);
-        THROW_IF((driver_registered = platform_driver_register(&otg_driver)), error);
-
-        CATCH(error) {
-                if (driver_registered) platform_driver_unregister(&otg_driver);
-                if (bus_registered) bus_unregister(&otg_bus_type);
-                return -EINVAL;
-        }
-        return 0;
-}
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,12) */
 
 
 /* ************************************************************************************* */
@@ -472,6 +259,8 @@ extern u8 otg_head, otg_tail;
  */
 static int otg_modinit (void)
 {
+        otg_led_init(LED1);
+        otg_led_init(LED2);
         return otg_register();
 }
 module_init (otg_modinit);
@@ -488,9 +277,34 @@ static void otg_modexit (void)
 
 
 
+#ifdef OTG_SKYE_LED
+void otg_led(int led, int flag)
+{
+        if (led)
+                mxc_set_gpio_dataout(led, flag);
+}
+
+void otg_led_init(int led)
+{
+        if (led)
+                mxc_set_gpio_direction(led,0);
+}
+#else /* OTG_SKYE_LED */
+void otg_led(int led, int flag)
+{
+}
+
+void otg_led_init(int led)
+{
+}
+#endif /* OTG_SKYE_LED */
+OTG_EXPORT_SYMBOL(otg_led);
+OTG_EXPORT_SYMBOL(otg_led_init);
+
 
 MOD_EXIT(otg_modexit);
 OTG_EXPORT_SYMBOL(otg_get_state_name);
+
 
 #ifdef OTG_MALLOC_TEST
 OTG_EXPORT_SYMBOL(otg_mallocs);

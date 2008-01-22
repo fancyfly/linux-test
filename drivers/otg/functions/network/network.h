@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/network/network.h - Network Function Driver
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/network/network.h|20070607004638|03187
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/network/network.h|20070814184652|05358
  *
  *      Copyright (c) 2002-2006 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -184,6 +184,7 @@ struct usb_network_private {
         int mtu;
         int use_crc;
         int seen_crc;
+        int seen_crc_error;
 #if defined(CONFIG_OTG_NETWORK_BLAN_FERMAT)
         int fermat;
 #endif

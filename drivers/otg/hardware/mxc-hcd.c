@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/mxc-hcd.c - Freescale USBOTG aware Host Controller Driver (HCD)
- * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/mxc/mxc-hcd.c|20070614183949|38516
+ * @(#) tt/root@belcarra.com/debian286.bbb|otg/platform/mxc/mxc-hcd.c|20070918011422|08412
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp
@@ -47,6 +47,7 @@
  * @ingroup HCD
  */
 
+#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
@@ -144,6 +145,7 @@ static int comp_code_to_status(int cc)
  */
 void rel_etd_irq(struct mxc_hcd *mxc_hcd, int etdn)
 {
+        TRACE_MSG1(HCD,"*****************etdn:%d",etdn);
         fs_wl(etd_word(etdn, 0), 0);
         fs_wl(etd_word(etdn, 1), 0);
         fs_wl(etd_word(etdn, 2), 0);
@@ -382,7 +384,6 @@ static int mxc_hcd_start_req_irq(struct mxc_hcd *mxc_hcd, struct mxc_req *mxc_re
          * 2. Set the registers
          */
         mxc_req->etdn = get_etd_irq(mxc_hcd, mxc_req);
-
         mxc_req->x = get_data_buff(mxc_hcd);
         mxc_req->y = get_data_buff(mxc_hcd);
         mxc_req->epnum = EPNUM(endpoint, is_out);
@@ -664,7 +665,6 @@ void mxc_hcd_finish_req_irq(struct mxc_hcd *mxc_hcd, struct mxc_req *mxc_req, st
 	int			address = usb_pipedevice(urb->pipe) ? 
 					(usb_pipedevice(urb->pipe) % MXC_MAX_USB_ADDRESS + 1) : 0;
         int                     endpoint = usb_pipeendpoint(urb->pipe);
-
         TRACE_MSG6(HCD, "urb: %x mxc_req: %x etdn: %d state: %d %s %s",
                         urb, mxc_req, mxc_req->etdn, mxc_req->etd_urb_state,
                         etd_urb_state_name[mxc_req->etd_urb_state], (killed?"KILLED":""));
@@ -1342,14 +1342,22 @@ static int num_host_interrupts = 0;
  * mxc_hcd_hw_int_hndlr() - interrupt handler for hcd controller
  * @param irq
  * @param dev_id
+ * @param regs
  */
-irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id)
+
+
+
+
+irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id, struct pt_regs *regs)
 {
         struct mxc_hcd  *mxc_hcd = hcd_instance->privdata;      // XXX this should come from dev_id
 
         u32 host_sint;                                  // C.f. 23.11.11 Host Interrupt Register
 
         int loop_count = 0;
+        struct usb_hcd *hcd = (struct usb_hcd *) mxc_hcd;
+        int start = hcd->state;
+
 
         /* XXX - what is this.... */
         if (OTG_USBDMA == irq) {
@@ -1368,7 +1376,11 @@ irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id)
         /* FIXME - should check mxc_hcd->mm->otg.OTG_Module_Interrupt_Status & (0x1 << 3) | 0x1;
          * for Host (async + regular) Interrupt - enable clock on async.
          */
-
+#if 1
+        if (unlikely(start == HC_STATE_HALT ||
+            !test_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags)))
+                return IRQ_NONE;
+#endif
         while ((host_sint = fs_rl(OTG_HOST_SINT_STAT) & mxc_hcd->int_mask)) {
 
                 num_host_interrupts++;
@@ -1403,6 +1415,7 @@ irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id)
                                 UNLESS(mxc_req) {
                                         printk(KERN_INFO"%s: ERROR NO REQUEST %d etds_done: %08x etdn: %d\n",
                                                         __FUNCTION__, num_host_interrupts, etds_done, fls(etds_done) - 1);
+                                        fs_wl(OTG_HOST_EP_DSTAT, ETD_MASK(etdn));
                                         continue;
                                 }
                                 mxc_hcd_finish_req_irq(mxc_hcd, mxc_req, mxc_req->urb, FALSE);
@@ -1456,6 +1469,14 @@ irqreturn_t mxc_hcd_hw_int_hndlr(int irq, void *dev_id)
                  */
                 fs_wl(OTG_HOST_SINT_STAT, host_sint & mxc_hcd->int_mask);
         }
+#if 1
+        set_bit(HCD_FLAG_SAW_IRQ, &hcd->flags);
+
+        if (unlikely(hcd->state == HC_STATE_HALT))
+                usb_hc_died (hcd);
+#endif
+
+
         return IRQ_HANDLED;
 }
 

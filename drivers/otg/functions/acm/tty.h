@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/acm/tty.h
- * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/tty.h|20070606024537|48294
+ * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/tty.h|20070911235625|36999
  *
  *      Copyright (c) 2003-2005 Belcarra
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -110,9 +110,8 @@ struct os_private {
 
         int index;
 
-        OLD_WORK_STRUCT wqueue;                     /*!< task queue for writer wakeup  */
-        OLD_WORK_STRUCT hqueue;                     /*!< task queue for hangup */
-
+        struct otg_workitem *wakeup_workitem;
+        struct otg_workitem *hangup_workitem;
         u32 flags;                              /*!< flags */
 
         u32 tiocm;                              /*!< tiocm settings */
@@ -130,9 +129,7 @@ struct os_private {
         wait_queue_head_t send_wait;            /*! wait queue for blocking open*/
         int sending;
 
-        OLD_WORK_STRUCT rqueue;                     /*!< task queue for hangup */
-        //wait_queue_head_t recv_wait;            /*! wait queue for blocking open*/
-
+        struct otg_workitem *recv_workitem;
         atomic_t used;
 
         u8 tty_overflow_buffer[TTY_OVERFLOW_SIZE];

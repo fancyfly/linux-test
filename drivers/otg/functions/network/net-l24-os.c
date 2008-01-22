@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/network/net-l24-os.c - Network Function Driver
- * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/network/net-l24-os.c|20070712213212|17701
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/network/net-l24-os.c|20070814184652|52070
  *
  *      Copyright (c) 2002-2006 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -124,6 +124,7 @@ DECLARE_MUTEX(usbd_network_sem);
 
 struct net_device Network_net_device;
 struct net_device_stats Network_net_device_stats;  /* network device statistics */
+struct usb_network_private Network_private;
 
 void notification_schedule_bh (void);
 int network_urb_sent_int (struct usbd_urb *urb, int urb_rc);
@@ -221,7 +222,8 @@ extern void usbd_write_info_message(struct usbd_function_instance*, char *msg);
  */
 void net_os_mutex_enter(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         down(&usbd_network_sem);
 }
 
@@ -231,7 +233,8 @@ void net_os_mutex_enter(struct usbd_function_instance *function_instance)
  */
 void net_os_mutex_exit(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         up(&usbd_network_sem);
 }
 
@@ -248,8 +251,8 @@ void net_os_mutex_exit(struct usbd_function_instance *function_instance)
  */
 STATIC void *notification_bh (void *data)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) data;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = (struct usb_network_private *) data;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
         // XXX unsigned long flags;
         RETURN_NULL_UNLESS(npd);
         // XXX local_irq_save(flags);
@@ -265,25 +268,10 @@ STATIC void *notification_bh (void *data)
  */
 void net_os_send_notification_later(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         RETURN_UNLESS(npd);
-        #if 0
-#ifdef LINUX24
-        //LINUX 2.4 is the only supported OS to need the USE_COUNT
-        //_MOD_INC_USE_COUNT;
-        TRACE_MSG1(NTT, "INC: %d", MOD_IN_USE);
-        if (!SCHEDULE_WORK(npd->notification_bh)) {
-                //_MOD_DEC_USE_COUNT;
-                //TRACE_MSG1(NTT, "DEC: %d", MOD_IN_USE);
-        }
-#else
-        PREPARE_WORK_ITEM(npd->notification_bh, notification_bh,npd);
-        SCHEDULE_WORK(npd->notification_bh);
-        //XXX No provision for failure of schedule ....
-#endif
-        #else
         otg_workitem_start(npd->notification_workitem);
-        #endif
 }
 
 /*! net_os_xmit_done - called from USB part when a transmit completes, good or bad.
@@ -296,7 +284,8 @@ void net_os_send_notification_later(struct usbd_function_instance *function_inst
 int net_os_xmit_done(struct usbd_function_instance *function_instance, void *data, int tx_rc)
 {
         struct sk_buff *skb = (struct sk_buff *) data;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         struct net_device *net_device = npd ? npd->net_device : NULL;
         int rc = 0;
 
@@ -335,7 +324,8 @@ int net_os_xmit_done(struct usbd_function_instance *function_instance, void *dat
  */
 void net_os_dealloc_buffer(struct usbd_function_instance *function_instance, void *data, void *buffer)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         struct sk_buff *skb = data;
         RETURN_UNLESS(skb);
         dev_kfree_skb_any(skb);
@@ -351,7 +341,8 @@ void net_os_dealloc_buffer(struct usbd_function_instance *function_instance, voi
  */
 void *net_os_alloc_buffer(struct usbd_function_instance *function_instance, u8 **cp, int n)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         struct sk_buff *skb;
 
         /* allocate skb of appropriate length, reserve 2 to align ip
@@ -385,7 +376,8 @@ void *net_os_alloc_buffer(struct usbd_function_instance *function_instance, u8 *
 STATIC __inline__ int network_recv (struct usbd_function_instance *function_instance,
                 struct net_device *net_device, struct sk_buff *skb)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         int rc;
 
         RETURN_ZERO_UNLESS(npd);
@@ -476,7 +468,8 @@ STATIC __inline__ int network_recv (struct usbd_function_instance *function_inst
 int net_os_recv_buffer(struct usbd_function_instance *function_instance, void *os_data, 
                 void *os_buffer, int crc_bad, int length, int trim)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         struct sk_buff *skb = (struct sk_buff *) os_data;
 
         RETURN_EAGAIN_UNLESS(npd);
@@ -541,36 +534,29 @@ STATIC void *hotplug_bh (void *data);
  */
 void net_os_enable(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = &Network_private;
 
-        printk(KERN_INFO"%s:\n", __FUNCTION__); 
-        RETURN_UNLESS(npd);
+        function_instance->privdata = npd;
+
         TRACE_MSG3(NTT,"npd: %p function: %p, f->p: %p", npd, function_instance, function_instance->privdata);
 
         memset(&Network_net_device_stats, 0, sizeof Network_net_device_stats);
-        npd->net_device = &Network_net_device;
-        npd->net_device_stats = &Network_net_device_stats;
-        npd->net_device->priv = function_instance;
+        npd->function_instance = function_instance;
         npd->max_queued_frames = 10;
         npd->max_queued_bytes = 20000;
 
         #if defined(CONFIG_OTG_NETWORK_BLAN_AUTO_CONFIG) || defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG)
-#if 0
-        THROW_UNLESS(npd->config_workitem = otg_workitem_init("netcfg", config_bh, function_instance, NTT), error);
-        //npd->config_workitem->debug = TRUE;
-#else
-         THROW_UNLESS((npd->config_otgtask = otg_task_init2("netcfg", config_bh, function_instance, NTT)), error);
+         THROW_UNLESS((npd->config_otgtask = otg_task_init2("netcfg", config_bh, npd, NTT)), error);
         //npd->config_otgtask->debug = TRUE;
         otg_task_start(npd->config_otgtask);
-#endif         
         #endif /* defined(CONFIG_OTG_NETWORK_BLAN_AUTO_CONFIG) || defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG) */
 
         #ifdef CONFIG_OTG_NETWORK_HOTPLUG
-        THROW_UNLESS(npd->hotplug_workitem = otg_workitem_init("hotplug", hotplug_bh, function_instance, NTT), error);
+        THROW_UNLESS(npd->hotplug_workitem = otg_workitem_init("hotplug", hotplug_bh, npd, NTT), error);
         //npd->hotplug_workitem->debug = TRUE;
         #endif /* CONFIG_OTG_NETWORK_HOTPLUG */
 
-        THROW_UNLESS(npd->notification_workitem = otg_workitem_init("netint", notification_bh, function_instance, NTT), error);
+        THROW_UNLESS(npd->notification_workitem = otg_workitem_init("netint", notification_bh, npd, NTT), error);
         //npd->notification_workitem->debug = TRUE;
 
         /* set the network device address from the local device address
@@ -581,15 +567,10 @@ void net_os_enable(struct usbd_function_instance *function_instance)
                 TRACE_MSG0(NTT,"FAILED");
 
                 #if defined(CONFIG_OTG_NETWORK_BLAN_AUTO_CONFIG) || defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG)
-#if 0
-                if (npd->config_workitem) otg_workitem_exit(npd->config_workitem);
-                npd->config_workitem = NULL;
-#else
                 if (npd->config_otgtask) {
                         otg_task_exit(npd->config_otgtask);
                         npd->config_otgtask = NULL;
                 }
-#endif                
                 #endif /* defined(CONFIG_OTG_NETWORK_BLAN_AUTO_CONFIG) || defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG) */
                 #ifdef CONFIG_OTG_NETWORK_HOTPLUG
                 if (npd->hotplug_workitem) otg_workitem_exit(npd->hotplug_workitem);
@@ -600,49 +581,27 @@ void net_os_enable(struct usbd_function_instance *function_instance)
         }
 }
 
-/*! net_os_disable - called t disable netwok device
+/*! net_os_disable - called to disable netwok device
  * @param function_instance pointer to function instance
  * @return none
  *
  */
 extern void net_os_disable(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        
         RETURN_UNLESS(npd && npd->net_device);
-        npd->net_device->priv = NULL;
-        npd->net_device = NULL;
-
-        #if 0
-        while (PENDING_WORK_ITEM(npd->notification_bh)) {
-                // TRACE_MSG pointless here, module will be gon before we can look at it.
-                printk(KERN_ERR"%s: waiting for notificationhotplug bh\n", __FUNCTION__);
-                schedule_timeout(10 * HZ);
-        }
+        //npd->net_device->priv = NULL;
+        //npd->net_device = NULL;
+        function_instance->privdata = NULL;
+        npd->function_instance = NULL;
 
         #if defined(CONFIG_OTG_NETWORK_BLAN_AUTO_CONFIG) || defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG)
-        while (PENDING_WORK_ITEM(npd->config_bh)) {
-                printk(KERN_ERR"%s: waiting for config bh\n", __FUNCTION__);
-                schedule_timeout(10 * HZ);
-        }
-        #endif /* defined(CONFIG_OTG_NETWORK_BLAN_AUTO_CONFIG) || defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG) */
-
-        #ifdef CONFIG_OTG_NETWORK_HOTPLUG
-        while (PENDING_WORK_ITEM(npd->hotplug_bh)) {
-                printk(KERN_ERR"%s: waiting for hotplug bh\n", __FUNCTION__);
-                schedule_timeout(10 * HZ);
-        }
-        #endif /* CONFIG_OTG_NETWORK_HOTPLUG */
-        #else
-        #if defined(CONFIG_OTG_NETWORK_BLAN_AUTO_CONFIG) || defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG)
-#if 0        
-        if (npd->config_workitem) otg_workitem_exit(npd->config_workitem);
-        npd->config_workitem = NULL;
-#else
         if (npd->config_otgtask) {
                         otg_task_exit(npd->config_otgtask);
                         npd->config_otgtask = NULL;
         }
-#endif        
         #endif /* defined(CONFIG_OTG_NETWORK_BLAN_AUTO_CONFIG) || defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG) */
         #ifdef CONFIG_OTG_NETWORK_HOTPLUG
         if (npd->hotplug_workitem) otg_workitem_exit(npd->hotplug_workitem);
@@ -650,7 +609,6 @@ extern void net_os_disable(struct usbd_function_instance *function_instance)
         #endif /* CONFIG_OTG_NETWORK_HOTPLUG */
         if (npd->notification_workitem) otg_workitem_exit(npd->notification_workitem);
         npd->notification_workitem = NULL;
-        #endif
 }
 
 /*! net_os_carrier_on - ???
@@ -660,7 +618,9 @@ extern void net_os_disable(struct usbd_function_instance *function_instance)
  */
 void net_os_carrier_on(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        
         RETURN_UNLESS(npd);
         netif_carrier_on(npd->net_device);
         net_os_wake_queue(function_instance);
@@ -680,7 +640,9 @@ void net_os_carrier_on(struct usbd_function_instance *function_instance)
  */
 void net_os_carrier_off(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        
         RETURN_UNLESS(npd);
         net_os_stop_queue(function_instance);
         netif_carrier_off(npd->net_device);
@@ -695,8 +657,10 @@ void net_os_carrier_off(struct usbd_function_instance *function_instance)
  */
 int net_os_queue_stopped(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         int rc;
+        
         RETURN_ZERO_UNLESS(npd);
         rc = netif_queue_stopped(npd->net_device);
         //TRACE_MSG3(NTT, "stopped: %d stops: %d restarts: %d", rc, npd->stops, npd->restarts);
@@ -710,7 +674,9 @@ int net_os_queue_stopped(struct usbd_function_instance *function_instance)
  */
 void net_os_wake_queue(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        
         RETURN_UNLESS(npd);
         //TRACE_MSG3(NTT, "stopped: %d stops: %d restarts: %d", netif_queue_stopped(npd->net_device), npd->stops, npd->restarts);
         netif_wake_queue (npd->net_device);
@@ -724,7 +690,9 @@ void net_os_wake_queue(struct usbd_function_instance *function_instance)
  */
 void net_os_stop_queue(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        
         RETURN_UNLESS(npd);
         //TRACE_MSG3(NTT, "stopped: %d stops: %d restarts: %d", netif_queue_stopped(npd->net_device), npd->stops, npd->restarts);
         netif_stop_queue(npd->net_device);
@@ -759,7 +727,6 @@ extern void set_address(char *mac_address_str, u8 *dev_addr);
 STATIC int network_init (struct net_device *net_device)
 {
 
-
         TRACE_MSG0(NTT,"no-op");
         set_address(MODPARM(local_dev_addr), net_device->dev_addr);
         return 0;
@@ -784,9 +751,11 @@ STATIC void network_uninit (struct net_device *net_device)
  */
 STATIC int network_open (struct net_device *net_device)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) net_device->priv;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = (struct usb_network_private *) net_device->priv;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
+
         // XXX unsigned long flags;
+        
         RETURN_ZERO_UNLESS(function_instance);
         RETURN_ZERO_UNLESS(npd);
 
@@ -825,10 +794,11 @@ STATIC int network_open (struct net_device *net_device)
  */
 STATIC int network_stop (struct net_device *net_device)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) net_device->priv;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = (struct usb_network_private *) net_device->priv;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
         // XXX unsigned long flags;
 
+        
         //TRACE_MSG0(NTT,"-");
 
         RETURN_ZERO_UNLESS(npd);
@@ -849,8 +819,8 @@ STATIC int network_stop (struct net_device *net_device)
  */
 STATIC struct net_device_stats *network_get_stats (struct net_device *net_device)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) net_device->priv;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = (struct usb_network_private *) net_device->priv;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
 
         //if (npd)
         //        return &npd->stats;
@@ -869,8 +839,8 @@ STATIC struct net_device_stats *network_get_stats (struct net_device *net_device
  */
 STATIC int network_set_mac_addr (struct net_device *net_device, void *p)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) net_device->priv;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = (struct usb_network_private *) net_device->priv;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
         struct sockaddr *addr = p;
         // XXX unsigned long flags;
 
@@ -892,10 +862,9 @@ STATIC int network_set_mac_addr (struct net_device *net_device, void *p)
  */
 STATIC void network_tx_timeout (struct net_device *net_device)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) net_device->priv;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = (struct usb_network_private *) net_device->priv;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
 
-        printk(KERN_INFO"%s:\n", __FUNCTION__);
 #if 0
         npd->net_device_stats.tx_errors++;
         npd->net_device_stats.tx_dropped++;
@@ -941,8 +910,8 @@ STATIC int network_set_config (struct net_device *net_device, struct ifmap *map)
  */
 STATIC int network_change_mtu (struct net_device *net_device, int mtu)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) net_device->priv;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = (struct usb_network_private *) net_device->priv;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
 
         RETURN_EBUSY_IF(netif_running (net_device));
         RETURN_ZERO_UNLESS(npd);
@@ -962,8 +931,8 @@ STATIC int network_change_mtu (struct net_device *net_device, int mtu)
  */
 STATIC __inline__ int net_os_start_xmit (struct sk_buff *skb, struct net_device *net_device)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) net_device->priv;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = (struct usb_network_private *) net_device->priv;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
         int rc;
 
         RETURN_ZERO_UNLESS(npd);
@@ -1200,7 +1169,8 @@ static int sock_flags(char * ifname, u16 oflags, u16 sflags, u16 rflags)
  */
 STATIC int network_attach(struct usbd_function_instance *function_instance, u32 ip, u32 mask, u32 router, int attach)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         int err = 0;
 
 
@@ -1259,9 +1229,8 @@ STATIC int network_attach(struct usbd_function_instance *function_instance, u32 
  */
 void *config_bh (void *data)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) data;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
-        //printk(KERN_INFO"%s:\n", __FUNCTION__); 
+        struct usb_network_private *npd = (struct usb_network_private *) data;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
 
         RETURN_NULL_UNLESS(npd);
 
@@ -1341,16 +1310,13 @@ void *config_bh (void *data)
  */
 void net_os_config(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+
         TRACE_MSG0(NTT, "CONFIG");
         RETURN_UNLESS(npd);
         //do_settime = FALSE;
-        #if 0
-        otg_workitem_start(npd->config_workitem);
-        #else
         otg_up_work(npd->config_otgtask);
-
-        #endif
 }
 #else /* defined(CONFIG_OTG_NETWORK_BLAN_AUTO_CONFIG) || defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG) */
 void net_os_config(struct usbd_function_instance *function_instance)
@@ -1381,7 +1347,8 @@ static char hotplug_path[]="";
  */
 STATIC int hotplug_attach(struct usbd_function_instance *function_instance, u32 ip, u32 mask, u32 router, int attach)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         static int count = 0;
         char *argv[3];
         char *envp[10];
@@ -1459,8 +1426,8 @@ STATIC int hotplug_attach(struct usbd_function_instance *function_instance, u32 
  */
 STATIC void *hotplug_bh (void *data)
 {
-        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) data;
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = (struct usb_network_private *) data;
+        struct usbd_function_instance *function_instance = (struct usbd_function_instance *) npd->function_instance;
 
         RETURN_NULL_UNLESS(npd);
 
@@ -1497,7 +1464,8 @@ STATIC void *hotplug_bh (void *data)
  */
 void net_os_hotplug(struct usbd_function_instance *function_instance)
 {
-        struct usb_network_private *npd = (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
+        struct usb_network_private *npd = 
+                (struct usb_network_private *) (function_instance ? function_instance->privdata : NULL);
         RETURN_UNLESS(npd);
         #if 0
         SET_WORK_ARG(npd->hotplug_bh, function_instance);
@@ -1524,7 +1492,11 @@ STATIC int network_create(void)
 {
         TRACE_MSG0(NTT,"entered");
 
-        // Set some fields to generic defaults and register the network device with the kernel networking code
+        /* Set some fields to generic defaults and register the network device with the kernel networking code */
+
+        Network_private.net_device = &Network_net_device;
+        Network_private.net_device_stats = &Network_net_device_stats;
+        Network_net_device.priv = &Network_private;
 
         ether_setup(&Network_net_device);
         RETURN_EINVAL_IF (register_netdev(&Network_net_device));
@@ -1532,6 +1504,7 @@ STATIC int network_create(void)
         netif_stop_queue(&Network_net_device);
         netif_carrier_off(&Network_net_device);
         Network_net_device.flags &= ~IFF_UP;
+
 
         TRACE_MSG0(NTT,"finis");
         return 0;
@@ -1546,6 +1519,10 @@ STATIC void network_destroy(void)
         netif_stop_queue(&Network_net_device);
         netif_carrier_off(&Network_net_device);
         unregister_netdev(&Network_net_device);
+
+        Network_private.net_device = NULL;
+        Network_private.net_device_stats = NULL;
+        Network_net_device.priv = NULL;
 }
 
 

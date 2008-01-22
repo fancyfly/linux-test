@@ -294,9 +294,11 @@ void pmic_otg_wakeup(void)
 /*! gpio_c17_int_hndlr - interrupt handler
  * @param irq - interrupt number
  * @param dev_id - interrupt device ip
+ * @param regs - cpu registers snapshot
  * @return interrput process result
  */
-static irqreturn_t gpio_c17_int_hndlr(int irq, void *dev_id)
+static irqreturn_t gpio_c17_int_hndlr(int irq, void *dev_id,
+                struct pt_regs *regs)
 {
         udelay(100);
         if (gpio_get_data(2, 17) == 1) {
@@ -314,10 +316,12 @@ static irqreturn_t gpio_c17_int_hndlr(int irq, void *dev_id)
 /*! gpio_c16_int_hndlr - interrupt handler
  * @param irq - interrupt number
  * @param dev_id - interrupt device ip
+ * @param regs - cpu registers snapshot
  * @return interrput process result
  */
 
-static irqreturn_t gpio_c16_int_hndlr(int irq, void *dev_id)
+static irqreturn_t gpio_c16_int_hndlr(int irq, void *dev_id,
+                struct pt_regs *regs)
 {
         udelay(100);
         if (gpio_get_data(2, 16) == 1) {

@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/arc-pcd.c -- Freescale HS (ARC) USBOTG Peripheral Controller driver
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/arc/arc-pcd.c|20070722225504|62695
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/arc/arc-pcd.c|20070918212334|07623
  *
  *      Copyright (c) 2007 Belcarra Technologies 2005 Corp
  *
@@ -39,6 +39,8 @@
 #include <linux/delay.h>
 #include "arc-hardware.h"
 #include "arc.h"
+
+#define HAVE_PLATFORM_ARC_REMOTE_WAKEUP 1
 
 #define TRACE_VERBOSE 1
 #define UDC_MAX_ENDPOINTS 16
@@ -100,14 +102,13 @@ int arc_read_rcv_buffer (struct pcd_instance *pcd, struct usbd_endpoint_instance
         struct ep_queue_head    *qh = privdata->cur_dqh; 
         struct usbd_urb         *rx_urb = endpoint->rcv_urb;
 
+        /* sync qh and td structures, note that urb-buffer was invalidated in arc_add_buffer_to_dtd() */
         consistent_sync(qh, sizeof(struct ep_queue_head), DMA_FROM_DEVICE);
         consistent_sync(curr_td, sizeof(struct ep_td_struct), DMA_FROM_DEVICE);
 
         if (rx_urb) {
                 int length = rx_urb->buffer_length - 
                         ((le32_to_cpu(curr_td->size_ioc_sts) & DTD_PACKET_SIZE) >> DTD_LENGTH_BIT_POS);
-
-                consistent_sync(rx_urb->buffer, length, DMA_FROM_DEVICE);
 
                 if (TRACE_VERBOSE) TRACE_MSG4(pcd->TAG, "buffer_length: %d alloc_length: %d Len: %d (%x)" , 
                                 rx_urb->buffer_length, rx_urb->alloc_length, length, 
@@ -148,7 +149,6 @@ static struct arcotg_udc *arc_udc_init (struct otg_dev *otg_dev)
 
         /* Setting up the udc structure */
         THROW_UNLESS((udc = (struct arcotg_udc *) CKMALLOC(sizeof(struct arcotg_udc))), error);
-        spin_lock_init(&udc->lock);
 
         /* Allocate queue */
         THROW_UNLESS((udc->ep_qh = (struct ep_queue_head *) KMALLOC_ALIGN(    USB_MAX_PIPES * sizeof(struct ep_queue_head),
@@ -172,8 +172,10 @@ static struct arcotg_udc *arc_udc_init (struct otg_dev *otg_dev)
 
         UOG_EPLISTADDR = virt_to_phys(udc->ep_qh);
         UOG_EPLISTADDR &= USB_EP_LIST_ADDRESS_MASK;
-        UOG_PORTSC1 &= ~PORTSCX_PHY_TYPE_SEL;
-        UOG_PORTSC1 |= pdata->xcvr_type;
+
+        /* Setup transceiver type, N.B. this must be done in one assignment */
+        UOG_PORTSC1 = (UOG_PORTSC1 & ~PORTSCX_PHY_TYPE_SEL) | pdata->xcvr_type;
+
         #if !defined(CONFIG_OTG_HIGH_SPEED)
         UOG_PORTSC1 |= (0x01000000);
         #endif
@@ -242,7 +244,7 @@ void arc_pcd_disable(struct pcd_instance *pcd)
 
 /*! arc_pcd_framenum() - get current framenum
  */
-static u16 arc_pcd_framenum (struct otg_instance *otg)
+static u16 arc_pcd_framenum (struct pcd_instance *pcd)
 {
         u16                     frame = (UOG_FRINDEX & USB_FRINDEX_MASKS);
         frame &= ~(0x7); 
@@ -250,30 +252,10 @@ static u16 arc_pcd_framenum (struct otg_instance *otg)
         return (int)( frame );
 }
 
-/*! arc_pcd_dp_pullup_func 
- * @param otg - otg_instance pointer
- * @param flag - 
- *
- * Enable or disable pullup.
- */
-void arc_pcd_dp_pullup_func(struct otg_instance *otg, u8 flag)
-{
-        struct otg_dev          *otg_dev = otg->privdata;
-        TRACE_MSG1(otg->pcd->TAG, "ARC PULLUP %s", flag ? "SET": "RESET");
-        switch (flag) {
-        case SET:
-                UOG_USBCMD |= USB_CMD_RUN_STOP;
-                break;
-        case RESET:
-                UOG_USBCMD &= ~USB_CMD_RUN_STOP;
-                break;
-        }
-}
-
 /* arc_pcd_ticks - get current ticks
  */
 #define MXC_GPT_GPTCNT          (IO_ADDRESS(GPT1_BASE_ADDR + 0x24))
-otg_tick_t arc_pcd_ticks (void)
+otg_tick_t arc_pcd_ticks (struct pcd_instance *pcd)
 {
         unsigned long           ticks = 0;
         ticks = __raw_readl(MXC_GPT_GPTCNT);
@@ -314,15 +296,24 @@ static void arc_add_buffer_to_dtd (struct pcd_instance *pcd, struct usbd_endpoin
 
         u32                     endptstat = -1;
         u32                     endptprime = -1;
+        u32                     endptcomplete = -1;
 
-        TRACE_MSG7(pcd->TAG, "[%2d] USBCMD: %08x ENDPTPRIME: %08x CURR_DTD_PTR: %p NEXT_DTD_PTR: %p STATUS: %08x %s", 
-                        2*epnum+dir, UOG_USBCMD, UOG_ENDPTPRIME, dQH->curr_dtd_ptr, dQH->next_dtd_ptr, 
-                        dQH->size_ioc_int_sts, (dir == ARC_DIR_OUT) ? "OUT" : "IN");
+        TRACE_MSG6(pcd->TAG, "[%2d] USBCMD: %08x ENDPTPRIME: %08x COMPLETE: %08x STATUS: %08x %s", 
+                        2*epnum+dir, UOG_USBCMD, UOG_ENDPTPRIME, UOG_ENDPTCOMPLETE, 
+                        (u32)dQH->size_ioc_int_sts, (dir == ARC_DIR_OUT) ? "OUT" : "IN");
 
-        if (urb && (dir == ARC_DIR_IN)) {
-                TRACE_MSG2(pcd->TAG, "AAAA buffer: %x length: %d", urb->buffer, urb->actual_length);
-                if (urb->buffer && urb->actual_length)
+        if (urb && urb->buffer) {
+
+                TRACE_MSG4(pcd->TAG, "buffer: %x length: %d alloc: %d dir: %d ", 
+                                urb->buffer, urb->actual_length, urb->buffer_length, dir);
+
+                /* flush cache for IN */
+                if ((dir == ARC_DIR_IN) && urb->actual_length) 
                         consistent_sync(urb->buffer, urb->actual_length, DMA_TO_DEVICE);
+                
+                /* invalidate cache for OUT */
+                else if ((dir == ARC_DIR_OUT) && urb->buffer_length) 
+                        consistent_sync(urb->buffer, urb->alloc_length, DMA_FROM_DEVICE);
         }
 
         /* Set size and interrupt on each dtd, Clear reserved field, 
@@ -364,32 +355,40 @@ static void arc_add_buffer_to_dtd (struct pcd_instance *pcd, struct usbd_endpoin
                 if (!(endptstat & mask) && !(endptprime & mask)) {
                         TRACE_MSG2(pcd->TAG, "[%2d] ENDPTSETUPSTAT: %04x PREMATURE FAILUURE", 2*epnum+dir, UOG_ENDPTSETUPSTAT);
                 }
+                TRACE_MSG6(pcd->TAG, "[%2d] ENDPTPRIME %08x ENPTSTAT: %08x mask: %08x timeout: %d:%d SET",
+                                2*epnum+dir, UOG_ENDPTPRIME, UOG_ENDPTSTAT, mask, timeout1, timeout2);;
         }
         /* epn general case */
         else {
                 /* Hit PRIME bit until STATUS bit is set. */
                 UOG_ENDPTPRIME |= mask;
                 //for (timeout2 = 0; !(UOG_ENDPTSTAT & mask) && (timeout2++ < 100); /* UOG_ENDPTPRIME |= mask */);
-                
+
                 for (timeout2 = 0; timeout2++ < 100; ) {
                         endptprime = UOG_ENDPTPRIME;    // order may be important
                         endptstat = UOG_ENDPTSTAT;      // we check stat after prime
+                        endptcomplete = UOG_ENDPTCOMPLETE;
                         BREAK_IF(endptstat & mask);
+                        BREAK_IF(endptcomplete & mask);
                         UNLESS(endptprime & mask) {
-                                TRACE_MSG8(pcd->TAG, "[%2d] ENDPTPRIME %08x:%08x ENPTSTATUS: %08x:%08x mask: %08x "
-                                                "timeout: %d:%d PRIME NOT SET",
-                                                2*epnum+dir, endptprime, UOG_ENDPTPRIME, 
-                                                endptstat, UOG_ENDPTSTAT, mask, timeout1, timeout2);;
+                                TRACE_MSG8(pcd->TAG, "[%2d] ENDPTPRIME %08x:%08x ENPTSTAT: %08x:%08x COMPLETE: %08x "
+                                                "mask: %08x timeout: %x NOT SET",
+                                                2*epnum+dir, endptprime, UOG_ENDPTPRIME, endptstat, UOG_ENDPTSTAT, 
+                                                UOG_ENDPTCOMPLETE,
+                                                mask, (timeout1 << 8) | timeout2);;
                                 udelay(1);
                                 endptstat = UOG_ENDPTSTAT;      // we check stat after prime
                                 BREAK_IF(endptstat & mask);
                                 UOG_ENDPTPRIME |= mask;
                         }
                 }
+                TRACE_MSG8(pcd->TAG, "[%2d] ENDPTPRIME %08x:%08x ENPTSTAT: %08x:%08x COMPLETE: %08x "
+                                "mask: %08x timeout: %x SET",
+                                2*epnum+dir, endptprime, UOG_ENDPTPRIME, endptstat, UOG_ENDPTSTAT, 
+                                UOG_ENDPTCOMPLETE,
+                                mask, (timeout1 << 8) | timeout2);;
         }
 
-        TRACE_MSG8(pcd->TAG, "[%2d] ENDPTPRIME %08x:%08x ENPTSTATUS: %08x:%08x mask: %08x timeout: %d:%d SET",
-                        2*epnum+dir, endptprime, UOG_ENDPTPRIME, endptstat, UOG_ENDPTSTAT, mask, timeout1, timeout2);;
 }
 
 /* arc_dtd_releases
@@ -401,50 +400,62 @@ static void arc_dtd_releases (struct pcd_instance *pcd, struct usbd_endpoint_ins
         consistent_sync(privdata->cur_dqh, sizeof(struct ep_queue_head), (dir == ARC_DIR_OUT) ? DMA_FROM_DEVICE : DMA_TO_DEVICE);
 }
 
+
 /* arc_pcd_start_endpoint_in - start transmit
  */
 void arc_pcd_start_endpoint_in (struct pcd_instance *pcd, struct usbd_endpoint_instance *endpoint)
 {
         struct otg_instance     *otg = pcd->otg;
         struct usbd_urb         *tx_urb;
-        unsigned long           flags;
         u8                      hs = pcd->bus->high_speed;
         u8                      bEndpointAddress = endpoint->bEndpointAddress[hs];
         u8                      epnum = bEndpointAddress & 0x3f;
+
         UNLESS(epnum) {
                 TRACE_MSG1(pcd->TAG, "[ 0] ENDPTSETUPSTAT: %04x", UOG_ENDPTSETUPSTAT);
                 RETURN_IF (UOG_ENDPTSETUPSTAT & 0x1);
         }
-        spin_lock_irqsave(&udc_controller->lock, flags);
         if ((tx_urb = endpoint->tx_urb)) {
                 endpoint->last = pcd_tx_sendzlp(endpoint) ?  0 : tx_urb->actual_length;
                 TRACE_MSG4(pcd->TAG, "[%2d] urb length: %d sent: %d %s", 
                                 epnum, tx_urb->actual_length, endpoint->sent, endpoint->last ? "" : "ZLP"); 
                 arc_add_buffer_to_dtd (pcd, endpoint, ARC_DIR_IN, endpoint->last, endpoint->sent);
         }
-        spin_unlock_irqrestore(&udc_controller->lock, flags);
 }
 
 /* arc_pcd_start_endpoint_out - start receive
  */
 void arc_pcd_start_endpoint_out (struct pcd_instance *pcd,struct usbd_endpoint_instance *endpoint)
 {
+        //struct usbd_urb         *rcv_urb;
+        //u8                      hs = pcd->bus->high_speed;
+        //u8                      bEndpointAddress = endpoint->bEndpointAddress[hs];
+        //u8                      epnum = bEndpointAddress & 0x3f;
+        
         struct usbd_urb         *rcv_urb;
-        unsigned long           flags;
-        u8                      hs = pcd->bus->high_speed;
-        u8                      bEndpointAddress = endpoint->bEndpointAddress[hs];
-        u8                      epnum = bEndpointAddress & 0x3f;
+        u8                      hs;
+        u8                      bEndpointAddress;
+        u8                      epnum;
+
+        UNLESS (pcd) printk(KERN_INFO"%s: pcd: %p\n", __FUNCTION__, pcd); 
+        UNLESS (pcd) printk(KERN_INFO"%s: pcd->bus: %p\n", __FUNCTION__, pcd->bus); 
+        hs = pcd->bus->high_speed;
+        
+        UNLESS (endpoint) printk(KERN_INFO"%s: endpoint: %p\n", __FUNCTION__, endpoint); 
+        bEndpointAddress = endpoint->bEndpointAddress[hs];
+        epnum = bEndpointAddress & 0x3f;
+
         UNLESS(epnum) {
+                //otg_led(LED2, 0);
                 TRACE_MSG1(pcd->TAG, "[ 0] ENDPTSETUPSTAT: %04x", UOG_ENDPTSETUPSTAT);
                 RETURN_IF (UOG_ENDPTSETUPSTAT & 0x1);
+                //otg_led(LED2, 1);
         }
-        spin_lock_irqsave(&udc_controller->lock, flags);
         if ((rcv_urb = pcd_rcv_next_irq(endpoint))) {
                 TRACE_MSG3(pcd->TAG, "[%2d] urb length: %d actual: %d length: %d", epnum, 
                                 rcv_urb->actual_length, rcv_urb->buffer_length); 
                 arc_add_buffer_to_dtd (pcd, endpoint, ARC_DIR_OUT, rcv_urb->buffer_length, 0);
         }
-        spin_unlock_irqrestore(&udc_controller->lock, flags);
 }
 
 /*! arc_pcd_setup_ep - setup endpoint
@@ -503,8 +514,8 @@ void arc_pcd_setup_ep (struct pcd_instance *pcd, unsigned int ep, struct usbd_en
         if (timeout == 0) 
                 printk(KERN_INFO "%s: TIMEOUT\n", __FUNCTION__);
 
-        TRACE_MSG5(pcd->TAG, "Control register for ep: %d dir: %d size: %d is %x (%x)",
-                        epnum, dir, wMaxPacketSize, tmp, USBOTG_REG32(0x1c0 + epnum*4));
+        TRACE_MSG4(pcd->TAG, "[%2x] Control register for size: %d is %x (%x)",
+                        2*epnum+dir, wMaxPacketSize, tmp, USBOTG_REG32(0x1c0 + epnum*4));
 
         if (!epnum) {
                 dir = 1;
@@ -536,21 +547,34 @@ void arc_pcd_disable_ep(struct pcd_instance *pcd, unsigned int ep, struct usbd_e
         endpoint->privdata = NULL;
 }
 
-/*! arc_pcd_cancel_in_irq
+
+/*! arc_pcd_cancel_irq
  */
-void arc_pcd_cancel_in_irq (struct pcd_instance *pcd,struct usbd_urb *urb)
+void arc_pcd_cancel_irq (struct pcd_instance *pcd, struct usbd_urb *urb)
 {
-        // XXX need to cancel active DTD
-        TRACE_MSG0(pcd->TAG, " -- ");
+        struct usbd_endpoint_instance *endpoint = urb->endpoint;
+
+        u8                      hs = pcd->bus->high_speed;
+        u8                      bEndpointAddress = endpoint->bEndpointAddress[hs];
+        u8                      epnum = bEndpointAddress & 0x3f;
+        u8                      dir = (bEndpointAddress & 0x80) ? 1 : 0;
+
+        u32                     mask = (dir == ARC_DIR_OUT) ?  (1 << epnum) : (1 << (epnum + 16));
+
+        TRACE_MSG5(pcd->TAG, "[%2d] USBCMD: %08x ENDPTPRIME: %08x COMPLETE: %08x mask: %08x FLUSH", 
+                        2*epnum+dir, UOG_USBCMD, UOG_ENDPTPRIME, UOG_ENDPTCOMPLETE, mask); 
+
+       
+        UOG_ENDPTFLUSH = mask;
+
+        TRACE_MSG5(pcd->TAG, "[%2d] USBCMD: %08x ENDPTPRIME: %08x COMPLETE: %08x mask: %08x FLUSH", 
+                        2*epnum+dir, UOG_USBCMD, UOG_ENDPTPRIME, UOG_ENDPTCOMPLETE, mask); 
+
+        TRACE_MSG5(pcd->TAG, "[%2d] USBCMD: %08x ENDPTPRIME: %08x COMPLETE: %08x mask: %08x FLUSH", 
+                        2*epnum+dir, UOG_USBCMD, UOG_ENDPTPRIME, UOG_ENDPTCOMPLETE, mask); 
+
 }
 
-/*! arc_pcd_cancel_out_irq
- */
-void arc_pcd_cancel_out_irq (struct pcd_instance *pcd,struct usbd_urb *urb)
-{
-        // XXX need to cancel active DTD
-        TRACE_MSG0(pcd->TAG, " -- ");
-}
 
 extern void fsl_platform_test_mode_select(struct fsl_usb2_platform_data *pdata, int on);
 /* arc_pcd_device_feature - device feature
@@ -560,20 +584,6 @@ int arc_pcd_device_feature(struct pcd_instance *pcd, int selector, int flag)
         u32 tmp = UOG_PORTSC1 | (selector << 16);
         UOG_PORTSC1 = tmp;
         return 0;
-}
-
-extern void fsl_platform_perform_remote_wakeup(struct fsl_usb2_platform_data *pdata);
-/*! arc_remote_wakeup
- */
-static void arc_remote_wakeup(struct otg_instance *otg, u8 flag)
-{
-        struct pcd_instance *pcd = otg->pcd;
-        struct otg_dev          *otg_dev = pcd->privdata;
-        struct device           *device = otg_dev_get_drvdata(otg_dev);
-        struct platform_device  *pdev = to_platform_device(device);
-        struct fsl_usb2_platform_data *pdata = (struct fsl_usb2_platform_data*)pdev->dev.platform_data;
-        
-        fsl_platform_perform_remote_wakeup(pdata);
 }
 
 /*
@@ -608,30 +618,76 @@ int arc_halt_endpoint(struct pcd_instance *pcd, struct usbd_endpoint_instance *e
         u8                      epnum = bEndpointAddress & 0x3f;
         u8                      dir = (bEndpointAddress & 0x80) ? 1 : 0;
 	u32			tmp = USBOTG_REG32(0x1c0 + epnum*4);
-	switch (dir) {
-        case USB_DIR_IN:
-		tmp |= EPCTRL_TX_EP_STALL;
-		TRACE_MSG4(pcd->TAG, "epn: %d dir: %d flag: %d ENDPTCTRLn: %04x USB_DIR_IN STALLING", epnum, dir, flag, tmp);
-		break;
-	case USB_DIR_OUT:
-		tmp |= EPCTRL_RX_EP_STALL;
-		TRACE_MSG4(pcd->TAG, "epn: %d dir: %d flag: %d ENDPTCTRLn: %04x USB_DIR_OUT STALLING", epnum, dir, flag, tmp);
-		break;
-	}
+        u32                     mask = (dir == USB_DIR_IN) ? EPCTRL_TX_EP_STALL : EPCTRL_RX_EP_STALL;
+
+        tmp = flag ? (tmp | mask) : (tmp & ~mask);
+	USBOTG_REG32(0x1c0 + epnum*4) = tmp;
+
+        TRACE_MSG5(pcd->TAG, "epn: %d dir: %d flag: %d ENDPTCTRLn: %04x USB_DIR_%s STALLING", 
+                        epnum, dir, flag, tmp, (dir == USB_DIR_IN) ? "IN" : "OUT");
 	return 0;
 }
 
+
+#if HAVE_PLATFORM_ARC_REMOTE_WAKEUP
+extern void fsl_platform_perform_remote_wakeup(struct fsl_usb2_platform_data *pdata);
+
+/*! arc_remote_wakeup
+ */
+static int arc_remote_wakeup(struct pcd_instance *pcd)
+{
+        struct usbd_bus_instance *bus = pcd->bus;
+        struct otg_dev          *otg_dev = pcd->privdata;
+        struct device           *device = otg_dev_get_drvdata(otg_dev);
+        struct platform_device  *pdev = to_platform_device(device);
+        struct fsl_usb2_platform_data *pdata = (struct fsl_usb2_platform_data*)pdev->dev.platform_data;
+        
+        printk(KERN_INFO"%s:\n", __FUNCTION__); 
+        fsl_platform_perform_remote_wakeup(pdata);
+        return 0;
+}
+#endif
+
+/*! arc_vbus_status() - enable
+ * This is called to enable / disable the PCD and USBD stack.
+ * @param otg - otg instance
+ * @param flag - SET or RESET
+ * Start or stop the UDC. 
+ */
+static int
+arc_vbus_status (struct pcd_instance *pcd)
+{
+        u32                     vbus = UOG_PORTSC1 & PORTSCX_CURRENT_CONNECT_STATUS;
+        TRACE_MSG2(pcd->TAG, "UOG_PORTSC1: %x, vbus: %x", UOG_PORTSC1, vbus);
+        return BOOLEAN(vbus);
+}
+
+/*! arc_softcon 
+ * @param pcd - pcd pointer
+ * @param flag - 
+ *
+ * Enable or disable pullup.
+ */
+int arc_softcon(struct pcd_instance *pcd, int flag)
+{
+        TRACE_MSG1(pcd->TAG, "ARC PULLUP %s", flag ? "SET": "RESET");
+        UOG_USBCMD = flag ? (UOG_USBCMD | USB_CMD_RUN_STOP) : (UOG_USBCMD & ~USB_CMD_RUN_STOP);
+        return 0;
+}
+
+
 /* ********************************************************************************************* */
 
-struct usbd_pcd_ops usbd_pcd_ops;
-struct
-usbd_pcd_ops usbd_pcd_ops = {
+struct usbd_pcd_ops usbd_pcd_ops = {
         .bmAttributes = 
-                USB_BMATTRIBUTE_RESERVED 
+                #ifdef CONFIG_OTG_SELF_POWERED
+                USB_BMATTRIBUTE_SELF_POWERED |
+                #endif /* CONFIG_OTG_SELF_POWERED */
                 #ifdef CONFIG_OTG_REMOTE_WAKEUP
-                | USB_BMATTRIBUTE_REMOTE_WAKEUP 
+                USB_BMATTRIBUTE_REMOTE_WAKEUP |
                 #endif /* CONFIG_OTG_REMOTE_WAKEUP */
-                | USB_OTG_HNP_SUPPORTED | USB_OTG_SRP_SUPPORTED,
+                //USB_OTG_HNP_SUPPORTED | USB_OTG_SRP_SUPPORTED |
+                USB_BMATTRIBUTE_RESERVED,
         #ifndef CONFIG_OTG_SELF_POWERED
         .bMaxPower = CONFIG_OTG_BMAXPOWER,
         #else /* CONFIG_OTG_SELF_POWERED */
@@ -649,49 +705,19 @@ usbd_pcd_ops usbd_pcd_ops = {
         .start_endpoint_out = arc_pcd_start_endpoint_out,
         .request_endpoints = pcd_request_endpoints,
         .setup_ep = arc_pcd_setup_ep,
-        .cancel_in_irq = arc_pcd_cancel_in_irq,
-        .cancel_out_irq = arc_pcd_cancel_out_irq,
+        .cancel_in_irq = arc_pcd_cancel_irq,
+        .cancel_out_irq = arc_pcd_cancel_irq,
         .device_feature = arc_pcd_device_feature,
 	.halt_endpoint = arc_halt_endpoint,
 	.endpoint_halted = arc_endpoint_halted,
-};
-
-/*! arc_tcd_en_func() - enable
- * This is called to enable / disable the PCD and USBD stack.
- * @param otg - otg instance
- * @param flag - SET or RESET
- * Start or stop the UDC. 
- */
-static void
-arc_tcd_en_func (struct otg_instance *otg, u8 flag)
-{
-        struct pcd_instance     *pcd = otg->pcd;
-        u32                     vbus = UOG_PORTSC1 & PORTSCX_CURRENT_CONNECT_STATUS;
-        TRACE_MSG2(pcd->TAG, "UOG_PORTSC1: %x, vbus: %x", UOG_PORTSC1, vbus);
-        switch (flag) {
-        case PULSE:
-        case SET:
-                switch (vbus) {
-                case 0:
-                        otg_event(otg, VBUS_VLD_ | B_SESS_VLD_ | A_SESS_VLD_, otg->pcd->TAG, "ARC VBUS INVALID");
-                        break;
-                case 1:
-                        otg_event(otg, VBUS_VLD | B_SESS_VLD, otg->pcd->TAG, "ARC VBLUS VALID");
-                        break;
-                }
-        }
-}
-
-struct pcd_ops pcd_ops = {
-        .pcd_en_func = pcd_en_func,
-        .tcd_en_func = arc_tcd_en_func,
-        .pcd_init_func = pcd_init_func,
-        .remote_wakeup_func = arc_remote_wakeup,
-        .framenum = arc_pcd_framenum,
-        .dp_pullup_func = arc_pcd_dp_pullup_func,
+	.remote_wakeup = arc_remote_wakeup,
+	.vbus_status = arc_vbus_status,
+	.softcon = arc_softcon,
         .ticks = arc_pcd_ticks,
         .elapsed = arc_pcd_elapsed,
+        .framenum = arc_pcd_framenum,
 };
+
 /* ********************************************************************************************* */
 /*! arc_ep0_irq
  */
@@ -706,8 +732,8 @@ static irqreturn_t arc_ep0_irq(struct pcd_instance *pcd)
                 TRACE_MSG2(pcd->TAG, "EP0 SETUP active: %p %x", urb, urb ? urb->flags : 0);
 
                 /* Complete any outstanding transfers */
-                if (urb && urb->flags & USBD_URB_IN) pcd_tx_complete_irq(endpoint, 0);
-                if (urb && urb->flags & USBD_URB_OUT) pcd_rcv_complete_irq(endpoint, 0, 0);
+                if (urb && (urb->flags & USBD_URB_IN)) pcd_tx_complete_irq(endpoint, 0);
+                if (urb && (urb->flags & USBD_URB_OUT)) pcd_rcv_complete_irq(endpoint, 0, 0);
 
                 /* Read setup - reset UOG_ENDPTSETUPSTAT */
                 arc_read_setup_buffer(pcd, (u8 *) &request);
@@ -738,7 +764,15 @@ static irqreturn_t arc_ep0_irq(struct pcd_instance *pcd)
                 /* sync and clear complete bit */
                 arc_dtd_releases (pcd, endpoint, ARC_DIR_IN);
                 UOG_ENDPTCOMPLETE = 0x10000;
-                pcd_tx_complete_irq(endpoint, 0);
+
+                /* finish urb, reset zlp flag if it's there, we always send zlp */
+                if (pcd_tx_complete_irq(endpoint, 0)) {
+                        TRACE_MSG2(pcd->TAG, "EP0 IN COMPLETE ZLP check: %p %x", urb, urb ? urb->flags : 0);
+                        if (pcd_tx_sendzlp(endpoint)) {
+                                pcd_tx_complete_irq(endpoint, 0);
+                                TRACE_MSG2(pcd->TAG, "EP0 IN COMPLETE ZLP active: %p %x", urb, urb ? urb->flags : 0);
+                        }
+                }
                 arc_add_buffer_to_dtd (pcd, endpoint, ARC_DIR_OUT, 0, 0);
                 return IRQ_HANDLED;
         }
@@ -799,6 +833,7 @@ static irqreturn_t arc_epn_irq(struct pcd_instance *pcd)
                                 if ((pcd_tx_complete_irq(endpoint, 0)))
                                         arc_pcd_start_endpoint_in(pcd, endpoint);
                                 break;
+
                         case ARC_DIR_OUT: /* Receiving */
                                 remain_len = arc_read_rcv_buffer (pcd, endpoint);
                                 arc_dtd_releases (pcd, endpoint, ARC_DIR_OUT);
@@ -808,8 +843,16 @@ static irqreturn_t arc_epn_irq(struct pcd_instance *pcd)
                                         cur_dtd->size_ioc_sts &= cpu_to_le32(errors);
                                         consistent_sync(cur_dtd, sizeof(struct ep_td_struct), DMA_TO_DEVICE);
                                 }
-                                if ((pcd_rcv_complete_irq(endpoint, remain_len, 0)))
+
+                                if ((pcd_rcv_complete_irq(endpoint, remain_len, 0))) {
+                                        
+                                        UNLESS(pcd && pcd->bus && endpoint) {
+                                                printk(KERN_INFO"%s: NULL pcd: %p bus: %p endpoint: %p\n", 
+                                                                __FUNCTION__, pcd, pcd ? pcd->bus : NULL, endpoint); 
+                                                break;
+                                        }
                                         arc_pcd_start_endpoint_out(pcd, endpoint);
+                                }
                                 break;
                         }
                         endptcomplete &= ~(1 << bit);
@@ -820,7 +863,7 @@ static irqreturn_t arc_epn_irq(struct pcd_instance *pcd)
 
 /*! arc_pcd_isr
  */
-static irqreturn_t arc_pcd_isr(struct otg_dev *otg_dev, void *data)
+static irqreturn_t arc_pcd_isr(struct otg_dev *otg_dev, void *data, u32 mask)
 {
         u32 irq_src;
         struct otg_instance     *otg = otg_dev ? otg_dev->otg_instance : NULL;
@@ -829,6 +872,7 @@ static irqreturn_t arc_pcd_isr(struct otg_dev *otg_dev, void *data)
         int                     timeout;
         irqreturn_t             status = IRQ_NONE;
 
+        otg_led(LED2, 1);
         otg->interrupts++;
         if (TRACE_VERBOSE) {
                 TRACE_MSG0(pcd->TAG, "--");
@@ -941,6 +985,7 @@ static irqreturn_t arc_pcd_isr(struct otg_dev *otg_dev, void *data)
                         UOG_USBINTR, UOG_ENDPTSTAT, UOG_ENDPTSETUPSTAT, UOG_ENDPTCOMPLETE, UOG_PORTSC1,
                         (status == IRQ_HANDLED) ? "IRQ_HANDLED" : "IRQ_NONE");
 
+        otg_led(LED2, 0);
         return status;
 }
 
@@ -1010,6 +1055,7 @@ static void arc_pcd_resume(struct otg_dev *otg_dev)
 {
         /* NOTHING */
 }
+
 /* ********************************************************************************************* */
 static struct otg_dev_driver arc_pcd_driver = {
         .name =         "arc_udc",

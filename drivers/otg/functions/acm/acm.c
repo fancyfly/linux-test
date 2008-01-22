@@ -10,9 +10,10 @@
  * http://www.opensource.org/licenses/gpl-license.html
  * http://www.gnu.org/copyleft/gpl.html
  */
+
 /*
  * otg/functions/acm/acm-fd.c
- * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/acm.c|20070703190924|28154
+ * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/acm.c|20070912103628|42749
  *
  *      Copyright (c) 2003-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -229,7 +230,8 @@ int acm_device_request (struct usbd_function_instance *function, struct usbd_dev
                                                 acm->ops->schedule_wakeup_writers(function);
 
                                         //acm_schedule_recv_restart(function);
-                                        acm->ops->recv_start_bh(function);
+                                        //acm->ops->recv_start_bh(function);
+                                        acm_start_recv_urbs(function);
 
                                 }
                                 #if 0
@@ -398,7 +400,8 @@ int acm_open(struct usbd_function_instance *function_instance, minor_chan_t chan
         acm->bmUARTState = /* CDC_UARTSTATE_BRXCARRIER_DCD | */ CDC_UARTSTATE_BTXCARRIER_DSR;
 
         //acm_schedule_recv_restart(function_instance);
-        acm->ops->recv_start_bh(function_instance);
+       // acm->ops->recv_start_bh(function_instance);
+        acm_start_recv_urbs(function_instance);
 
         TRACE_MSG1(TTY,"bmUARTState: %04x", acm->bmUARTState);
         acm_send_int_notification(function_instance, CDC_NOTIFICATION_SERIAL_STATE, acm->bmUARTState);
@@ -455,7 +458,7 @@ int acm_close(struct usbd_function_instance *function_instance, minor_chan_t cha
                 break;
         }
 
-        local_irq_save(flags);
+        otg_pthread_mutex_lock(&acm->mutex);
 
         acm->flags &= ~ACM_OPENED;
 
@@ -466,7 +469,7 @@ int acm_close(struct usbd_function_instance *function_instance, minor_chan_t cha
                 TRACE_MSG1(TTY, "setting ACM_CLOSING flags: %04x", acm->flags);
         }
 
-        local_irq_restore(flags);
+        otg_pthread_mutex_unlock(&acm->mutex);
 
         /* XXX Should we wait here for data to flush...
          */
@@ -530,12 +533,11 @@ int acm_start_recv_urbs(struct usbd_function_instance *function_instance)
         RETURN_ZERO_IF((acm->flags & ACM_THROTTLED));
 
         UNLESS (acm_ready(function_instance)) {
-                printk(KERN_INFO"%s: NOT READY\n", __FUNCTION__);
+                //printk(KERN_INFO"%s: NOT READY\n", __FUNCTION__);
                 TRACE_MSG0(TTY, "START RECV: NOT READY");
                 return -1;
         }
 
-        // XXX local_irq_save(flags);
 
         /* if configured, opened, not throttled and we have carrier or local then
          * we can queue recv urbs.
@@ -569,7 +571,6 @@ int acm_start_recv_urbs(struct usbd_function_instance *function_instance)
          * many there are in case the OS layer must try again later.
          */
         num_in_queue = atomic_read(&acm->recv_urbs);
-        // XXX local_irq_restore(flags);
         return num_in_queue;
 #else
         
@@ -585,7 +586,6 @@ int acm_start_recv_urbs(struct usbd_function_instance *function_instance)
          usbd_free_urb(urb);
                 
         num_in_queue = atomic_read(&acm->recv_urbs);
-        // XXX local_irq_restore(flags);
         return 1;
 
 #endif
@@ -635,10 +635,10 @@ void acm_schedule_recv_restart(struct usbd_function_instance *function_instance)
         struct acm_private *acm = function_instance ? function_instance->privdata : NULL;
         TRACE_MSG1(TTY,"acm: %x", (int)acm);
         RETURN_UNLESS(acm);
-        local_irq_save(flags);
+        //otg_led(LED1, TRUE);
         SET_WORK_ARG(acm->recv_bh, function_instance);
         SCHEDULE_WORK(acm->recv_bh);
-        local_irq_restore(flags);
+        //otg_led(LED1, FALSE);
 }
 #endif
 
@@ -658,15 +658,12 @@ STATIC int acm_send_int_notification(struct usbd_function_instance *function_ins
 {
         struct usbd_urb *urb = NULL;
         struct cdc_notification_descriptor *notification;
-        // XXX unsigned long flags;
         int rc = 0;
         struct acm_private *acm = function_instance ? function_instance->privdata : NULL;
         TRACE_MSG1(TTY,"acm: %x", (int)acm);
         RETURN_EINVAL_UNLESS(acm);
 
         RETURN_ZERO_UNLESS((acm->flags & ACM_CONFIGURED));
-
-        // XXX local_irq_save(flags);
 
         do {
                 BREAK_IF(!(urb = usbd_alloc_urb((struct usbd_function_instance *)function_instance,
@@ -705,7 +702,6 @@ STATIC int acm_send_int_notification(struct usbd_function_instance *function_ins
 
         } while(0);
 
-        // XXX local_irq_restore(flags);
         return rc;
 }
 
@@ -747,7 +743,6 @@ int acm_urb_sent_zle (struct usbd_urb *urb, int urb_rc)
         struct usbd_function_instance *function_instance = urb->function_instance;
         struct acm_private *acm = function_instance ? function_instance->privdata : NULL;
 
-        unsigned long flags;
         void *buf;
         int rc = -EINVAL;
         int in_pkt_sz;
@@ -816,8 +811,6 @@ STATIC int acm_urb_sent_bulk (struct usbd_urb *urb, int rc)
         /* check if we should send a zlp, send ZLP */
         #if 1
         UNLESS (urb->actual_length % in_pkt_sz) {
-                // XXX unsigned long flags;
-                // XXX local_irq_save(flags);
                 if ((urb = usbd_alloc_urb (function_instance, BULK_IN, 0, acm_urb_sent_zle ))) {
                         urb->actual_length = 0;
                         TRACE_MSG1(TTY, "Sending ZLP: length: %d", urb->actual_length);
@@ -830,7 +823,6 @@ STATIC int acm_urb_sent_bulk (struct usbd_urb *urb, int rc)
                                 usbd_free_urb (urb);
                         }
                 }
-                // XXX local_irq_restore(flags);
                 return 0;
         }
         #endif
@@ -930,7 +922,7 @@ int acm_xmit_chars(struct usbd_function_instance *function_instance, minor_chan_
         struct acm_private *acm = function_instance ? function_instance->privdata : NULL;
         struct usbd_urb *urb;
         int in_pkt_sz = usbd_endpoint_wMaxPacketSize(function_instance, BULK_IN, usbd_high_speed(function_instance));
-
+        int rc=0;
 
         TRACE_MSG4(TTY,"acm[%d]: %x flags: %x queued_bytes: %d", chan, acm,
                         acm ? acm->flags: 0, acm ? atomic_read(&acm->queued_bytes) : 0);
@@ -959,7 +951,7 @@ int acm_xmit_chars(struct usbd_function_instance *function_instance, minor_chan_
                                                 BULK_IN, count, acm_urb_sent_bulk)));
 
                 if (from_user)
-                        copy_from_user ((void *)urb->buffer, (void *)buf, count);
+                        rc=copy_from_user ((void *)urb->buffer, (void *)buf, count);
                 else
                         memcpy ((void *)urb->buffer, (void *)buf, count);
 
@@ -1076,21 +1068,7 @@ void acm_wait_task(struct usbd_function_instance *function_instance, OLD_WORK_IT
         TRACE_MSG1(TTY,"acm: %x", (int)acm);
         RETURN_UNLESS(acm);
 
-        TRACE_MSG1(TTY,"entered data=%p",WORK_DATA(*queue));
-        RETURN_IF(NO_WORK_DATA(*queue));
-        SET_WORK_ARG(*queue, NULL);
-#if defined(LINUX24)
-        while (queue->sync) {
-                TRACE_MSG1(TTY,"waiting for queue: %p",queue);
-                schedule_timeout(HZ);
-        }
-#else
-        while(PENDING_WORK_ITEM((*queue))){
-                TRACE_MSG1(TTY,"waiting for queue: %p",queue);
-                otg_sleep(1);  // 1 second delay
-        }
-#endif
-        TRACE_MSG0(TTY,"exited");
+       
 }
 
 /* ********************************************************************************************* */

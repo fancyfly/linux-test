@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/pcd.c - OTG Peripheral Controller Driver
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/otglib/pcd.c|20070711072703|14012
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/otglib/pcd.c|20070820053759|59156
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp
@@ -37,7 +37,7 @@
 #include <otg/pcd-include.h>
 #include <otg/usbp-func.h>
 
-#define TRACE_VERBOSE   0
+#define TRACE_VERBOSE   1
 #define TRACE_VERY_VERBOSE   0
 
 /* ******************************************************************************************* */
@@ -436,9 +436,13 @@ int bus_endpoint_halted (struct usbd_bus_instance *bus, int bEndpointAddress)
         TRACE_MSG1(pcd->TAG, "BUS_ENDPOINT HALTED:  endpoint: %p", (int) endpoint);
         RETURN_EINVAL_UNLESS(endpoint);
 
-        //halted = usbd_pcd_ops.endpoint_halted ? usbd_pcd_ops.endpoint_halted(pcd, endpoint_index) : 0;
+        /* return true IFF endpoint was previously halted by host OR if hardware
+         * has been stalled.
+         */
+        
         halted = usbd_pcd_ops.endpoint_halted ? usbd_pcd_ops.endpoint_halted(pcd, endpoint) : 0;
-        TRACE_MSG1(pcd->TAG, "BUS_ENDPOINT HALTED: %08x", bus->endpoint_array[endpoint_index].feature_setting);
+        TRACE_MSG2(pcd->TAG, "BUS_ENDPOINT STALLED %d FEATURE: %08x", 
+                        halted, bus->endpoint_array[endpoint_index].feature_setting);
 
         return halted || (endpoint->feature_setting & FEATURE(USB_ENDPOINT_HALT)? 1 : 0);
 }
@@ -465,7 +469,10 @@ int bus_halt_endpoint (struct usbd_bus_instance *bus, int bEndpointAddress,  int
                         endpoint, bEndpointAddress, flag);
 
         RETURN_EINVAL_UNLESS(endpoint);
-        endpoint->feature_setting = flag;
+
+        endpoint->feature_setting = flag ?
+                (endpoint->feature_setting | FEATURE(USB_ENDPOINT_HALT)) :
+                (endpoint->feature_setting & ~FEATURE(USB_ENDPOINT_HALT));
 
         if (flag)
                 usbd_flush_endpoint(endpoint);
@@ -856,8 +863,6 @@ struct usbd_urb * pcd_tx_complete_irq (struct usbd_endpoint_instance *endpoint, 
                 }
                 endpoint->last = 0;
 
-                //if ( ( (tx_urb->actual_length - endpoint->sent) <= 0) && ! (tx_urb->flags & USBD_URB_SENDZLP) ) 
-
                 if ( (endpoint->sent >= tx_urb->actual_length) && ! (tx_urb->flags & USBD_URB_SENDZLP) ) {
                         endpoint->tx_urb = NULL;
                         endpoint->last = endpoint->sent = 0;
@@ -913,20 +918,21 @@ u64 bus_interrupts (void)
 {
         return pcd_instance->otg->interrupts;
 }
-/*! bus_ticks
+#endif
+
+/*! pcd_ticks
  */
-otg_tick_t bus_ticks (void)
+otg_tick_t pcd_ticks (void)
 {
-        return (ocd_ops.ticks) ? ocd_ops.ticks () : 0;
+        return usbd_pcd_ops.ticks ? usbd_pcd_ops.ticks (NULL) : 0;
 }
 
-/*! bus_elapsed
+/*! pcd_elapsed
  */
-otg_tick_t bus_elapsed (otg_tick_t *t1, otg_tick_t *t2)
+otg_tick_t pcd_elapsed (otg_tick_t *t1, otg_tick_t *t2)
 {
-        return (ocd_ops.elapsed) ? (ocd_ops.elapsed (t1, t2)) : 0;
+        return usbd_pcd_ops.elapsed ? (usbd_pcd_ops.elapsed (t1, t2)) : 0;
 }
-#endif
 
 /*! pcd_recv_setup_emulate_irq - emulate a device request
  */
@@ -1080,6 +1086,31 @@ void pcd_bus_event_handler_irq (struct usbd_bus_instance *bus, usbd_device_event
 
         last_state = bus->device_state;
 
+        if (TRACE_VERBOSE)
+                switch (event) {
+                case DEVICE_BUS_INACTIVE:
+                        TRACE_MSG0(pcd->TAG, "BUS INACTIVE");
+                        break;
+                default:
+                        TRACE_MSG0(pcd->TAG, "default");
+                        break;
+                case DEVICE_UNKNOWN:
+                        TRACE_MSG0(pcd->TAG, "UNKNOWN");
+                        break;
+                case DEVICE_BUS_ACTIVITY:
+                        TRACE_MSG0(pcd->TAG, "BUS ACTIVITY");
+                        break;
+                case DEVICE_CONFIGURED:
+                        TRACE_MSG0(pcd->TAG, "CONFIGURED");
+                        break;
+                case DEVICE_SET_INTERFACE:
+                        TRACE_MSG0(pcd->TAG, "SET INTEERFACE");
+                        break;
+                case DEVICE_SET_FEATURE:
+                case DEVICE_CLEAR_FEATURE:
+                        TRACE_MSG0(pcd->TAG, "SET/CLEAR FEATURE");
+                        break;
+                }
         /* get the next bus device state by table lookup of event, we need to save the
          * current state IFF we are suspending so that it can be restored on resume.
          */
@@ -1089,20 +1120,16 @@ void pcd_bus_event_handler_irq (struct usbd_bus_instance *bus, usbd_device_event
                 /* FALL THROUGH */
         default:
                 bus->device_state = event_states[event];
-                //TRACE_MSG0(PCD, "default");
                 break;
         case DEVICE_UNKNOWN:
-                //TRACE_MSG0(PCD, "UNKNOWN");
                 break;
         case DEVICE_BUS_ACTIVITY:
                 bus->device_state = bus->suspended_state;
-                //TRACE_MSG0(PCD, "ACTIVITY");
                 break;
 
         case DEVICE_SET_INTERFACE:
         case DEVICE_SET_FEATURE:
         case DEVICE_CLEAR_FEATURE:
-                //TRACE_MSG0(PCD, "SET");
                 break;
         }
 
@@ -1193,6 +1220,7 @@ void *pcd_device_bh (otg_task_arg_t data)
         struct usbd_urb *urb;
         int i;
         RETURN_NULL_IF (!bus || !(endpoint = bus->endpoint_array));
+        //otg_led(LED2, TRUE);
         for (i = 0; i < bus->endpoints; i++) {
                 struct usbd_endpoint_instance *endpoint = &bus->endpoint_array[i];
                 CONTINUE_UNLESS(endpoint);
@@ -1217,6 +1245,7 @@ void *pcd_device_bh (otg_task_arg_t data)
                         #endif
                 }
         }
+        //otg_led(LED2, FALSE);
         return NULL;
 }
 
@@ -1251,7 +1280,6 @@ void *pcd_register_bh(void *data)
         struct usbd_endpoint_instance *endpoint;
         BOOL usbd_enabled = FALSE;
 
-        printk(KERN_INFO"%s: pcd: %p\n", __FUNCTION__, pcd); 
 
         TRACE_MSG1(pcd->TAG, "BUS_REGISTER_BH: pcd: %p", (int)data);
         RETURN_NULL_UNLESS(pcd);
@@ -1296,7 +1324,6 @@ void *pcd_register_bh(void *data)
                 TRACE_STRING(pcd->TAG, "function_name: %s", pcd->otg->function_name);
 
 
-        printk(KERN_INFO"%s: enable function\n", __FUNCTION__); 
         THROW_IF ((usbd_enabled = usbd_enable_function (bus, pcd->otg->function_name, pcd->otg->serial_number)), error);
 
         TRACE_MSG0(pcd->TAG, "BUS_REGISTER_BH: task start");
@@ -1354,7 +1381,6 @@ void *pcd_deregister_bh(void *data)
         TRACE_MSG2(pcd->TAG, "PCD_DEREGISTER_BH: pcd: %x bus: %x", pcd, pcd ? pcd->bus : NULL);
 
         //Disable OTG state
-        printk(KERN_INFO"%s:----Disable otg----\n", __FUNCTION__);
         otg_event(pcd->otg, enable_otg_, pcd->TAG, "BUS_DEREGISTER_BH");
 
         if (pcd && (bus = pcd->bus) /*&& (usbd_bus_state_enabled == bus->bus_state)*/) {
@@ -1400,6 +1426,97 @@ void *pcd_deregister_bh(void *data)
 /* ************************************************************************************* */
 
 
+/*! pcd_framenum() - get current framenum
+ * @param otg
+ */
+u16
+pcd_framenum (struct otg_instance *otg)
+{
+        struct pcd_instance     *pcd = otg ? otg->pcd : NULL;
+        RETURN_ZERO_UNLESS(otg && pcd && usbd_pcd_ops.framenum);
+        return usbd_pcd_ops.framenum(pcd);
+}
+
+
+/*!
+ * pcd_remote_wakeup() - perform remote wakeup.
+ * Initiate a remote wakeup to the host.
+ * @param otg - otg instance
+ * @param flag - SET or RESET
+ */
+void pcd_remote_wakeup(struct otg_instance *otg, u8 flag)
+{
+        struct pcd_instance     *pcd = otg->pcd;
+        struct usbd_bus_instance *bus = pcd->bus;
+
+        struct otg_dev          *otg_dev = otg->privdata;
+
+        TRACE_MSG1(pcd->TAG, "device_feature_settings: %04x", bus->device_feature_settings);
+        RETURN_UNLESS(bus->device_feature_settings & FEATURE(USB_DEVICE_REMOTE_WAKEUP));
+
+        TRACE_MSG1(pcd->TAG, "remote wakeup enabled flag: %d", flag);
+
+        RETURN_UNLESS (usbd_pcd_ops.remote_wakeup);
+
+        usbd_pcd_ops.remote_wakeup(pcd);
+}
+
+/*!
+ * pcd_tcd_en_func() - enable
+ * This is called to enable / disable the PCD and USBD stack.
+ * @param otg - otg instance
+ * @param flag - SET or RESET
+ *
+ * Start or stop the UDC. 
+ *
+ * SET Called after Vbus detected and before the pullup is enabled.
+ *
+ * RESET after pullup disabled to turn off.
+ *
+ */
+void
+pcd_tcd_en_func (struct otg_instance *otg, u8 flag)
+{
+        struct pcd_instance     *pcd = otg->pcd;
+
+        int                     vbus = FALSE;
+
+        RETURN_UNLESS (usbd_pcd_ops.vbus_status);
+
+        vbus = usbd_pcd_ops.vbus_status(pcd);
+
+        TRACE_MSG1(pcd->TAG, "vbus: %d", vbus);
+
+        switch (flag) {
+        case PULSE:
+        case SET:
+                switch (vbus) {
+                case 1:
+                case 2:
+                        otg_event(otg, VBUS_VLD | B_SESS_VLD, otg->pcd->TAG, "PCD TCD EN");
+                        break;
+                default:
+                        break;
+                }
+                break;
+        }
+}
+
+/*! pcd_dp_pullup_func 
+ * @param otg - otg_instance pointer
+ * @param flag - 
+ *
+ * Enable or disable pullup.
+ */
+void pcd_dp_pullup_func(struct otg_instance *otg, u8 flag)
+{
+        struct pcd_instance     *pcd = otg->pcd;
+        
+        RETURN_UNLESS(usbd_pcd_ops.softcon);
+        usbd_pcd_ops.softcon(pcd, flag);
+}
+
+
 /*! pcd_en_func - enable
  *
  * This is called to enable / disable the PCD and USBD stack.
@@ -1411,7 +1528,6 @@ void pcd_en_func (struct otg_instance *otg, u8 flag)
         struct pcd_instance *pcd = otg->pcd;
         struct usbd_bus_instance *bus = pcd->bus;
 
-	printk(KERN_INFO"%s:\n", __FUNCTION__); 
         //TRACE_MSG0(pcd->TAG, "--");
         switch (flag) {
         case SET:
@@ -1446,7 +1562,6 @@ void pcd_init_func (struct otg_instance *otg, u8 flag)
         //struct usbd_bus_instance *bus = pcd->bus;
         //struct bus_data *data = NULL;
 
-        printk(KERN_INFO"%s:\n", __FUNCTION__); 
         //TRACE_MSG0(pcd->TAG, "--");
         switch (flag) {
         case SET:
@@ -1512,4 +1627,17 @@ void pcd_mod_exit (struct otg_instance *otg)
         pcd->task = NULL;
         pcd->register_bh = pcd->deregister_bh = NULL;
 }
+
+struct pcd_ops pcd_ops = {
+        .pcd_en_func = pcd_en_func,
+        .pcd_init_func = pcd_init_func,
+        #ifdef CONFIG_OTG_REMOTE_WAKEUP
+        .remote_wakeup_func = pcd_remote_wakeup,
+        #endif /* CONFIG_OTG_REMOTE_WAKEUP */
+        .framenum = pcd_framenum,
+        .tcd_en_func = pcd_tcd_en_func,
+        .dp_pullup_func = pcd_dp_pullup_func,
+        .ticks = pcd_ticks,
+        .elapsed = pcd_elapsed,
+};
 

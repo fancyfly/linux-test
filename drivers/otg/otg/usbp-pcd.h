@@ -12,7 +12,7 @@
  */
 /*
  * otg/otg/usbp-pcd.h - OTG Peripheral Controller Driver
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/usbp-pcd.h|20070710060324|20938
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/usbp-pcd.h|20070820053712|09860
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -132,6 +132,9 @@ struct usbd_pcd_ops {
                  int,
                  int);                                  /* Return non-zero if requested endpoint clear fails */
 
+        int (*remote_wakeup)
+                (struct pcd_instance *);                /* Return non-zero if remote wakeup fails */
+
         /* 17 */
         void (*startup_events) (struct pcd_instance *);   /* perform UDC specific USB events */
 
@@ -146,6 +149,13 @@ struct usbd_pcd_ops {
 
         /* 19. configuration changes
          */
+        int (*vbus_status) (struct pcd_instance *);
+        int (*softcon) (struct pcd_instance *, int);
+        u16 (*framenum) (struct pcd_instance *);
+
+        otg_tick_t (*ticks)(struct pcd_instance *);
+        otg_tick_t (*elapsed)(otg_tick_t *, otg_tick_t *);
+
 };
 
 extern struct usbd_pcd_ops usbd_pcd_ops;
@@ -213,11 +223,20 @@ static __inline__ void pcd_tx_cancelled_irq (struct usbd_endpoint_instance *endp
 static __inline__ int pcd_tx_sendzlp (struct usbd_endpoint_instance *endpoint)
 {
         struct usbd_urb *tx_urb = endpoint->tx_urb;
+        struct usbd_bus_instance *bus;
+        struct pcd_instance *pcd;
+        
         RETURN_FALSE_UNLESS(tx_urb);                                    // no urb
+
+        bus = tx_urb->bus;
+        pcd = (struct pcd_instance *)bus->privdata;
+        TRACE_MSG3(pcd->TAG, "sent: %d actual: %d flags: %02x", endpoint->sent, tx_urb->actual_length, tx_urb->flags);
+
         RETURN_FALSE_IF(!endpoint->sent && tx_urb->actual_length);      // nothing sent yet and there is data to send
         RETURN_FALSE_IF(tx_urb->actual_length > endpoint->sent);        // still data to send
         RETURN_FALSE_UNLESS(tx_urb->flags & USBD_URB_SENDZLP);          // flag not set
 
+        TRACE_MSG0(pcd->TAG, "SENDZLP");
         tx_urb->flags &= ~USBD_URB_SENDZLP;
         return TRUE;
 }

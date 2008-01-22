@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/mouse/mouse-if.c
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/mouse/mouse-if.c|20070712081140|33552
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/mouse/mouse-if.c|20070810225217|38889
  *
  *      Copyright (c) 2003-2005 Belcarra
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -110,7 +110,8 @@ struct mouse_if_private {
 
         int wLength;
         u16 pending_report;
-        u16 idle;
+        u8 idle;
+        u8 duration;
         u16 protocol;
 
         int mouse_interface_number;
@@ -211,12 +212,13 @@ void mouse_if_global_init(void)
          */
         ZERO(mouse_if_hid);
         mouse_if_hid.bLength = 0x09;
-        mouse_if_hid.bDescriptorType = 0x21;
-        mouse_if_hid.bcdHID = __constant_cpu_to_le16(0x110);
+        mouse_if_hid.bDescriptorType = HID_DT_HID;
+        mouse_if_hid.bcdHID = __constant_cpu_to_le16(0x101);
         mouse_if_hid.bCountryCode = 0x00;
         mouse_if_hid.bNumDescriptors = 0x01;
-        mouse_if_hid.bReportType = 0x22;
-        mouse_if_hid.wItemLength = __constant_cpu_to_le16(0x34);  // XXX magic length?
+        mouse_if_hid.bReportType = HID_DT_REPORT;
+        mouse_if_hid.wItemLength = __constant_cpu_to_le16(sizeof(MouseHIDReport));  
+
 
         /*! Interface Descriptions
          */
@@ -247,12 +249,14 @@ void mouse_if_global_init(void)
  */
 struct hid_descriptor mouse_if_hid = {
         .bLength = 0x09,
-        .bDescriptorType = 0x21,
-        .bcdHID = __constant_cpu_to_le16(0x110),
+        .bDescriptorType = HID_DT_HID,
+        .bcdHID = __constant_cpu_to_le16(0x101),
+
         .bCountryCode = 0x00,
         .bNumDescriptors = 0x01,
-        .bReportType = 0x22,
-        .wItemLength = __constant_cpu_to_le16(0x34),
+        .bReportType = HID_DT_REPORT,
+
+        .wItemLength = __constant_cpu_to_le16(sizeof(MouseHIDReport)),
 };
 
 /*! 
@@ -442,6 +446,7 @@ static int copy_report (struct usbd_urb *urb, void *data, int size, int max_buf)
         RETURN_EINVAL_IF (!(length = size));
         RETURN_EINVAL_IF ((available = max_buf - urb->actual_length) <= 0);
 
+        TRACE_MSG3(MOUSE, "max_buf: %d actual: %d available: %d", max_buf, urb->actual_length, available);
         length = (length < available) ? length : available;
         memcpy (urb->buffer + urb->actual_length, data, length);
         urb->actual_length += length;
@@ -449,7 +454,7 @@ static int copy_report (struct usbd_urb *urb, void *data, int size, int max_buf)
 }
 
 /*!
- * mouse_if_send_hid() - send an EP0 urb containing HID report
+ * mouse_if_send_hid_descriptor() - send an EP0 urb containing HID descriptor
  * This is called to send the Mouse HID report.
  *
  * This will satisfy a device request from the host.
@@ -457,21 +462,59 @@ static int copy_report (struct usbd_urb *urb, void *data, int size, int max_buf)
  * @param function  - pointer to function instance
  * @return int
  */
-static int mouse_if_send_hid (struct usbd_function_instance *function)
+static int mouse_if_send_hid_descriptor (struct usbd_function_instance *function)
 {
         struct usbd_interface_instance *interface_instance = (struct usbd_interface_instance *)function;
         struct mouse_if_private *mouse = interface_instance->function.privdata;
         struct usbd_urb *urb = usbd_alloc_urb_ep0(function, mouse->wLength, NULL);
-        int wMaxPacketSize = usbd_endpoint_zero_wMaxPacketSize(function, 0);
+        int hs = usbd_high_speed(function);
+        int wMaxPacketSize = usbd_endpoint_zero_wMaxPacketSize(function, hs);
 
-        TRACE_MSG1(MOUSE, "Send Hid wLength: %d", mouse->wLength);
-        RETURN_EINVAL_IF (copy_report(urb, MouseHIDReport, sizeof(MouseHIDReport), mouse->wLength));
+        TRACE_MSG2(MOUSE, "Send Hid wLength: %d wMaxPacketSize: %d", mouse->wLength, wMaxPacketSize);
+        TRACE_MSG0(MOUSE, "AAAA"); 
+        RETURN_EINVAL_IF (copy_report(urb, (u8 *)&mouse_if_hid, sizeof(mouse_if_hid), mouse->wLength));
+        TRACE_MSG1(MOUSE, "BBBB actual: %d", urb->actual_length); 
         RETURN_EINVAL_UNLESS (wMaxPacketSize);
+        TRACE_MSG0(MOUSE, "BBBB"); 
 
         if (!(urb->actual_length % wMaxPacketSize) && (urb->actual_length < mouse->wLength))
                 urb->flags |= USBD_URB_SENDZLP;
 
         RETURN_ZERO_IF(!usbd_start_in_urb(urb));
+        TRACE_MSG0(MOUSE, "CCCC"); 
+        usbd_free_urb(urb);
+        return -EINVAL;
+}
+
+/*!
+ * mouse_if_send_hid_report() - send an EP0 urb containing HID report
+ * This is called to send the Mouse HID report.
+ *
+ * This will satisfy a device request from the host.
+ *
+ * @param function  - pointer to function instance
+ * @return int
+ */
+static int mouse_if_send_hid_report (struct usbd_function_instance *function)
+{
+        struct usbd_interface_instance *interface_instance = (struct usbd_interface_instance *)function;
+        struct mouse_if_private *mouse = interface_instance->function.privdata;
+        struct usbd_urb *urb = usbd_alloc_urb_ep0(function, mouse->wLength, NULL);
+        int hs = usbd_high_speed(function);
+        int wMaxPacketSize = usbd_endpoint_zero_wMaxPacketSize(function, hs);
+
+        TRACE_MSG1(MOUSE, "Send Hid wLength: %d", mouse->wLength);
+        TRACE_MSG0(MOUSE, "AAAA"); 
+        RETURN_EINVAL_IF (copy_report(urb, MouseHIDReport, sizeof(MouseHIDReport), mouse->wLength));
+        TRACE_MSG0(MOUSE, "BBBB"); 
+        RETURN_EINVAL_UNLESS (wMaxPacketSize);
+        TRACE_MSG0(MOUSE, "BBBB"); 
+
+        if (!(urb->actual_length % wMaxPacketSize) && (urb->actual_length < mouse->wLength))
+                urb->flags |= USBD_URB_SENDZLP;
+
+        RETURN_ZERO_IF(!usbd_start_in_urb(urb));
+        TRACE_MSG0(MOUSE, "CCCC"); 
         usbd_free_urb(urb);
         return -EINVAL;
 }
@@ -491,7 +534,7 @@ static void mouse_if_hid_bh (void *data)
 {
         struct usbd_function_instance *function = (struct usbd_function_instance *)data;
         struct usbd_interface_instance *interface_instance = (struct usbd_interface_instance *)function;
-        mouse_if_send_hid(function);
+        mouse_if_send_hid_report(function);
         atomic_inc(&mouse_if_bh_active);
 }
 
@@ -507,9 +550,11 @@ static int mouse_schedule_bh (struct usbd_function_instance *function)
         struct mouse_if_private *mouse = interface_instance->function.privdata;
 
         TRACE_MSG0(MOUSE, "Scheduling");
+        TRACE_MSG0(MOUSE, "AAAA"); 
         PREPARE_WORK_ITEM(mouse->notification_bh, mouse_if_hid_bh, (void *)function);
         atomic_set(&mouse_if_bh_active, 1);
         SCHEDULE_WORK(mouse->notfication_bh);
+        TRACE_MSG0(MOUSE, "BBBB"); 
         return 0;
 }
 #endif /* CONFIG_OTG_MOUSE_BH */
@@ -562,27 +607,45 @@ static int mouse_if_device_request (struct usbd_function_instance *function, str
 
         /* HID only sends requests to interface.
          */
+        TRACE_MSG0(MOUSE, "CHECK RECIP"); 
         RETURN_EINVAL_UNLESS(USB_REQ_RECIPIENT_INTERFACE == (request->bmRequestType & USB_REQ_RECIPIENT_MASK));
+
+
+        TRACE_MSG0(MOUSE, "RECIP OK"); 
 
         switch (request->bmRequestType & USB_REQ_DIRECTION_MASK) {
         case USB_REQ_DEVICE2HOST:
+                TRACE_MSG0(MOUSE, "DEVICE2HOST"); 
                 switch (request->bRequest) {
                 case USB_REQ_GET_DESCRIPTOR:
+                        TRACE_MSG0(MOUSE, "GET DESCRIPTOR"); 
                         switch (le16_to_cpu(request->wValue)>>8) {
-                        case HID_REPORT:
+                        case HID_DT_HID:
                                 mouse->wLength = request->wLength;
+                                return mouse_if_send_hid_descriptor(function);
+
+                        case HID_DT_REPORT:
+                                TRACE_MSG0(MOUSE, "GET DESCRIPTOR HID REPORT"); 
+                                mouse->wLength = le16_to_cpu(request->wLength);
                                 #ifdef CONFIG_OTG_MOUSE_BH
                                 return mouse_schedule_bh(function);
                                 #else
-                                return mouse_if_send_hid(function);
+                                return mouse_if_send_hid_report(function);
                                 #endif
+                        default:
+                                TRACE_MSG0(MOUSE, "GET DESCRIPTOR HID UNKNOWN"); 
+                                break;
                         }
                         return -EINVAL;
                 case USB_REQ_GET_REPORT:
+                        TRACE_MSG0(MOUSE, "GET REPORT"); break;
                 case USB_REQ_GET_IDLE:
+                        TRACE_MSG0(MOUSE, "GET IDLE"); break;
                 case USB_REQ_GET_PROTOCOL:
+                        TRACE_MSG0(MOUSE, "GET PROTOCOL"); break;
                         break;
                 default:
+                        TRACE_MSG0(MOUSE, "GET DEFAULT"); break;
                         return -EINVAL;
                 }
 
@@ -595,8 +658,14 @@ static int mouse_if_device_request (struct usbd_function_instance *function, str
 
                         switch (le16_to_cpu(request->wValue) >> 8) {
                         case HID_INPUT:
+                                TRACE_MSG0(MOUSE, "GET REPORT HID_INPUT"); break;
                         case HID_OUTPUT:
+                                TRACE_MSG0(MOUSE, "GET REPORT HID_OUTPUT"); break;
                         case HID_FEATURE:
+                                TRACE_MSG0(MOUSE, "GET REPORT HID_FEATURE"); break;
+                                break;
+                        default:
+                                TRACE_MSG0(MOUSE, "GET REPORT default"); break;
                                 break;
                         }
                         // XXX create urb and send?
@@ -608,10 +677,12 @@ static int mouse_if_device_request (struct usbd_function_instance *function, str
                         urb->actual_length = 1;
                         switch (request->bRequest) {
                         case USB_REQ_GET_IDLE:
-                                urb->buffer[0] = mouse->idle;
+                                urb->buffer[0] = cpu_to_le16(mouse->idle);
+                                TRACE_MSG1(MOUSE, "GET IDLE: %x", urb->buffer[0]);
                                 break;
                         case USB_REQ_GET_PROTOCOL:
-                                urb->buffer[0] = mouse->protocol;
+                                urb->buffer[0] = cpu_to_le16(mouse->protocol);
+                                TRACE_MSG1(MOUSE, "GET PROTOCOL: %x", urb->buffer[0]);
                                 break;
                         }
                 }
@@ -624,10 +695,12 @@ static int mouse_if_device_request (struct usbd_function_instance *function, str
                 break;
 
         case USB_REQ_HOST2DEVICE:
+                TRACE_MSG0(MOUSE, "HOST2DEVICE"); 
                 switch (request->bRequest) {
                 case USB_REQ_SET_REPORT:
+                        TRACE_MSG0(MOUSE, "SET REPORT"); 
                         // Sample: 21 09 00 02 00 00 01 00
-                        mouse->pending_report = request->wValue;
+                        mouse->pending_report = le16_to_cpu(request->wValue);
                         RETURN_EINVAL_UNLESS(request->wLength &&
                                         (urb = usbd_alloc_urb_ep0(function, request->wLength, mouse_report_received)));
 
@@ -638,14 +711,20 @@ static int mouse_if_device_request (struct usbd_function_instance *function, str
                         return -EINVAL;
 
                 case USB_REQ_SET_IDLE:
-                        mouse->idle = request->wValue;
-                        TRACE_MSG1(MOUSE, "SET IDLE: %x", request->wValue);
+                        TRACE_MSG0(MOUSE, "SET IDLE"); 
+                        mouse->idle = le16_to_cpu(request->wValue) >> 8;
+                        mouse->duration = le16_to_cpu(request->wValue) & 0xff;
+                        TRACE_MSG2(MOUSE, "SET IDLE: idle: %02x duration: %02x", mouse->idle, mouse->duration);
                         return 0;
 
                 case USB_REQ_SET_PROTOCOL:
-                        mouse->protocol = request->wValue;
+                        TRACE_MSG0(MOUSE, "SET PROTOCOL"); 
+                        mouse->protocol = le16_to_cpu(request->wValue);
                         TRACE_MSG1(MOUSE, "SET PROTOCOL: %x", request->wValue);
                         return 0;
+                default:
+                        TRACE_MSG0(MOUSE, "SET UNKNOWN"); 
+                        break;
                 }
                 break;
         }
@@ -666,6 +745,7 @@ static int mouse_if_set_configuration (struct usbd_function_instance *function, 
 {
         struct usbd_interface_instance *interface_instance = (struct usbd_interface_instance *)function;
         struct mouse_if_private *mouse = interface_instance->function.privdata;
+        int hs = usbd_high_speed(function);
 
 
         TRACE_MSG3(MOUSE, "SET_CONFIGURATION MOUSE_IF[%d] %x cfg: %d ", interface_instance->wIndex, function, configuration);
@@ -676,8 +756,8 @@ static int mouse_if_set_configuration (struct usbd_function_instance *function, 
 
         mouse->n = mouse->x = mouse->y = mouse->last_x = mouse->last_y = 0;
 
-        mouse->bEndpointAddress = usbd_endpoint_bEndpointAddress(function, BULK_INT, 0);
-        mouse->writesize = usbd_endpoint_wMaxPacketSize(function, BULK_INT, 0);
+        mouse->bEndpointAddress = usbd_endpoint_bEndpointAddress(function, BULK_INT, hs);
+        mouse->writesize = usbd_endpoint_wMaxPacketSize(function, BULK_INT, hs);
 
         mouse->mouse_count = 0;
 
@@ -743,11 +823,12 @@ static int mouse_if_function_enable (struct usbd_function_instance *function)
 {
         struct usbd_interface_instance *interface_instance = (struct usbd_interface_instance *)function;
         struct mouse_if_private *mouse = NULL;
+        int hs = usbd_high_speed(function);
 
         RETURN_EINVAL_UNLESS((mouse = CKMALLOC(sizeof(struct mouse_if_private))));
         // XXX MODULE LOCK HERE
         interface_instance->function.privdata = (void *)mouse;
-        mouse->writesize = usbd_endpoint_wMaxPacketSize(function, BULK_INT, 0);
+        mouse->writesize = usbd_endpoint_wMaxPacketSize(function, BULK_INT, hs);
         mouse->mouse_interface_number = Mouse_Interfaces_Active++;
         return 0;
 }

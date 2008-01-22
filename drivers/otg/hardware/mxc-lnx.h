@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/mxc-lnx.h
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/mxc/mxc-lnx.h|20061123215831|00336
+ * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/mxc/mxc-lnx.h|20070726000034|21621
  *
  * 	Copyright (c) 2004-2005 Belcarra
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -258,22 +258,23 @@ static __inline__ u32 ep_word(int n, int dir, int word)
  * overlapped endpoints (both in and out are allocated).
  */
 
-static volatile __inline__ u16 data_x_buf(int n, int dir)
+#define VOLATILE 
+static VOLATILE __inline__ u16 data_x_buf(int n, int dir)
 {
         return 0x40 * (n * 4 + 2 * (dir ? 1 : 0));
 }
-static volatile __inline__ u16 data_y_buf(int n, int dir)
+static VOLATILE __inline__ u16 data_y_buf(int n, int dir)
 {
         return 0x40 * (n * 4 + 2 * (dir ? 1 : 0) + 1);
 }
 
-static volatile __inline__ u8 * data_x_address(int n, int dir)
+static VOLATILE __inline__ u8 * data_x_address(int n, int dir)
 {
-        return (volatile u8 *) IO_ADDRESS(OTG_DATA_BASE + data_x_buf(n, dir));
+        return (VOLATILE u8 *) IO_ADDRESS(OTG_DATA_BASE + data_x_buf(n, dir));
 }
-static volatile __inline__ u8 * data_y_address(int n, int dir)
+static VOLATILE __inline__ u8 * data_y_address(int n, int dir)
 {
-        return (volatile u8 *) IO_ADDRESS(OTG_DATA_BASE + data_y_buf(n, dir));
+        return (VOLATILE u8 *) IO_ADDRESS(OTG_DATA_BASE + data_y_buf(n, dir));
 }
 /*! @} */
 

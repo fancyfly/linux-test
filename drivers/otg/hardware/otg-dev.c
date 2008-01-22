@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/otg-dev.c -- Generic DEV driver
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/otglib/otg-dev.c|20070721004822|27474
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/otglib/otg-dev.c|20070918212346|28546
  *
  *      Copyright (c) 2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp
@@ -97,11 +97,11 @@ static struct otg_dev       *otg_devs;
 /*!
  * otg_dev_isr() - interrupt service handler
  */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
 irqreturn_t otg_dev_isr(int irq, void *data, struct pt_regs *r)
-#else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+#else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
 irqreturn_t otg_dev_isr(int irq, void *data)
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
 {
         struct otg_interrupt    *otg_interrupt; // = data;
         struct device           *device; // = otg_interrupt->device;
@@ -134,7 +134,7 @@ irqreturn_t otg_dev_isr(int irq, void *data)
                 CONTINUE_UNLESS(otg_dev_driver);
                 CONTINUE_UNLESS(otg_dev_driver->isr);
                 CONTINUE_UNLESS(otg_dev_driver->irqs & irqmask);
-                RETURN_IRQ_HANDLED_IF_IRQ_HANDLED (otg_dev_driver->isr(otg_dev, data));
+                RETURN_IRQ_HANDLED_IF_IRQ_HANDLED (otg_dev_driver->isr(otg_dev, data, irqmask));
                 //TRACE_MSG2(otg_dev->DEV, "not handled by %s %d", otg_dev_driver->name, i);
         }
 
@@ -248,15 +248,15 @@ int otg_dev_probe (struct device *device, struct otg_device_driver *otg_device_d
                                 __FUNCTION__, resource, resources->start, otg_interrupt); 
                 THROW_IF(request_irq(resources->start, 
 
-                                        (otg_dev->otg_device_driver->isr) ?  
-                                        (otg_dev->otg_device_driver->isr) : 
+                                        //(otg_dev->otg_device_driver->isr) ?  
+                                        //(otg_dev->otg_device_driver->isr) : 
                                         otg_dev_isr, 
 
-                                        #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+                                        #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
                                         SA_SHIRQ, 
-                                        #else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+                                        #else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
                                         0, 
-                                        #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+                                        #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
                                         otg_dev->otg_device_driver->name, 
                                         otg_interrupt
                                     ), error);

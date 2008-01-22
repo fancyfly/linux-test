@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/mx31-l26.c - iMX31ADS EVB OTG Peripheral and OTG Controller Drivers Module Initialization
- * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/imx31ads/imx31ads-l26.c|20070710021517|14139
+ * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/imx31ads/imx31ads-l26.c|20070909224442|14233
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp

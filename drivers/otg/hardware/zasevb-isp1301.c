@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/zasevb-isp1301.c -- ZASEVB ISP1301 Transceiver Controller driver
- * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/zasevb/zasevb-isp1301.c|20070614183950|01743
+ * @(#) sp/root@belcarra.com/debian-black.(none)|otg/platform/zasevb/zasevb-isp1301.c|20070822230929|14023
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp
@@ -55,7 +55,6 @@
 
 #include "mxc-lnx.h"
 #include "mxc-hardware.h"
-//#include <asm/arch/board.h>
 
 #include "isp1301.h"
 #include "isp1301-hardware.h"
@@ -230,39 +229,38 @@ int zasevb_tcd_mod_init (struct otg_instance *otg)
         int gpio = 1;
 
         /* ------------------------------------------------------------------------ */
-        #ifdef CONFIG_OTG_ZASEVB_DIFFERENTIAL_UNIDIRECTIONAL
+        #if defined(CONFIG_OTG_ZASEVB_DIFFERENTIAL_UNIDIRECTIONAL)
         int hwmode = XCVR_D_SE0_NEW;
         int newmode = XCVR_D_D;
         isp1301_tx_mode_t tx_mode = vp_vm_unidirectional;       // SCMA11 ok
         printk (KERN_INFO"Current setting is DIFFERENTIAL UNIDIRECTIONAL\n");
 
         /* ------------------------------------------------------------------------ */
-        #elif CONFIG_OTG_ZASEVB_SINGLE_ENDED_UNIDIRECTIONAL
+        #elif defined(CONFIG_OTG_ZASEVB_SINGLE_ENDED_UNIDIRECTIONAL)
         int hwmode = XCVR_SE0_D_NEW;
         int newmode = XCVR_SE0_D_NEW;
         isp1301_tx_mode_t tx_mode = dat_se0_unidirectional;     // ArgonEVB ok
         printk (KERN_INFO"Current setting is SINGLE ENDED UNIDIRECTIONAL\n");
 
         /* ------------------------------------------------------------------------ */
-        #elif CONFIG_OTG_ZASEVB_DIFFERENTIAL_BIDIRECTIONAL
+        #elif defined(CONFIG_OTG_ZASEVB_DIFFERENTIAL_BIDIRECTIONAL)
         int hwmode = XCVR_D_D;
         int newmode = XCVR_D_D;
         isp1301_tx_mode_t tx_mode = vp_vm_bidirectional;       // ArgonEVB ok
         printk (KERN_INFO"Current setting is DIFFERENTIAL BIDIRECTIONAL\n");
 
         /* ------------------------------------------------------------------------ */
-        #elif CONFIG_OTG_ZASEVB_SINGLE_ENDED_BIDIRECTIONAL
+        #elif defined(CONFIG_OTG_ZASEVB_SINGLE_ENDED_BIDIRECTIONAL)
         int hwmode = XCVR_SE0_SE0;
         int newmode = XCVR_SE0_SE0;
         isp1301_tx_mode_t tx_mode = dat_se0_bidirectional;      //SCMA11 ok
         printk (KERN_INFO"Current setting is SINGLE ENDED BIDIRECTIONAL\n");
-
-        /* ------------------------------------------------------------------------ */
+        
+	/* ------------------------------------------------------------------------ */
         #else
         #error Please Configure Transceiver Mode
         #endif /* CONFIG_OTG_ZASEVB_.... */
         /* ------------------------------------------------------------------------ */
-
 
         TRACE_MSG0(otg->tcd->TAG, "1. I2C setup");
 
@@ -279,6 +277,12 @@ int zasevb_tcd_mod_init (struct otg_instance *otg)
 
         mxc_iomux_gpio_isp1301_set (otg, hwmode);
 
+	#ifdef CONFIG_ARCH_MXC91131
+        writel (0x00000051, PLL2_DP_HFSOP);
+        writel (0x00000051, PLL2_DP_OP);
+	#endif /* CONFIG_ARCH_ZEUS */
+		
+	
         /* ------------------------------------------------------------------------ */
         TRACE_MSG0(otg->tcd->TAG, "7. SET HWMODE");
         isp1301_configure(otg, tx_mode, spd_susp_reg);

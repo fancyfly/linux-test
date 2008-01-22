@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/zasevb-arc-l26.c - iMX31ADS EVB OTG Peripheral and OTG Controller Drivers Module Initialization
- * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/zasevb/zasevb-arc-l26.c|20070710021518|26558
+ * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/zasevb/zasevb-arc-l26.c|20070909224442|30419
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp
@@ -51,6 +51,9 @@
 
 #include <linux/pci.h>
 #include <asm/arch/gpio.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22)
+#include <asm/arch/board.h>
+#endif
 
 //#include "mxc-lnx.h"
 //#include "mxc-hardware.h"

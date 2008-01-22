@@ -1,5 +1,5 @@
 #
-# @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/zasevb/Kconfig-zasevb|20070619202017|07422
+# @(#) sp/root@belcarra.com/debian-black.(none)|otg/platform/zasevb/Kconfig-zasevb|20070829214932|07457
 # Copyright (c) 2005 Belcarra
 # Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
 #
@@ -136,7 +136,7 @@ choice
 		Select OTG timer according to platform structure
 	
 	config OTG_HRT
-		depends on HIGH_RES_TIMERS
+#		depends on HIGH_RES_TIMERS
 		bool 'High Resolution Timer'
 		---help---
 		Using high resolution timer, if present and enabled (preferred)

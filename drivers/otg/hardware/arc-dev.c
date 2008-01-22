@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/arc-dev.c - MX31 Device driver 
- * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/arc/arc-dev.c|20070710021517|28761
+ * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/arc/arc-dev.c|20070921192720|26657
  *
  *      Copyright (c) 2006-2007 Belcarra Technologies 2005 Corp
  *
@@ -120,7 +120,7 @@ irqreturn_t arc_udc_isr(int irq, void *data)
 {
 
 //	printk(KERN_INFO"%s: --\n", __FUNCTION__);
-        return otg_dev_isr(irq, data);
+	return otg_dev_isr(irq,data);
 }
 
 

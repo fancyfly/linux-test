@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/acm/acm.h
- * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/acm.h|20070717190926|17746
+ * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/acm.h|20070911235624|28546
  *
  *      Copyright (c) 2003-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -205,6 +205,7 @@ struct acm_private {
 
         u32 flags;
 
+        otg_pthread_mutex_t mutex;
         otg_atomic_t recv_urbs;
         //otg_atomic_t used;
         otg_atomic_t queued_bytes;
@@ -326,7 +327,7 @@ int acm_chars_in_buffer (struct usbd_function_instance *, minor_chan_t);
 /*! acm_wait_task - wait for task to complete.
  */
 void acm_wait_task (struct usbd_function_instance *, OLD_WORK_ITEM *queue);
-
+//void acm_wait_task (struct usbd_function_instance *, struct otg_workitem *work);
 /*! acm_ready - return true if connected and carrier
  */
 int acm_ready (struct usbd_function_instance *);

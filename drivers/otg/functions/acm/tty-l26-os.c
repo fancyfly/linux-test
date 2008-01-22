@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/acm/tty-l24-os.c
- * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/tty-l26-os.c|20070717194651|33148
+ * @(#) balden@belcarra.com/seth2.rillanon.org|otg/functions/acm/tty-l26-os.c|20070921192720|19575
  *
  *      Copyright (c) 2003-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -158,9 +158,9 @@ static u8 tty_minor_count;
 
 /* ******************************************************************************************* */
 
-void tty_l26_wakeup_writers(void *data);
+void * tty_l26_wakeup_writers(void *data);
 void tty_l26_recv_flip(void *data);
-void tty_l26_call_hangup(void *data);
+void * tty_l26_call_hangup(void *data);
 int tty_l26_block_until_ready(struct tty_struct *tty, struct file *filp);
 int tty_l26_loop_xmit_chars(struct usbd_function_instance *function_instance, minor_chan_t chan,
                 int count, int from_user, const unsigned char *buf);
@@ -171,7 +171,7 @@ unsigned int tty_l26_tiocm(struct usbd_function_instance *function_instance, min
 int tty_l26_overflow_xmit_chars(struct usbd_function_instance *function_instance, minor_chan_t chan,
                 int count, int from_user, const unsigned char *buf);
 
-void tty_l26_recv_start(void *data);
+void * tty_l26_recv_start(void *data);
 void tty_l26_recv_start_bh(struct usbd_function_instance *function_instance);
 void tty_l26_os_line_coding(struct usbd_function_instance *function_instance);
 
@@ -200,7 +200,6 @@ STATIC int tty_l26_open(struct tty_struct *tty, struct file *filp)
         int used;
         BOOL nonblocking;
         int rc = 0;
-        unsigned long flags;
 
         TRACE_MSG1(TTY,"acm: %x", acm);
 
@@ -216,7 +215,7 @@ STATIC int tty_l26_open(struct tty_struct *tty, struct file *filp)
                 break;
         }
 
-        local_irq_save(flags);
+        otg_pthread_mutex_lock(&acm->mutex);
         UNLESS(tty->driver_data) {
                 THROW_UNLESS((os_private = CKMALLOC(sizeof(struct os_private))), error);
                 os_private->index = index;
@@ -224,11 +223,12 @@ STATIC int tty_l26_open(struct tty_struct *tty, struct file *filp)
                 init_waitqueue_head(&os_private->open_wait);
                 init_waitqueue_head(&os_private->tiocm_wait);
                 init_waitqueue_head(&os_private->send_wait);
-                PREPARE_WORK_ITEM(os_private->wqueue, tty_l26_wakeup_writers, tty);
-                PREPARE_WORK_ITEM(os_private->hqueue, tty_l26_call_hangup, tty);
-                PREPARE_WORK_ITEM(os_private->rqueue, tty_l26_recv_start, tty);
+               
+                 os_private->wakeup_workitem = otg_workitem_init("wakeup", tty_l26_wakeup_writers, tty, TTY);
+                 os_private->hangup_workitem = otg_workitem_init("hangup", tty_l26_call_hangup, tty, TTY);
+                 os_private->recv_workitem = otg_workitem_init("receive", tty_l26_recv_start, tty, TTY);
         }
-        local_irq_restore(flags);
+        otg_pthread_mutex_unlock(&acm->mutex);
 
 
         nonblocking = BOOLEAN(filp->f_flags & O_NONBLOCK);      /* O_NONBLOCK is same as O_NDELAY */
@@ -238,7 +238,7 @@ STATIC int tty_l26_open(struct tty_struct *tty, struct file *filp)
         /* Lock and increment used counter, save current value.
          * Check for exclusive open at the same time.
          */
-        local_irq_save(flags);
+        otg_pthread_mutex_lock(&acm->mutex);
 
         /* The value of os_private->used controls MOD_{INC/DEC}_USE_COUNT, so
          * it has to be incremented unconditionally, and no early return
@@ -274,7 +274,7 @@ STATIC int tty_l26_open(struct tty_struct *tty, struct file *filp)
                 rc = -EBUSY;
         }
 #endif
-        local_irq_restore(flags);
+        otg_pthread_mutex_unlock(&acm->mutex);
 
         // OK, now it's safe to make an early return if we are failing.
         if (rc) {
@@ -285,7 +285,6 @@ STATIC int tty_l26_open(struct tty_struct *tty, struct file *filp)
 #endif
                 return rc;
         }
-        // XXX local_irq_save(flags);
 
 
         /* To truly emulate the old dual-device approach of having a non-blocking
@@ -304,7 +303,6 @@ STATIC int tty_l26_open(struct tty_struct *tty, struct file *filp)
                 }
                 os_private->flags |= TTYFD_OPENED;
         }
-        // XXX local_irq_restore(flags);
 
 
         /* All done if configured
@@ -404,16 +402,9 @@ STATIC void tty_l26_close(struct tty_struct *tty, struct file *filp)
 
         // XXX wait
 
-        while (
-                        PENDING_WORK_ITEM(os_private->wqueue) ||
-                        PENDING_WORK_ITEM(os_private->hqueue) ||
-                        PENDING_WORK_ITEM(os_private->rqueue)
-                        ) {
-                otg_sleep(1);
-        }
-        PREPARE_WORK_ITEM(os_private->wqueue, NULL, NULL);
-        PREPARE_WORK_ITEM(os_private->hqueue, NULL, NULL);
-        PREPARE_WORK_ITEM(os_private->rqueue, NULL, NULL);
+   otg_workitem_exit(os_private->wakeup_workitem);
+   otg_workitem_exit(os_private->hangup_workitem);     
+   otg_workitem_exit(os_private->recv_workitem);
 
         if (os_private) LKFREE(os_private);
         // XXX moved up tty->driver_data = NULL;
@@ -868,6 +859,11 @@ STATIC int tty_l26_fd_ioctl(struct tty_struct *tty, struct file *file, unsigned 
 
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,20)
+#define _TERMIOS_ ktermios
+#else
+#define _TERMIOS_ termios
+#endif
 
 /*! tty_l26_set_termios
  *
@@ -876,7 +872,7 @@ STATIC int tty_l26_fd_ioctl(struct tty_struct *tty, struct file *file, unsigned 
  * @param tty - pointer to acm private data structure
  * @param termios_old - termios structure
  */
-STATIC void tty_l26_set_termios(struct tty_struct *tty, struct termios *termios_old)
+STATIC void tty_l26_set_termios(struct tty_struct *tty, struct _TERMIOS_ *termios_old)
 {
         int index = TTYINDEX(tty);
         minor_chan_t chan = CHAN(index);
@@ -1053,6 +1049,7 @@ int tty_l26_loop_xmit_chars(struct usbd_function_instance *function_instance, mi
         struct tty_struct *tty = tty_table[index];
         struct os_private *os_private = tty->driver_data;
         int received = 0;
+        int rc=0;
 
         TRACE_MSG2(TTY,"acm[%x] %x", chan, acm);
 
@@ -1069,7 +1066,7 @@ int tty_l26_loop_xmit_chars(struct usbd_function_instance *function_instance, mi
                 BREAK_UNLESS(recv);
 
                 if (from_user)
-                        copy_from_user ((void *)copybuf, (void*)(buf + received), recv);
+                        rc=copy_from_user ((void *)copybuf, (void*)(buf + received), recv);
                 else
                         memcpy ((void *)copybuf, (void*)(buf + received), recv);
 
@@ -1100,11 +1097,9 @@ void tty_l26_overflow_send(struct usbd_function_instance *function_instance, min
         int chars_in_buffer;
         int count;
 
-        unsigned long flags;
-
         TRACE_MSG2(TTY,"acm[%x] %x", chan, acm);
 
-        local_irq_save(flags);
+        otg_pthread_mutex_lock(&acm->mutex);
 
         chars_in_buffer = acm_chars_in_buffer(function_instance, chan);
 
@@ -1125,7 +1120,7 @@ void tty_l26_overflow_send(struct usbd_function_instance *function_instance, min
                 }
 
         }
-        local_irq_restore(flags);
+        otg_pthread_mutex_unlock(&acm->mutex);
 }
 
 
@@ -1156,23 +1151,23 @@ int tty_l26_overflow_xmit_chars(struct usbd_function_instance *function_instance
         int index = acm->index;
         struct tty_struct *tty = tty_table[index];
         struct os_private *os_private = tty->driver_data;
-        unsigned long flags;
         int overflow_room;
         int write_room = acm_write_room(function_instance, chan);
         int sent = 0;
+        int rc=0;
 
         TRACE_MSG4(TTY,"acm[%x] %x count: %d from_user:%d", chan, acm, count, from_user);
 
         RETURN_ZERO_UNLESS(acm);
 
         do {
-                local_irq_save(flags);
+                otg_pthread_mutex_lock(&acm->mutex);
 
                 if ((overflow_room = MIN(TTY_OVERFLOW_SIZE, acm->writesize) - atomic_read(&os_private->tty_overflow_used)) > 0) {
 
                         int tosend = MIN(overflow_room, count);
                         if (from_user)
-                                copy_from_user ((void *)os_private->tty_overflow_buffer + atomic_read(&os_private->tty_overflow_used),
+                                rc=copy_from_user ((void *)os_private->tty_overflow_buffer + atomic_read(&os_private->tty_overflow_used),
                                                 (void*)buf, tosend);
                         else
                                 memcpy ((void *)os_private->tty_overflow_buffer + atomic_read(&os_private->tty_overflow_used),
@@ -1187,7 +1182,7 @@ int tty_l26_overflow_xmit_chars(struct usbd_function_instance *function_instance
                 {
                         count = 0;
                 }
-                local_irq_restore(flags);
+                otg_pthread_mutex_unlock(&acm->mutex);
 
                 /* start sending from overflow if neccessary
                  */
@@ -1348,24 +1343,6 @@ static int tty_l26_break_ctl(struct tty_struct *tty, int flag)
 /* ********************************************************************************************* */
 
 /*!
- * @brief tty_l26_schedule
- *
- * Schedule a bottom half handler work item.
- * @param tty
- * @param queue
- * @return none
- */
-STATIC void tty_l26_schedule(struct tty_struct *tty, OLD_WORK_ITEM *queue)
-{
-        TRACE_MSG1(TTY,"tty: %x", tty);
-        SET_WORK_ARG(*queue, tty);
-        RETURN_IF(NO_WORK_DATA((*queue)) || PENDING_WORK_ITEM((*queue)));
-        SCHEDULE_WORK((*queue));
-        TRACE_MSG1(TTY,"task %p scheduled", queue);
-}
-
-
-/*!
  * @brief tty_l26_call_hangup
  *
  * Bottom half handler to safely send hangup signal to process group.
@@ -1373,14 +1350,14 @@ STATIC void tty_l26_schedule(struct tty_struct *tty, OLD_WORK_ITEM *queue)
  * @param data
  * @return none
  */
-void tty_l26_call_hangup(void *data)
+void * tty_l26_call_hangup(void *data)
 {
         struct tty_struct *tty = data;
         struct os_private *os_private = tty ? tty->driver_data : NULL;
 
         /* XXX Do we need to protect this
          */
-        RETURN_UNLESS(tty && os_private);
+        RETURN_NULL_UNLESS(tty && os_private);
 
         TRACE_MSG3(TTY,"tty: %x c_cflag: %02x CLOCAL: %d", tty,
                         tty->termios->c_cflag,
@@ -1394,6 +1371,7 @@ void tty_l26_call_hangup(void *data)
         wake_up_interruptible(&os_private->open_wait);
 
         TRACE_MSG0(TTY,"exited");
+        return NULL;
 }
 
 /*!
@@ -1417,7 +1395,8 @@ void tty_l26_os_schedule_hangup(struct usbd_function_instance *function_instance
         RETURN_UNLESS(os_private);
 
         TRACE_MSG0(TTY, "entered");
-        tty_l26_schedule(tty, &os_private->hqueue);
+        //tty_l26_schedule(tty, &os_private->hqueue);
+        otg_workitem_start(os_private->hangup_workitem);
 }
 
 
@@ -1427,7 +1406,7 @@ void tty_l26_os_schedule_hangup(struct usbd_function_instance *function_instance
  *
  * @param data - pointer to acm private data structure
  */
-void tty_l26_wakeup_writers(void *data)
+void * tty_l26_wakeup_writers(void *data)
 {
         struct tty_struct *tty = data;
         struct os_private *os_private = tty ? tty->driver_data : NULL;
@@ -1442,13 +1421,13 @@ void tty_l26_wakeup_writers(void *data)
 
         /* XXX Do we need to protect this
          */
-        RETURN_UNLESS(os_private);
+        RETURN_NULL_UNLESS(os_private);
 
         //TRACE_MSG2(TTY,"used: %d MOD_IN_USE: %d", atomic_read(&os_private->used), MOD_IN_USE);
 
-        RETURN_UNLESS(acm_ready(function_instance));
-        RETURN_UNLESS(atomic_read(&os_private->used));
-        RETURN_UNLESS(tty);
+        RETURN_NULL_UNLESS(acm_ready(function_instance));
+        RETURN_NULL_UNLESS(atomic_read(&os_private->used));
+        RETURN_NULL_UNLESS(tty);
 
         /* start sending from overflow buffer if necessary
          */
@@ -1458,6 +1437,7 @@ void tty_l26_wakeup_writers(void *data)
                 (tty->ldisc.write_wakeup)(tty);
 
         wake_up_interruptible(&tty->write_wait);
+        return NULL;
 }
 
 /*!
@@ -1506,8 +1486,8 @@ void tty_l26_os_schedule_wakeup_writers(struct usbd_function_instance *function_
          */
         RETURN_UNLESS(os_private);
 
-        tty_l26_schedule(tty, &os_private->wqueue);
-
+        //tty_l26_schedule(tty, &os_private->wqueue);
+        otg_workitem_start(os_private->wakeup_workitem);
         // verify ok
         wake_up_interruptible(&os_private->send_wait);
 }
@@ -1627,16 +1607,15 @@ int tty_l26_os_recv_chars(struct usbd_function_instance *function_instance, u8 *
         struct tty_struct *tty = tty_table[index];
         struct os_private *os_private = tty ? tty->driver_data : tty;
 
-        unsigned long flags;
         int buf_size;
         RETURN_EINVAL_UNLESS(tty);
 #if 1
-        local_irq_save(flags);
+        otg_pthread_mutex_lock(&acm->mutex);
         buf_size=tty_buffer_request_room(tty,n);
         //printk(KERN_INFO"%s: USB got data and push to tty:%d, buf_size:%d\n", __FUNCTION__,n,buf_size);
         tty_insert_flip_string(tty, cp, buf_size);
         tty_flip_buffer_push(tty);
-        local_irq_restore(flags);
+        otg_pthread_mutex_unlock(&acm->mutex);
         return 0;
 #else
 
@@ -1660,7 +1639,7 @@ int tty_l26_os_recv_chars(struct usbd_function_instance *function_instance, u8 *
         }
 #endif
 
-        local_irq_save(flags);
+        otg_pthread_mutex_lock(&acm->mutex);
 
 #if LINUX_VERSION_CODE < LINUX_KERNEL_VERSION_NO_FLIP_BUF
         TRACE_MSG5(TTY, "tty: %x cb: %x fb: %x count: %d buf: %d",
@@ -1708,7 +1687,8 @@ int tty_l26_os_recv_chars(struct usbd_function_instance *function_instance, u8 *
         n = tty_insert_flip_string(tty, cp, n);
 #endif /* LINUX_VERSION_CODE < LINUX_KERNEL_VERSION_NO_FLIP_BUF */
         tty_flip_buffer_push(tty);
-        local_irq_restore(flags);
+        //otg_led(LED1, FALSE);
+        otg_pthread_mutex_unlock(&acm->mutex);
         return 0;
 #endif
 
@@ -1729,15 +1709,14 @@ int tty_l26_os_recv_chars(struct usbd_function_instance *function_instance, u8 *
  * @param data
  * @return none
  */
-void tty_l26_recv_start(void *data)
+void * tty_l26_recv_start(void *data)
 {
         struct tty_struct *tty = data;
         int index = TTYINDEX(tty);
         struct usbd_function_instance *function_instance = function_table[index];
         struct os_private *os_private = tty ? tty->driver_data : NULL;
 
-return;
-        RETURN_UNLESS(function_instance);
+       RETURN_NULL_UNLESS(function_instance);
 
         TRACE_MSG3(TTY,"tty: %x c_cflag: %02x CLOCAL: %d", tty,
                         tty->termios->c_cflag,
@@ -1754,6 +1733,7 @@ return;
         }
 
         TRACE_MSG0(TTY,"exited");
+        return NULL;
 }
 
 /*!
@@ -1777,7 +1757,8 @@ void tty_l26_recv_start_bh(struct usbd_function_instance *function_instance)
         RETURN_UNLESS(os_private);
 
         TRACE_MSG0(TTY, "entered");
-        tty_l26_schedule(tty, &os_private->rqueue);
+       
+        otg_workitem_start(os_private->recv_workitem);
 }
 
 void tty_l26_os_line_coding(struct usbd_function_instance *function_instance)
@@ -2000,11 +1981,9 @@ void tty_l26_exit (void)
         //struct usbd_urb *urb;
 
         /* Wake up any pending opens after setting the exiting flag. */
-        //local_irq_save(flags);
         //tty_l26_private.exiting = 1;
         //if (tty_l26_private.open_wait_count > 0)
         //wake_up_interruptible(&tty_l26_private.open_wait);
-        //local_irq_restore(flags);
 
         /* verify no tasks are running */
         //acm_wait_task(acm->function_instance, &acm->recv_tqueue);
@@ -2033,6 +2012,7 @@ void tty_l26_exit (void)
         if (tty_table) LKFREE(tty_table);
         if (function_table) LKFREE(function_table);
         printk(KERN_INFO "tty_l26_exit!\n");
+
 
 }
 

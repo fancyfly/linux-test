@@ -12,7 +12,7 @@
  */
 /*
  * otg/otg-pcd.h - OTG Peripheral Controller Driver
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/otg-pcd.h|20070616020745|36037
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/otg-pcd.h|20070819221238|02897
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -105,8 +105,16 @@ extern void pcd_global_init(void);
 #endif /* !defined(OTG_C99) */
 extern void pcd_init_func(struct otg_instance *, u8 );
 extern void pcd_en_func(struct otg_instance *, u8 );
+extern void pcd_remote_wakeup(struct otg_instance *, u8 );
+extern void pcd_tcd_en_func(struct otg_instance *, u8 );
+extern void pcd_dp_pullup_func(struct otg_instance *, u8 );
+extern u16 pcd_framenum(struct otg_instance *);
+extern otg_tick_t pcd_ticks(void);
+extern otg_tick_t pcd_elapsed(otg_tick_t *, otg_tick_t *);
 
 extern int pcd_request_endpoints(struct pcd_instance *, struct usbd_endpoint_map *, int, struct usbd_endpoint_request *);
+
+extern struct pcd_ops pcd_ops;
 
 
 /* @} */

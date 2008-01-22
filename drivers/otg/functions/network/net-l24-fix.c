@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/network/net-l24-fix.c - Network Function Driver
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/network/net-l24-fix.c|20070710205206|53846
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/network/net-l24-fix.c|20070814002638|51510
  *
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
  *

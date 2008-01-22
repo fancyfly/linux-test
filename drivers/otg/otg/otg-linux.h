@@ -11,6 +11,18 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 /*
+ * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ */
+
+/*
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+/*
  * otg/otg/otg-linux.h
  * @(#) balden@belcarra.com/seth2.rillanon.org|otg/otg/linux/otg-linux.h|20070711184304|55012
  *
@@ -59,6 +71,25 @@
 #include <linux/device.h>
 #endif
 
+
+#undef OTG_SKYE_LED
+#ifdef OTG_SKYE_LED
+#include <asm/arch/gpio.h>
+#define LED1   SP_GP_SP_A26
+#define LED2   SP_GP_SP_A7
+void otg_led(int led, int flag);
+void otg_led_init(int led);
+
+//#define LEDI    LED1          /* define this to get local_irq_save/restore */
+#define LEDI    0
+
+#else
+#define LED1    0
+#define LED2    1
+#define LEDI    0
+void otg_led(int led, int flag);
+void otg_led_init(int led);
+#endif
 
 /* ********************************************************************************************** */
 
@@ -649,7 +680,7 @@ static void inline otg_task_exit(struct otg_task *task)
 
         #if defined(CONFIG_OTG_TASK_WORK)
         while (!task->terminated) {
-                otg_sleep(10);
+                otg_sleep(1);
         }
         #else /* defined(CONFIG_OTG_TASK_WORK) */
         /* signal termination */
@@ -831,7 +862,7 @@ static void inline otg_workitem_exit(struct otg_workitem *workitem)
                 printk(KERN_INFO"%s: %s terminating\n", __FUNCTION__, workitem->name);
 
         while (!workitem->terminated) {
-                otg_sleep(10);
+                otg_sleep(1);
                 if (workitem->workdebug)
                 printk(KERN_INFO"%s: %s while loop terminating\n", __FUNCTION__, workitem->name);
         }
@@ -1026,7 +1057,7 @@ static void inline otg_tasklet_exit(struct otg_tasklet *tasklet)
         while (!tasklet->terminated) {
                 if (tasklet->taskdebug)
                         printk(KERN_INFO"%s: SLEEPING\n", __FUNCTION__); 
-                otg_sleep(10);
+                otg_sleep(1);
                 if (tasklet->taskdebug)
                         printk(KERN_INFO"%s: RUNNING\n", __FUNCTION__); 
         }
@@ -1161,13 +1192,22 @@ static void inline otg_tasklet_exit(struct otg_tasklet *tasklet)
     //#undef PREPARE_WORK
     typedef void (* WORK_PROC)(void *);
 
-    #define SET_WORK_ARG(__item, __data) (*work_data_bits(&(__item)) = (long)__data)
+    #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+            #define SET_WORK_ARG(__item, __data) (__item).data = __data
+            #define PENDING_WORK_ITEM(item) (item.pending != 0)
+            #define NO_WORK_DATA(item) (!item.data)
+    #else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+            #define SET_WORK_ARG(__item, __data) (*work_data_bits(&(__item)) = (long)__data)
+            #define NO_WORK_DATA(item) (!(*work_data_bits(&(item))))
+            #define WORK_DATA(item) (*work_data_bits(&(item)))    
+            #define PENDING_WORK_ITEM(item) (work_pending(&(item)))
+    #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */  
+    
 
     #define SCHEDULE_DELAYED_WORK(item) schedule_delayed_work(&item, 0)
     #define SCHEDULE_IMMEDIATE_WORK(item) SCHEDULE_WORK((item))
-    #define PENDING_WORK_ITEM(item) (work_pending(&(item)))
-    #define NO_WORK_DATA(item) (!(*work_data_bits(&(item))))
-    #define WORK_DATA(item) (*work_data_bits(&(item)))
+    
+   
     //#define _MOD_DEC_USE_COUNT   //Not used in 2.6
     //#define _MOD_INC_USE_COUNT   //Not used in 2.6
 
@@ -1281,7 +1321,7 @@ static void inline otg_tasklet_exit(struct otg_tasklet *tasklet)
 #else /* defined(LINUX24) || defined(LINUX26) */
     #error "Need to define EMBED_LICENSE for the current operating system"
 #endif /* defined(LINUX24) || defined(LINUX26) */
-#define EMBED_MODULE_INFO(section,moduleinfo) static char __##section##_module_info[] = moduleinfo "%@%"
+#define EMBED_MODULE_INFO(section,moduleinfo) static char __##section##_module_info[] = moduleinfo "tt/root@belcarra.com/debian286.bbb"
 #define EMBED_USBD_INFO(moduleinfo) EMBED_MODULE_INFO(usbd,moduleinfo)
 #define GET_MODULE_INFO(section) __##section##_module_info
 

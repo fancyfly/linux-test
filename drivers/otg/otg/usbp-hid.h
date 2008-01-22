@@ -12,7 +12,7 @@
  */
 /*
  * otg/otg/usbp-hid.h
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/usbp-hid.h|20061218212925|35281
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/usbp-hid.h|20070810225414|35914
  *
  *      Copyright (c) 2004-2005 Belcarra
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -52,9 +52,9 @@
  */
  /*! @{ */
 
-#define HID             0x21
-#define HID_REPORT      0x22
-#define HID_PHYSICAL    0x23
+#define HID_DT_HID      0x21
+#define HID_DT_REPORT   0x22
+#define HID_DT_PHYSICAL 0x23
 
 /*! @} */
 

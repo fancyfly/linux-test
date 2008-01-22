@@ -12,7 +12,7 @@
  */
 /*
  * otg/otg/otg-dev.h -- Generic PCI driver
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/otg-dev.h|20070623070327|32901
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/otg-dev.h|20070918212334|33755
  *
  *      Copyright (c) 2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -78,7 +78,7 @@ struct otg_dev_driver {
         int                     id;
 
         u32                     irqs;
-        irqreturn_t             (*isr)(struct otg_dev *, void *);
+        irqreturn_t             (*isr)(struct otg_dev *, void *, u32);
 
         int                     (*probe)(struct otg_dev *);
         void                    (*remove)(struct otg_dev *);
@@ -93,9 +93,9 @@ struct otg_dev_driver {
 };
 
 struct otg_interrupt {
-        struct device   *device;
+        struct device           *device;
         struct platform_device   *platform_device;
-        int             irq;
+        int                     irq;
 };
 
 /*! otg_device_driver
@@ -116,11 +116,11 @@ struct otg_device_driver {
         int                     (*platform_otg_remove)(struct platform_device *, struct otg_device_driver *);
 
         /* interrupts */
-        #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+        #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
         irqreturn_t             (*isr) (int irq, void *data, struct pt_regs *r);
-        #else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+        #else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
         irqreturn_t             (*isr) (int irq, void *data);
-        #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+        #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
 
 
         /* sub-drivers supporting various OTG functions from the hardware */
@@ -166,13 +166,13 @@ struct otg_dev {
 };
 
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
 extern irqreturn_t otg_dev_isr(int irq, void *data, struct pt_regs *r);
 extern irqreturn_t otg_pdev_isr(int irq, void *data, struct pt_regs *r);
-#else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+#else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
 extern irqreturn_t otg_dev_isr(int irq, void *data);
 extern irqreturn_t otg_pdev_isr(int irq, void *data);
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
 
 extern int otg_dev_probe (struct device *, struct otg_device_driver *, void *privdata);
 extern void otg_dev_remove (struct device *, struct otg_device_driver *);

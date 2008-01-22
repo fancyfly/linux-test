@@ -12,7 +12,7 @@
  */
 /*
  * otg/otgcore/usbp-bops.c - USB Device Prototype
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otgcore/usbp-bops.c|20070627062801|48260
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otgcore/usbp-bops.c|20070816060612|46629
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -144,6 +144,8 @@ struct usbd_bus_instance *usbd_register_bus (struct usbd_bus_driver *driver, int
         bus->endpoints = bus->driver->max_endpoints;
         bus->bmAttributes = bus->driver->bmAttributes;
         bus->bMaxPower = bus->driver->bMaxPower;
+        TRACE_MSG2(USBD, "bmAttributes: %02x bMaxPower: %02x", bus->bmAttributes, bus->bMaxPower);
+
 
         THROW_IF(!(bus->endpoint_array = CKMALLOC(sizeof (struct usbd_endpoint_instance) * bus->endpoints)), error);
 
@@ -819,9 +821,9 @@ void *usbd_device_suspended(void *data)
         struct usbd_function_instance *function = bus->function_instance;
         BOOL rc;
 
-        TRACE_MSG1(USBD, "type: %d", function->function_type);
+        TRACE_MSG2(USBD, "device_state: %d status: %d",bus->device_state, bus->status);
 
-        RETURN_NULL_UNLESS(bus->device_state == STATE_CONFIGURED);
+        RETURN_NULL_UNLESS(bus->device_state == STATE_SUSPENDED);
         RETURN_NULL_UNLESS(bus->status == USBD_OK); 
 
         /* Call all function drivers suspended() operation and if available any
@@ -1068,7 +1070,8 @@ find_interface_instance(struct usbd_composite_instance *composite_instance, int 
                 CONTINUE_UNLESS((wIndex >= interface_instance->wIndex) &&
                                 (wIndex < interface_instance->wIndex + interface_driver->interfaces) );
 
-                TRACE_MSG1(USBD, "found: %x", interface_instance);
+                TRACE_MSG2(USBD, "found interface: %d altSetting: %d", 
+                                interface_instance->wIndex, interface_instance->altsetting);
                 return interface_instance;
         }
         TRACE_MSG0(USBD, "ERROR");
@@ -1716,26 +1719,31 @@ static int do_standard_device_request (struct usbd_function_instance *function, 
                                 urb->buffer[0] |=
                                         (devreq_get_device_feature_settings(function) & FEATURE(USB_DEVICE_REMOTE_WAKEUP)) ?
                                         USB_STATUS_REMOTEWAKEUP : 0;
+                                TRACE_MSG2(USBD, "GET STATUS DEVICE status: %02x %02x", 
+                                                urb->buffer[0], urb->buffer[1]);
                                 rc = 0;
                                 break;
                         case USB_REQ_RECIPIENT_ENDPOINT:
                                 urb->buffer[0] = function->bus->driver->bops->endpoint_halted (bus,wIndex);
                                 rc = 0;
-                                TRACE_MSG0(USBD, "Get endpoint status");
+                                TRACE_MSG2(USBD, "GET STATUS ENDPOINT status: %02x %02x", urb->buffer[0], urb->buffer[1]);
                                 break;
                         case USB_REQ_RECIPIENT_INTERFACE:
+                                TRACE_MSG2(USBD, "GET STATUS INTERFACE status: %02x %02x", urb->buffer[0], urb->buffer[1]);
                                 rc = 0;
                                 break;
                         case USB_REQ_RECIPIENT_OTHER:
+                                TRACE_MSG0(USBD, "GET STATUS OTHER");
                         default:
-                                TRACE_MSG0(USBD, "bad recipient");
+                                TRACE_MSG0(USBD, "GET STATUS BAD RECIPIENT");
                                 rc = -EINVAL;
                         }
                         break;
 
                 case USB_REQ_GET_DESCRIPTOR:
                         //printk(KERN_INFO"%s: GET DESCRIPTOR\n", __FUNCTION__); 
-                        //TRACE_MSG2(USBD, "GET_DESCRIPTOR type : %04x, wLength: %d", wValue, wLength);
+                        
+                        TRACE_MSG2(USBD, "GET_DESCRIPTOR type : %04x, wLength: %d", wValue, wLength);
 
                         rc = usbd_get_descriptor (function, urb->buffer, wLength, wValue >> 8, wValue & 0xff);
 
@@ -1771,7 +1779,8 @@ static int do_standard_device_request (struct usbd_function_instance *function, 
                                 BREAK_IF(wIndex > simple_instance->interfaces);
                                 urb->buffer[0] = simple_instance->altsettings[wIndex];
                                 urb->actual_length = 1;
-                                rc =- 0;
+                                rc = 0;
+                                TRACE_MSG1(USBD, "GET INTERFACE: %d simple", urb->buffer[0]);
                         }
                         else if (function_composite == function->function_type) {
                                 struct usbd_interface_instance *interface_instance;
@@ -1779,6 +1788,11 @@ static int do_standard_device_request (struct usbd_function_instance *function, 
                                         urb->buffer[0] = interface_instance->altsetting;
                                         urb->actual_length = 1;
                                         rc = 0;
+                                        TRACE_MSG1(USBD, "GET INTERFACE: %d composite", urb->buffer[0]);
+                                }
+                                else {
+                                        TRACE_MSG1(USBD, "GET INTERFACE: %d composite not found", urb->buffer[0]);
+
                                 }
                         }
                         break;
@@ -1791,6 +1805,7 @@ static int do_standard_device_request (struct usbd_function_instance *function, 
                 if (!(urb->actual_length % usbd_endpoint_zero_wMaxPacketSize(function, usbd_high_speed(function))) &&
                                 (urb->actual_length < wLength))
                         urb->flags |= USBD_URB_SENDZLP;
+
                 RETURN_ZERO_UNLESS(rc || usbd_start_in_urb(urb));
                 /* only get here if error */
                 usbd_free_urb(urb);

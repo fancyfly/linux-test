@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/network/blan.c - Network Function Driver
- * @(#) balden@belcarra.com/seth2.rillanon.org|otg/functions/network/blan-if.c|20070711193627|21096
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/network/blan-if.c|20070814215823|43564
  *
  *      Copyright (c) 2002-2006 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -50,11 +50,9 @@
 
 #define NTT network_fd_trace_tag
 
-//#undef CONFIG_OTG_NETWORK_BLAN_CRC
-//#undef CONFIG_OTG_NETWORK_SAFE_CRC
-
-
 #define TRACE_VERBOSE 0
+#define TRACE_VERY_VERBOSE 0
+#undef DEBUG_CRC_SEEN
 
 #if defined(CONFIG_OTG_NETWORK_BLAN) || defined(_OTG_DOXYGEN)
 
@@ -364,8 +362,13 @@ int net_fd_recv_urb_mdlm(struct usbd_urb *urb, int rc)
 
         // test if 1 more than packetsize multiple
         if (1 == (len % urb->wMaxPacketSize)) {
+                u8 *cp = urb->buffer + len - 1 - 4;
                 // copy and CRC up to the packetsize boundary
                 crc = crc32_nocopy(urb->buffer, len - 1, CRC32_INIT);
+
+                if (TRACE_VERBOSE)
+                        TRACE_MSG7(NTT,"A CRC nocopy: %08x %08x len: %d CRC: %02x %02x %02x %02x", 
+                                        CRC32_GOOD, crc, len, cp[0], cp[1], cp[2], cp[3]);
 
                 // if the CRC is good then this is case 1
                 if (CRC32_GOOD != crc) {
@@ -376,6 +379,7 @@ int net_fd_recv_urb_mdlm(struct usbd_urb *urb, int rc)
                                 //crc_errors[len%64]++;
                                 TRACE_MSG3(NTT,"A CRC error %08x %08x %03x", CRC32_GOOD, crc, urb->framenum);
                                 printk(KERN_INFO"%s: A CRC\n", __FUNCTION__); 
+                                npd->seen_crc_error = 1;
                                 THROW_IF(npd->seen_crc, crc_error);
                         }
                         else
@@ -386,15 +390,25 @@ int net_fd_recv_urb_mdlm(struct usbd_urb *urb, int rc)
 
         }
         else {
-
+                u8 *cp = urb->buffer + len - 4;
                 crc = crc32_nocopy(urb->buffer, len, CRC32_INIT);
                 if (TRACE_VERBOSE)
-                        TRACE_MSG3(NTT,"CRC nocopy: %08x %08x len: %d", CRC32_GOOD, crc, len);
+                        TRACE_MSG7(NTT,"B CRC nocopy: %08x %08x len: %d CRC: %02x %02x %02x %02x", 
+                                        CRC32_GOOD, crc, len, cp[0], cp[1], cp[2], cp[3]);
 
                 if (CRC32_GOOD != crc) {
                         //crc_errors[len%64]++;
                         TRACE_MSG3(NTT,"B CRC error %08x %08x %03x", CRC32_GOOD, crc, urb->framenum);
+                        if (TRACE_VERBOSE) {
+
+                                TRACE_MSG2(NTT, "status: %d actual_length: %d", urb->status, urb->actual_length);
+
+                                TRACE_NRECV(NTT, 32, urb->buffer);
+                                TRACE_MSG0(NTT, "--");
+                                TRACE_RECV(NTT, urb->actual_length, urb->buffer);
+                        }
                         printk(KERN_INFO"%s: B CRC\n", __FUNCTION__); 
+                        npd->seen_crc_error = 1;
                         THROW_IF(npd->seen_crc, crc_error);
                 }
                 else
@@ -420,6 +434,7 @@ int net_fd_recv_urb_mdlm(struct usbd_urb *urb, int rc)
                 // catch a CRC error
                 CATCH(crc_error) {
                         crc_bad = 1;
+                        npd->seen_crc_error = 1;
                 }
         }
         return 0;
@@ -456,9 +471,12 @@ int net_fd_recv_urb2(struct usbd_urb *urb, int rc)
         u8 *os_buffer;
 
 
-        if (TRACE_VERBOSE) {
+        if (TRACE_VERY_VERBOSE) {
 
-                TRACE_MSG2(NTT, "status: %d actual_length: %d", urb->status, urb->actual_length);
+                TRACE_MSG4(NTT, "status: %d actual_length: %d bus status: %d device_state: %d", 
+                                urb->status, urb->actual_length, 
+                                usbd_get_device_status(function_instance), usbd_get_device_state(function_instance)
+                                );
                 
                 TRACE_NRECV(NTT, 32, urb->buffer);
                 TRACE_MSG0(NTT, "--");
@@ -476,15 +494,19 @@ int net_fd_recv_urb2(struct usbd_urb *urb, int rc)
                 net_os_dealloc_buffer(function_instance, urb->function_privdata, urb->buffer);
 
         /* disconnect os_data buffer from urb */
-        urb->function_privdata=NULL;
+        urb->function_privdata = NULL;
         urb->buffer = NULL;
         urb->function_instance = NULL;
-        urb->status = USBD_OK;
+        urb->status = USBD_URB_OK;
         usbd_free_urb(urb);
+
         if ((USBD_OK == usbd_get_device_status(function_instance)) && 
                         (STATE_CONFIGURED == usbd_get_device_state(function_instance))) {
              
                 blan_start_recv(function_instance);     
+        }
+        else {
+                TRACE_MSG0(NTT, "NOT RESTARTING");
         }
 
         return 0;
@@ -507,6 +529,13 @@ int blan_start_recv_endpoint(struct usbd_function_instance *function_instance,
                 void *os_data = NULL;
                 struct usbd_urb *urb;
 
+                #ifdef DEBUG_CRC_SEEN
+                if (npd->seen_crc_error) {
+                        TRACE_MSG0(NTT, "CRC ERROR NOT RESTARTING");
+                        break;
+                }
+                #endif /* DEBUG_CRC_SEEN */
+
                 /* get os buffer - os_buffer is data, os_data is the os data structure */
                 os_data = net_os_alloc_buffer(function_instance, &os_buffer, alloc_length);
 
@@ -524,7 +553,7 @@ int blan_start_recv_endpoint(struct usbd_function_instance *function_instance,
                         if (usbd_start_out_urb(urb)) {
                                 net_os_dealloc_buffer(function_instance, os_data, os_buffer);
                                 urb->function_privdata = NULL;
-                                urb->buffer=NULL;
+                                urb->buffer = NULL;
                                 usbd_free_urb(urb);
                         }
                         otg_atomic_inc(recv_urbs_started);
@@ -535,7 +564,7 @@ int blan_start_recv_endpoint(struct usbd_function_instance *function_instance,
                 if (os_buffer || os_data) 
                         net_os_dealloc_buffer(function_instance, os_data, os_buffer);
                 if (urb)
-                        urb->buffer=NULL;
+                        urb->buffer = NULL;
                         usbd_free_urb(urb);
                 break;
         }
@@ -553,6 +582,7 @@ int blan_start_recv_endpoint(struct usbd_function_instance *function_instance,
 int blan_start_recv(struct usbd_function_instance *function_instance)
 {
         struct usb_network_private *npd = function_instance->privdata;
+        TRACE_MSG0(NTT, "DIRECT");
         blan_start_recv_endpoint(function_instance, BULK_OUT_A, &npd->recv_urbs_started[0], "BULK_OUT_A");
         #ifdef CONFIG_OTG_NETWORK_DOUBLE_OUT
         blan_start_recv_endpoint(function_instance, BULK_OUT_B, &npd->recv_urbs_started[1], "BULK_OUT_B");
@@ -574,7 +604,7 @@ void * blan_start_recv_task(otg_task_arg_t data)
 {
         struct usbd_function_instance *function_instance = (struct usbd_function_instance *)data;
         struct usb_network_private *npd = function_instance->privdata;
-        //TRACE_MSG0(NTT, "--");
+        TRACE_MSG0(NTT, "--");
         blan_start_recv_endpoint(function_instance, BULK_OUT_A, &npd->recv_urbs_started[0], "BULK_OUT_A");
         #ifdef CONFIG_OTG_NETWORK_DOUBLE_OUT
         blan_start_recv_endpoint(function_instance, BULK_OUT_B, &npd->recv_urbs_started[1], "BULK_OUT_B");
@@ -589,7 +619,7 @@ void * blan_start_recv_task(otg_task_arg_t data)
 int blan_start_recv(struct usbd_function_instance *function_instance)
 {
         struct usb_network_private *npd = function_instance->privdata;
-        //TRACE_MSG0(NTT, "--");
+        TRACE_MSG0(NTT, "SCHEDULE");
         otg_up_work(npd->blan_recv_task);
         return 0;
 }
@@ -659,6 +689,7 @@ int blan_fd_function_enable (struct usbd_function_instance *function_instance)
         recv_urb_flags = USBD_URB_FAST_RETURN | USBD_URB_FAST_FINISH;
         #endif /* defined(CONFIG_OTG_NETWORK_BLAN_CRC) || defined(CONFIG_OTG_NETWORK_SAFE_CRC) */
 
+        
         THROW_IF(net_fd_function_enable(function_instance, 
                         network_blan, net_fd_recv_urb_mdlm, 
                         net_fd_start_xmit_mdlm,

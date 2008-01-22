@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/arc.h - MX31 Device driver 
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/arc/arc.h|20070721004822|60125
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/arc/arc.h|20070801221240|58512
  *
  *	Copyright (c) 2006-2007 Belcarra Technologies 2005 Corp
  *
@@ -50,6 +50,5 @@ struct arc_private_struct {
 struct arcotg_udc {
 	struct ep_queue_head *ep_qh;    /* Endpoints Queue-Head */
         struct ep_td_struct *ep_dtd;
-	spinlock_t lock;
 };
 

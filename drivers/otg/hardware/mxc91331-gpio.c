@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/mxc91331-gpio.c - Freescale USBOTG ArgonPlus gpio and iomux setting
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/mxc/mxc91331-gpio.c|20070612233038|07871
+ * @(#) sp/root@belcarra.com/debian-black.(none)|otg/platform/mxc/mxc91331-gpio.c|20070822230929|09899
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp
@@ -29,6 +29,7 @@
  * @ingroup FSOTG
  */
 
+#include <linux/irq.h>
 #include <otg/pcd-include.h>
 #include <../arch/arm/mach-mxc91321/iomux.h>
 
@@ -61,11 +62,12 @@ BOOL zasevb_int_disabled = FALSE;
  * zasevb_gpio_int_hndlr() - gpio interrupt handler
  * @param irq
  * @param dev_id
+ * @param regs
  * @return interrupt handler status
  * This disables the gpio interrup and schedules the isp1301 bottom half handler.
  *
  */
-static irqreturn_t zasevb_gpio_int_hndlr (int irq, void *dev_id)
+static irqreturn_t zasevb_gpio_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
 {
         disable_irq(irq);
         zasevb_int_disabled = TRUE;

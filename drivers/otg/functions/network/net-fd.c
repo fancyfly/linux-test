@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/network/net-fd.c - Network Function Driver
- * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/network/net-fd.c|20070712213212|38585
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/network/net-fd.c|20070814184652|40728
  *
  *      Copyright (c) 2002-2006 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -75,7 +75,9 @@
 #include "fermat.h"
 #endif
 
-#define TRACE_VERBOSE 0
+#define TRACE_VERBOSE_SEND 0
+#define TRACE_VERBOSE_RECV 0
+#define TRACE_VERY_VERBOSE 0
 
 static char * local_dev_addr_str;
 static char * remote_dev_addr_str;
@@ -168,7 +170,6 @@ STATIC int make_crc_table(void)
         u32 n;
         RETURN_ZERO_IF(network_crc32_table);
         RETURN_ENOMEM_IF(!(network_crc32_table = (u32 *)ckmalloc(256*4)));
-        printk(KERN_ERR"%s: allocate network_crc32_table ", __FUNCTION__);
         for (n = 0; n < 256; n++) {
                 int k;
                 u32 c = n;
@@ -296,16 +297,18 @@ int net_fd_start_xmit (struct usbd_function_instance *function_instance, u8 *buf
         struct usbd_urb *urb = NULL;
         int rc;
 
-        if (TRACE_VERBOSE)
+        if (TRACE_VERBOSE_SEND)
                 TRACE_MSG4(NTT, "os: %p buffer: %p len: %d flags: %04x", data, buffer, len, npd->flags);
         RETURN_EUNATCH_UNLESS(npd->flags & NETWORK_CONFIGURED);
         RETURN_EINVAL_IF(usbd_get_device_status(function_instance) != USBD_OK);
 
 	//TRACE_MSG2(NTT, "queued: %d bytes: %d", npd->queued_frames, npd->queued_bytes);
 
-        if (TRACE_VERBOSE) {
+        if (TRACE_VERBOSE_SEND) {
                 TRACE_NSEND(NTT, 32, buffer);
-                TRACE_SEND(NTT, len, buffer);
+                if (TRACE_VERY_VERBOSE) {
+                        TRACE_SEND(NTT, len, buffer);
+                }
         }
 
         UNLESS ((rc = npd->net_start_xmit (function_instance, buffer, len, data)))
@@ -337,14 +340,16 @@ int net_fd_recv_buffer(struct usbd_function_instance *function_instance, u8 *os_
 {
         struct usb_network_private *npd = function_instance->privdata;
 
-        if (TRACE_VERBOSE) {
+        if (TRACE_VERBOSE_RECV) {
 
                 TRACE_MSG6(NTT, "os_buffer: %x length: %d os_data: %x crc_bad: %d trim: %d flags: %04x",
                                 os_buffer, length, os_data, crc_bad, trim, npd->flags);
                 
                 TRACE_NRECV(NTT, 32, os_buffer);
                 TRACE_MSG0(NTT, "--");
-                TRACE_RECV(NTT, length, os_buffer);
+                if (TRACE_VERY_VERBOSE) {
+                        TRACE_RECV(NTT, length, os_buffer);
+                }
         }
 
 	#if defined(CONFIG_OTG_NETWORK_RARPD_AUTO_CONFIG)
@@ -432,7 +437,7 @@ int net_fd_recv_urb(struct usbd_urb *urb, int rc)
 			);
         #endif
 
-        if (TRACE_VERBOSE)
+        if (TRACE_VERBOSE_RECV)
                 TRACE_NRECV(NTT, MIN(32, urb->actual_length), urb->buffer);
 
         if (urb->status == USBD_URB_OK)
@@ -614,28 +619,26 @@ int net_fd_function_enable (struct usbd_function_instance *  function_instance, 
 {
         struct usb_network_private *npd = NULL;
 
-        // XXX MODULE LOCK HERE
+        /* This will link the usb_network_private structure into function_instance->privdata */
+        net_os_enable(function_instance);
+        npd = function_instance->privdata; 
 
-        THROW_UNLESS((npd = CKMALLOC(sizeof(struct usb_network_private))), error);
-
-        function_instance->privdata = npd;
         npd->network_type = network_type;
         npd->net_recv_urb = net_recv_urb;
         npd->net_start_xmit = net_start_xmit;
         npd->net_start_recv = net_start_recv;
         npd->recv_urb_flags = recv_urb_flags;
         npd->override_MAC   = override_MAC;
-        net_os_mutex_enter(function_instance);
-        net_os_enable(function_instance);
-        #if 1
         
+        net_os_mutex_enter(function_instance);
+
+        #if 1
         set_address(local_dev_addr_str, npd->local_dev_addr);
 
         TRACE_MSG7(NTT, "net npd->local_ addr: %02x:%02x:%02x:%02x:%02x:%02x org MAC string:%s",
                         npd->local_dev_addr[0], npd->local_dev_addr[1], npd->local_dev_addr[2],
                         npd->local_dev_addr[3], npd->local_dev_addr[4], npd->local_dev_addr[5],
                         local_dev_addr_str);
-
         npd->local_dev_set = TRUE;
         #else
         if (local_dev_addr_str && strlen(local_dev_addr_str)) {
@@ -681,9 +684,9 @@ void net_fd_function_disable (struct usbd_function_instance *function_instance)
         if (npd->eem_os_buffer)
                 net_os_dealloc_buffer(function_instance, npd->eem_os_data, npd->eem_os_buffer);
 
+        /* this will disconnect function_instance->privdata */
         net_os_disable(function_instance);
-        function_instance->privdata = NULL;
-        LKFREE(npd);
+
 }
 
 /* ********************************************************************************************** */
@@ -897,7 +900,6 @@ int net_fd_init(char *info_str, char *local, char *remote, BOOL override_mac, BO
 void net_fd_exit(void)
 {
         if (network_crc32_table) {
-                printk(KERN_ERR"%s: free network_crc32_table ", __FUNCTION__);
                 lkfree(network_crc32_table);
                 network_crc32_table = NULL;
         }

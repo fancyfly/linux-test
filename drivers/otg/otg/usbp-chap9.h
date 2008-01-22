@@ -12,7 +12,7 @@
  */
 /*
  * otg/otg/usbp-chap9.h
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/usbp-chap9.h|20070620205835|10496
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otg/usbp-chap9.h|20070814003511|14784
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -70,8 +70,10 @@
 #define USB_RECIP_ENDPOINT              0x02
 #define USB_RECIP_OTHER                 0x03
 
+#ifndef __LINUX_USB_CH9_H
 #define USB_RECIP_HUB                   0x00
 #define USB_RECIP_PORT                  0x03
+#endif /* __LINUX_USB_CH9_H */
 
 #define USB_DIR_OUT                     0
 #define USB_DIR_IN                      0x80

@@ -12,7 +12,7 @@
  */
 /*
  * otg/functions/acm/acm-l24-os.c
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/functions/acm/acm-l26.c|20070412233105|22864
+ * @(#) tt/root@belcarra.com/debian286.bbb|otg/functions/acm/acm-l26.c|20070911235624|22864
  *
  *      Copyright (c) 2003-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp

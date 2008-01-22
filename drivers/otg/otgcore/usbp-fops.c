@@ -12,7 +12,7 @@
  */
 /*
  * otg/otgcore/usbp-fops.c - USB Function support
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otgcore/usbp-fops.c|20070711072816|41824
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otgcore/usbp-fops.c|20070816060612|51897
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
@@ -699,9 +699,10 @@ void usbp_alloc_composite_configuration_descriptor(struct usbd_composite_instanc
          */
         cp = (u8 *)configuration_descriptor;
 
-        TRACE_MSG3(USBD, "bDeviceClass: %02x descriptor[%d] %x",
-                        composite_driver->device_description->bDeviceClass, hs,
-                        composite_instance->configuration_descriptor[hs]);
+        TRACE_MSG4(USBD, "bDeviceClass: %02x bus->bmAttributes: %02x descriptor[%d] %x",
+                        composite_driver->device_description->bDeviceClass, 
+                        bus->bmAttributes,
+                        hs, composite_instance->configuration_descriptor[hs]);
 
         //cfg_size = copy_descriptor(cp + 0, configuration_description->configuration_descriptor);
         cfg_size = sizeof(struct usbd_configuration_descriptor);
@@ -1966,11 +1967,11 @@ void usbd_flush_endpoint (struct usbd_endpoint_instance *endpoint)
 {
         struct usbd_urb *urb;
 
-        //if (endpoint->bEndpointAddress)
-        //        TRACE_MSG1(USBD, "bEndpointAddress: %02x", endpoint->bEndpointAddress);
-        
-        while ((urb = endpoint->active_urb))
+        if (TRACE_VERBOSE)
+                if (endpoint->bEndpointAddress)
+                        TRACE_MSG1(USBD, "bEndpointAddress: %02x", endpoint->bEndpointAddress);
 
+        while ((urb = endpoint->active_urb))
                 usbd_cancel_urb(urb);
 
         for (; (urb = usbd_first_urb_detached (endpoint, &endpoint->rdy)); usbd_cancel_urb(urb))
@@ -2183,8 +2184,9 @@ int usbd_start_in_urb (struct usbd_urb *urb)
         struct usbd_endpoint_instance *endpoint= urb->endpoint;
 
         if (TRACE_VERBOSE)
-                TRACE_MSG5(USBD, "[%2x] urb: %x index: %d bus: %x status: %d", 
-                                urb->endpoint->bEndpointAddress[hs], urb, urb->endpoint_index, urb->bus, urb->bus->status);
+                TRACE_MSG6(USBD, "[%2x] urb: %x index: %d bus: %x status: %d length: %d", 
+                                urb->endpoint->bEndpointAddress[hs], urb, urb->endpoint_index, urb->bus, urb->bus->status,
+                                urb->actual_length);
 
         if (urb->endpoint->feature_setting & FEATURE(USB_ENDPOINT_HALT)) {
                 urb->status = USBD_URB_STALLED;

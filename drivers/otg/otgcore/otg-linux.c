@@ -13,7 +13,7 @@
 #if 0
 /*
  * otg/otgcore/otg-linux.c
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otgcore/otg-linux.c|20070425221028|06474
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/otgcore/otg-linux.c|20070920072547|06330
  *
  *	Copyright (c) 2005-2006 Belcarra Technologies 2005 Corp
  *
@@ -357,7 +357,7 @@ void otg_task_exit(struct otg_task *task)
 
         #if defined(OTG_TASK_WORK)
         while (!task->terminated) {
-                otg_sleep( 10 );
+                otg_sleep( 1 );
         }
         #else /* defined(OTG_TASK_WORK) */
         /* signal termination */
@@ -516,7 +516,7 @@ static void inline otg_workitem_exit(struct otg_workitem *workitem)
                 printk(KERN_INFO"%s: %s terminating\n", __FUNCTION__, workitem->name);
 
         while (!workitem->terminated) {
-                otg_sleep( 10 );
+                otg_sleep( 1 );
         }
 
         if (workitem->debug)
@@ -692,7 +692,7 @@ static void inline otg_tasklet_exit(struct otg_tasklet *tasklet)
         while (!tasklet->terminated) {
                 if (tasklet->debug)
                         printk(KERN_INFO"%s: SLEEPING\n", __FUNCTION__); 
-                otg_sleep( 10 );
+                otg_sleep( 1 );
                 if (tasklet->debug)
                         printk(KERN_INFO"%s: RUNNING\n", __FUNCTION__); 
         }

@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/mxc-l26.c - Linux 2.6 Freescale USBOTG aware Host Controller Driver (HCD)
- * @(#) balden@belcarra.com/seth2.rillanon.org|otg/platform/mxc/mxc-l26.c|20070710021518|31512
+ * @(#) tt/root@belcarra.com/debian286.bbb|otg/platform/mxc/mxc-l26.c|20070907214828|35671
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp
@@ -40,6 +40,7 @@
  * @ingroup LINUXOS
  */
 
+#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
@@ -65,7 +66,7 @@
 
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
-
+#include <linux/platform_device.h>
 
 #include "mxc-hcd.h"
 
@@ -525,10 +526,10 @@ void mxc_hcd_rh_func(struct otg_instance *otg, u8 flag)
 
                 for (i = 0; i < NUM_DATA_BUFFS; i++)
                         (void) rel_data_buff(mxc_hcd, ((fs_data_buff *)OTG_DATA_BASE)+i);
-
+#if 0
                 for (i = 0; i < NUM_ETDS; i++)
                         rel_etd_irq(mxc_hcd,i);
-
+#endif
                 fs_wl(OTG_HOST_CONTROL, HOST_CONTROL_HCRESET | HOST_CONTROL_RMTWUEN |
                                 HOST_CONTROL_HCUSBSTE_RESET | HOST_CONTROL_CTLBLKSR_11);
 
@@ -840,9 +841,9 @@ void mxc_hcd_endpoint_disable(struct usb_hcd *hcd, struct usb_host_endpoint *ep)
 	unsigned int		pipe = (unsigned int) ep->hcpriv;
 	int			address = usb_pipedevice(pipe) ? 
 					(usb_pipedevice(pipe) % MXC_MAX_USB_ADDRESS + 1) : 0;
-
         TRACE_MSG0(HCD, "--");
         local_irq_save(flags);
+
         if ((mxc_req = mxc_hcd->ep[address][EPNUM(ep->desc.bEndpointAddress, is_out)])) {
                 //printk(KERN_INFO"%s: disabled\n", __FUNCTION__);
                 rel_etd_irq(mxc_hcd, mxc_req->etdn);
@@ -851,6 +852,7 @@ void mxc_hcd_endpoint_disable(struct usb_hcd *hcd, struct usb_host_endpoint *ep)
                 // XXX giveback?
                 mxc_hcd_giveback_req_irq(mxc_hcd, mxc_req, 0);  // check if 0 is correct status to return
         }
+
         local_irq_restore(flags);
 }
 

@@ -12,7 +12,7 @@
  */
 /*
  * otg/hardware/zasevb-l26.c - ZAS EVB OTG Peripheral and OTG Controller Drivers Module Initialization
- * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/zasevb/zasevb-l26.c|20070612233038|35915
+ * @(#) sl@belcarra.com/whiskey.enposte.net|otg/platform/zasevb/zasevb-l26.c|20070827195306|47636
  *
  *      Copyright (c) 2004-2005 Belcarra Technologies Corp
  *      Copyright (c) 2005-2007 Belcarra Technologies 2005 Corp
@@ -47,6 +47,7 @@
 
 #include <linux/pci.h>
 #include <asm/arch/gpio.h>
+#include <linux/clk.h>
 
 #include "mxc-lnx.h"
 #include "mxc-hardware.h"
@@ -78,7 +79,7 @@ struct pcd_instance *REMOVE_pcd_instance;
 #if !defined(CONFIG_USB_HOST)
 extern struct pcd_ops pcd_ops;
 #else /* !defined(CONFIG_USB_HOST) */
-irqreturn_t mxc_pcd_int_hndlr (int irq, void *dev_id)
+irqreturn_t mxc_pcd_int_hndlr (int irq, void *dev_id, struct pt_regs *regs)
 {
         return IRQ_HANDLED;
 }
@@ -92,7 +93,7 @@ struct hcd_instance *hcd_instance;
 extern struct hcd_ops hcd_ops;
 
 #else /* defined(CONFIG_OTG_USB_HOST) || defined(CONFIG_OTG_USB_PERIPHERAL_OR_HOST)|| defined(CONFIG_OTG_DEVICE) */
-irqreturn_t hcd_hw_int_hndlr(int irq, void *dev_id)
+irqreturn_t hcd_hw_int_hndlr(int irq, void *dev_id, struct pt_regs *regs)
 {
         return IRQ_HANDLED;
 }
@@ -120,6 +121,7 @@ extern void fs_ocd_global_init(void);
 extern void zasevb_tcd_global_init(void);
 extern void fs_pcd_global_init(void);
 #endif /* !defined(OTG_C99) */
+void mxc_pcd_ops_init(void);
 
 #if defined(CONFIG_OTG_GPTR)
 extern int mxc_gptcr_mod_init (int divisor, int multiplier);
@@ -197,6 +199,8 @@ static void zasevb_modexit (void)
         otg_destroy(otg);
 }
 
+extern void mxc_pcd_ops_init(void);
+
 /*!
  * zasevb_modinit() - linux module initialization
  *
@@ -214,9 +218,9 @@ static int zasevb_modinit (void)
         clk_put(clk);
         #endif
 
-
         THROW_UNLESS((otg = otg_create()), error);
 
+        mxc_pcd_ops_init();
         #if !defined(OTG_C99)
         pcd_global_init();
         fs_ocd_global_init();
@@ -229,6 +233,17 @@ static int zasevb_modinit (void)
         mxc_procfs_init();
 
         TRACE_MSG0(ZAS, "1. ZAS");
+
+        #if 0
+        /* ZAS EVB Platform setup
+         */
+        TRACE_MSG4(ZAS, "BCTRL Version: %04x Status: %04x 1: %04x 2: %04x",
+                        readw(PBC_BASE_ADDRESS ),
+                        readw(PBC_BASE_ADDRESS + PBC_BSTAT),
+                        readw(PBC_BASE_ADDRESS + PBC_BCTRL1_SET),
+                        readw(PBC_BASE_ADDRESS + PBC_BCTRL2_SET));
+
+        #endif
 
         /* ZAS EVB Clock setup
          */

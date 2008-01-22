@@ -170,6 +170,7 @@ void config_uartdma_event(int port)
 	return;
 }
 
+static int usbh1_hs_active = 0;
 /*!
  * Setup GPIO for USB, Total 34 signals
  * PIN Configuration for USBOTG:   High/Full speed OTG
@@ -187,6 +188,8 @@ void config_uartdma_event(int port)
  */
 void gpio_usbh1_active(void)
 {
+	if (usbh1_hs_active)
+		return;
 	gpio_request_mux(MX27_PIN_USBH1_SUSP, GPIO_MUX_PRIMARY);
 	gpio_request_mux(MX27_PIN_USBH1_RCV, GPIO_MUX_PRIMARY);
 	gpio_request_mux(MX27_PIN_USBH1_FS, GPIO_MUX_PRIMARY);
@@ -198,9 +201,14 @@ void gpio_usbh1_active(void)
 
 	__raw_writew(PBC_BCTRL3_FSH_MOD, PBC_BCTRL3_CLEAR_REG);
 	__raw_writew(PBC_BCTRL3_FSH_VBUS_EN, PBC_BCTRL3_CLEAR_REG);
+
+	usbh1_hs_active = 1;
 }
 void gpio_usbh1_inactive(void)
 {
+	if (usbh1_hs_active == 0)
+		return;
+
 	gpio_free_mux(MX27_PIN_USBH1_SUSP);
 	gpio_free_mux(MX27_PIN_USBH1_RCV);
 	gpio_free_mux(MX27_PIN_USBH1_FS);
@@ -210,13 +218,19 @@ void gpio_usbh1_inactive(void)
 	gpio_free_mux(MX27_PIN_USBH1_RXDM);
 	gpio_free_mux(MX27_PIN_USBH1_RXDP);
 	__raw_writew(PBC_BCTRL3_FSH_VBUS_EN, PBC_BCTRL3_SET_REG);
+
+	usbh1_hs_active = 0;
 }
 
+static int usbh2_hs_active = 0;
 /*
  * conflicts with CSPI1 (Atlas) and CSPI2 (Connector)
  */
 void gpio_usbh2_active(void)
 {
+	if (usbh2_hs_active)
+		return;
+
 	gpio_set_puen(MX27_PIN_USBH2_CLK, 0);
 	gpio_set_puen(MX27_PIN_USBH2_DIR, 0);
 	gpio_set_puen(MX27_PIN_USBH2_DATA7, 0);
@@ -244,9 +258,14 @@ void gpio_usbh2_active(void)
 	gpio_request_mux(MX27_PIN_CSPI2_MOSI, GPIO_MUX_ALT);
 	gpio_request_mux(MX27_PIN_CSPI1_SS2, GPIO_MUX_ALT);
 	__raw_writew(PBC_BCTRL3_HSH_EN, PBC_BCTRL3_CLEAR_REG);
+
+	usbh2_hs_active = 1;
 }
 void gpio_usbh2_inactive(void)
 {
+	if (usbh2_hs_active == 0)
+		return;
+
 	gpio_free_mux(MX27_PIN_USBH2_CLK);
 	gpio_free_mux(MX27_PIN_USBH2_DIR);
 	gpio_free_mux(MX27_PIN_USBH2_DATA7);
@@ -274,10 +293,16 @@ void gpio_usbh2_inactive(void)
 	gpio_set_puen(MX27_PIN_CSPI2_MOSI, 1);
 	gpio_set_puen(MX27_PIN_CSPI1_SS2, 1);
 	__raw_writew(PBC_BCTRL3_HSH_EN, PBC_BCTRL3_SET_REG);
+
+	usbh2_hs_active = 0;
 }
 
+static int usbotg_hs_active = 0;
 int gpio_usbotg_hs_active(void)
 {
+	if (usbotg_hs_active)
+		return 0;
+
 	gpio_request_mux(MX27_PIN_USBOTG_DATA5, GPIO_MUX_PRIMARY);
 	gpio_request_mux(MX27_PIN_USBOTG_DATA6, GPIO_MUX_PRIMARY);
 	gpio_request_mux(MX27_PIN_USBOTG_DATA0, GPIO_MUX_PRIMARY);
@@ -295,11 +320,16 @@ int gpio_usbotg_hs_active(void)
 	gpio_request_mux(MX27_PIN_USB_OC_B, GPIO_MUX_PRIMARY);
 	gpio_request_mux(MX27_PIN_USB_PWR, GPIO_MUX_PRIMARY);
 	__raw_writew(PBC_BCTRL3_OTG_HS_EN, PBC_BCTRL3_CLEAR_REG);
+
+	usbotg_hs_active = 1;
 	return 0;
 }
 
 void gpio_usbotg_hs_inactive(void)
 {
+	if (usbotg_hs_active == 0)
+		return;
+
 	gpio_free_mux(MX27_PIN_USBOTG_DATA5);
 	gpio_free_mux(MX27_PIN_USBOTG_DATA6);
 	gpio_free_mux(MX27_PIN_USBOTG_DATA0);
@@ -317,6 +347,8 @@ void gpio_usbotg_hs_inactive(void)
 	gpio_free_mux(MX27_PIN_USB_OC_B);
 	gpio_free_mux(MX27_PIN_USB_PWR);
 	__raw_writew(PBC_BCTRL3_OTG_HS_EN, PBC_BCTRL3_SET_REG);
+
+	usbotg_hs_active = 0;
 }
 
 int gpio_usbotg_fs_active(void)

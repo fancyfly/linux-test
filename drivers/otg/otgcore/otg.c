@@ -72,6 +72,9 @@
 otg_tick_t (* otg_ocd_ops_ticks) (void);
 otg_tick_t (* otg_ocd_ops_elapsed) (otg_tick_t *, otg_tick_t *);
 
+otg_tick_t (* otg_pcd_ops_ticks) (void);
+otg_tick_t (* otg_pcd_ops_elapsed) (otg_tick_t *, otg_tick_t *);
+
 u32 *otg_interrupts;
 
 framenum_t otg_hcd_ops_framenum;
@@ -978,10 +981,8 @@ struct pcd_instance * otg_set_pcd_ops(struct otg_instance *otg, struct pcd_ops *
                         otg->otg_output_ops[TCD_EN_OUT] = pcd_ops->tcd_en_func;
                 if (pcd_ops->dp_pullup_func)
                         otg->otg_output_ops[DP_PULLUP_OUT] = pcd_ops->dp_pullup_func;
-                if (pcd_ops->ticks)
-                        otg_ocd_ops_ticks = pcd_ops->ticks; 
-                if (pcd_ops->elapsed)
-                        otg_ocd_ops_elapsed = pcd_ops->elapsed; 
+                otg_pcd_ops_ticks = pcd_ops->ticks; 
+                otg_pcd_ops_elapsed = pcd_ops->elapsed; 
         }
         else {
                 if (otg->pcd) {
@@ -989,6 +990,8 @@ struct pcd_instance * otg_set_pcd_ops(struct otg_instance *otg, struct pcd_ops *
                         LKFREE(otg->pcd);
                         otg->pcd = NULL;
                 }
+                otg_pcd_ops_ticks = NULL;
+                otg_pcd_ops_elapsed = NULL;
                 otg->otg_output_ops[PCD_INIT_OUT] =
                 otg->otg_output_ops[PCD_EN_OUT] =
                 otg->otg_output_ops[REMOTE_WAKEUP_OUT] = NULL;
@@ -1082,7 +1085,7 @@ struct tcd_instance * otg_set_tcd_ops(struct otg_instance *otg, struct tcd_ops *
  */
 void otg_get_ocd_info(struct otg_instance *otg, otg_tick_t *ticks, u16 *p_framenum)
 {
-        *ticks = (otg_ocd_ops_ticks) ? otg_ocd_ops_ticks () : 0;
+        *ticks = (otg_ocd_ops_ticks) ? otg_ocd_ops_ticks () : ((otg_pcd_ops_ticks) ? otg_pcd_ops_ticks () : 0);
         if (p_framenum)
                 *p_framenum = ((otg && otg_pcd_ops_framenum) ? otg_pcd_ops_framenum(otg) : 0);
 }
@@ -1106,7 +1109,7 @@ void otg_get_trace_info(struct otg_instance *otg, otg_trace_t *p)
         // XXX if (pcd_instance_private.active) p->hcd_pcd |= 0x2;
 
         #if 1
-        p->ticks = (otg && otg_ocd_ops_ticks) ? otg_ocd_ops_ticks () : 0;
+        p->ticks = (otg && otg_ocd_ops_ticks) ? otg_ocd_ops_ticks () : ((otg && otg_pcd_ops_ticks) ? otg_pcd_ops_ticks () : 0);
         p->interrupts = (otg && otg_interrupts) ? *otg_interrupts : 0;
         p->h_framenum = ((otg && otg_hcd_ops_framenum) ? otg_hcd_ops_framenum(otg) : 0);
         p->p_framenum = ((otg && otg_pcd_ops_framenum) ? otg_pcd_ops_framenum(otg) : 0);
@@ -1141,6 +1144,9 @@ otg_tick_t otg_tmr_ticks(void)
         if (otg_ocd_ops_ticks)
                 return otg_ocd_ops_ticks ();
 
+        if (otg_pcd_ops_ticks)
+                return otg_pcd_ops_ticks ();
+
         otg_gettimeofday(&tv);
         return tv.tv_sec * 1000000 + tv.tv_usec;
 }
@@ -1153,7 +1159,9 @@ otg_tick_t otg_tmr_ticks(void)
  */
 otg_tick_t otg_tmr_elapsed(otg_tick_t *t1, otg_tick_t *t2)
 {
-        return (otg_ocd_ops_elapsed) ?  otg_ocd_ops_elapsed (t1, t2) : (((*t1 > *t2) ? (*t1 - *t2) : (*t2 - *t1)));
+        return otg_ocd_ops_elapsed ? otg_ocd_ops_elapsed (t1, t2) :
+                (otg_pcd_ops_elapsed ? otg_pcd_ops_elapsed (t1, t2) :
+                (((*t1 > *t2) ? (*t1 - *t2) : (*t2 - *t1))));
 }
 
 OTG_EXPORT_SYMBOL(otg_set_hcd_ops);
@@ -1172,4 +1180,3 @@ OTG_EXPORT_SYMBOL(otg_get_ocd_info);
 #if defined(OTG_WINCE)
 #else /* defined(OTG_WINCE) */
 #endif /* defined(OTG_WINCE) */
-

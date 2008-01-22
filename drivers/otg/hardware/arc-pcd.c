@@ -483,7 +483,10 @@ void arc_pcd_setup_ep (struct pcd_instance *pcd, unsigned int ep, struct usbd_en
         struct arc_private_struct      *privdata;
 
         dQH = &udc_controller->ep_qh[2 * epnum + dir];
-        RETURN_UNLESS(endpoint->privdata = privdata = (struct arc_private_struct *) CKMALLOC (sizeof(struct arc_private_struct)));
+        UNLESS(endpoint->privdata) {
+                endpoint->privdata = (struct arc_private_struct *) CKMALLOC (sizeof(struct arc_private_struct));
+        }
+        RETURN_UNLESS(privdata = endpoint->privdata);
 
         /* Set the packet size */
         switch (type) {
@@ -542,6 +545,7 @@ void arc_pcd_setup_ep (struct pcd_instance *pcd, unsigned int ep, struct usbd_en
  */
 void arc_pcd_disable_ep(struct pcd_instance *pcd, unsigned int ep, struct usbd_endpoint_instance *endpoint)
 {
+        TRACE_MSG1(pcd->TAG, "endpoint->privdata: %p", endpoint->privdata);
         RETURN_UNLESS (endpoint->privdata);
         LKFREE(endpoint->privdata);
         endpoint->privdata = NULL;
@@ -649,9 +653,7 @@ static int arc_remote_wakeup(struct pcd_instance *pcd)
 #endif
 
 /*! arc_vbus_status() - enable
- * This is called to enable / disable the PCD and USBD stack.
- * @param otg - otg instance
- * @param flag - SET or RESET
+ * This is called to return status of the PCD and USBD stack.
  * Start or stop the UDC. 
  */
 static int
@@ -1009,7 +1011,9 @@ arc_pcd_remove(struct otg_dev *otg_dev)
         arc_udc_release ();
         udc_controller = NULL;
         pdata->platform_uninit(pdata);
+//printk(KERN_INFO"%s: jumpin116 start--------\n ", __FUNCTION__);
         pcd_mod_exit(otg);
+//printk(KERN_INFO"%s: jumpin116 end--------- \n", __FUNCTION__);
 }
 
 /*! arc_pcd_probe() - called to probe hardware
@@ -1082,4 +1086,3 @@ void arc_pcd_module_exit (struct otg_device_driver *otg_device_driver)
 {
         otg_dev_unregister_driver (otg_device_driver, &arc_pcd_driver);
 }
-

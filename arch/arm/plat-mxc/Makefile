@@ -6,10 +6,14 @@
 obj-y := gpio.o clock.o wdog.o snoop.o io.o
 
 ifneq ($(CONFIG_ARCH_MX21)$(CONFIG_ARCH_MX27),y)
-obj-y += time.o cpu_common.o  spba.o sdma/
+obj-y += time.o cpu_common.o spba.o sdma/
 endif
 
+ifeq ($(CONFIG_MXC_TZIC),y)
+obj-y += tzic.o
+else
 obj-y += irq.o
+endif
 
 obj-$(CONFIG_ARCH_MX21) += dma_mx2.o
 obj-$(CONFIG_ARCH_MX27) += cpu_common.o dma_mx2.o usb_common.o

@@ -747,6 +747,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_rtc();
 	mxc_init_owire();
 	mxc_init_hmp4e();
+	mxc_init_audio();
 	mxc_init_dma();
 	mxc_init_scc();
 #ifndef CONFIG_MXC_DPTC

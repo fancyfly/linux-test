@@ -844,6 +844,7 @@ void dptc_set_turbo_mode(unsigned int status)
 			if (cpu_is_mxc91321()) {
 				dvfs_dptc_params->suspended =
 				    dvfs_dptc_params->turbo_mode_active;
+				return;
 			} else {
 				dvfs_dptc_params->suspended = 1;
 			}

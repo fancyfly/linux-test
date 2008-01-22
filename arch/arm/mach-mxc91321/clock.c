@@ -41,6 +41,8 @@ static struct clk turbo_pll_clk;
 static struct clk ipg_clk;
 static struct clk ahb_clk;
 
+static int cpu_clk_set_wp(int wp);
+
 static int _clk_enable(struct clk *clk)
 {
 	u32 reg;
@@ -175,6 +177,18 @@ static void _clk_mcu_recalc(struct clk *clk)
 	} else if (brmm == 4) {
 		clk->rate = max_clk;
 	}
+}
+
+static int _clk_cpu_set_rate(struct clk *clk, unsigned long rate)
+{
+	if (rate != 399000000 && rate != 532000000) {
+		printk(KERN_ERR "Wrong rate %lu in _clk_cpu_set_rate\n", rate);
+		return -EINVAL;
+	}
+
+	cpu_clk_set_wp(rate / ahb_clk.rate - 3);
+
+	return 0;
 }
 
 static void _clk_ahb_recalc(struct clk *clk)
@@ -687,6 +701,7 @@ static struct clk mcu_pll_clk = {
 	.name = "mcu_pll",
 	.parent = &ckih_clk,
 	.recalc = _clk_pll_recalc,
+	.set_parent = _clk_pll_set_parent,
 	.enable = _clk_mcu_pll_enable,
 	.disable = _clk_mcu_pll_disable,
 	.flags = RATE_PROPAGATES,
@@ -696,6 +711,7 @@ static struct clk turbo_pll_clk = {
 	.name = "turbo_pll",
 	.parent = &ckih_clk,
 	.recalc = _clk_pll_recalc,
+	.set_parent = _clk_pll_set_parent,
 	.enable = _clk_turbo_pll_enable,
 	.disable = _clk_turbo_pll_disable,
 	.flags = RATE_PROPAGATES,
@@ -722,6 +738,7 @@ static struct clk mcu_clk = {
 	.name = "cpu_clk",
 	.parent = &mcu_pll_clk,	/* two parents? another one is hclk ?? */
 	.recalc = _clk_mcu_recalc,
+	.set_rate = _clk_cpu_set_rate,
 	.set_parent = _clk_pll_set_parent,
 };
 
@@ -1481,6 +1498,10 @@ static struct clk *mxc_clks[] = {
 	&sahara_clk,
 };
 
+static int cpu_curr_wp;
+static struct cpu_wp *cpu_wp_tbl;
+static int cpu_wp_nr;
+
 extern void propagate_rate(struct clk *tclk);
 
 int mxc_clocks_init(void)
@@ -1520,6 +1541,8 @@ int mxc_clocks_init(void)
 	propagate_rate(&ckih_clk);
 	propagate_rate(&ckil_clk);
 
+	cpu_curr_wp = mcu_clk.rate / ahb_clk.rate - 3;
+	cpu_wp_tbl = get_cpu_wp(&cpu_wp_nr);
 	clk_enable(&gpt_clk);
 	clk_enable(&emi_clk);
 	clk_enable(&iim_clk);
@@ -1543,4 +1566,51 @@ unsigned long __init clk_early_get_timer_rate(void)
 	ipg_clk.recalc(&ipg_clk);
 
 	return ipg_clk.rate;
+}
+
+#define MXC_MPDR0_MAX_MCU_MASK   (MXC_CCM_MPDR0_BRMM_MASK | \
+                                 MXC_CCM_MPDR0_MAX_PDF_MASK | \
+                                 MXC_CCM_MPDR0_TPSEL)
+
+/*!
+ * Setup cpu clock based on working point.
+ * @param       wp      cpu freq working point (0 is the slowest)
+ * @return              0 on success or error code on failure.
+ */
+static int cpu_clk_set_wp(int wp)
+{
+	struct clk *pll_old = &turbo_pll_clk;
+	struct clk *pll_new = &mcu_pll_clk;
+	struct cpu_wp *p;
+
+	if (wp >= cpu_wp_nr || wp < 0) {
+		printk(KERN_ERR "Wrong wp: %d for cpu_clk_set_wp\n", wp);
+		return -EINVAL;
+	}
+
+	if (wp == cpu_curr_wp) {
+		return 0;
+	}
+
+	p = &cpu_wp_tbl[wp];
+	if (p->pll_rate > 400000000) {
+		pll_old = &mcu_pll_clk;
+		pll_new = &turbo_pll_clk;
+	}
+
+	clk_enable(pll_new);
+
+	while ((__raw_readl(MXC_CCM_PMCR0) & MXC_CCM_PMCR0_DFSP) != 0) ;
+
+	/* no switching is in progress, update MPDR0 */
+	__raw_writel((__raw_readl(MXC_CCM_MPDR0) & ~MXC_MPDR0_MAX_MCU_MASK) |
+		     p->pdr0_reg, MXC_CCM_MPDR0);
+
+	mcu_clk.parent = pll_new;
+	mcu_clk.rate = p->cpu_rate;
+	clk_disable(pll_old);
+
+	cpu_curr_wp = wp;
+
+	return 0;
 }

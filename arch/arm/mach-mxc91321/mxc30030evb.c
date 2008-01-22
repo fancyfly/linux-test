@@ -618,6 +618,30 @@ static void __init mxc_board_init(void)
 	}
 }
 
+#define MPDR0_REG(brmm, max, tpsel)       \
+        (MXC_CCM_MPDR0_BRMM_##brmm | MXC_CCM_MPDR0_MAX_PDF_##max | \
+         MXC_CCM_MPDR0_TPSEL_##tpsel)
+
+/* working point(wp): 0 - 399MHz; 1 - 532MHz */
+/* for ahb clock 133MHz */
+
+static struct cpu_wp cpu_wp_133[] = {
+	{
+	 .pll_rate = 399000000,
+	 .cpu_rate = 399000000,
+	 .pdr0_reg = MPDR0_REG(0, 3, 0),},
+	{
+	 .pll_rate = 532000000,
+	 .cpu_rate = 532000000,
+	 .pdr0_reg = MPDR0_REG(0, 4, 1),},
+};
+
+struct cpu_wp *get_cpu_wp(int *wp)
+{
+	*wp = 2;
+	return cpu_wp_133;
+}
+
 /*
  * The following uses standard kernel macros define in arch.h in order to
  * initialize __mach_desc_MXC30030EVB data structure.

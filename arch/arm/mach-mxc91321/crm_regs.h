@@ -53,7 +53,7 @@
 #define MXC_CCM_MCR_LPM_MASK                (0x3 << 29)
 #define MXC_CCM_MCR_SSIS1                   (0x1 << 28)
 #define MXC_CCM_MCR_SSIS2                   (0x1 << 27)
-#define MXC_CCM_MCR_CSIS_OFFSET             25
+#define MXC_CCM_MCR_CSIS_OFFSET	             25
 #define MXC_CCM_MCR_CSIS_MASK               (0x3 << 25)
 #define MXC_CCM_MCR_SDHC1S_OFFSET           14
 #define MXC_CCM_MCR_SDHC1S_MASK             (0x3 << 14)
@@ -77,15 +77,25 @@
 #define MXC_CCM_MPDR0_CSI_PRE               (0x1 << 21)
 #define MXC_CCM_MPDR0_CSI_DIS               (0x1 << 19)
 #define MXC_CCM_MPDR0_TPSEL                 (0x1 << 11)
-#define MXC_CCM_MPDR0_TPSEL_OFFSET          11
+#define MXC_CCM_MPDR0_TPSEL_0               0
+#define MXC_CCM_MPDR0_TPSEL_1               (0x1 << 11)
+#define MXC_CCM_MPDR0_TPSEL_OFFSET	    11
 #define MXC_CCM_MPDR0_NFC_PDF_OFFSET        8
 #define MXC_CCM_MPDR0_NFC_PDF_MASK          (0x7 << 8)
 #define MXC_CCM_MPDR0_IPG_PDF_OFFSET        6
 #define MXC_CCM_MPDR0_IPG_PDF_MASK          (0x3 << 6)
 #define MXC_CCM_MPDR0_MAX_PDF_OFFSET        3
 #define MXC_CCM_MPDR0_MAX_PDF_MASK          (0x7 << 3)
+#define MXC_CCM_MPDR0_MAX_PDF_3		    0x00000010
+#define MXC_CCM_MPDR0_MAX_PDF_4             0x00000018
+#define MXC_CCM_MPDR0_MAX_PDF_5             0x00000020
 #define MXC_CCM_MPDR0_BRMM_OFFSET           0
-#define MXC_CCM_MPDR0_BRMM_MASK             0x7
+#define MXC_CCM_MPDR0_BRMM_MASK		    0x7
+#define MXC_CCM_MPDR0_BRMM_0		0x00000000
+#define MXC_CCM_MPDR0_BRMM_1		0x00000001
+#define MXC_CCM_MPDR0_BRMM_2		0x00000002
+#define MXC_CCM_MPDR0_BRMM_3	    	0x00000003
+#define MXC_CCM_MPDR0_BRMM_4		0x00000004
 
 #define MXC_CCM_MPDR1_USB_DIS               (0x1 << 30)
 #define MXC_CCM_MPDR1_USB_PDF_OFFSET        27

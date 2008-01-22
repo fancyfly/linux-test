@@ -176,6 +176,11 @@ typedef struct audio_mixer_control {
 	int stdac_playback_active;
 	int mixing_active;
 
+	/*!
+	 * This variable holds the configuration of the headset which was previously enabled.
+	 */
+	int old_prof;
+
 	PMIC_AUDIO_HANDLE stdac_handle;
 	PMIC_AUDIO_HANDLE voice_codec_handle;
 
@@ -424,6 +429,86 @@ static struct snd_pcm_hw_constraint_list hw_capture_rates = {
 
 static struct platform_device *device;
 
+#ifdef CONFIG_HEADSET_DETECT_ENABLE
+static PMIC_HS_STATE hs_state;
+
+/*!
+ *This is used to maintain the state of the Headset*/
+static int headset_state = 0;
+
+/*Callback for headset event. */
+static void HSCallback(const PMIC_HS_STATE hs_st)
+{
+
+	msleep(10);
+
+	if (headset_state == 1) {
+		pmic_audio_output_disable_phantom_ground();
+		headset_state = 0;
+		if (audio_mixer_control.stdac_playback_active)
+			pmic_audio_output_clear_port(audio_mixer_control.
+						     stdac_handle,
+						     STEREO_HEADSET_LEFT |
+						     STEREO_HEADSET_RIGHT);
+		else if (audio_mixer_control.voice_codec_handle)
+			pmic_audio_output_clear_port(audio_mixer_control.
+						     voice_codec_handle,
+						     STEREO_HEADSET_LEFT |
+						     STEREO_HEADSET_RIGHT);
+
+		if (audio_mixer_control.old_prof & (SOUND_MASK_PHONEOUT)) {
+			set_mixer_output_device(NULL, MIXER_OUT, OP_EARPIECE,
+						1);
+		}
+		if (audio_mixer_control.old_prof & (SOUND_MASK_VOLUME)) {
+			set_mixer_output_device(NULL, MIXER_OUT, OP_HANDSFREE,
+						1);
+		}
+		if (audio_mixer_control.old_prof & (SOUND_MASK_SPEAKER)) {
+#ifdef CONFIG_HEADSET_DETECT_ENABLE
+			/*This is a temporary workaround which should be removed later */
+			set_mixer_output_device(NULL, MIXER_OUT, OP_MONO, 1);
+#else
+			set_mixer_output_device(NULL, MIXER_OUT, OP_HEADSET, 1);
+#endif
+		}
+		if (audio_mixer_control.old_prof & (SOUND_MASK_PCM)) {
+			set_mixer_output_device(NULL, MIXER_OUT, OP_LINEOUT, 1);
+		}
+
+	} else {
+		headset_state = 1;
+
+		pmic_audio_output_enable_phantom_ground();
+
+		audio_mixer_control.old_prof =
+		    audio_mixer_control.output_device;
+
+		if (audio_mixer_control.old_prof & (SOUND_MASK_PHONEOUT)) {
+			set_mixer_output_device(NULL, MIXER_OUT, OP_EARPIECE,
+						0);
+		}
+		if (audio_mixer_control.old_prof & (SOUND_MASK_VOLUME)) {
+			set_mixer_output_device(NULL, MIXER_OUT, OP_HANDSFREE,
+						0);
+		}
+		if (audio_mixer_control.old_prof & (SOUND_MASK_SPEAKER)) {
+			set_mixer_output_device(NULL, MIXER_OUT, OP_HEADSET, 0);
+		}
+		if (audio_mixer_control.old_prof & (SOUND_MASK_PCM)) {
+			set_mixer_output_device(NULL, MIXER_OUT, OP_LINEOUT, 0);
+		}
+#ifdef CONFIG_HEADSET_DETECT_ENABLE
+		/*This is a temporary workaround which should be removed later */
+		set_mixer_output_device(NULL, MIXER_OUT, OP_MONO, 1);
+#else
+		set_mixer_output_device(NULL, MIXER_OUT, OP_HEADSET, 1);
+#endif
+
+	}
+}
+
+#endif
 /*!
   * This function configures audio multiplexer to support
   * audio data routing in PMIC master mode.
@@ -1213,9 +1298,16 @@ int set_mixer_output_device(PMIC_AUDIO_HANDLE handle, OUTPUT_SOURCE src,
 		}
 		if (audio_mixer_control.output_device & SOUND_MASK_VOLUME) {
 			audio_mixer_control.output_active[OP_HEADSET] = 1;
-			pmic_audio_output_set_port(handle,
-						   STEREO_HEADSET_LEFT |
-						   STEREO_HEADSET_RIGHT);
+			if (dev != OP_MONO) {
+				pmic_audio_output_set_port(handle,
+							   STEREO_HEADSET_LEFT |
+							   STEREO_HEADSET_RIGHT);
+			} else {
+				pmic_audio_output_set_port(handle,
+							   STEREO_HEADSET_LEFT);
+				/*This is a temporary workaround which should be removed later */
+			}
+
 		}
 		if (audio_mixer_control.output_device & SOUND_MASK_PCM) {
 			audio_mixer_control.output_active[OP_LINEOUT] = 1;
@@ -1260,6 +1352,19 @@ int set_mixer_output_device(PMIC_AUDIO_HANDLE handle, OUTPUT_SOURCE src,
 				    ~SOUND_MASK_VOLUME;
 			}
 			port = STEREO_HEADSET_LEFT | STEREO_HEADSET_RIGHT;
+			break;
+		case OP_MONO:
+			/*This is a temporary workaround which should be removed later */
+			if (enable) {
+				audio_mixer_control.output_device |=
+				    SOUND_MASK_VOLUME;
+				audio_mixer_control.source_for_output[dev] =
+				    src;
+			} else {
+				audio_mixer_control.output_device &=
+				    ~SOUND_MASK_VOLUME;
+			}
+			port = STEREO_HEADSET_LEFT;
 			break;
 		case OP_LINEOUT:
 			if (enable) {
@@ -1358,7 +1463,6 @@ void configure_codec(struct snd_pcm_substream *substream, int stream_id)
 	msleep(20);
 	pmic_audio_vcodec_set_config(handle, VCODEC_MASTER_CLOCK_OUTPUTS);
 	pmic_audio_digital_filter_reset(handle);
-	pmic_audio_output_enable_phantom_ground(handle);
 	msleep(15);
 	if (stream_id == 2) {
 		pmic_audio_output_enable_mixer(handle);
@@ -1427,13 +1531,13 @@ void configure_stereodac(struct snd_pcm_substream *substream)
 	audio_mixer_control.stdac_out_to_mixer = 1;
 	pmic_audio_digital_filter_reset(handle);
 	msleep(10);
-	pmic_audio_output_enable_phantom_ground(handle);
+	pmic_audio_output_enable_phantom_ground();
 	set_mixer_output_volume(handle, audio_mixer_control.master_volume_out,
 				OP_HEADSET);
 	pmic_audio_output_enable_mono_adder(handle,
 					    audio_mixer_control.
 					    mixer_mono_adder);
-	set_mixer_output_device(handle, MIXER_OUT, OP_NODEV, 1);
+	set_mixer_output_device(handle, MIXER_OUT, OP_MONO, 1);
 	pmic_audio_enable(handle);
 
 }
@@ -3378,6 +3482,11 @@ static int __init mxc_alsa_audio_probe(struct platform_device *dev)
 	if (0 == mxc_alsa_create_ctl(card, (void *)&audio_mixer_control))
 		printk(KERN_INFO "Control ALSA component registered\n");
 
+#ifdef CONFIG_HEADSET_DETECT_ENABLE
+	pmic_audio_antipop_enable(ANTI_POP_RAMP_SLOW);
+	pmic_audio_set_callback((PMIC_AUDIO_CALLBACK) HSCallback,
+				HEADSET_DETECTED | HEADSET_REMOVED, &hs_state);
+#endif
 	/* Set autodetect feature in order to allow audio operations */
 
 	spin_lock_init(&(mxc_audio->s[0].dma_lock));

@@ -59,4 +59,13 @@ config  SND_MXC_PLAYBACK_MIXING
 	  As of now , mixing of mono files only are supported in Digital Mixing since it is done on VCODEC. 
 	  SSI 2 channel mode is used to mix 2 streams on a single SSI.  This is supported on all platforms except imx27ads(imx27ads - Analog mixing only).
 
+config HEADSET_DETECT_ENABLE
+        bool "Headset Detect Enable"
+        depends on (!ARCH_MXC91131) && ARCH_MXC && MXC_DAM && MXC_SSI && \
+                (MXC_MC13783_AUDIO)
+        default n
+        select SND_PCM
+        help
+        Say Y here to enable Headset Detect Feature.
+
 endmenu

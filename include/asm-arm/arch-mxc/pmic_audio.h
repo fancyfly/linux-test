@@ -109,6 +109,11 @@ typedef enum {
  */
 typedef PMIC_AUDIO_EVENTS(*PMIC_AUDIO_CALLBACK) (const PMIC_AUDIO_EVENTS event);
 
+typedef struct {
+	int hs_state;
+	int event_type;
+} PMIC_HS_STATE;
+
 /*!
  * @enum PMIC_AUDIO_SOURCE
  * @brief Select an audio signal processing component.
@@ -1039,17 +1044,17 @@ PMIC_STATUS pmic_audio_reset_all(void);
  * events. For example, the OSS audio driver should register a callback
  * function in order to be notified of headset connect/disconnect events.
  *
- * @param[in]   handle          Device handle from pmic_audio_open() call.
  * @param[in]   func            A pointer to the callback function.
  * @param[in]   eventMask       A mask selecting events to be notified.
+ * @param[in]   hs_state        To know the headset state.
  *
  * @retval      PMIC_SUCCESS         If the callback was successfully
  *                                   registered.
  * @retval      PMIC_PARAMETER_ERROR If the handle or the eventMask is invalid.
  */
-PMIC_STATUS pmic_audio_set_callback(const PMIC_AUDIO_HANDLE handle,
-				    const PMIC_AUDIO_CALLBACK func,
-				    const PMIC_AUDIO_EVENTS eventMask);
+PMIC_STATUS pmic_audio_set_callback(void *func,
+				    const PMIC_AUDIO_EVENTS eventMask,
+				    PMIC_HS_STATE * hs_state);
 
 /*!
  * @brief Deregisters the existing audio callback function.
@@ -1057,20 +1062,18 @@ PMIC_STATUS pmic_audio_set_callback(const PMIC_AUDIO_HANDLE handle,
  * Deregister the callback function that was previously registered by calling
  * pmic_audio_set_callback().
  *
- * @param[in]   handle          Device handle from pmic_audio_open() call.
  *
  * @retval      PMIC_SUCCESS         If the callback was successfully
  *                                   deregistered.
  * @retval      PMIC_PARAMETER_ERROR If the handle is invalid.
  */
-PMIC_STATUS pmic_audio_clear_callback(const PMIC_AUDIO_HANDLE handle);
+PMIC_STATUS pmic_audio_clear_callback(void);
 
 /*!
  * @brief Get the current audio callback function settings.
  *
  * Get the current callback function and event mask.
  *
- * @param[in]   handle          Device handle from pmic_audio_open() call.
  * @param[out]  func            The current callback function.
  * @param[out]  eventMask       The current event selection mask.
  *
@@ -1078,8 +1081,7 @@ PMIC_STATUS pmic_audio_clear_callback(const PMIC_AUDIO_HANDLE handle);
  *                                   successfully retrieved.
  * @retval      PMIC_PARAMETER_ERROR If the handle is invalid.
  */
-PMIC_STATUS pmic_audio_get_callback(const PMIC_AUDIO_HANDLE handle,
-				    PMIC_AUDIO_CALLBACK * const func,
+PMIC_STATUS pmic_audio_get_callback(PMIC_AUDIO_CALLBACK * const func,
 				    PMIC_AUDIO_EVENTS * const eventMask);
 
 /*!
@@ -2274,8 +2276,7 @@ PMIC_STATUS pmic_audio_output_get_config(const PMIC_AUDIO_HANDLE handle,
  * @retval      PMIC_ERROR           If the phantom ground circuit could not
  *                                   be enabled.
  */
-PMIC_STATUS pmic_audio_output_enable_phantom_ground(const PMIC_AUDIO_HANDLE
-						    handle);
+PMIC_STATUS pmic_audio_output_enable_phantom_ground(void);
 
 /*!
  * @brief Disable the phantom ground circuit that is used to help identify
@@ -2292,8 +2293,7 @@ PMIC_STATUS pmic_audio_output_enable_phantom_ground(const PMIC_AUDIO_HANDLE
  * @retval      PMIC_ERROR           If the phantom ground circuit could not
  *                                   be disabled.
  */
-PMIC_STATUS pmic_audio_output_disable_phantom_ground(const PMIC_AUDIO_HANDLE
-						     handle);
+PMIC_STATUS pmic_audio_output_disable_phantom_ground(void);
 
 /*@}*/
 

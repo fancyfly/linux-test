@@ -52,7 +52,7 @@
 #include <asm/arch/pmic_audio.h>	/* For PMIC Audio driver interface.    */
 #include <asm/arch/pmic_adc.h>	/* For PMIC ADC driver interface.      */
 
-#include <linux/interrupt.h>	/* For tasklet interface.              */
+#include <linux/interrupt.h>
 #include <linux/platform_device.h>	/* For kernel module interface.        */
 #include <linux/init.h>
 #include <linux/spinlock.h>	/* For spinlock interface.             */
@@ -136,7 +136,6 @@ EXPORT_SYMBOL(pmic_audio_set_autodetect);
 #ifdef DEBUG_AUDIO
 EXPORT_SYMBOL(pmic_audio_dump_registers);
 #endif				/* DEBUG_AUDIO */
-
 /*!
  * Define the minimum sampling rate (in Hz) that is supported by the
  * Stereo DAC.
@@ -723,6 +722,21 @@ static PMIC_AUDIO_EXT_STEREO_IN_STATE extStereoIn = {
 };
 
 /*!
+ * @brief This maintains the current state of the callback & Eventmask.
+ */
+typedef struct {
+	PMIC_AUDIO_CALLBACK callback;	/*!< Event notification callback
+					   function pointer.           */
+	PMIC_AUDIO_EVENTS eventMask;	/*!< Event notification mask.    */
+} PMIC_AUDIO_EVENT_STATE;
+
+static PMIC_AUDIO_EVENT_STATE event_state = {
+	(PMIC_AUDIO_CALLBACK) NULL,	/*Callback */
+	(PMIC_AUDIO_EVENTS) NULL,	/* EventMask */
+
+};
+
+/*!
  * @brief This maintains the current state of the Audio Output Section.
  */
 typedef struct {
@@ -793,9 +807,9 @@ static const unsigned long delay_1ms = (HZ / 1000);
  * Spinlocks should be held for the minimum time that is necessary
  * because hardware interrupts are disabled while a spinlock is held.
  *
- *static spinlock_t lock = SPIN_LOCK_UNLOCKED;
  */
 
+static spinlock_t lock = SPIN_LOCK_UNLOCKED;
 /*!
  * @brief This mutex is used to provide mutual exclusion.
  *
@@ -810,20 +824,6 @@ static const unsigned long delay_1ms = (HZ / 1000);
  * to minimize kernel interrupt handling latency.
  */
 static DECLARE_MUTEX(mutex);
-
-/* Prototype for the audio driver tasklet function. */
-static void pmic_audio_tasklet(unsigned long arg);
-
-/*!
- * @brief Tasklet handler for the audio driver.
- *
- * Declare a tasklet that will do most of the processing for
- * mc13783 audio interrupt events. Note that we cannot do all of the required
- * processing within the interrupt handler itself because we may need to
- * call the ADC driver to measure voltages as well as calling any
- * user-registered callback functions.
- */
-DECLARE_TASKLET(audioTasklet, pmic_audio_tasklet, 0);
 
 /*!
  * @brief Global variable to track currently active interrupt events.
@@ -841,10 +841,9 @@ static PMIC_STATUS pmic_audio_mic_boost_enable(void);
 static PMIC_STATUS pmic_audio_mic_boost_disable(void);*/
 static PMIC_STATUS pmic_audio_close_handle(const PMIC_AUDIO_HANDLE handle);
 static PMIC_STATUS pmic_audio_reset_device(const PMIC_AUDIO_HANDLE handle);
-/*
-static PMIC_STATUS pmic_audio_deregister(PMIC_AUDIO_CALLBACK * const callback,
+
+static PMIC_STATUS pmic_audio_deregister(void *callback,
 					 PMIC_AUDIO_EVENTS * const eventMask);
-static void pmic_audio_event_handler(void *param);*/
 
 /*************************************************************************
  * Audio device access APIs.
@@ -861,16 +860,22 @@ static void pmic_audio_event_handler(void *param);*/
 PMIC_STATUS pmic_audio_set_autodetect(int val)
 {
 	PMIC_STATUS status;
-	unsigned int reg_mask = 0;
+	unsigned int reg_mask = 0, reg_write = 0;
 	reg_mask = SET_BITS(regAUDIO_RX_0, VAUDIOON, 1);
 	status = pmic_write_reg(REG_AUDIO_RX_0, reg_mask, reg_mask);
 	if (status != PMIC_SUCCESS)
 		return status;
 	reg_mask = 0;
+	if (val == 1) {
+		reg_write = SET_BITS(regAUDIO_RX_0, HSDETEN, 1);
+	} else {
+		reg_write = 0;
+	}
 	reg_mask =
 	    SET_BITS(regAUDIO_RX_0, HSDETEN, 1) | SET_BITS(regAUDIO_RX_0,
 							   HSDETAUTOB, 1);
-	status = pmic_write_reg(REG_AUDIO_RX_0, reg_mask, reg_mask);
+	status = pmic_write_reg(REG_AUDIO_RX_0, reg_write, reg_mask);
+
 	return status;
 }
 
@@ -1300,8 +1305,6 @@ PMIC_STATUS pmic_audio_enable(const PMIC_AUDIO_HANDLE handle)
 	const unsigned int STDAC_ENABLE = SET_BITS(regST_DAC, STDCEN, 1);
 	const unsigned int VCODEC_ENABLE = SET_BITS(regAUD_CODEC, CDCEN, 1);
 	PMIC_STATUS rc = PMIC_PARAMETER_ERROR;
-	unsigned int reg_write = 0;
-	unsigned int reg_mask = 0;
 
 	/* Use a critical section to ensure a consistent hardware state. */
 	if (down_interruptible(&mutex))
@@ -1321,13 +1324,6 @@ PMIC_STATUS pmic_audio_enable(const PMIC_AUDIO_HANDLE handle)
 		/* Must first set the audio bias bit to power up the audio circuits. */
 		pmic_write_reg(REG_AUDIO_RX_0, AUDIO_BIAS_ENABLE,
 			       AUDIO_BIAS_ENABLE);
-		reg_mask = SET_BITS(regAUDIO_RX_0, HSDETEN, 1) |
-		    SET_BITS(regAUDIO_RX_0, HSDETAUTOB, 1);
-		reg_write = SET_BITS(regAUDIO_RX_0, HSDETEN, 1) |
-		    SET_BITS(regAUDIO_RX_0, HSDETAUTOB, 1);
-		rc = pmic_write_reg(REG_AUDIO_RX_0, reg_write, reg_mask);
-		if (rc == PMIC_SUCCESS) {
-		}
 		/* Then we can enable the Voice CODEC. */
 		rc = pmic_write_reg(REG_AUDIO_CODEC, VCODEC_ENABLE,
 				    VCODEC_ENABLE);
@@ -1547,21 +1543,165 @@ PMIC_STATUS pmic_audio_reset_all(void)
  * events. For example, the OSS audio driver should register a callback
  * function in order to be notified of headset connect/disconnect events.
  *
- * @param   handle          Device handle from pmic_audio_open() call.
  * @param   func            A pointer to the callback function.
  * @param   eventMask       A mask selecting events to be notified.
+ * @param   hs_state        To know the headset state.
+ *
+ *
  *
  * @retval      PMIC_SUCCESS         If the callback was successfully
  *                                   registered.
  * @retval      PMIC_PARAMETER_ERROR If the handle or the eventMask is invalid.
  */
-PMIC_STATUS pmic_audio_set_callback(const PMIC_AUDIO_HANDLE handle,
-				    const PMIC_AUDIO_CALLBACK func,
-				    const PMIC_AUDIO_EVENTS eventMask)
+PMIC_STATUS pmic_audio_set_callback(void *func,
+				    const PMIC_AUDIO_EVENTS eventMask,
+				    PMIC_HS_STATE * hs_state)
 {
-	/* Event handling and callback are currently not supported for mc13783 */
-	/* Both in case of PMIC and old API */
-	PMIC_STATUS rc = PMIC_NOT_SUPPORTED;
+	unsigned long flags;
+	PMIC_STATUS rc = PMIC_PARAMETER_ERROR;
+	pmic_event_callback_t eventNotify;
+
+	/* We need to start a critical section here to ensure a consistent state
+	 * in case simultaneous calls to pmic_audio_set_callback() are made. In
+	 * that case, we must serialize the calls to ensure that the "callback"
+	 * and "eventMask" state variables are always consistent.
+	 *
+	 * Note that we don't actually need to acquire the spinlock until later
+	 * when we are finally ready to update the "callback" and "eventMask"
+	 * state variables which are shared with the interrupt handler.
+	 */
+	if (down_interruptible(&mutex))
+		return PMIC_SYSTEM_ERROR_EINTR;
+
+	rc = PMIC_ERROR;
+	/* Register for PMIC events from the core protocol driver. */
+	if (eventMask & MICROPHONE_DETECTED) {
+		/* We need to register for the A1 amplifier interrupt. */
+		eventNotify.func = func;
+		eventNotify.param = (void *)(CORE_EVENT_MC2BI);
+		rc = pmic_event_subscribe(EVENT_MC2BI, eventNotify);
+
+		if (rc != PMIC_SUCCESS) {
+			pr_debug
+			    ("%s: pmic_event_subscribe() for EVENT_HSDETI "
+			     "failed\n", __FILE__);
+			goto End;
+		}
+	}
+
+	if (eventMask & HEADSET_DETECTED) {
+		/* We need to register for the A1 amplifier interrupt. */
+		eventNotify.func = func;
+		eventNotify.param = (void *)(CORE_EVENT_HSDETI);
+		rc = pmic_event_subscribe(EVENT_HSDETI, eventNotify);
+
+		if (rc != PMIC_SUCCESS) {
+			pr_debug
+			    ("%s: pmic_event_subscribe() for EVENT_HSDETI "
+			     "failed\n", __FILE__);
+			goto Cleanup_HDT;
+		}
+
+	}
+	if (eventMask & HEADSET_STEREO) {
+		/* We need to register for the A1 amplifier interrupt. */
+		eventNotify.func = func;
+		eventNotify.param = (void *)(CORE_EVENT_HSLI);
+		rc = pmic_event_subscribe(EVENT_HSLI, eventNotify);
+
+		if (rc != PMIC_SUCCESS) {
+			pr_debug
+			    ("%s: pmic_event_subscribe() for EVENT_HSLI "
+			     "failed\n", __FILE__);
+			goto Cleanup_HST;
+		}
+	}
+	if (eventMask & HEADSET_THERMAL_SHUTDOWN) {
+		/* We need to register for the A1 amplifier interrupt. */
+		eventNotify.func = func;
+		eventNotify.param = (void *)(CORE_EVENT_ALSPTHI);
+		rc = pmic_event_subscribe(EVENT_ALSPTHI, eventNotify);
+
+		if (rc != PMIC_SUCCESS) {
+			pr_debug
+			    ("%s: pmic_event_subscribe() for EVENT_ALSPTHI "
+			     "failed\n", __FILE__);
+			goto Cleanup_TSD;
+		}
+		pr_debug("Registered for EVENT_ALSPTHI\n");
+	}
+	if (eventMask & HEADSET_SHORT_CIRCUIT) {
+		/* We need to register for the A1 amplifier interrupt. */
+		eventNotify.func = func;
+		eventNotify.param = (void *)(CORE_EVENT_AHSSHORTI);
+		rc = pmic_event_subscribe(EVENT_AHSSHORTI, eventNotify);
+
+		if (rc != PMIC_SUCCESS) {
+			pr_debug
+			    ("%s: pmic_event_subscribe() for EVENT_AHSSHORTI "
+			     "failed\n", __FILE__);
+			goto Cleanup_HShort;
+		}
+		pr_debug("Registered for EVENT_AHSSHORTI\n");
+	}
+
+	/* We also need the spinlock here to avoid possible problems
+	 * with the interrupt handler  when we update the
+	 * "callback" and "eventMask" state variables.
+	 */
+	spin_lock_irqsave(&lock, flags);
+
+	/* Successfully registered for all events. */
+	event_state.callback = func;
+	event_state.eventMask = eventMask;
+
+	/* The spinlock is no longer needed now that we've finished
+	 * updating the "callback" and "eventMask" state variables.
+	 */
+	spin_unlock_irqrestore(&lock, flags);
+
+	goto End;
+
+	/* This section unregisters any already registered events if we should
+	 * encounter an error partway through the registration process. Note
+	 * that we don't check the return status here since it is already set
+	 * to PMIC_ERROR before we get here.
+	 */
+      Cleanup_HShort:
+
+	if (eventMask & HEADSET_SHORT_CIRCUIT) {
+		eventNotify.func = func;
+		eventNotify.param = (void *)(CORE_EVENT_AHSSHORTI);
+		pmic_event_unsubscribe(EVENT_AHSSHORTI, eventNotify);
+	}
+
+      Cleanup_TSD:
+
+	if (eventMask & HEADSET_THERMAL_SHUTDOWN) {
+		eventNotify.func = func;
+		eventNotify.param = (void *)(CORE_EVENT_ALSPTHI);
+		pmic_event_unsubscribe(EVENT_ALSPTHI, eventNotify);
+	}
+
+      Cleanup_HST:
+
+	if (eventMask & HEADSET_STEREO) {
+		eventNotify.func = func;
+		eventNotify.param = (void *)(CORE_EVENT_HSLI);
+		pmic_event_unsubscribe(EVENT_HSLI, eventNotify);
+	}
+
+      Cleanup_HDT:
+
+	if (eventMask & HEADSET_DETECTED) {
+		eventNotify.func = func;
+		eventNotify.param = (void *)(CORE_EVENT_HSDETI);
+		pmic_event_unsubscribe(EVENT_HSDETI, eventNotify);
+	}
+
+      End:
+	/* Exit the critical section. */
+	up(&mutex);
 	return rc;
 }
 
@@ -1571,17 +1711,26 @@ PMIC_STATUS pmic_audio_set_callback(const PMIC_AUDIO_HANDLE handle,
  * Deregister the callback function that was previously registered by calling
  * pmic_audio_set_callback().
  *
- * @param       handle          Device handle from pmic_audio_open() call.
  *
  * @retval      PMIC_SUCCESS         If the callback was successfully
  *                                   deregistered.
  * @retval      PMIC_PARAMETER_ERROR If the handle is invalid.
  */
-PMIC_STATUS pmic_audio_clear_callback(const PMIC_AUDIO_HANDLE handle)
+PMIC_STATUS pmic_audio_clear_callback(void)
 {
-	/* Event handling and callback are currently not supported for mc13783 */
-	/* Both in case of PMIC and old API */
-	PMIC_STATUS rc = PMIC_NOT_SUPPORTED;
+	PMIC_STATUS rc = PMIC_PARAMETER_ERROR;
+
+	/* We need a critical section to maintain a consistent state. */
+	if (down_interruptible(&mutex))
+		return PMIC_SYSTEM_ERROR_EINTR;
+
+	if (event_state.callback != (PMIC_AUDIO_CALLBACK) NULL) {
+		rc = pmic_audio_deregister(&(event_state.callback),
+					   &(event_state.eventMask));
+	}
+
+	/* Exit the critical section. */
+	up(&mutex);
 	return rc;
 }
 
@@ -1590,7 +1739,6 @@ PMIC_STATUS pmic_audio_clear_callback(const PMIC_AUDIO_HANDLE handle)
  *
  * Get the current callback function and event mask.
  *
- * @param   handle          Device handle from pmic_audio_open() call.
  * @param   func            The current callback function.
  * @param   eventMask       The current event selection mask.
  *
@@ -1598,13 +1746,31 @@ PMIC_STATUS pmic_audio_clear_callback(const PMIC_AUDIO_HANDLE handle)
  *                                   successfully retrieved.
  * @retval      PMIC_PARAMETER_ERROR If the handle is invalid.
  */
-PMIC_STATUS pmic_audio_get_callback(const PMIC_AUDIO_HANDLE handle,
-				    PMIC_AUDIO_CALLBACK * const func,
+PMIC_STATUS pmic_audio_get_callback(PMIC_AUDIO_CALLBACK * const func,
 				    PMIC_AUDIO_EVENTS * const eventMask)
 {
-	/* Event handling and callback are currently not supported for mc13783 */
-	/* Both in case of PMIC and old API */
-	PMIC_STATUS rc = PMIC_NOT_SUPPORTED;
+	PMIC_STATUS rc = PMIC_PARAMETER_ERROR;
+
+	/* We only need to acquire the mutex here because we will not be updating
+	 * anything that may affect the interrupt handler. We just need to ensure
+	 * that the callback fields are not changed while we are in the critical
+	 * section by calling either pmic_audio_set_callback() or
+	 * pmic_audio_clear_callback().
+	 */
+	if (down_interruptible(&mutex))
+		return PMIC_SYSTEM_ERROR_EINTR;
+
+	if ((func != (PMIC_AUDIO_CALLBACK *) NULL) &&
+	    (eventMask != (PMIC_AUDIO_EVENTS *) NULL)) {
+
+		*func = event_state.callback;
+		*eventMask = event_state.eventMask;
+
+		rc = PMIC_SUCCESS;
+	}
+
+	/* Exit the critical section. */
+	up(&mutex);
 	return rc;
 }
 
@@ -1641,7 +1807,8 @@ PMIC_STATUS pmic_audio_antipop_enable(const PMIC_AUDIO_ANTI_POP_RAMP_SPEED
 	 * BIASEN is just to make sure that BIAS is enabled
 	 */
 	reg_value = SET_BITS(regAUDIO_RX_0, BIASEN, 1)
-	    | SET_BITS(regAUDIO_RX_0, BIASSPEED, 0);
+	    | SET_BITS(regAUDIO_RX_0, BIASSPEED, 0) | SET_BITS(regAUDIO_RX_0,
+							       HSLDETEN, 1);
 	rc = pmic_write_reg(REG_AUDIO_RX_0, reg_value, reg_mask);
 	return rc;
 }
@@ -4115,7 +4282,7 @@ PMIC_STATUS pmic_audio_output_set_port(const PMIC_AUDIO_HANDLE handle,
 					    reg_write, reg_mask);
 
 			if (rc == PMIC_SUCCESS) {
-				pr_debug("output ports enabled\n");
+				pr_debug("output ports  enabled\n");
 				audioOutput.outputPort = port;
 
 			}
@@ -4246,6 +4413,17 @@ PMIC_STATUS pmic_audio_output_clear_port(const PMIC_AUDIO_HANDLE handle,
 				    SET_BITS(regAUDIO_RX_0, CDCOUTEN, 0);
 			}
 		}
+#ifdef CONFIG_HEADSET_DETECT_ENABLE
+
+		if (port & STEREO_HEADSET_LEFT) {
+			reg_mask |= SET_BITS(regAUDIO_RX_0, AHSLEN, 1);
+			reg_write |= SET_BITS(regAUDIO_RX_0, AHSLEN, 0);
+		}
+		if (port & STEREO_HEADSET_RIGHT) {
+			reg_mask |= SET_BITS(regAUDIO_RX_0, AHSREN, 1);
+			reg_write |= SET_BITS(regAUDIO_RX_0, AHSREN, 0);
+		}
+#endif
 
 		if (reg_mask == 0) {
 
@@ -5179,8 +5357,7 @@ PMIC_STATUS pmic_audio_output_get_config(const PMIC_AUDIO_HANDLE handle,
  * @retval      PMIC_ERROR           If the phantom ground circuit could not
  *                                   be enabled.
  */
-PMIC_STATUS pmic_audio_output_enable_phantom_ground(const PMIC_AUDIO_HANDLE
-						    handle)
+PMIC_STATUS pmic_audio_output_enable_phantom_ground()
 {
 	PMIC_STATUS rc = PMIC_PARAMETER_ERROR;
 	const unsigned int reg_mask = SET_BITS(regAUDIO_RX_0, HSPGDIS, 1);
@@ -5189,17 +5366,10 @@ PMIC_STATUS pmic_audio_output_enable_phantom_ground(const PMIC_AUDIO_HANDLE
 	 * global data.
 	 */
 
-	if (((handle == stDAC.handle) &&
-	     (stDAC.handleState == HANDLE_IN_USE)) ||
-	    ((handle == vCodec.handle) &&
-	     (vCodec.handleState == HANDLE_IN_USE)) ||
-	    ((handle == extStereoIn.handle) &&
-	     (extStereoIn.handleState == HANDLE_IN_USE))) {
-		rc = pmic_write_reg(REG_AUDIO_RX_0, 0, reg_mask);
-		if (rc == PMIC_SUCCESS) {
-			pr_debug("Phantom ground enabled\n");
+	rc = pmic_write_reg(REG_AUDIO_RX_0, 0, reg_mask);
+	if (rc == PMIC_SUCCESS) {
+		pr_debug("Phantom ground enabled\n");
 
-		}
 	}
 	return rc;
 }
@@ -5219,8 +5389,7 @@ PMIC_STATUS pmic_audio_output_enable_phantom_ground(const PMIC_AUDIO_HANDLE
  * @retval      PMIC_ERROR           If the phantom ground circuit could not
  *                                   be disabled.
  */
-PMIC_STATUS pmic_audio_output_disable_phantom_ground(const PMIC_AUDIO_HANDLE
-						     handle)
+PMIC_STATUS pmic_audio_output_disable_phantom_ground()
 {
 	PMIC_STATUS rc = PMIC_PARAMETER_ERROR;
 	const unsigned int reg_mask = SET_BITS(regAUDIO_RX_0, HSPGDIS, 1);
@@ -5229,17 +5398,10 @@ PMIC_STATUS pmic_audio_output_disable_phantom_ground(const PMIC_AUDIO_HANDLE
 	 * global data.
 	 */
 
-	if (((handle == stDAC.handle) &&
-	     (stDAC.handleState == HANDLE_IN_USE)) ||
-	    ((handle == vCodec.handle) &&
-	     (vCodec.handleState == HANDLE_IN_USE)) ||
-	    ((handle == extStereoIn.handle) &&
-	     (extStereoIn.handleState == HANDLE_IN_USE))) {
-		rc = pmic_write_reg(REG_AUDIO_RX_0, 1, reg_mask);
-		if (rc == PMIC_SUCCESS) {
-			pr_debug("Phantom ground disabled\n");
+	rc = pmic_write_reg(REG_AUDIO_RX_0, 1, reg_mask);
+	if (rc == PMIC_SUCCESS) {
+		pr_debug("Phantom ground disabled\n");
 
-		}
 	}
 	return rc;
 }
@@ -5496,44 +5658,85 @@ static PMIC_STATUS pmic_audio_reset_device(const PMIC_AUDIO_HANDLE handle)
  *                                   event mask was not successfully
  *                                   deregistered.
  */
-/*
-static PMIC_STATUS pmic_audio_deregister(PMIC_AUDIO_CALLBACK * const callback,
+
+static PMIC_STATUS pmic_audio_deregister(void *callback,
 					 PMIC_AUDIO_EVENTS * const eventMask)
 {
+	unsigned long flags;
+	pmic_event_callback_t eventNotify;
+	PMIC_STATUS rc = PMIC_SUCCESS;
 
-	PMIC_STATUS rc = PMIC_NOT_SUPPORTED;
+	/* Deregister each of the PMIC events that we had previously
+	 * registered for by calling pmic_event_subscribe().
+	 */
+	if (*eventMask & (HEADSET_DETECTED)) {
+		/* We need to deregister for the A1 amplifier interrupt. */
+		eventNotify.func = callback;
+		eventNotify.param = (void *)(CORE_EVENT_HSDETI);
+		if (pmic_event_unsubscribe(EVENT_HSDETI, eventNotify) ==
+		    PMIC_SUCCESS) {
+			*eventMask &= ~(HEADSET_DETECTED);
+			pr_debug("Deregistered for EVENT_HSDETI\n");
+		} else {
+			rc = PMIC_ERROR;
+		}
+	}
+
+	if (*eventMask & (HEADSET_STEREO)) {
+		/* We need to deregister for the A1 amplifier interrupt. */
+		eventNotify.func = callback;
+		eventNotify.param = (void *)(CORE_EVENT_HSLI);
+		if (pmic_event_unsubscribe(EVENT_HSLI, eventNotify) ==
+		    PMIC_SUCCESS) {
+			*eventMask &= ~(HEADSET_STEREO);
+			pr_debug("Deregistered for EVENT_HSLI\n");
+		} else {
+			rc = PMIC_ERROR;
+		}
+	}
+	if (*eventMask & (HEADSET_THERMAL_SHUTDOWN)) {
+		/* We need to deregister for the A1 amplifier interrupt. */
+		eventNotify.func = callback;
+		eventNotify.param = (void *)(CORE_EVENT_ALSPTHI);
+		if (pmic_event_unsubscribe(EVENT_ALSPTHI, eventNotify) ==
+		    PMIC_SUCCESS) {
+			*eventMask &= ~(HEADSET_THERMAL_SHUTDOWN);
+			pr_debug("Deregistered for EVENT_ALSPTHI\n");
+		} else {
+			rc = PMIC_ERROR;
+		}
+	}
+	if (*eventMask & (HEADSET_SHORT_CIRCUIT)) {
+		/* We need to deregister for the A1 amplifier interrupt. */
+		eventNotify.func = callback;
+		eventNotify.param = (void *)(CORE_EVENT_AHSSHORTI);
+		if (pmic_event_unsubscribe(EVENT_AHSSHORTI, eventNotify) ==
+		    PMIC_SUCCESS) {
+			*eventMask &= ~(HEADSET_SHORT_CIRCUIT);
+			pr_debug("Deregistered for EVENT_AHSSHORTI\n");
+		} else {
+			rc = PMIC_ERROR;
+		}
+	}
+
+	if (rc == PMIC_SUCCESS) {
+		/* We need to grab the spinlock here to create a critical section to
+		 * avoid any possible race conditions with the interrupt handler
+		 */
+		spin_lock_irqsave(&lock, flags);
+
+		/* Restore the initial reset values for the callback function
+		 * and event mask parameters. This should be NULL and zero,
+		 * respectively.
+		 */
+		callback = NULL;
+		*eventMask = 0;
+
+		/* Exit the critical section. */
+		spin_unlock_irqrestore(&lock, flags);
+	}
+
 	return rc;
-}
-*/
-/*!
- * @brief This is the default event handler for the audio driver.
- *
- * This function is called by the low-level PMIC interrupt handler whenever
- * a registered event occurs. This function will perform whatever additional
- * processing may be required to fully identify the event that just occur and
- * then call the appropriate callback function to complete the handling of the
- * event.
- *
- * @param[in]   param               The parameter that was provided when this
- *                                  event handler was registered (unused).
- */
-/*
-static void pmic_audio_event_handler(void *param)
-{
-}
-*/
-
-/*!
- * @brief This is the audio driver tasklet that handles interrupt events.
- *
- * This is currently not supported by MC13783
- *
- * @param[in]   arg                 The parameter that was provided above in
- *                                  the DECLARE_TASKLET() macro (unused).
- */
-void pmic_audio_tasklet(unsigned long arg)
-{
-
 }
 
 /*@}*/

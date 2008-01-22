@@ -35,7 +35,8 @@ typedef enum {
 	OP_HANDSFREE,
 	OP_HEADSET,
 	OP_LINEOUT,
-	OP_MAXDEV
+	OP_MAXDEV,
+	OP_MONO
 } OUTPUT_DEVICES;
 
 typedef enum {

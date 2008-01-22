@@ -656,7 +656,6 @@ static int mxc_v4l_dqueue(cam_data * cam, struct v4l2_buffer *buf)
 		return -ETIME;
 	} else if (signal_pending(current)) {
 		printk(KERN_ERR "mxc_v4l_dqueue() interrupt received\n");
-		mxc_free_frames(cam);
 		return -ERESTARTSYS;
 	}
 

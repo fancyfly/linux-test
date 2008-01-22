@@ -231,6 +231,9 @@ static void mxc_v4l2out_timer_handler(unsigned long arg)
 
 	spin_lock_irqsave(&g_lock, lock_flags);
 
+	if ((vout->state == STATE_STREAM_STOPPING)
+	    || (vout->state == STATE_STREAM_OFF))
+		goto exit0;
 	/*
 	 * If timer occurs before IPU h/w is ready, then set the state to
 	 * paused and the timer will be set again when next buffer is queued
@@ -1264,7 +1267,6 @@ mxc_v4l2out_do_ioctl(struct inode *inode, struct file *file,
 			} else if (signal_pending(current)) {
 				dev_dbg(vdev->dev,
 					"VIDIOC_DQBUF: interrupt received\n");
-				vout->state = STATE_STREAM_STOPPING;
 				retval = -ERESTARTSYS;
 				break;
 			}

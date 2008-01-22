@@ -567,7 +567,7 @@ typedef enum {
 	/*!
 	 * Charger attach sense
 	 */
-	SENSE_CHGDETS,
+	SENSE_CHGDETS = 6,
 	/*!
 	 * Charger over-voltage sense
 	 */
@@ -602,6 +602,10 @@ typedef enum {
 	 */
 	SENSE_LOBATHS,
 	/*!
+	 * UDPS
+	 */
+	SENSE_UDPS,
+	/*!
 	 * USB 4V4
 	 */
 	SENSE_USB4V4S,
@@ -629,6 +633,10 @@ typedef enum {
 	 * Car-kit detect
 	 */
 	SENSE_CKDETS,
+	/*!
+	 * UDMS
+	 */
+	SENSE_UDMS,
 	/*!
 	 * mic bias detect
 	 */

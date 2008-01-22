@@ -12,7 +12,6 @@
  */
 
 #include <linux/kernel.h>
-
 #include <asm/arch/hardware.h>
 #include <asm/arch/pmic_external.h>
 #include <asm/arch/pmic_convity.h>
@@ -20,31 +19,83 @@
 #include <linux/platform_device.h>
 #include <linux/usb/fsl_xcvr.h>
 #include <linux/delay.h>
-
-#define ID_GND                  (1UL << 0)	/*!< ID is grounded */
-#define A_SESS_VLD              (1UL << 1)	/*!< Vbus greater than Session valid threshold */
-#define B_SESS_VLD              (1UL << 2)	/*!< Vbus greater than B-Session Valid threshold */
-#define VBUS_VLD                (1UL << 3)	/*!< Vbus greater than A-Device Vbus Valid threshold */
-#define B_SESS_END              (1UL << 4)	/*!< Vbus less than B-Session end thresshold */
+#include <linux/kthread.h>
 
 #define TRUE  1
 #define FALSE 0
 
+/* Events to be passed to the thread */
+#define MC13783_USB_VBUS_ON		0x0001
+#define MC13783_USB_VBUS_OFF		0x0002
+#define MC13783_USB_DETECT_MINI_A	0x0004
+#define MC13783_USB_DETECT_MINI_B	0x0008
+
 static inline void mc13783_set_host(void);
 static inline void mc13783_set_peripheral(void);
 
-PMIC_CONVITY_HANDLE pmic_handle = (PMIC_CONVITY_HANDLE) NULL;
+static int pmic_event_thread(void *arg);
 
 extern void otg_set_serial_peripheral(void);
 extern void otg_set_serial_host(void);
 
+static unsigned int p_event;
+PMIC_CONVITY_EVENTS g_event;
+PMIC_CONVITY_HANDLE pmic_handle = (PMIC_CONVITY_HANDLE) NULL;
+
+DECLARE_MUTEX_LOCKED(pmic_mx);
+static struct task_struct *pmic_task;
+
 static void pmic_event_handler(const PMIC_CONVITY_EVENTS event)
 {
-	if (event == USB_DETECT_MINI_B) {
-		otg_set_serial_peripheral();
+	if (event & USB_DETECT_4V4_RISE) {
+		pr_debug("%s: USB_DETECT_4V4_RISE\n", __FUNCTION__);
 	}
-	if (event == USB_DETECT_MINI_A) {
+	if (event & USB_DETECT_4V4_FALL) {
+		pr_debug("%s: USB_DETECT_4V4_FALL\n", __FUNCTION__);
+	}
+	if (event & USB_DETECT_2V0_RISE) {
+		pr_debug("%s: USB_DETECT_2V0_RISE\n", __FUNCTION__);
+	}
+	if (event & USB_DETECT_2V0_FALL) {
+		pr_debug("%s: USB_DETECT_2V0_FALL\n", __FUNCTION__);
+	}
+	if (event & USB_DETECT_0V8_RISE) {
+		pr_debug("%s: USB_DETECT_0V8_RISE\n", __FUNCTION__);
+	}
+	if (event & USB_DETECT_0V8_FALL) {
+		pr_debug("%s: USB_DETECT_0V8_FALL\n", __FUNCTION__);
+	}
+	if (event & USB_DETECT_MINI_B) {
+		pr_debug("%s: USB_DETECT_MINI_B\n", __FUNCTION__);
+		otg_set_serial_peripheral();
+		g_event = USB_DETECT_MINI_B;
+		p_event = MC13783_USB_DETECT_MINI_B;
+		up(&pmic_mx);
+	}
+	if (event & USB_DETECT_MINI_A) {
+		pr_debug("%s: USB_DETECT_MINI_A\n", __FUNCTION__);
 		otg_set_serial_host();
+		g_event = USB_DETECT_MINI_A;
+		p_event = MC13783_USB_DETECT_MINI_A;
+		up(&pmic_mx);
+	}
+
+	/*
+	 * Mini-B cable insertion/removal does not generate cable-detect
+	 * event, so we rely on the VBUS changes to identify a mini-b cable
+	 * connect. This logic is only used if mini-b is the first cable that
+	 * is connected after bootup. At all other times, removal of mini-a
+	 * cable is used to initialize peripheral.
+	 */
+	if (g_event != USB_DETECT_MINI_A && g_event != USB_DETECT_MINI_B) {
+		if ((event & USB_DETECT_0V8_RISE) &&
+		    (event & USB_DETECT_2V0_RISE) &&
+		    (event & USB_DETECT_4V4_RISE)) {
+			otg_set_serial_peripheral();
+			g_event = USB_DETECT_MINI_B;
+			p_event = MC13783_USB_DETECT_MINI_B;
+			up(&pmic_mx);
+		}
 	}
 }
 
@@ -59,7 +110,11 @@ static int usb_pmic_mod_init(void)
 	}
 
 	rs = pmic_convity_set_callback(pmic_handle, pmic_event_handler,
-				       USB_DETECT_MINI_A | USB_DETECT_MINI_B);
+				       USB_DETECT_4V4_RISE | USB_DETECT_4V4_FALL
+				       | USB_DETECT_2V0_RISE |
+				       USB_DETECT_2V0_FALL | USB_DETECT_0V8_RISE
+				       | USB_DETECT_0V8_FALL | USB_DETECT_MINI_A
+				       | USB_DETECT_MINI_B);
 
 	if (rs != PMIC_SUCCESS) {
 		printk(KERN_ERR
@@ -92,16 +147,11 @@ static inline void mc13783_set_host(void)
 {
 	PMIC_STATUS rs = PMIC_ERROR;
 
-	rs = pmic_convity_usb_otg_set_config(pmic_handle, USB_UDM_PD);
-	rs |= pmic_convity_usb_otg_set_config(pmic_handle, USB_UDP_PD);
-	rs |= pmic_convity_set_output(pmic_handle, TRUE, TRUE);
-	rs |=
-	    pmic_convity_usb_otg_set_config(pmic_handle,
-					    USB_VBUS_CURRENT_LIMIT_LOW_30MS);
-#ifndef CONFIG_USB_OTG
-	rs |= pmic_convity_usb_otg_clear_config(pmic_handle, USB_OTG_SE0CONN);
+	rs = pmic_convity_usb_otg_clear_config(pmic_handle, USB_OTG_SE0CONN);
 	rs |= pmic_convity_usb_otg_clear_config(pmic_handle, USB_PU);
-#endif
+
+	rs |= pmic_convity_usb_otg_set_config(pmic_handle, USB_UDM_PD);
+	rs |= pmic_convity_usb_otg_set_config(pmic_handle, USB_UDP_PD);
 
 	if (rs != PMIC_SUCCESS) {
 		printk(KERN_ERR "mc13783_set_host failed\n");
@@ -112,11 +162,12 @@ static inline void mc13783_set_peripheral(void)
 {
 	PMIC_STATUS rs = PMIC_ERROR;
 
-	rs = pmic_convity_usb_set_speed(pmic_handle, USB_FULL_SPEED);
-#ifndef CONFIG_USB_OTG
+	rs = pmic_convity_usb_otg_clear_config(pmic_handle, USB_UDM_PD);
+	rs |= pmic_convity_usb_otg_clear_config(pmic_handle, USB_UDP_PD);
+
+	rs |= pmic_convity_usb_set_speed(pmic_handle, USB_FULL_SPEED);
 	rs |= pmic_convity_usb_otg_set_config(pmic_handle, USB_OTG_SE0CONN);
 	rs |= pmic_convity_usb_otg_set_config(pmic_handle, USB_PU);
-#endif
 
 	if (rs != PMIC_SUCCESS) {
 		printk(KERN_ERR "mc13783_set_peripheral failed\n");
@@ -125,6 +176,10 @@ static inline void mc13783_set_peripheral(void)
 
 void mc13783_set_vbus_power(u32 * view, int on)
 {
+	if (on) {
+		p_event = MC13783_USB_VBUS_ON;
+		up(&pmic_mx);
+	}
 }
 
 static struct fsl_xcvr_ops mc13783_ops_otg = {
@@ -158,13 +213,14 @@ int mc13783xc_init(void)
 		return rs;
 	}
 
-	rs = pmic_convity_usb_otg_set_config(pmic_handle, USB_OTG_SE0CONN);
-	rs |= pmic_convity_usb_set_xcvr(pmic_handle, xc_mode);
+	rs = pmic_convity_usb_set_xcvr(pmic_handle, xc_mode);
+	rs |= pmic_convity_usb_otg_set_config(pmic_handle, USB_OTG_SE0CONN);
+	rs |= pmic_convity_usb_otg_set_config(pmic_handle, USBXCVREN);
+	rs |= pmic_convity_set_output(pmic_handle, FALSE, TRUE);
+
 	rs |= pmic_convity_usb_otg_set_config(pmic_handle, USB_PULL_OVERRIDE);
 	rs |= pmic_convity_usb_otg_clear_config(pmic_handle, USB_USBCNTRL);
-	rs |= pmic_convity_usb_otg_set_config(pmic_handle, USBXCVREN);
 	rs |= pmic_convity_usb_otg_clear_config(pmic_handle, USB_DP150K_PU);
-	rs |= pmic_convity_set_output(pmic_handle, FALSE, TRUE);
 
 	if (rs != PMIC_SUCCESS) {
 		printk(KERN_ERR "pmic configuration failed\n");
@@ -172,10 +228,12 @@ int mc13783xc_init(void)
 
 	fsl_usb_xcvr_register(&mc13783_ops_otg);
 
-#ifdef CONFIG_USB_OTG
 	mc13783_set_peripheral();
-	mc13783_set_host();
-#endif
+
+	pmic_task = kthread_run(pmic_event_thread, NULL, "pmic_usb_xc");
+	if (pmic_task == NULL) {
+		printk(KERN_ERR "pmic task creation failed\n");
+	}
 
 	return rs;
 }
@@ -184,16 +242,73 @@ extern void fsl_usb_xcvr_unregister(struct fsl_xcvr_ops *xcvr_ops);
 
 void mc13783xc_uninit(void)
 {
-	pmic_convity_usb_otg_set_config(pmic_handle, USB_PULL_OVERRIDE);
-	pmic_convity_usb_otg_clear_config(pmic_handle, USB_OTG_SE0CONN);
-	pmic_convity_usb_otg_set_config(pmic_handle, USB_USBCNTRL);
+	int res = 0;
 
+	/* Clear stuff from init */
+	pmic_convity_usb_otg_clear_config(pmic_handle, USB_OTG_SE0CONN);
+	pmic_convity_usb_otg_clear_config(pmic_handle, USBXCVREN);
+	pmic_convity_set_output(pmic_handle, FALSE, FALSE);
+	pmic_convity_usb_otg_clear_config(pmic_handle, USB_PULL_OVERRIDE);
+
+	/* Clear host mode */
 	pmic_convity_usb_otg_clear_config(pmic_handle, USB_UDP_PD);
 	pmic_convity_usb_otg_clear_config(pmic_handle, USB_UDM_PD);
+
+	/* Clear peripheral mode */
+	pmic_convity_usb_otg_clear_config(pmic_handle, USB_PU);
+
+	/* Vbus off */
+	pmic_convity_set_output(pmic_handle, TRUE, FALSE);
+	pmic_convity_usb_otg_clear_config(pmic_handle,
+					  USB_VBUS_CURRENT_LIMIT_LOW_30MS);
 
 	usb_pmic_mod_exit();
 
 	fsl_usb_xcvr_unregister(&mc13783_ops_otg);
+
+	res = kthread_stop(pmic_task);
+	if (res < 0) {
+		printk(KERN_ERR "pmic task stop failed\n");
+	}
+}
+
+static int pmic_event_thread(void *arg)
+{
+	PMIC_STATUS rs = PMIC_ERROR;
+
+	while (1) {
+		down(&pmic_mx);
+
+		if (p_event == MC13783_USB_VBUS_OFF) {
+			mc13783_set_peripheral();
+		}
+		if (p_event == MC13783_USB_VBUS_ON) {
+			mc13783_set_host();
+		}
+		if (p_event == MC13783_USB_DETECT_MINI_B) {
+			rs = pmic_convity_set_output(pmic_handle, TRUE, FALSE);
+			rs |=
+			    pmic_convity_usb_otg_clear_config(pmic_handle,
+							      USB_VBUS_CURRENT_LIMIT_LOW_30MS);
+
+			if (rs != PMIC_SUCCESS) {
+				printk(KERN_ERR
+				       "MC13783_USB_VBUS_OFF failed\n");
+			}
+		}
+		if (p_event == MC13783_USB_DETECT_MINI_A) {
+			rs = pmic_convity_set_output(pmic_handle, TRUE, TRUE);
+			rs |=
+			    pmic_convity_usb_otg_set_config(pmic_handle,
+							    USB_VBUS_CURRENT_LIMIT_LOW_30MS);
+
+			if (rs != PMIC_SUCCESS) {
+				printk(KERN_ERR "MC13783_USB_VBUS_ON failed\n");
+			}
+		}
+	}
+
+	return 0;
 }
 
 module_init(mc13783xc_init);

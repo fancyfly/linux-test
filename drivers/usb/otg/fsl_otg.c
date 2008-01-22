@@ -672,12 +672,13 @@ irqreturn_t fsl_otg_isr(int irq, void *dev_id)
 			VDBG("IRQ=ID now=%d", fsm->id);
 
 			if (fsm->id) {	/* switch to gadget */
-				schedule_delayed_work(&((struct fsl_otg *)
+				schedule_delayed_work((struct delayed_work *)
+						      &((struct fsl_otg *)
 							dev_id)->otg_event, 25);
 			} else {	/* switch to host */
-				cancel_delayed_work(&
-						    ((struct fsl_otg *)dev_id)->
-						    otg_event);
+				cancel_delayed_work((struct delayed_work *)
+						    &((struct fsl_otg *)
+						      dev_id)->otg_event);
 				fsl_otg_start_gadget(fsm, 0);
 				otg_drv_vbus(fsm, 1);
 				fsl_otg_start_host(fsm, 1);

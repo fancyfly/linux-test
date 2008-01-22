@@ -436,7 +436,7 @@ static spinlock_t lock = SPIN_LOCK_UNLOCKED;
 static DECLARE_MUTEX(mutex);
 
 /* Prototype for the connectivity driver tasklet function. */
-static void pmic_convity_tasklet(struct work_struct *work);
+static void pmic_convity_tasklet(void *work);
 
 /*!
  * @brief Tasklet handler for the connectivity driver.
@@ -2320,7 +2320,7 @@ static void pmic_convity_event_handler(void *param)
  * @param   arg                The parameter that was provided above in
  *                                  the DECLARE_TASKLET() macro (unused).
  */
-static void pmic_convity_tasklet(struct work_struct *work)
+static void pmic_convity_tasklet(void *work)
 {
 
 	PMIC_CONVITY_EVENTS activeEvents = 0;
@@ -2335,7 +2335,7 @@ static void pmic_convity_tasklet(struct work_struct *work)
 		eventID &= ~CORE_EVENT_4V4;
 		spin_unlock_irqrestore(&lock, flags);
 
-		activeEvents = pmic_check_sensor(SENSE_USB4V4S) ?
+		activeEvents |= pmic_check_sensor(SENSE_USB4V4S) ?
 		    USB_DETECT_4V4_RISE : USB_DETECT_4V4_FALL;
 
 		if (activeEvents & ~usb.eventMask) {
@@ -2344,12 +2344,13 @@ static void pmic_convity_tasklet(struct work_struct *work)
 			 */
 			;
 		}
-	} else if (eventID & CORE_EVENT_2V0) {
+	}
+	if (eventID & CORE_EVENT_2V0) {
 		spin_lock_irqsave(&lock, flags);
 		eventID &= ~CORE_EVENT_2V0;
 		spin_unlock_irqrestore(&lock, flags);
 
-		activeEvents = pmic_check_sensor(SENSE_USB2V0S) ?
+		activeEvents |= pmic_check_sensor(SENSE_USB2V0S) ?
 		    USB_DETECT_2V0_RISE : USB_DETECT_2V0_FALL;
 		if (activeEvents & ~usb.eventMask) {
 			/* The default handler for 2.0 V rising/falling edge detection
@@ -2357,12 +2358,13 @@ static void pmic_convity_tasklet(struct work_struct *work)
 			 */
 			;
 		}
-	} else if (eventID & CORE_EVENT_0V8) {
+	}
+	if (eventID & CORE_EVENT_0V8) {
 		spin_lock_irqsave(&lock, flags);
 		eventID &= ~CORE_EVENT_0V8;
 		spin_unlock_irqrestore(&lock, flags);
 
-		activeEvents = pmic_check_sensor(SENSE_USB0V8S) ?
+		activeEvents |= pmic_check_sensor(SENSE_USB0V8S) ?
 		    USB_DETECT_0V8_RISE : USB_DETECT_0V8_FALL;
 
 		if (activeEvents & ~usb.eventMask) {
@@ -2371,23 +2373,17 @@ static void pmic_convity_tasklet(struct work_struct *work)
 			 */
 			;
 		}
-	} else if (eventID & CORE_EVENT_ABDET) {
+	}
+	if (eventID & CORE_EVENT_ABDET) {
 		spin_lock_irqsave(&lock, flags);
 		eventID &= ~CORE_EVENT_ABDET;
 		spin_unlock_irqrestore(&lock, flags);
 
-		pmic_read_reg(REG_INTERRUPT_SENSE_0, &reg_val, PMIC_ALL_BITS);
-		pr_debug("%s: reg_val=0x%08x\n", __FUNCTION__, reg_val);
-		if (reg_val & SET_BITS(regUSB0, IDPD, 1)
-		    && (!(reg_val & SET_BITS(regUSB0, USBCNTRL, 1)))) {
-			pr_debug("MINI A\n");
-			activeEvents = USB_DETECT_MINI_A;
-		}
-		if ((!(reg_val & SET_BITS(regUSB0, IDPD, 1)))
-		    && (reg_val & SET_BITS(regUSB0, USBCNTRL, 1))) {
-			pr_debug("MINI B\n");
-			activeEvents = USB_DETECT_MINI_B;
-		}
+		activeEvents |= pmic_check_sensor(SENSE_ID_GNDS) ?
+		    USB_DETECT_MINI_A : 0;
+
+		activeEvents |= pmic_check_sensor(SENSE_ID_FLOATS) ?
+		    USB_DETECT_MINI_B : 0;
 	}
 
 	/* Begin a critical section here so that we don't register/deregister

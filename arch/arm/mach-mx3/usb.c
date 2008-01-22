@@ -273,7 +273,6 @@ static struct fsl_usb2_platform_data fsl_otg_config = {
 	.usbmode = (u32) & UOG_USBMODE,
 	.power_budget = 150,	/* 150 mA max power */
 #if defined(CONFIG_MC13783_MXC)
-	.operating_mode = FSL_USB2_DR_DEVICE,
 	.gpio_usb_active = gpio_usbotg_fs_active,
 	.gpio_usb_inactive = gpio_usbotg_fs_inactive,
 	.transceiver = "mc13783",

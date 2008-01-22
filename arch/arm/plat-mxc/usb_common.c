@@ -427,7 +427,7 @@ void otg_set_serial_host(void)
 	USBCTRL |= UCTRL_OSIC_DU6 | UCTRL_OWIE | UCTRL_OPM;
 #endif
 
-	USB_OTG_MIRROR = 0xa;
+	USB_OTG_MIRROR = OTGM_VBUSVAL | OTGM_ASESVLD;	/* 0xa */
 }
 
 EXPORT_SYMBOL(otg_set_serial_host);
@@ -454,7 +454,7 @@ void otg_set_serial_peripheral(void)
 	USBCTRL |= UCTRL_OSIC_DU6 | UCTRL_OWIE | UCTRL_OPM;
 #endif
 
-	USB_OTG_MIRROR = 0xd;
+	USB_OTG_MIRROR = OTGM_VBUSVAL | OTGM_BSESVLD | OTGM_IDIDG;	/* oxd */
 }
 
 EXPORT_SYMBOL(otg_set_serial_peripheral);

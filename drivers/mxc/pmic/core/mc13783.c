@@ -303,7 +303,15 @@ int pmic_event_mask(type_event event)
  */
 bool pmic_check_sensor(t_sensor sensor)
 {
-	return false;
+	unsigned int reg_val = 0;
+
+	CHECK_ERROR(pmic_read_reg
+		    (REG_INTERRUPT_SENSE_0, &reg_val, PMIC_ALL_BITS));
+
+	if ((1 << sensor) & reg_val)
+		return true;
+	else
+		return false;
 }
 
 /*!

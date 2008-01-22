@@ -411,69 +411,6 @@ static inline void mxc_init_scc(void)
 }
 #endif
 
-#if defined(CONFIG_MXC_FIR) || defined(CONFIG_MXC_FIR_MODULE)
-/*!
- * Resource definition for the FIR
- */
-static struct resource mxcir_resources[] = {
-	[0] = {
-	       .start = UART4_BASE_ADDR,
-	       .end = UART4_BASE_ADDR + SZ_16K - 1,
-	       .flags = IORESOURCE_MEM,
-	       },
-	[1] = {
-	       .start = INT_UART4_FIRI_OR,
-	       .end = INT_UART4_FIRI_OR,
-	       .flags = IORESOURCE_IRQ,
-	       },
-	[2] = {
-	       .start = FIRI_BASE_ADDR,
-	       .end = FIRI_BASE_ADDR + SZ_16K - 1,
-	       .flags = IORESOURCE_MEM,
-	       },
-	[3] = {
-	       .start = INT_UART4_FIRI_OR,
-	       .end = INT_UART4_FIRI_OR,
-	       .flags = IORESOURCE_IRQ,
-	       },
-	[4] = {
-	       .start = INT_UART4_FIRI_OR,
-	       .end = INT_UART4_FIRI_OR,
-	       .flags = IORESOURCE_IRQ,
-	       },
-};
-
-static struct mxc_ir_platform_data ir_data;
-
-/*! Device Definition for MXC FIR */
-static struct platform_device mxcir_device = {
-	.name = "mxcir",
-	.id = 0,
-	.dev = {
-		.release = mxc_nop_release,
-		.platform_data = &ir_data,
-		},
-	.num_resources = ARRAY_SIZE(mxcir_resources),
-	.resource = mxcir_resources,
-};
-
-static inline void mxc_init_ir(void)
-{
-	spba_take_ownership(SPBA_UART4, SPBA_MASTER_A | SPBA_MASTER_C);
-
-	if (cpu_is_mxc91321_rev(CHIP_REV_1_2) > 0) {
-		ir_data.uart_ir_mux = 1;
-	}
-	/* Get clock for UART4 */
-	ir_data.uart_clk = clk_get(NULL, "uart_clk.3");
-	(void)platform_device_register(&mxcir_device);
-}
-#else
-static inline void mxc_init_ir(void)
-{
-}
-#endif
-
 struct mxc_gpio_port mxc_gpio_ports[GPIO_PORT_NUM] = {
 	{
 	 .num = 0,
@@ -721,7 +658,6 @@ static int __init mxc_init_devices(void)
 	mxc_init_ipu();
 	mxc_init_mmc();
 	mxc_init_mu();
-	mxc_init_ir();
 	mxc_init_spi();
 	mxc_init_i2c();
 	mxc_init_rtc();

@@ -613,6 +613,9 @@ EXPORT_SYMBOL(gpio_firi_init);
  */
 void gpio_firi_inactive(void)
 {
+	iomux_config_mux(PIN_IRDA_TX4, OUTPUTCONFIG_FUNC, INPUTCONFIG_NONE);
+	iomux_config_mux(PIN_IRDA_RX4, INPUTCONFIG_NONE, INPUTCONFIG_FUNC);
+
 	/* Set the SD/Mode signal */
 	gpio_set_data(0, 6, 1);
 

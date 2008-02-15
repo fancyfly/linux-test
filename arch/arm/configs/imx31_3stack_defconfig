@@ -470,6 +470,13 @@ CONFIG_MTD_NAND_MXC_V2=y
 # CONFIG_MTD_UBI is not set
 
 #
+# Voltage and Current regulators
+#
+CONFIG_REGULATOR_API=y
+CONFIG_REGULATOR=y
+CONFIG_REGULATOR_MC13783=y
+
+#
 # Parallel port support
 #
 # CONFIG_PARPORT is not set

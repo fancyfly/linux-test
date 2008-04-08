@@ -635,6 +635,9 @@ int32_t ipu_init_channel_buffer(ipu_channel_t channel, ipu_buffer_t type,
 	burst_size = _ipu_ch_param_get_burst_size(dma_chan);
 	_ipu_ic_idma_init(dma_chan, width, height, burst_size, rot_mode);
 
+	if (idma_is_set(IDMAC_CHA_PRI, dma_chan))
+		_ipu_ch_param_set_high_priority(dma_chan);
+
 	_ipu_ch_param_dump(dma_chan);
 
 	spin_lock_irqsave(&ipu_lock, lock_flags);

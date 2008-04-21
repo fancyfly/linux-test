@@ -368,15 +368,16 @@ typedef union {
 	} mem_sdc_fg;
 	struct {
 		uint32_t di;
+		bool interlaced;
 		uint32_t in_pixel_fmt;
 		uint32_t out_pixel_fmt;
-		bool interlaced;
 	} mem_dp_bg_sync;
 	struct {
 		uint32_t temp;
 	} mem_sdc_bg;
 	struct {
 		uint32_t di;
+		bool interlaced;
 		uint32_t in_pixel_fmt;
 		uint32_t out_pixel_fmt;
 	} mem_dp_fg_sync;

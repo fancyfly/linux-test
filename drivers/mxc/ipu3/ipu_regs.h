@@ -171,6 +171,15 @@ extern u32 *ipu_tpmem_base;
 #define DC_EVT_NEW_CHAN		7
 #define DC_EVT_NEW_DATA		8
 
+#define dc_ch_offset(ch) \
+({ \
+	const char _offset[] = { \
+		0, 0x1C, 0x38, 0x54, 0x58, 0x5C, 0x78, 0, 0x94, 0xB4}; \
+	_offset[ch]; \
+})
+#define DC_WR_CH_CONF(ch)	(ipu_dc_reg + dc_ch_offset(ch)/4)
+#define DC_WR_CH_ADDR(ch)	(ipu_dc_reg + dc_ch_offset(ch)/4 + 4/4)
+
 #define DC_WR_CH_CONF_1		(ipu_dc_reg + 0x001C/4)
 #define DC_WR_CH_ADDR_1		(ipu_dc_reg + 0x0020/4)
 #define DC_WR_CH_CONF_5		(ipu_dc_reg + 0x005C/4)
@@ -391,6 +400,7 @@ enum {
 	DC_WR_CH_CONF_FIELD_MODE = 0x00000200,
 	DC_WR_CH_CONF_PROG_TYPE_OFFSET = 5,
 	DC_WR_CH_CONF_PROG_TYPE_MASK = 0x000000E0,
+	DC_WR_CH_CONF_PROG_DI_ID = 0x00000004,
 
 	DC_UGDE_0_ODD_EN = 0x02000000,
 	DC_UGDE_0_ID_CODED_MASK = 0x00000007,

@@ -279,6 +279,7 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	u32 vtotal;
 	u32 htotal;
+	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)info->par;
 
 	if (var->xres_virtual < var->xres)
 		var->xres_virtual = var->xres;
@@ -295,6 +296,11 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	if ((var->bits_per_pixel != 32) && (var->bits_per_pixel != 24) &&
 	    (var->bits_per_pixel != 16))
 		var->bits_per_pixel = default_bpp;
+
+	if (mxc_fbi->ipu_ch == MEM_DC_SYNC && mxc_fbi->ipu_di == 1) {
+		var->bits_per_pixel = 16;
+		var->nonstd = IPU_PIX_FMT_UYVY;
+	}
 
 	switch (var->bits_per_pixel) {
 	case 16:

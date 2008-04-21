@@ -282,15 +282,9 @@ void _ipu_dc_init(int dc_chan, int di, bool interlaced)
 
 	if ((dc_chan == 1) || (dc_chan == 5)) {
 		if (interlaced) {
-			reg = 0;
-			reg |= dc_chan << DC_UGDE_0_ID_CODED_OFFSET;
-			reg |= 1 << DC_UGDE_0_EV_PRIORITY_OFFSET;
-			reg |= DC_UGDE_0_ODD_EN;
-			__raw_writel(reg, DC_UGDE_0(0));
-
-			_ipu_dc_link_event(dc_chan, DC_EVT_NL, 0, 0);
-			_ipu_dc_link_event(dc_chan, DC_EVT_EOL, 0, 0);
-			_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA, 0, 0);
+			_ipu_dc_link_event(dc_chan, DC_EVT_NL, 0, 3);
+			_ipu_dc_link_event(dc_chan, DC_EVT_EOL, 0, 2);
+			_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA, 0, 1);
 		} else {
 			_ipu_dc_link_event(dc_chan, DC_EVT_NL, 2, 3);
 			_ipu_dc_link_event(dc_chan, DC_EVT_EOL, 3, 2);
@@ -302,29 +296,31 @@ void _ipu_dc_init(int dc_chan, int di, bool interlaced)
 		_ipu_dc_link_event(dc_chan, DC_EVT_EOFIELD, 0, 0);
 		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_CHAN, 0, 0);
 		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_ADDR, 0, 0);
+
+		/* Make sure other DC sync channel is not assigned same DI */
+		reg = __raw_readl(DC_WR_CH_CONF(6 - dc_chan));
+		if ((di << 2) == (reg & DC_WR_CH_CONF_PROG_DI_ID)) {
+			reg &= ~DC_WR_CH_CONF_PROG_DI_ID;
+			reg |= di ? 0 : DC_WR_CH_CONF_PROG_DI_ID;
+			__raw_writel(reg, DC_WR_CH_CONF(6 - dc_chan));
+		}
 	} else {
 		/* async channels */
 	}
 
-	reg = 0x9A;
+	reg = 0x1A;
 	reg |= di << 2;
 	if (interlaced)
 		reg |= DC_WR_CH_CONF_FIELD_MODE;
+	__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
+	__raw_writel(0x00000000, DC_WR_CH_ADDR(dc_chan));
 
-	if (dc_chan == 1) {
-		__raw_writel(reg, DC_WR_CH_CONF_1);
-		__raw_writel(0x00000000, DC_WR_CH_ADDR_1);
-	} else if (dc_chan == 5) {
-		__raw_writel(reg, DC_WR_CH_CONF_5);
-		__raw_writel(0x00000000, DC_WR_CH_ADDR_5);
-	}
-	__raw_writel(0x00000044, DC_GEN);
+	__raw_writel(0x00000084, DC_GEN);
 }
 
 void _ipu_dc_uninit(int dc_chan)
 {
 	if ((dc_chan == 1) || (dc_chan == 5)) {
-		__raw_writel(0, DC_UGDE_0(0));
 		_ipu_dc_link_event(dc_chan, DC_EVT_NL, 0, 0);
 		_ipu_dc_link_event(dc_chan, DC_EVT_EOL, 0, 0);
 		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA, 0, 0);
@@ -375,71 +371,34 @@ void _ipu_dp_dc_enable(ipu_channel_t channel)
 		return;
 	}
 
+	reg = __raw_readl(dc_ch_conf);
+	reg |= 4 << DC_WR_CH_CONF_PROG_TYPE_OFFSET;
+	__raw_writel(reg, dc_ch_conf);
+
 	reg = __raw_readl(IPU_DISP_GEN);
 	if (g_ipu_di_channel[0] == channel)
 		reg |= DI0_COUNTER_RELEASE;
 	else if (g_ipu_di_channel[1] == channel)
 		reg |= DI1_COUNTER_RELEASE;
 	__raw_writel(reg, IPU_DISP_GEN);
-
-	reg = __raw_readl(dc_ch_conf);
-	reg |= 4 << DC_WR_CH_CONF_PROG_TYPE_OFFSET;
-	__raw_writel(reg, dc_ch_conf);
 }
 
-void _ipu_dp_dc_disable(ipu_channel_t channel)
+static irqreturn_t dc_irq_handler(int irq, void *dev_id)
 {
-	uint32_t lock_flags;
-	uint32_t reg;
+	u32 reg;
 	uint32_t *dc_ch_conf;
-	int irq = 0;
-	int timeout = 30;
+	ipu_channel_t channel;
+	struct completion *comp = dev_id;
 
-	if (channel == MEM_FG_SYNC) {
+	if (irq == IPU_IRQ_DP_SF_END) {
+		channel = MEM_BG_SYNC;
 		dc_ch_conf = DC_WR_CH_CONF_5;
-		irq = IPU_IRQ_DP_SF_END;
-	} else if (channel == MEM_DC_SYNC) {
+	} else if (irq == IPU_IRQ_DC_FC_1) {
+		channel = MEM_DC_SYNC;
 		dc_ch_conf = DC_WR_CH_CONF_1;
-		irq = IPU_IRQ_DC_FC_1;
-	} else if (channel == MEM_BG_SYNC) {
-		dc_ch_conf = DC_WR_CH_CONF_5;
-		irq = IPU_IRQ_DP_SF_END;
 	} else {
-		return;
+		return IRQ_HANDLED;
 	}
-
-	if (channel == MEM_FG_SYNC) {
-		/* Disable FG channel */
-		reg = __raw_readl(DP_COM_CONF(DP_SYNC));
-		__raw_writel(reg & ~DP_COM_CONF_FG_EN, DP_COM_CONF(DP_SYNC));
-
-		reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
-		__raw_writel(reg, IPU_SRM_PRI2);
-	}
-
-	__raw_writel(IPUIRQ_2_MASK(irq), IPUIRQ_2_STATREG(irq));
-	while ((__raw_readl(IPUIRQ_2_STATREG(irq)) & IPUIRQ_2_MASK(irq)) == 0) {
-		timeout--;
-		msleep(1);
-		if (timeout == 0) {
-			ipu_dump_registers();
-			break;
-		}
-	}
-	dev_dbg(g_ipu_dev, "timeout = %d ms\n", (30 - timeout));
-
-	/* Wait for DI triple buffer to empty */
-	if (g_ipu_di_channel[0] == channel)
-		while ((__raw_readl(DC_STAT) & 0x00000002) != 0x00000002) ;
-	else if (g_ipu_di_channel[1] == channel)
-		while ((__raw_readl(DC_STAT) & 0x00000020) != 0x00000020) ;
-
-	udelay(50);
-
-	if (channel == MEM_FG_SYNC)
-		return;
-
-	spin_lock_irqsave(&ipu_lock, lock_flags);
 
 	reg = __raw_readl(dc_ch_conf);
 	reg &= ~DC_WR_CH_CONF_PROG_TYPE_MASK;
@@ -452,7 +411,62 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 		reg &= ~DI1_COUNTER_RELEASE;
 	__raw_writel(reg, IPU_DISP_GEN);
 
-	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+	complete(comp);
+	return IRQ_HANDLED;
+}
+
+void _ipu_dp_dc_disable(ipu_channel_t channel)
+{
+	int ret;
+	uint32_t lock_flags;
+	uint32_t reg;
+	uint32_t *dc_ch_conf;
+	int irq = 0;
+	int timeout = 50;
+	DECLARE_COMPLETION_ONSTACK(dc_comp);
+
+	if (channel == MEM_DC_SYNC) {
+		dc_ch_conf = DC_WR_CH_CONF_1;
+		irq = IPU_IRQ_DC_FC_1;
+	} else if (channel == MEM_BG_SYNC) {
+		dc_ch_conf = DC_WR_CH_CONF_5;
+		irq = IPU_IRQ_DP_SF_END;
+	} else if (channel == MEM_FG_SYNC) {
+		/* Disable FG channel */
+
+		spin_lock_irqsave(&ipu_lock, lock_flags);
+
+		reg = __raw_readl(DP_COM_CONF(DP_SYNC));
+		__raw_writel(reg & ~DP_COM_CONF_FG_EN, DP_COM_CONF(DP_SYNC));
+
+		reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
+		__raw_writel(reg, IPU_SRM_PRI2);
+
+		spin_unlock_irqrestore(&ipu_lock, lock_flags);
+
+		__raw_writel(IPUIRQ_2_MASK(IPU_IRQ_DP_SF_END),
+			     IPUIRQ_2_STATREG(IPU_IRQ_DP_SF_END));
+		while ((__raw_readl(IPUIRQ_2_STATREG(IPU_IRQ_DP_SF_END)) &
+			IPUIRQ_2_MASK(IPU_IRQ_DP_SF_END)) == 0) {
+			msleep(2);
+			timeout -= 2;
+			if (timeout <= 0)
+				break;
+		}
+		return;
+	} else {
+		return;
+	}
+
+	ipu_clear_irq(irq);
+	ret = ipu_request_irq(irq, dc_irq_handler, 0, NULL, &dc_comp);
+	if (ret < 0) {
+		dev_err(g_ipu_dev, "DC irq %d in use\n", irq);
+		return;
+	}
+	ret = wait_for_completion_timeout(&dc_comp, msecs_to_jiffies(50));
+	dev_dbg(g_ipu_dev, "DC stop timeout - %d * 10ms\n", 5 - ret);
+	ipu_free_irq(irq, &dc_comp);
 }
 
 void _ipu_init_dc_mappings(void)
@@ -610,7 +624,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 		field1_offset = v_sync_width + v_start_width + height / 2 +
 		    v_end_width;
 		if (sig.odd_field_first) {
-			field0_offset = field1_offset;
+			field0_offset = field1_offset - 1;
 			field1_offset = 0;
 		}
 		v_total += v_start_width + v_end_width;
@@ -630,7 +644,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 		/* Active Field ? */
 		_ipu_di_sync_config(disp, 4,
 				    field0_offset ?
-				    field0_offset - 1 : field1_offset - 2,
+				    field0_offset : field1_offset - 2,
 				    1, v_start_width + v_sync_width, 1, 2, 2,
 				    0, DI_SYNC_NONE, DI_SYNC_NONE, 0, 0);
 
@@ -664,13 +678,15 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 				    0, DI_SYNC_NONE,
 				    0, DI_SYNC_NONE, 6, DI_SYNC_NONE,
 				    DI_SYNC_NONE, 0, 0);
+		reg = __raw_readl(DI_SW_GEN1(disp, 9));
+		reg |= 0x8000;
+		__raw_writel(reg, DI_SW_GEN1(disp, 9));
 
 		/* Init template microcode */
 		_ipu_dc_write_tmpl(0, WROD(0), 0, map, SYNC_WAVE, 0, 8);
 
-		__raw_writel(width - 1, DC_UGDE_3(0));
-		__raw_writel(v_start_width + v_end_width + height / 2 - 1,
-			     DI_SCR_CONF(disp));
+		__raw_writel(v_sync_width + v_start_width +
+			     v_end_width + height / 2 - 1, DI_SCR_CONF(disp));
 
 		if (sig.Hsync_pol)
 			di_gen |= DI_GEN_POLARITY_3;

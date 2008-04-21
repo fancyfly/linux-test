@@ -346,7 +346,12 @@ static int tve_probe(struct platform_device *pdev)
 	__raw_writel(CD_SM_INT | CD_LM_INT, tve.base + TVE_STAT_REG);
 	__raw_writel(CD_SM_INT | CD_LM_INT, tve.base + TVE_INT_CONT_REG);
 
-	__raw_writel(0x00000002, tve.base + TVE_MV_CONT_REG);
+	__raw_writel(0x00000000, tve.base + 0x34);
+	__raw_writel(0x00000000, tve.base + 0x38);
+	__raw_writel(0x00000000, tve.base + 0x3C);
+	__raw_writel(0x00000000, tve.base + 0x40);
+	__raw_writel(0x00000000, tve.base + 0x44);
+	__raw_writel(0x00000000, tve.base + TVE_MV_CONT_REG);
 
 	ret = fb_register_client(&nb);
 	if (ret < 0)

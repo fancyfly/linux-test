@@ -288,11 +288,19 @@ void ipu_dump_registers(void)
  */
 int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 {
+	int ret = 0;
 	uint32_t ipu_conf;
 	uint32_t reg;
 	unsigned long lock_flags;
 
 	dev_dbg(g_ipu_dev, "init channel = %d\n", IPU_CHAN_ID(channel));
+
+	/* re-enable error interrupts every time a channel is initialized */
+	__raw_writel(0xFFFFFFFF, IPU_INT_CTRL(5));
+	__raw_writel(0xFFFFFFFF, IPU_INT_CTRL(6));
+	__raw_writel(0xFFFFFFFF, IPU_INT_CTRL(9));
+	__raw_writel(0xFFFFFFFF, IPU_INT_CTRL(10));
+
 
 	spin_lock_irqsave(&ipu_lock, lock_flags);
 
@@ -346,6 +354,11 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 		ipu_rot_use_count++;
 		break;
 	case MEM_DC_SYNC:
+		if (params->mem_dc_sync.di > 1) {
+			ret = -EINVAL;
+			goto err;
+		}
+
 		g_ipu_di_channel[params->mem_dc_sync.di] = MEM_DC_SYNC;
 		_ipu_dc_init(1, params->mem_dc_sync.di,
 			     params->mem_dc_sync.interlaced);
@@ -354,6 +367,11 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 		ipu_dmfc_use_count++;
 		break;
 	case MEM_BG_SYNC:
+		if (params->mem_dc_sync.di > 1) {
+			ret = -EINVAL;
+			goto err;
+		}
+
 		g_ipu_di_channel[params->mem_dp_bg_sync.di] = MEM_BG_SYNC;
 		_ipu_dp_init(channel, params->mem_dp_bg_sync.in_pixel_fmt,
 			     params->mem_dp_bg_sync.out_pixel_fmt);
@@ -395,9 +413,9 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 
 	__raw_writel(ipu_conf, IPU_CONF);
 
+err:
 	spin_unlock_irqrestore(&ipu_lock, lock_flags);
-
-	return 0;
+	return ret;
 }
 EXPORT_SYMBOL(ipu_init_channel);
 
@@ -492,7 +510,7 @@ void ipu_uninit_channel(ipu_channel_t channel)
 		if (g_ipu_di_channel[0] == MEM_BG_SYNC) {
 			g_ipu_di_channel[0] = CHAN_NONE;
 			ipu_di_use_count[0]--;
-		} else if (g_ipu_di_channel[1] == MEM_DC_SYNC) {
+		} else if (g_ipu_di_channel[1] == MEM_BG_SYNC) {
 			g_ipu_di_channel[1] = CHAN_NONE;
 			ipu_di_use_count[1]--;
 		}

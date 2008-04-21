@@ -109,3 +109,24 @@ PMIC_STATUS pmic_gpio_get_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
 	return PMIC_SUCCESS;
 }
 EXPORT_SYMBOL(pmic_gpio_get_bit_val);
+
+PMIC_STATUS pmic_gpio_get_designation_bit_val(unsigned int bit,
+					unsigned int *val)
+{
+	unsigned int reg_read_val;
+	u8 reg_mask = 0;
+
+	if (bit > 7)
+		return PMIC_PARAMETER_ERROR;
+
+	SET_BIT_IN_BYTE(reg_mask, bit);
+	CHECK_ERROR(pmic_read_reg(REG_MCU_DES_FLAG, &reg_read_val, reg_mask));
+	if (0 == reg_read_val)
+		*val = 0;
+	else
+		*val = 1;
+
+	return PMIC_SUCCESS;
+}
+EXPORT_SYMBOL(pmic_gpio_get_designation_bit_val);
+

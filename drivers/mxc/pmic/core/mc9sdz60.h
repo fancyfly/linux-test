@@ -61,6 +61,7 @@
 #define MCU_INT_ENABLE_2	0x26
 #define MCU_INT_FLAG_1	0x27
 #define MCU_INT_FLAG_2	0x28
+#define MCU_DES_FLAG		0x29
 int mc9sdz60_read_reg(u8 reg, u8 *value);
 int mc9sdz60_write_reg(u8 reg, u8 value);
 int mc9sdz60_init(void);

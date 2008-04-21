@@ -137,7 +137,7 @@ enum {
 #define SET_BIT_IN_BYTE(byte, pos) (byte |= (0x01 << pos))
 #define CLEAR_BIT_IN_BYTE(byte, pos) (byte &= ~(0x01 << pos))
 
-#define DEBUG_REG_MAX8660 1
+#define DEBUG_REG_MAX8660 0
 #if DEBUG_REG_MAX8660
 #define DPRINTK(format, args...) printk(KERN_ERR \
 	"reg-max8660: "format"\n", ##args)

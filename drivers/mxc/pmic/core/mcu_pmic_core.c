@@ -102,6 +102,7 @@ const static u8 mcu_pmic_reg_addr_table[] = {
 	MCU_INT_ENABLE_2,
 	MCU_INT_FLAG_1,
 	MCU_INT_FLAG_2,
+	MCU_DES_FLAG,
 	MAX8660_OUTPUT_ENABLE_1,
 	MAX8660_OUTPUT_ENABLE_2,
 	MAX8660_VOLT_CHANGE_CONTROL,
@@ -122,7 +123,7 @@ int pmic_read(int reg_num, unsigned int *reg_val)
 	int ret;
 	u8 value = 0;
 	/* mcu ops */
-	if (reg_num >= REG_MCU_VERSION && reg_num <= REG_MCU_INT_FLAG_2) {
+	if (reg_num >= REG_MCU_VERSION && reg_num <= REG_MCU_DES_FLAG) {
 
 		ret =
 		    mc9sdz60_read_reg(mcu_pmic_reg_addr_table[reg_num], &value);
@@ -151,7 +152,7 @@ int pmic_write(int reg_num, const unsigned int reg_val)
 	int ret;
 	u8 value = reg_val;
 	/* mcu ops */
-	if (reg_num >= REG_MCU_VERSION && reg_num <= REG_MCU_INT_FLAG_2) {
+	if (reg_num >= REG_MCU_VERSION && reg_num <= REG_MCU_DES_FLAG) {
 
 		ret =
 		    mc9sdz60_write_reg(mcu_pmic_reg_addr_table[reg_num], value);

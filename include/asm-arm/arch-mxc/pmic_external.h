@@ -847,6 +847,7 @@ typedef enum {
 	REG_MCU_INT_ENABLE_2,
 	REG_MCU_INT_FLAG_1,
 	REG_MCU_INT_FLAG_2,
+	REG_MCU_DES_FLAG,
 
 	/* reg names for max8660 */
 	REG_MAX8660_OUTPUT_ENABLE_1,
@@ -899,6 +900,7 @@ typedef enum {
 #endif				/* MXC_PMIC_MC9SDZ60 */
 
 /* EXPORTED FUNCTIONS */
+#if defined(CONFIG_MXC_PMIC_MC13783) || defined(CONFIG_MXC_PMIC_MC9SDZ60)
 #ifdef __KERNEL__
 
 /*!
@@ -975,6 +977,10 @@ PMIC_STATUS pmic_gpio_set_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
 
 PMIC_STATUS pmic_gpio_get_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
 				  unsigned int *val);
+
+PMIC_STATUS pmic_gpio_get_designation_bit_val(unsigned int bit,
+						unsigned int *val);
+
 #endif
 
 #ifdef CONFIG_REGULATOR_MC13783
@@ -991,5 +997,7 @@ static inline int reg_mc13783_probe(void)
 };
 #endif
 #endif				/* __KERNEL__ */
+#endif
+/* CONFIG_MXC_PMIC_MC13783 || CONFIG_MXC_PMIC_MC9SDZ60 */
 
 #endif				/* __ASM_ARCH_MXC_PMIC_EXTERNAL_H__ */

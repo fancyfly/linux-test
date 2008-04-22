@@ -1,5 +1,5 @@
 /*
- *  Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -370,6 +370,11 @@ void __init mxc_init_irq(void)
 	reg = __raw_readl(AVIC_NIPRIORITY6);
 	reg |= (0xF << 28);
 	__raw_writel(reg, AVIC_NIPRIORITY6);
+
+	if (MXC_INT_FORCE >= 32)
+		__raw_writel(1 << (MXC_INT_FORCE & 31), AVIC_INTFRCH);
+	else if (MXC_INT_FORCE >= 0)
+		__raw_writel(1 << MXC_INT_FORCE, AVIC_INTFRCL);
 
 	printk(KERN_INFO "MXC IRQ initialized\n");
 }

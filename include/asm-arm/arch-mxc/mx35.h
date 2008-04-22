@@ -400,6 +400,7 @@
 
 #define MXC_MAX_INT_LINES       	64
 
+#define MXC_INT_FORCE			MXC_INT_RESV0
 /*!
  * Interrupt Number for ARM11 PMU
  */

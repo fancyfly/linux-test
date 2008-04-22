@@ -128,8 +128,20 @@ MXC_REV(cpu_is_mx37);
 #define MXC_EXP_IO_BASE		(MXC_MAX_INT_LINES + MXC_MAX_GPIO_LINES)
 #define MXC_MAX_EXP_IO_LINES	16
 
+#ifdef CONFIG_MXC_PSEUDO_IRQS
+#define MXC_PSEUDO_IO_BASE	(MXC_EXP_IO_BASE + MXC_MAX_EXP_IO_LINES)
+#define MXC_MAX_PSEUDO_IO_LINES 16
+#else
+#define MXC_MAX_PSEUDO_IO_LINES 0
+#endif
+
+#ifndef MXC_INT_FORCE
+#define MXC_INT_FORCE	-1
+#endif
+
 #define MXC_MAX_INTS            (MXC_MAX_INT_LINES + \
-                                MXC_MAX_GPIO_LINES + \
-                                MXC_MAX_EXP_IO_LINES)
+				MXC_MAX_GPIO_LINES + \
+				MXC_MAX_EXP_IO_LINES + \
+				MXC_MAX_PSEUDO_IO_LINES)
 
 #endif				/* __ASM_ARCH_MXC_HARDWARE_H__ */

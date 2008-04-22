@@ -143,7 +143,7 @@ int pmic_read(int reg_num, unsigned int *reg_val)
 
 	return 0;
 
-error1:
+      error1:
 	return -1;
 }
 
@@ -174,7 +174,7 @@ int pmic_write(int reg_num, const unsigned int reg_val)
 
 	return 0;
 
-error1:
+      error1:
 	DPRINTK(" reg_num = %d, write failed", reg_num);
 	return -1;
 
@@ -506,30 +506,16 @@ static int __init mcu_pmic_init(void)
 	pmic_event_list_init();
 
 	/* Set and install PMIC IRQ handler */
-	mxc_request_iomux(MX35_PIN_GPIO1_0, OUTPUTCONFIG_GPIO,
-			  INPUTCONFIG_GPIO);
-	mxc_iomux_set_pad(MX35_PIN_GPIO1_0, PAD_CTL_PKE_NONE);
-	mxc_set_gpio_direction(MX35_PIN_GPIO1_0, 1);	/* input */
-
-	err = set_irq_type(IOMUX_TO_IRQ(MX35_PIN_GPIO1_0), IRQT_RISING);
-	err = request_irq(IOMUX_TO_IRQ(MX35_PIN_GPIO1_0), pmic_irq_handler,
-			  0, "PMIC_IRQ", 0);
-	if (err) {
-		DPRINTK("mcu pmic request irq failed");
-		goto fail1;
-	}
-
 	pmic_pdev_register();
 
 	return 0;
 
-fail1:
+      fail1:
 	return err;
 }
 
 static void __exit mcu_pmic_exit(void)
 {
-	free_irq(IOMUX_TO_IRQ(MX35_PIN_GPIO1_1), 0);
 	pmic_pdev_unregister();
 }
 

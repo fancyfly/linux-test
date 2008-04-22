@@ -4,6 +4,7 @@ menu "MX35 Options"
 config MACH_MX35_3DS
 	bool "Support MX35 3STACK platforms"
 	default y
+	select MXC_PSEUDO_IRQS if MXC_PMIC 
 	help
 	  Include support for MX35 3STACK platform. This includes specific
 	  configurations for the board and its peripherals.
@@ -70,4 +71,7 @@ config I2C_MXC_SELECT3
 
 endmenu
 
+config MXC_PSEUDO_IRQS
+	bool 
+ 
 endmenu

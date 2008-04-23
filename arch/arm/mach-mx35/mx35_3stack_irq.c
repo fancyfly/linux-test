@@ -233,11 +233,11 @@ static void mcu_state_handler(struct work_struct *work)
 	int err, i;
 	unsigned int event1, event2;
 	event1 = pseudo_irq_enable & ((1 << MCU_INT_KEYPAD) - 1);
-	event2 = pseudo_irq_enable >> (MCU_INT_KEYPAD - 1);
+	event2 = pseudo_irq_enable >> MCU_INT_KEYPAD;
 
 	for (i = 0; i < 3; i++) {
-		err = pmic_write_reg(REG_MCU_INT_ENABLE_1, event1, event1);
-		err |= pmic_write_reg(REG_MCU_INT_ENABLE_2, event2, event2);
+		err = pmic_write_reg(REG_MCU_INT_ENABLE_1, event1, 0xFF);
+		err |= pmic_write_reg(REG_MCU_INT_ENABLE_2, event2, 0xFF);
 		if (err == PMIC_SUCCESS)
 			break;
 	}

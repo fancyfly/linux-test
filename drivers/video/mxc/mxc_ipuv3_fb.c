@@ -26,6 +26,7 @@
 /*!
  * Include files
  */
+#define DEBUG
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
@@ -748,32 +749,18 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct fb_info *fbi = platform_get_drvdata(pdev);
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
+	int saved_blank;
 #ifdef CONFIG_FB_MXC_LOW_PWR_DISPLAY
 	void *fbmem;
 #endif
 
 	acquire_console_sem();
 	fb_set_suspend(fbi, 1);
+	saved_blank = mxc_fbi->blank;
+	mxcfb_blank(FB_BLANK_POWERDOWN, fbi);
+	mxc_fbi->blank = saved_blank;
 	release_console_sem();
 
-	if (mxc_fbi->blank == FB_BLANK_UNBLANK) {
-#ifdef CONFIG_FB_MXC_LOW_PWR_DISPLAY
-		if (drv_data->fbi->fix.smem_start != FB_RAM_BASE_ADDR) {
-			fbmem = ioremap(FB_RAM_BASE_ADDR, FB_RAM_SIZE);
-			memcpy(fbmem, drv_data->fbi->screen_base, FB_RAM_SIZE);
-			iounmap(fbmem);
-			mxc_fbi->cur_ipu_buf = !mxc_fbi->cur_ipu_buf;
-			ipu_update_channel_buffer(MEM_SDC_BG, IPU_INPUT_BUFFER,
-						  mxc_fbi->cur_ipu_buf,
-						  FB_RAM_BASE_ADDR);
-			ipu_select_buffer(MEM_SDC_BG, IPU_INPUT_BUFFER,
-					  mxc_fbi->cur_ipu_buf);
-		}
-		ipu_lowpwr_display_enable();
-#else
-		ipu_disable_channel(mxc_fbi->ipu_ch, true);
-#endif
-	}
 	return 0;
 }
 
@@ -784,25 +771,12 @@ static int mxcfb_resume(struct platform_device *pdev)
 {
 	struct fb_info *fbi = platform_get_drvdata(pdev);
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
-
-	if (mxc_fbi->blank == FB_BLANK_UNBLANK) {
-#ifdef CONFIG_FB_MXC_LOW_PWR_DISPLAY
-		ipu_lowpwr_display_disable();
-		if (drv_data->fbi->fix.smem_start != FB_RAM_BASE_ADDR) {
-			mxc_fbi->cur_ipu_buf = !mxc_fbi->cur_ipu_buf;
-			ipu_update_channel_buffer(MEM_SDC_BG, IPU_INPUT_BUFFER,
-						  mxc_fbi->cur_ipu_buf,
-						  drv_data->fbi->fix.
-						  smem_start);
-			ipu_select_buffer(MEM_SDC_BG, IPU_INPUT_BUFFER,
-					  mxc_fbi->cur_ipu_buf);
-		}
-#else
-		ipu_enable_channel(MEM_BG_SYNC);
-#endif
-	}
+	int saved_blank;
 
 	acquire_console_sem();
+	saved_blank = mxc_fbi->blank;
+	mxc_fbi->blank = FB_BLANK_POWERDOWN;
+	mxcfb_blank(saved_blank, fbi);
 	fb_set_suspend(fbi, 0);
 	release_console_sem();
 

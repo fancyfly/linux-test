@@ -105,6 +105,17 @@ static struct clk di_clk[] = {
 	 .rate = 27000000,},
 };
 
+static void _ipu_dmfc_init(void)
+{
+	__raw_writel(0x2, DMFC_IC_CTRL);
+	/* 1 - segment 0 and 1; 2, 1C and 2C unused */
+	__raw_writel(0x00000090, DMFC_WR_CHAN);
+	__raw_writel(0x20202000, DMFC_WR_CHAN_DEF);
+	/* 5B - segment 2 and 3; 5F - segment 4 and 5; */
+	/* 6B - segment 6; 6F - segment 7 */
+	__raw_writel(0x1F1E9492, DMFC_DP_CHAN);
+}
+
 /*!
  * This function is called by the driver framework to initialize the IPU
  * hardware.
@@ -198,13 +209,7 @@ static int ipu_probe(struct platform_device *pdev)
 	__raw_writel(0xFFFFFFFF, IPU_INT_CTRL(10));
 
 	/* DMFC Init */
-	__raw_writel(0x2, DMFC_IC_CTRL);
-	/* 1 - segment 0 and 1; 2, 1C and 2C unused */
-	__raw_writel(0x00000090, DMFC_WR_CHAN);
-	__raw_writel(0x20202000, DMFC_WR_CHAN_DEF);
-	/* 5B - segment 2 and 3; 5F - segment 4 and 5; */
-	/* 6B - segment 6; 6F - segment 7 */
-	__raw_writel(0x1F1E9492, DMFC_DP_CHAN);
+	_ipu_dmfc_init();
 
 	/* Set sync refresh channels as high priority */
 	__raw_writel(0x18800000L, IDMAC_CHA_PRI(0));
@@ -1439,11 +1444,23 @@ ipu_color_space_t format_to_colorspace(uint32_t fmt)
 
 static int ipu_suspend(struct platform_device *pdev, pm_message_t state)
 {
+	mxc_pg_enable(pdev);
 	return 0;
 }
 
 static int ipu_resume(struct platform_device *pdev)
 {
+	mxc_pg_disable(pdev);
+
+	clk_enable(g_ipu_clk);
+
+	_ipu_dmfc_init();
+	_ipu_init_dc_mappings();
+
+	/* Set sync refresh channels as high priority */
+	__raw_writel(0x18800000L, IDMAC_CHA_PRI(0));
+
+	clk_disable(g_ipu_clk);
 	return 0;
 }
 
@@ -1456,8 +1473,8 @@ static struct platform_driver mxcipu_driver = {
 		   },
 	.probe = ipu_probe,
 	.remove = ipu_remove,
-	.suspend = ipu_suspend,
-	.resume = ipu_resume,
+	.suspend_late = ipu_suspend,
+	.resume_early = ipu_resume,
 };
 
 int32_t __init ipu_gen_init(void)

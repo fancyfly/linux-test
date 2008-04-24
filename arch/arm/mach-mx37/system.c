@@ -10,9 +10,10 @@
  * http://www.opensource.org/licenses/gpl-license.html
  * http://www.gnu.org/copyleft/gpl.html
  */
-
+#define DEBUG
 #include <linux/kernel.h>
 #include <linux/clk.h>
+#include <linux/platform_device.h>
 #include <asm/io.h>
 #include <asm/hardware.h>
 #include <asm/proc-fns.h>
@@ -66,6 +67,7 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 		arm_srpgcr |= MXC_SRPGCR_PCR;
 		empgcr0 |= MXC_EMPGCR_PCR;
 		empgcr1 |= MXC_EMPGCR_PCR;
+
 		if (tzic_enable_wake(1) != 0)
 			return;
 		break;
@@ -83,6 +85,41 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 	/* __raw_writel(empgcr0, MXC_EMPGC0_ARM_EMPGCR); TODO: system crash */
 	__raw_writel(empgcr1, MXC_EMPGC1_ARM_EMPGCR);
 }
+
+void mxc_pg_enable(struct platform_device *pdev)
+{
+	if (pdev == NULL)
+		return;
+
+	if (strcmp(pdev->name, "mxc_ipu") == 0) {
+		__raw_writel(MXC_PGCR_PCR, MXC_PGC_IPU_PGCR);
+		__raw_writel(MXC_PGSR_PSR, MXC_PGC_IPU_PGSR);
+	} else if (strcmp(pdev->name, "mxc_vpu") == 0) {
+		__raw_writel(MXC_PGCR_PCR, MXC_PGC_VPU_PGCR);
+		__raw_writel(MXC_PGSR_PSR, MXC_PGC_VPU_PGSR);
+	}
+
+}
+EXPORT_SYMBOL(mxc_pg_enable);
+
+void mxc_pg_disable(struct platform_device *pdev)
+{
+	if (pdev == NULL)
+		return;
+
+	if (strcmp(pdev->name, "mxc_ipu") == 0) {
+		__raw_writel(0x0, MXC_PGC_IPU_PGCR);
+		if (__raw_readl(MXC_PGC_IPU_PGSR) & MXC_PGSR_PSR)
+			dev_dbg(&pdev->dev, "power gating successful\n");
+		__raw_writel(MXC_PGSR_PSR, MXC_PGC_IPU_PGSR);
+	} else if (strcmp(pdev->name, "mxc_vpu") == 0) {
+		__raw_writel(0x0, MXC_PGC_VPU_PGCR);
+		if (__raw_readl(MXC_PGC_VPU_PGSR) & MXC_PGSR_PSR)
+			dev_dbg(&pdev->dev, "power gating successful\n");
+		__raw_writel(MXC_PGSR_PSR, MXC_PGC_VPU_PGSR);
+	}
+}
+EXPORT_SYMBOL(mxc_pg_disable);
 
 /* To change the idle power mode, need to set arch_idle_mode to a different
  * power mode as in enum mxc_cpu_pwr_mode.

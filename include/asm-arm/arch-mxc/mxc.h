@@ -163,6 +163,10 @@ unsigned long board_get_ckih_rate(void);
 int mxc_snoop_set_config(u32 num, unsigned long base, int size);
 int mxc_snoop_get_status(u32 num, u32 * statl, u32 * stath);
 
+struct platform_device;
+void mxc_pg_enable(struct platform_device *pdev);
+void mxc_pg_disable(struct platform_device *pdev);
+
 #endif				/* __ASSEMBLY__ */
 
 #define IOMUX_TO_GPIO(pin) 	((((unsigned int)pin >> MUX_IO_P) * GPIO_NUM_PIN) + ((pin >> MUX_IO_I) & ((1 << (MUX_IO_P - MUX_IO_I)) -1)))

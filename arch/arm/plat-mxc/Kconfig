@@ -27,7 +27,7 @@ config ARCH_MX35
     bool "MX35-based"
         select CPU_V6
         select CACHE_L2X0
-        #select USB_ARCH_HAS_EHCI
+        select USB_ARCH_HAS_EHCI
         select ARCH_HAS_EVTMON
     help
       This enables support for systems based on Freescale i.MX35
@@ -105,11 +105,22 @@ config DMA_ZONE_SIZE
 	  This is the size in MB for the DMA zone. The DMA zone is used for
 	  dedicated memory for large contiguous video buffers
 
+choice
+        prompt "Select USB OTG transceiver"
+        depends on USB_ARCH_HAS_EHCI
+        default INTERN_UTMI
+
+config INTERN_UTMI
+	bool "Internal UTMI transceiver"
+	help
+	  Support for the internal USB transceiver on MXC platforms
+
 config ISP1504_MXC
 	bool "ISP1504 transceiver support"
-	depends on USB_ARCH_HAS_EHCI
+	#depends on USB_ARCH_HAS_EHCI
 	help
 	  Support for the ISP1504 USB transceiver on MXC platforms.
+endchoice
 
 choice
 	prompt "Select serial USB transceiver"

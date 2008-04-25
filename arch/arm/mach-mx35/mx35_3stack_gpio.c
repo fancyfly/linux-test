@@ -476,3 +476,51 @@ void gpio_sdhc_inactive(int module)
 }
 
 EXPORT_SYMBOL(gpio_sdhc_inactive);
+
+/*
+ *  USB Host2
+ */
+int gpio_usbh2_active(void)
+{
+	mxc_request_iomux(MX35_PIN_I2C2_CLK, MUX_CONFIG_ALT2);
+	mxc_iomux_set_pad(MX35_PIN_I2C2_CLK, 0x0040);
+
+	mxc_request_iomux(MX35_PIN_I2C2_DAT, MUX_CONFIG_ALT2);
+	mxc_iomux_set_input(MUX_IN_USB_UH2_USB_OC, INPUT_CTL_PATH1);
+	mxc_iomux_set_pad(MX35_PIN_I2C2_DAT, 0x01c0);
+
+	return 0;
+}
+EXPORT_SYMBOL(gpio_usbh2_active);
+
+int gpio_usbh2_inactive(void)
+{
+	mxc_request_gpio(MX35_PIN_I2C2_DAT);
+	mxc_free_iomux(MX35_PIN_I2C2_DAT, MUX_CONFIG_GPIO);
+	mxc_request_gpio(MX35_PIN_I2C2_CLK);
+	mxc_free_iomux(MX35_PIN_I2C2_CLK, MUX_CONFIG_GPIO);
+}
+EXPORT_SYMBOL(gpio_usbh2_inactive);
+
+/*
+ *  USB OTG UTMI
+ */
+int gpio_usbotg_utmi_active(void)
+{
+	mxc_request_iomux(MX35_PIN_USBOTG_PWR, MUX_CONFIG_FUNC);
+	mxc_iomux_set_pad(MX35_PIN_USBOTG_PWR, 0x0040);
+	mxc_request_iomux(MX35_PIN_USBOTG_OC, MUX_CONFIG_FUNC);
+	mxc_iomux_set_pad(MX35_PIN_USBOTG_OC, 0x01c0);
+
+	return 0;
+}
+EXPORT_SYMBOL(gpio_usbotg_utmi_active);
+
+void gpio_usbotg_utmi_inactive(void)
+{
+	mxc_request_gpio(MX35_PIN_USBOTG_PWR);
+	mxc_free_iomux(MX35_PIN_USBOTG_PWR, MUX_CONFIG_GPIO);
+	mxc_request_gpio(MX35_PIN_USBOTG_OC);
+	mxc_free_iomux(MX35_PIN_USBOTG_OC, MUX_CONFIG_GPIO);
+}
+EXPORT_SYMBOL(gpio_usbotg_utmi_inactive);

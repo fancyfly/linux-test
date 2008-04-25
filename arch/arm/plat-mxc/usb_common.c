@@ -331,6 +331,37 @@ static void usbh2_set_ulpi_xcvr(void)
 	clk_disable(usb_clk);
 }
 
+static void usbh2_set_serial_xcvr(void)
+{
+	pr_debug("%s: \n", __func__);
+
+	/* Stop then Reset */
+	UH2_USBCMD &= ~UCMD_RUN_STOP;
+	while (UH2_USBCMD & UCMD_RUN_STOP);
+
+	UH2_USBCMD |= UCMD_RESET;
+	while (UH2_USBCMD & UCMD_RESET);
+
+	USBCTRL &= ~(UCTRL_H2SIC_MASK); /* Disable bypass mode */
+	USBCTRL &= ~(UCTRL_H2PM);	/* Power Mask */
+	USBCTRL |= UCTRL_H2WIE |        /* Wakeup intr enable */
+	UCTRL_IP_PUE_DOWN |		/* ipp_pue_pulldwn_dpdm */
+	UCTRL_USBTE |			/* USBT is enabled */
+	UCTRL_H2DT;			/* Disable H2 TLL */
+
+	USBCTRL &= ~(UCTRL_PP);
+	UH2_PORTSC1 = (UH2_PORTSC1&(~PORTSC_PTS_MASK)) | PORTSC_PTS_SERIAL;
+
+	if (UH2_HCSPARAMS & HCSPARAMS_PPC)
+		UH2_PORTSC1 |= PORTSC_PORT_POWER;
+
+	/* Reset controller before set host mode */
+	UH2_USBCMD |= UCMD_RESET;
+	while (UH2_USBCMD & UCMD_RESET);
+
+	msleep(100);
+}
+
 extern void usbh2_get_xcvr_power(struct device *dev);
 extern void usbh2_put_xcvr_power(struct device *dev);
 
@@ -383,7 +414,10 @@ int fsl_usb_host_init(struct platform_device *pdev)
 		xops->init(xops);
 
 	if (xops->xcvr_type == PORTSC_PTS_SERIAL) {
-		usbh1_set_serial_xcvr();
+		if (machine_is_mx35_3ds())
+			usbh2_set_serial_xcvr();
+		else
+			usbh1_set_serial_xcvr();
 	} else if (xops->xcvr_type == PORTSC_PTS_ULPI) {
 		usbh2_set_ulpi_xcvr();
 	}
@@ -543,20 +577,35 @@ static void otg_set_utmi_xcvr(void)
 {
 	u32 tmp;
 
-	USBCTRL &= ~UCTRL_OSIC_MASK;
-	USBCTRL |= UCTRL_OUIE |	/* ULPI intr enable */
-	    UCTRL_OWIE |	/* OTG wakeup intr enable */
-	    UCTRL_OPM;		/* power mask */
+	/* Stop then Reset */
+	UOG_USBCMD &= ~UCMD_RUN_STOP;
+	while (UOG_USBCMD & UCMD_RUN_STOP);
+
+	UOG_USBCMD |= UCMD_RESET;
+	while ((UOG_USBCMD)&(UCMD_RESET));
+
+	USBCTRL &= ~UCTRL_OCE;        /* Disable OverCurrent signal */
+	USBCTRL &= ~UCTRL_PP;         /* USBOTG_PWR low active */
+	USBCTRL &= ~UCTRL_OCPOL;      /* OverCurrent Polarity is Low Active */
+	USBCTRL &= ~UCTRL_OPM;        /* OTG Power Mask */
+	USBCTRL |= UCTRL_OWIE; 	      /* ULPI intr enable */
 
 	/* set UTMI xcvr */
 	tmp = UOG_PORTSC1 & ~PORTSC_PTS_MASK;
 	tmp |= PORTSC_PTS_UTMI;
 	UOG_PORTSC1 = tmp;
 
+	/* Enable UTMI interface in PHY control Reg */
+	USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_UTMI_ENABLE;
+
+	if (UOG_HCSPARAMS & HCSPARAMS_PPC)
+		UOG_PORTSC1 |= PORTSC_PORT_POWER;
+
 	/* need to reset the controller here so that the ID pin
 	 * is correctly detected.
 	 */
 	UOG_USBCMD |= UCMD_RESET;
+	while ((UOG_USBCMD)&(UCMD_RESET));
 
 	/* allow controller to reset, and leave time for
 	 * the ULPI transceiver to reset too.

@@ -933,7 +933,7 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	 * working because gadget uses the same root hub. We disable
 	 * this feature when OTG is selected.
 	 */
-#ifdef CONFIG_USB_EHCI_ARC_OTG
+#if defined(CONFIG_PM) && defined(CONFIG_USB_EHCI_ARC_OTG)
 	hdev->autosuspend_disabled = 1;
 #endif
 

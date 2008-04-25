@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -37,6 +37,7 @@
 #define UOG_HWHOST		USBOTG_REG32(0x08)	/* Host h/w params */
 #define UOG_HWTXBUF		USBOTG_REG32(0x10)	/* TX buffer h/w params */
 #define UOG_HWRXBUF		USBOTG_REG32(0x14)	/* RX buffer h/w params */
+#define UOG_SBUSCFG             USBOTG_REG32(0x90)      /* System bus interface */
 #define UOG_CAPLENGTH		USBOTG_REG16(0x100)	/* Capability register length */
 #define UOG_HCIVERSION		USBOTG_REG16(0x102)	/* Host Interface version */
 #define UOG_HCSPARAMS		USBOTG_REG32(0x104)	/* Host control structural params */
@@ -134,6 +135,7 @@
  */
 #define USBCTRL			USBOTHER_REG(0x00)	/* USB Control register */
 #define USB_OTG_MIRROR		USBOTHER_REG(0x04)	/* USB OTG mirror register */
+#define USB_PHY_CTR_FUNC        USBOTHER_REG(0x08)      /* OTG UTMI PHY Function Control register */
 
 /*
  * register bits
@@ -146,6 +148,7 @@
 #define PORTSC_PTS_ULPI			(2 << 30)	/* ULPI */
 #define PORTSC_PTS_SERIAL		(3 << 30)	/* serial */
 #define PORTSC_STS			(1 << 29)	/* serial xcvr select */
+#define PORTSC_PTW                      (1 << 28)       /* UTMI width */
 #define PORTSC_PORT_POWER		(1 << 12)	/* port power */
 #define PORTSC_LS_MASK			(3 << 10)	/* Line State mask */
 #define PORTSC_LS_SE0			(0 << 10)	/* SE0     */
@@ -240,17 +243,29 @@
 #define UCTRL_H1SIC_SU6		(2 << 13)	/* single-ended/unidirectional 6 wire */
 #define UCTRL_H1SIC_SB3		(3 << 13)	/* single-ended/bidirectional  3 wire */
 
+#define UCTRL_PP                (1 << 11)       /* The power polarity bit controls the polarity of the pwr output signal*/
 #define UCTRL_H1WIE		(1 << 11)	/* HOST1 wakeup intr enable */
 #define UCTRL_H1BPVAL_RXDP	(1 << 10)	/* HOST1 RxDp status in bypass mode */
+#define UCTRL_XCSO              (1 << 10)       /* Xcvr Clock Select for OTG port */
 #define UCTRL_H1BPVAL_RXDM	(1 <<  9)	/* HOST1 RxDm status in bypass mode */
+#define UCTRL_XCSH2             (1 <<  9)       /* Xcvr Clock Select for Host port */
 #define UCTRL_H1PM		(1 <<  8)	/* HOST1 power mask */
+#define UCTRL_IP_PULIDP         (1 <<  8)       /* Ipp_Puimpel_Pullup_Dp */
 
+#define UCTRL_IP_PUE_UP         (1 <<  7)       /* ipp_pue_pullup_dp */
+#define UCTRL_IP_PUE_DOWN       (1 <<  6)       /* ipp_pue_pulldwn_dpdm */
 #define UCTRL_H2DT		(1 <<  5)	/* HOST2 TLL disabled */
 #define UCTRL_H1DT		(1 <<  4)	/* HOST1 TLL disabled */
+#define UCTRL_USBTE             (1 <<  4)       /* USBT Transceiver enable */
+#define UCTRL_OCPOL             (1 <<  3)       /* OverCurrent Polarity */
+#define UCTRL_OCE               (1 <<  2)       /* OverCurrent Enable */
+#define UCTRL_H2OCS             (1 <<  1)       /* Host OverCurrent State */
 #define UCTRL_BPE		(1 <<  0)	/* bypass mode enable */
-#define UCTRL_OTD		(1 << 0)	/* OTG TLL Disable */
+#define UCTRL_OTD		(1 <<  0)	/* OTG TLL Disable */
+#define UCTRL_OOCS              (1 <<  0)       /* OTG OverCurrent State */
 
 /* USBCMD */
+#define UCMD_RUN_STOP           (1 << 0)        /* controller run/stop */
 #define UCMD_RESET		(1 << 1)	/* controller reset */
 
 /* OTG_MIRROR */
@@ -261,6 +276,9 @@
 #define OTGM_IDIDG		(1 << 0)	/* OTG ID pin status */
 						/* 1=high: Operate as B-device */
 						/* 0=low : Operate as A-device */
+
+/* USB_PHY_CTRL_FUNC */
+#define USB_UTMI_PHYCTRL_UTMI_ENABLE   0x01000000
 
 /* ULPIVIEW register bits */
 #define ULPIVW_WU		(1 << 31)	/* Wakeup */
@@ -276,4 +294,5 @@
 #define ULPIVW_WDATA_MASK	0xFF	/* write data field */
 #define ULPIVW_WDATA_SHIFT	0
 
+#define HCSPARAMS_PPC           (0x1<<4)        /* Port Power Control */
 #endif

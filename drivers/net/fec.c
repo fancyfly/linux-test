@@ -52,6 +52,7 @@
 #include <asm/io.h>
 #include <asm/pgtable.h>
 #include <asm/cacheflush.h>
+#include <asm/mach-types.h>
 
 #if defined(CONFIG_M523x) || defined(CONFIG_M527x) || \
     defined(CONFIG_M5272) || defined(CONFIG_M528x) || \
@@ -1264,6 +1265,26 @@ static phy_info_t phy_info_dp83848= {
 	},
 };
 
+static phy_info_t phy_info_lan8700 = {
+	0x0007C0C,
+	"LAN8700",
+	(const phy_cmd_t []) { /* config */
+		{ mk_mii_read(MII_REG_CR), mii_parse_cr },
+		{ mk_mii_read(MII_REG_ANAR), mii_parse_anar },
+		{ mk_mii_end, }
+	},
+	(const phy_cmd_t []) { /* startup */
+		{ mk_mii_write(MII_REG_CR, 0x1200), NULL }, /* autonegotiate */
+		{ mk_mii_read(MII_REG_SR), mii_parse_sr },
+		{ mk_mii_end, }
+	},
+	(const phy_cmd_t []) { /* act_int */
+		{ mk_mii_end, }
+	},
+	(const phy_cmd_t []) { /* shutdown */
+		{ mk_mii_end, }
+	},
+};
 /* ------------------------------------------------------------------------- */
 
 static phy_info_t const * const phy_info[] = {
@@ -1273,6 +1294,7 @@ static phy_info_t const * const phy_info[] = {
 	&phy_info_am79c874,
 	&phy_info_ks8721bl,
 	&phy_info_dp83848,
+	&phy_info_lan8700,
 	NULL
 };
 
@@ -2059,7 +2081,8 @@ static void __inline__ fec_request_intrs(struct net_device *dev)
 	if (request_irq(MXC_INT_FEC, fec_enet_interrupt, 0, "fec", dev) != 0)
 		panic("FEC: Could not allocate FEC IRQ(%d)!\n", MXC_INT_FEC);
 	/* TODO: disable now due to CPLD issue */
-	if (request_irq(expio_intr_fec, mii_link_interrupt, 0, "fec(MII)", dev) != 0)
+	if ((expio_intr_fec > 0) &&
+	(request_irq(expio_intr_fec, mii_link_interrupt, 0, "fec(MII)", dev) != 0))
 		panic("FEC: Could not allocate FEC(MII) IRQ(%d)!\n", expio_intr_fec);
 	disable_irq(expio_intr_fec);
 }
@@ -2100,12 +2123,15 @@ static void __inline__ fec_get_mac(struct net_device *dev)
 		fec_mac_base = FEC_IIM_BASE + MXC_IIMMAC;
 	}
 
+	memset(tmpaddr, 0, ETH_ALEN);
+	if (!machine_is_mx35_3ds()) {
 	/*
 	 * Get MAC address from IIM.
 	 * If it is all 1's or 0's, use the default.
 	 */
-	for (i = 0; i < ETH_ALEN; i++) {
-		tmpaddr[ETH_ALEN-1-i] = __raw_readb(fec_mac_base + i * 4);
+		for (i = 0; i < ETH_ALEN; i++) {
+			tmpaddr[ETH_ALEN-1-i] = __raw_readb(fec_mac_base + i * 4);
+		}
 	}
 	iap = &tmpaddr[0];
 
@@ -2122,6 +2148,32 @@ static void __inline__ fec_get_mac(struct net_device *dev)
         if (iap == fec_mac_default)
 		dev->dev_addr[ETH_ALEN-1] = fec_mac_default[ETH_ALEN-1] + fep->index;
 }
+
+#ifndef MODULE
+static int fec_mac_setup(char *new_mac)
+{
+	char *ptr, *p = new_mac;
+	int i = 0;
+
+	while (p && (*p) && i < 6) {
+		ptr = strchr(p, ':');
+		if (ptr)
+			*ptr++ = '\0';
+
+		if (strlen(p)) {
+			unsigned long tmp = simple_strtoul(p, NULL, 16);
+			if (tmp > 0xff)
+				break;
+			fec_mac_default[i++] = tmp;
+		}
+		p = ptr;
+	}
+
+	return 0;
+}
+
+__setup("fec_mac=", fec_mac_setup);
+#endif
 
 static void __inline__ fec_enable_phy_intr(void)
 {

@@ -49,13 +49,6 @@ static struct class *pmic_rtc_class;
 struct rtc_time alarm_greg_time;
 static DECLARE_MUTEX(mutex);
 
-#define DEBUG_PMIC_RTC 1
-#if DEBUG_PMIC_RTC
-#define DPRINTK(format, args...) printk(KERN_ERR "pmic_rtc"format"\n", ##args)
-#else
-#define DPRINTK(format, args...)
-#endif
-
 /*
  * Real Time Clock Pmic API
  */
@@ -74,9 +67,9 @@ static void callback_alarm_asynchronous(void *unused)
  */
 static void callback_test_sub(void)
 {
-	printk(KERN_INFO "*****************************************\n");
-	printk(KERN_INFO "***** PMIC RTC 'Alarm IT CallBack' ******\n");
-	printk(KERN_INFO "*****************************************\n");
+	pr_info(KERN_INFO "*****************************************\n");
+	pr_info(KERN_INFO "***** PMIC RTC 'Alarm IT CallBack' ******\n");
+	pr_info(KERN_INFO "*****************************************\n");
 }
 
 /*!
@@ -85,7 +78,7 @@ static void callback_test_sub(void)
  */
 static void callback_alarm_synchronous(void *unused)
 {
-	printk(KERN_INFO "*** Alarm IT Pmic ***\n");
+	pr_info(KERN_INFO "*** Alarm IT Pmic ***\n");
 	wake_up(&queue_alarm);
 }
 
@@ -149,9 +142,6 @@ PMIC_STATUS pmic_rtc_set_time(struct timeval *pmic_time)
 	reg_val |= ((greg_time.tm_year / 10) << 4);
 	CHECK_ERROR(pmic_write_reg(REG_MCU_YEAR, reg_val, 0xff));
 
-	DPRINTK("set time = %d y, %d m, %d d, %d h, %d m, %d s",
-		greg_time.tm_year, greg_time.tm_mon, greg_time.tm_mday,
-		greg_time.tm_hour, greg_time.tm_min, greg_time.tm_sec);
 	return PMIC_SUCCESS;
 }
 EXPORT_SYMBOL(pmic_rtc_set_time);
@@ -189,10 +179,6 @@ PMIC_STATUS pmic_rtc_get_time(struct timeval *pmic_time)
 
 	CHECK_ERROR(pmic_read_reg(REG_MCU_YEAR, &reg_val, 0xff));
 	greg_time.tm_year = BCD2BIN(reg_val);
-
-	DPRINTK("get time = %d y, %d m, %d d, %d h, %d m, %d s",
-		greg_time.tm_year, greg_time.tm_mon, greg_time.tm_mday,
-		greg_time.tm_hour, greg_time.tm_min, greg_time.tm_sec);
 
 	rtc_tm_to_time(&greg_time, &time);
 	pmic_time->tv_sec = time;
@@ -232,9 +218,6 @@ PMIC_STATUS pmic_rtc_set_time_alarm(struct timeval *pmic_time)
 
 	/* enable alarm */
 	CHECK_ERROR(pmic_write_reg(REG_MCU_ALARM_SECS, 0x80, 0x80));
-	DPRINTK("set alarm time = %dh, %dm, %ds\n",
-		greg_time.tm_hour, greg_time.tm_min, greg_time.tm_sec);
-
 	up(&mutex);
 
 	return PMIC_SUCCESS;
@@ -268,9 +251,6 @@ PMIC_STATUS pmic_rtc_get_time_alarm(struct timeval *pmic_time)
 
 	rtc_tm_to_time(&greg_time, &time);
 	pmic_time->tv_sec = time;
-	DPRINTK("get alarm time = %dh, %dm, %ds\n",
-		greg_time.tm_hour, greg_time.tm_min, greg_time.tm_sec);
-
 	return PMIC_SUCCESS;
 }
 EXPORT_SYMBOL(pmic_rtc_get_time_alarm);
@@ -408,22 +388,18 @@ static int pmic_rtc_ioctl(struct inode *inode, struct file *file,
 		CHECK_ERROR(pmic_rtc_get_time_alarm(pmic_time));
 		break;
 	case PMIC_RTC_WAIT_ALARM:
-		printk(KERN_INFO "WAIT ALARM...\n");
 		CHECK_ERROR(pmic_rtc_event_sub(RTC_IT_ALARM,
 					       callback_test_sub));
 		CHECK_ERROR(pmic_rtc_wait_alarm());
-		printk(KERN_INFO "ALARM DONE\n");
 		CHECK_ERROR(pmic_rtc_event_unsub(RTC_IT_ALARM,
 						 callback_test_sub));
 		break;
 	case PMIC_RTC_ALARM_REGISTER:
-		printk(KERN_INFO "PMIC RTC ALARM REGISTER\n");
 		alarm_callback.func = callback_alarm_asynchronous;
 		alarm_callback.param = NULL;
 		CHECK_ERROR(pmic_event_subscribe(EVENT_RTC, alarm_callback));
 		break;
 	case PMIC_RTC_ALARM_UNREGISTER:
-		printk(KERN_INFO "PMIC RTC ALARM UNREGISTER\n");
 		alarm_callback.func = callback_alarm_asynchronous;
 		alarm_callback.param = NULL;
 		CHECK_ERROR(pmic_event_unsubscribe(EVENT_RTC, alarm_callback));
@@ -532,13 +508,11 @@ static int pmic_rtc_probe(struct platform_device *pdev)
 
 	pmic_rtc_major = register_chrdev(0, MCU_PMIC_RTC_NAME, &pmic_rtc_fops);
 	if (pmic_rtc_major < 0) {
-		printk(KERN_ERR "Unable to get a major for pmic_rtc\n");
 		return pmic_rtc_major;
 	}
 
 	pmic_rtc_class = class_create(THIS_MODULE, MCU_PMIC_RTC_NAME);
 	if (IS_ERR(pmic_rtc_class)) {
-		printk(KERN_ERR "Error creating pmic rtc class.\n");
 		ret = PTR_ERR(pmic_rtc_class);
 		goto err_out1;
 	}
@@ -547,7 +521,6 @@ static int pmic_rtc_probe(struct platform_device *pdev)
 					 MKDEV(pmic_rtc_major, 0),
 					 NULL, MCU_PMIC_RTC_NAME);
 	if (IS_ERR(temp_class)) {
-		printk(KERN_ERR "Error creating pmic rtc class device.\n");
 		ret = PTR_ERR(temp_class);
 		goto err_out2;
 	}

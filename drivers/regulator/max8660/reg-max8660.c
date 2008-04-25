@@ -137,14 +137,6 @@ enum {
 #define SET_BIT_IN_BYTE(byte, pos) (byte |= (0x01 << pos))
 #define CLEAR_BIT_IN_BYTE(byte, pos) (byte &= ~(0x01 << pos))
 
-#define DEBUG_REG_MAX8660 0
-#if DEBUG_REG_MAX8660
-#define DPRINTK(format, args...) printk(KERN_ERR \
-	"reg-max8660: "format"\n", ##args)
-#else
-#define DPRINTK(format, args...)
-#endif
-
 static int max8660_regulator_on(int regulator)
 {
 	u8 reg_mask = 0;
@@ -851,16 +843,12 @@ int reg_max8660_probe(void)
 						   reg_max8660[i].regulator.
 						   constraints);
 		if (ret11 < 0) {
-			DPRINTK("%s: failed to register %s err %d\n",
-				__func__, reg_max8660[i].regulator.name, ret11);
 			i--;
 			for (; i >= 0; i--)
 				regulator_unregister(&reg_max8660[i].regulator);
 
 			return ret11;
 		}
-		DPRINTK("%s: success register %s err %d\n",
-			__func__, reg_max8660[i].regulator.name, ret11);
 
 	}
 
@@ -871,9 +859,6 @@ int reg_max8660_probe(void)
 					      regulator,
 					      reg_max8660[i].regulator.parent);
 		if (ret11 < 0) {
-			DPRINTK("%s: failed to register %s err %d\n",
-				__func__,
-				reg_max8660_children[i].regulator.name, ret11);
 			i--;
 			for (; i >= 0; i--)
 				regulator_unregister(&reg_max8660_children[i].
@@ -881,12 +866,8 @@ int reg_max8660_probe(void)
 
 			return ret11;
 		}
-		DPRINTK("%s: success register %s err %d\n",
-			__func__, reg_max8660_children[i].regulator.name,
-			ret11);
 
 	}
-	DPRINTK("max8660 regulator successfully probed\n");
 
 	return 0;
 }

@@ -35,13 +35,6 @@
 #define MC9SDZ60_I2C_ADDR	0xD2	/* 7bits I2C address */
 static struct i2c_client *mc9sdz60_i2c_client;
 
-#define DEBUG_MC9SDZ60 1
-#if DEBUG_MC9SDZ60
-#define DPRINTK(format, args...) printk(KERN_ERR "mc9sdz60: "format"\n", ##args)
-#else
-#define DPRINTK(format, args...)
-#endif
-
 int mc9sdz60_read_reg(u8 reg, u8 *value)
 {
 	*value = (u8) i2c_smbus_read_byte_data(mc9sdz60_i2c_client, reg);
@@ -51,8 +44,6 @@ int mc9sdz60_read_reg(u8 reg, u8 *value)
 int mc9sdz60_write_reg(u8 reg, u8 value)
 {
 	if (i2c_smbus_write_byte_data(mc9sdz60_i2c_client, reg, value) < 0) {
-		printk(KERN_ERR "%s:write reg errorr:reg=%x,val=%x\n",
-		       __func__, reg, value);
 		return -1;
 	}
 	return 0;
@@ -67,7 +58,6 @@ int mc9sdz60_write_reg(u8 reg, u8 value)
 static int mc9sdz60_probe(struct i2c_client *client)
 {
 	mc9sdz60_i2c_client = client;
-	DPRINTK("mc9sdz60_i2c_client = %p", mc9sdz60_i2c_client);
 	return 0;
 }
 
@@ -95,14 +85,10 @@ static struct i2c_driver mc9sdz60_i2c_driver = {
 int mc9sdz60_init(void)
 {
 	int err;
-	DPRINTK("Freescale mc9sdz60 driver,\
-	     (c) 2008 Freescale Semiconductor, Inc.\n");
 	err = i2c_add_driver(&mc9sdz60_i2c_driver);
 	if (err) {
-		printk(KERN_ERR "mc9sdz60: driver registration failed\n");
 		return err;
 	}
-	DPRINTK("mc9sdz60 inited\n");
 	return 0;
 }
 void mc9sdz60_exit(void)

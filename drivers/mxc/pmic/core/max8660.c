@@ -34,13 +34,6 @@
 #define I2C1_BUS	0
 #define MAX8660_I2C_ADDR				0x68
 
-#define DEBUG_MAX8660 1
-#if DEBUG_MAX8660
-#define DPRINTK(format, args...) printk(KERN_ERR "max8660"format"\n", ##args)
-#else
-#define DPRINTK(format, args...)
-#endif
-
 static struct i2c_client *max8660_i2c_client;
 
     /* reg names for max8660
@@ -67,7 +60,6 @@ int max8660_get_buffered_reg_val(int reg_name, u8 *value)
 	/* outof range */
 	if (reg_name < REG_MAX8660_OUTPUT_ENABLE_1
 	    || reg_name > REG_MAX8660_FORCE_PWM) {
-		DPRINTK("reg_name=%d outof range", reg_name);
 		return -1;
 	}
 	*value =
@@ -80,7 +72,6 @@ int max8660_save_buffered_reg_val(int reg_name, u8 value)
 	/* outof range */
 	if (reg_name < REG_MAX8660_OUTPUT_ENABLE_1
 	    || reg_name > REG_MAX8660_FORCE_PWM) {
-		DPRINTK("reg_name=%d outof range", reg_name);
 		return -1;
 	}
 	max8660_reg_value_table[reg_name - REG_MAX8660_OUTPUT_ENABLE_1] = value;
@@ -89,10 +80,7 @@ int max8660_save_buffered_reg_val(int reg_name, u8 value)
 
 int max8660_write_reg(u8 reg, u8 value)
 {
-	DPRINTK("max8660_i2c_client = %p", max8660_i2c_client);
 	if (i2c_smbus_write_byte_data(max8660_i2c_client, reg, value) < 0) {
-		printk(KERN_ERR "%s:write reg errorr:reg=%x,val=%x\n",
-		       __func__, reg, value);
 		return -1;
 	}
 	return 0;
@@ -107,7 +95,6 @@ int max8660_write_reg(u8 reg, u8 value)
 static int max8660_probe(struct i2c_client *client)
 {
 	max8660_i2c_client = client;
-	DPRINTK("max8660_i2c_client = %p", max8660_i2c_client);
 	return 0;
 }
 
@@ -133,14 +120,10 @@ static struct i2c_driver max8660_i2c_driver = {
 int max8660_init(void)
 {
 	int err;
-	DPRINTK("Freescale max8660 driver loaded\n");
 	err = i2c_add_driver(&max8660_i2c_driver);
 	if (err) {
-		printk(KERN_ERR
-		       "max8660: driver registration failed err = %d\n", err);
 		return err;
 	}
-	DPRINTK("max8660 inited\n");
 	return 0;
 }
 void max8660_exit(void)

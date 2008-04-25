@@ -32,8 +32,6 @@
 #include <asm/uaccess.h>
 #include <asm/arch/gpio.h>
 
-#include <../arch/arm/mach-mx3/iomux.h>
-
 #include <asm/arch/pmic_status.h>
 #include <asm/arch/pmic_external.h>
 #include "pmic.h"
@@ -116,8 +114,6 @@ const static u8 mcu_pmic_reg_addr_table[] = {
 	MAX8660_FORCE_PWM
 };
 
-#define DPRINTK(format, args...) printk(KERN_ERR "pmic-core "format"\n", ##args)
-
 int pmic_read(int reg_num, unsigned int *reg_val)
 {
 	int ret;
@@ -137,7 +133,6 @@ int pmic_read(int reg_num, unsigned int *reg_val)
 			goto error1;
 		*reg_val = value;
 	} else {
-		DPRINTK("reg_num=%d out of range", reg_num);
 		goto error1;
 	}
 
@@ -168,60 +163,14 @@ int pmic_write(int reg_num, const unsigned int reg_val)
 
 		ret = max8660_save_buffered_reg_val(reg_num, value);
 	} else {
-		DPRINTK("reg_num=%d out of range", reg_num);
 		goto error1;
 	}
 
 	return 0;
 
       error1:
-	DPRINTK(" reg_num = %d, write failed", reg_num);
 	return -1;
 
-}
-
-/* for debug*/
-void dump_pmic_reg(void)
-{
-#define REG_DUMP(reg) do {\
-		pmic_read_reg(reg, &reg_val, 0xff);\
-		DPRINTK("%s = %x", #reg, reg_val); } while (0)
-	unsigned int reg_val;
-
-	REG_DUMP(REG_MCU_VERSION);
-	REG_DUMP(REG_MCU_SECS);
-	REG_DUMP(REG_MCU_MINS);
-	REG_DUMP(REG_MCU_HRS);
-	REG_DUMP(REG_MCU_DAY);
-	REG_DUMP(REG_MCU_DATE);
-	REG_DUMP(REG_MCU_MONTH);
-	REG_DUMP(REG_MCU_YEAR);
-	REG_DUMP(REG_MCU_ALARM_SECS);
-	REG_DUMP(REG_MCU_ALARM_MINS);
-	REG_DUMP(REG_MCU_ALARM_HRS);
-	REG_DUMP(REG_MCU_TS_CONTROL);
-	REG_DUMP(REG_MCU_X_LOW);
-	REG_DUMP(REG_MCU_Y_LOW);
-	REG_DUMP(REG_MCU_XY_HIGH);
-	REG_DUMP(REG_MCU_X_LEFT_LOW);
-	REG_DUMP(REG_MCU_X_LEFT_HIGH);
-	REG_DUMP(REG_MCU_X_RIGHT);
-	REG_DUMP(REG_MCU_Y_TOP_LOW);
-	REG_DUMP(REG_MCU_Y_TOP_HIGH);
-	REG_DUMP(REG_MCU_Y_BOTTOM);
-	REG_DUMP(REG_MCU_RESET_1);
-	REG_DUMP(REG_MCU_RESET_2);
-	REG_DUMP(REG_MCU_POWER_CTL);
-	REG_DUMP(REG_MCU_DELAY_CONFIG);
-	REG_DUMP(REG_MCU_GPIO_1);
-	REG_DUMP(REG_MCU_GPIO_2);
-	REG_DUMP(REG_MCU_KPD_1);
-	REG_DUMP(REG_MCU_KPD_2);
-	REG_DUMP(REG_MCU_KPD_CONTROL);
-	REG_DUMP(REG_MCU_INT_ENABLE_1);
-	REG_DUMP(REG_MCU_INT_ENABLE_2);
-	REG_DUMP(REG_MCU_INT_FLAG_1);
-	REG_DUMP(REG_MCU_INT_FLAG_2);
 }
 
 /*!
@@ -389,7 +338,6 @@ unsigned int pmic_get_active_events(unsigned int *active_events)
 	pmic_read(REG_MCU_INT_FLAG_2, &flag2);
 	pmic_write(REG_MCU_INT_FLAG_1, 0);
 	pmic_write(REG_MCU_INT_FLAG_2, 0);
-	DPRINTK("pmic interrupt flag1=%x, flag2=%x", flag1, flag2);
 
 	flag1 &= events_enabled1;
 	flag2 &= events_enabled2;
@@ -410,19 +358,12 @@ unsigned int pmic_get_active_events(unsigned int *active_events)
 	return count;
 }
 
-void pmic_bh_handler(struct work_struct *work);
-
 /*
  * External functions
  */
 extern void pmic_event_list_init(void);
 extern void pmic_event_callback(type_event event);
 extern void gpio_pmic_active(void);
-
-/*!
- * Bottom half handler of PMIC event handling.
- */
-DECLARE_WORK(pmic_ws, pmic_bh_handler);
 
 /*!
  * This function registers platform device structures for
@@ -442,39 +383,6 @@ static void pmic_pdev_register(void)
 static void pmic_pdev_unregister(void)
 {
 	platform_device_unregister(&rtc_ldm);
-}
-
-/*!
- * This function is called when pmic interrupt occurs on the processor.
- * It is the interrupt handler for the pmic module.
- *
- * @param        irq        the irq number
- * @param        dev_id     the pointer on the device
- *
- * @return       The function returns IRQ_HANDLED when handled.
- */
-static irqreturn_t pmic_irq_handler(int irq, void *dev_id)
-{
-	/* prepare a task */
-	schedule_work(&pmic_ws);
-
-	return IRQ_HANDLED;
-}
-
-/*!
- * This function is the bottom half handler of the PMIC interrupt.
- * It checks for active events and launches callback for the
- * active events.
- */
-void pmic_bh_handler(struct work_struct *work)
-{
-	unsigned int loop;
-	unsigned int count = 0;
-
-	count = pmic_get_active_events(active_events);
-
-	for (loop = 0; loop < count; loop++)
-		pmic_event_callback(active_events[loop]);
 }
 
 /*!
@@ -502,10 +410,6 @@ static int __init mcu_pmic_init(void)
 	if (err)
 		goto fail1;
 
-	/* Initialize the PMIC event handling */
-	pmic_event_list_init();
-
-	/* Set and install PMIC IRQ handler */
 	pmic_pdev_register();
 
 	return 0;

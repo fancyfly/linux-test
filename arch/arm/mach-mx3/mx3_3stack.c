@@ -222,6 +222,7 @@ static struct mxc_camera_platform_data camera_data = {
 	.io_regulator = "VMMC1",
 	.analog_regulator = "SW2B_NORMAL",
 	.gpo_regulator = "GPO3",
+	.mclk = 27000000,
 };
 
 struct mxc_tvout_platform_data tvout_data = {
@@ -810,11 +811,11 @@ static void __init mxc_init_pata(void)
 {
 	(void)platform_device_register(&pata_fsl_device);
 }
-#else				/* CONFIG_PATA_FSL */
+#else /* CONFIG_PATA_FSL */
 static void __init mxc_init_pata(void)
 {
 }
-#endif				/* CONFIG_PATA_FSL */
+#endif /* CONFIG_PATA_FSL */
 
 /*!
  * Board specific initialization.

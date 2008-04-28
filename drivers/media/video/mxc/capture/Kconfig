@@ -24,7 +24,7 @@ config VIDEO_MXC_CSI_DMA
 
 choice
 	prompt "Select Camera"
-	default MXC_CAMERA_MICRON111
+	default MXC_CAMERA_OV2640
 	depends on VIDEO_MXC_CAMERA
 
 config MXC_CAMERA_MC521DA

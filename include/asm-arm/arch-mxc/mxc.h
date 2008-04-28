@@ -125,6 +125,7 @@ struct mxc_camera_platform_data {
 	char *io_regulator;
 	char *analog_regulator;
 	char *gpo_regulator;
+	u32 mclk;
 };
 
 /*gpo1-3 is in fixed state by hardware design,

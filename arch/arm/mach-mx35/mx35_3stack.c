@@ -260,6 +260,14 @@ static struct mxc_tsc_platform_data tsc2007_data = {
 	.inactive = gpio_tsc_inactive,
 };
 
+static struct mxc_camera_platform_data camera_data = {
+	.core_regulator = NULL,
+	.io_regulator = NULL,
+	.analog_regulator = "LDO7",
+	.gpo_regulator = NULL,
+	.mclk = 15000000,
+};
+
 static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	{
 	 .driver_name = "mc9sdz60",
@@ -274,6 +282,11 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	 .addr = 0x48,
 	 .platform_data = &tsc2007_data,
 	 .irq = IOMUX_TO_IRQ(MX35_PIN_CAPTURE),
+	 },
+	{
+	 .driver_name = "ov2640",
+	 .addr = 0x30,
+	 .platform_data = (void *)&camera_data,
 	 },
 };
 

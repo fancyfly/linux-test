@@ -517,6 +517,16 @@ static void _clk_csi_recalc(struct clk *clk)
 	clk->rate = clk->parent->rate / ((pre + 1) * (post + 1));
 }
 
+static void __csi_calc_pre_post_dividers(u32 div, u32 *pre, u32 *post)
+{
+	*pre = div;
+
+	while (*pre > 8)
+		*pre = *pre / 2;
+
+	*post = div / *pre;
+}
+
 static unsigned long _clk_csi_round_rate(struct clk *clk, unsigned long rate)
 {
 	u32 pre, post;
@@ -524,7 +534,7 @@ static unsigned long _clk_csi_round_rate(struct clk *clk, unsigned long rate)
 	if (clk->parent->rate % rate)
 		div++;
 
-	__calc_pre_post_dividers(div, &pre, &post);
+	__csi_calc_pre_post_dividers(div, &pre, &post);
 
 	return clk->parent->rate / (pre * post);
 }
@@ -550,7 +560,7 @@ static int _clk_csi_set_rate(struct clk *clk, unsigned long rate)
 	if ((clk->parent->rate / div) != rate)
 		return -EINVAL;
 
-	__calc_pre_post_dividers(div, &pre, &post);
+	__csi_calc_pre_post_dividers(div, &pre, &post);
 
 	/* Set CSI clock divider */
 	reg = __raw_readl(MXC_CCM_PDR2) &

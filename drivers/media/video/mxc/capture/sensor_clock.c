@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -33,17 +33,11 @@
 void set_mclk_rate(uint32_t * p_mclk_freq)
 {
 	struct clk *clk;
-	int i;
 	uint32_t freq = 0;
-	uint32_t step = *p_mclk_freq / 8;
 
 	clk = clk_get(NULL, "csi_clk");
 
-	for (i = 0; i <= 8; i++) {
-		freq = clk_round_rate(clk, *p_mclk_freq - (i * step));
-		if (freq <= *p_mclk_freq)
-			break;
-	}
+	freq = clk_round_rate(clk, *p_mclk_freq);
 	clk_set_rate(clk, freq);
 
 	*p_mclk_freq = freq;

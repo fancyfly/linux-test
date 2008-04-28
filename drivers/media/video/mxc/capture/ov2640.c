@@ -139,6 +139,7 @@ static struct regulator *io_regulator;
 static struct regulator *core_regulator;
 static struct regulator *analog_regulator;
 static struct regulator *gpo_regulator;
+u32 mclk = 24000000;
 
 struct i2c_client *ov2640_i2c_client;
 
@@ -167,6 +168,7 @@ static int ov2640_probe(struct i2c_client *client)
 	struct mxc_camera_platform_data *plat_data = client->dev.platform_data;
 
 	ov2640_i2c_client = client;
+	mclk = plat_data->mclk;
 
 	io_regulator = regulator_get(&client->dev, plat_data->io_regulator);
 	core_regulator = regulator_get(&client->dev, plat_data->core_regulator);
@@ -196,17 +198,25 @@ static int ov2640_remove(struct i2c_client *client)
 	kfree(interface_param);
 	interface_param = NULL;
 
-	regulator_disable(io_regulator);
-	regulator_put(io_regulator, NULL);
+	if (!IS_ERR_VALUE(io_regulator)) {
+		regulator_disable(io_regulator);
+		regulator_put(io_regulator, NULL);
+	}
 
-	regulator_disable(core_regulator);
-	regulator_put(core_regulator, NULL);
+	if (!IS_ERR_VALUE(core_regulator)) {
+		regulator_disable(core_regulator);
+		regulator_put(core_regulator, NULL);
+	}
 
-	regulator_disable(gpo_regulator);
-	regulator_put(gpo_regulator, NULL);
+	if (!IS_ERR_VALUE(gpo_regulator)) {
+		regulator_disable(gpo_regulator);
+		regulator_put(gpo_regulator, NULL);
+	}
 
-	regulator_disable(analog_regulator);
-	regulator_put(analog_regulator, NULL);
+	if (!IS_ERR_VALUE(analog_regulator)) {
+		regulator_disable(analog_regulator);
+		regulator_put(analog_regulator, NULL);
+	}
 
 	return 0;
 }
@@ -269,7 +279,7 @@ static void ov2640_interface(sensor_interface *param, u32 width, u32 height)
 	param->width = width - 1;
 	param->height = height - 1;
 	param->pixel_fmt = IPU_PIX_FMT_UYVY;
-	param->mclk = 27000000;
+	param->mclk = mclk;
 }
 
 static void ov2640_set_color(int bright, int saturation, int red, int green,
@@ -299,44 +309,34 @@ static sensor_interface *ov2640_config(int *frame_rate, int high_quality)
 
 	u32 out_width, out_height;
 
-	/*set vmmc1 */
-	if (io_regulator) {
+	/*set io votage */
+	if (!IS_ERR_VALUE(io_regulator)) {
 		regulator_set_voltage(io_regulator, 2800000);
 		if (regulator_enable(io_regulator) != 0) {
 			dev_dbg(&ov2640_i2c_client->dev,
-				"%s:vmmc1 set voltage error\n", __func__);
+				"%s:io set voltage error\n", __func__);
 			return NULL;
 		} else {
 			dev_dbg(&ov2640_i2c_client->dev,
-				"%s:vmmc1 set voltage ok\n", __func__);
+				"%s:io set voltage ok\n", __func__);
 		}
-	} else {
-		dev_dbg(&ov2640_i2c_client->dev,
-			"%s:vmmc1 set voltage error:regulator not found\n",
-			__func__);
-		return NULL;
 	}
 
-	/*vvib */
-	if (core_regulator) {
+	/*core votage */
+	if (!IS_ERR_VALUE(core_regulator)) {
 		regulator_set_voltage(core_regulator, 1300000);
 		if (regulator_enable(core_regulator) != 0) {
 			dev_dbg(&ov2640_i2c_client->dev,
-				"%s:vvib set voltage error\n", __func__);
+				"%s:core set voltage error\n", __func__);
 			return NULL;
 		} else {
 			dev_dbg(&ov2640_i2c_client->dev,
-				"%s:vvib set voltage ok\n", __func__);
+				"%s:core set voltage ok\n", __func__);
 		}
-	} else {
-		dev_dbg(&ov2640_i2c_client->dev,
-			"%s:vvib set voltage error:regulator not found\n",
-			__func__);
-		return NULL;
 	}
 
 	/*GPO 3 */
-	if (gpo_regulator) {
+	if (!IS_ERR_VALUE(gpo_regulator)) {
 		if (regulator_enable(gpo_regulator) != 0) {
 			dev_dbg(&ov2640_i2c_client->dev,
 				"%s:gpo3 enable error\n", __func__);
@@ -345,28 +345,18 @@ static sensor_interface *ov2640_config(int *frame_rate, int high_quality)
 			dev_dbg(&ov2640_i2c_client->dev, "%s:gpo3 enable ok\n",
 				__func__);
 		}
-	} else {
-		dev_dbg(&ov2640_i2c_client->dev,
-			"%s:gpo3 error: regulator not found\n", __func__);
-		return NULL;
 	}
 
-	/*sw2b */
-	if (analog_regulator) {
+	if (!IS_ERR_VALUE(analog_regulator)) {
 		regulator_set_voltage(analog_regulator, 2000000);
 		if (regulator_enable(analog_regulator) != 0) {
 			dev_dbg(&ov2640_i2c_client->dev,
-				"%s:sw2b set voltage error\n", __func__);
+				"%s:analog set voltage error\n", __func__);
 			return NULL;
 		} else {
 			dev_dbg(&ov2640_i2c_client->dev,
-				"%s:sw2b set voltage ok\n", __func__);
+				"%s:analog set voltage ok\n", __func__);
 		}
-	} else {
-		dev_dbg(&ov2640_i2c_client->dev,
-			"%s:sw2b set voltage error:regulator not found\n",
-			__func__);
-		return NULL;
 	}
 
 	gpio_sensor_active();

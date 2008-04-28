@@ -645,3 +645,34 @@ void gpio_usbotg_utmi_inactive(void)
 	mxc_free_iomux(MX35_PIN_USBOTG_OC, MUX_CONFIG_GPIO);
 }
 EXPORT_SYMBOL(gpio_usbotg_utmi_inactive);
+
+void gpio_sensor_active()
+{
+	/*CSI D6 */
+	mxc_request_iomux(MX35_PIN_TX1, MUX_CONFIG_ALT6);
+	/*CSI D7 */
+	mxc_request_iomux(MX35_PIN_TX0, MUX_CONFIG_ALT6);
+	mxc_request_iomux(MX35_PIN_CSI_D8, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_D9, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_D10, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_D11, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_D12, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_D13, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_D14, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_D15, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_HSYNC, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_MCLK, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_PIXCLK, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_CSI_VSYNC, MUX_CONFIG_FUNC);
+}
+
+EXPORT_SYMBOL(gpio_sensor_active);
+
+void gpio_sensor_inactive()
+{
+	mxc_request_iomux(MX35_PIN_TX1, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_TX0, MUX_CONFIG_FUNC);
+}
+
+EXPORT_SYMBOL(gpio_sensor_inactive);
+

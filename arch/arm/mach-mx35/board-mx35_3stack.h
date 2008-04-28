@@ -195,6 +195,7 @@ extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
 extern void gpio_tsc_active(void);
 extern void gpio_tsc_inactive(void);
+extern unsigned int sdhc_get_card_det_status(struct device *dev);
 
 #endif				/* CONFIG_MACH_MX35_3DS */
 #endif				/* __ASM_ARCH_MXC_BOARD_MX35_3STACK_H__ */

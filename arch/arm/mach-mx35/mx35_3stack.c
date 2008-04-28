@@ -323,6 +323,7 @@ static struct mxc_mmc_platform_data mmc_data = {
 	.min_clk = 400000,
 	.max_clk = 52000000,
 	.card_inserted_state = 1,
+	.status = sdhc_get_card_det_status,
 	.clock_mmc = "sdhc_clk",
 };
 
@@ -341,8 +342,8 @@ static struct resource mxcsdhc1_resources[] = {
 	       .flags = IORESOURCE_IRQ,
 	       },
 	[2] = {
-	       .start = 0,
-	       .end = 0,
+	       .start = MXC_PSEUDO_IRQ_SD1_CD,
+	       .end = MXC_PSEUDO_IRQ_SD1_CD,
 	       .flags = IORESOURCE_IRQ,
 	       },
 };

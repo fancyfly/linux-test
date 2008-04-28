@@ -67,6 +67,7 @@
 #define  SDHCI_CTRL_4BITBUS	0x00000002
 #define  SDHCI_CTRL_HISPD	0x00000004
 #define  SDHCI_CTRL_D3CD 	0x00000008
+#define  SDHCI_CTRL_ADMA 	0x00000100
 /* wake up control */
 #define  SDHCI_CTRL_WECINS 	0x04000000
 
@@ -126,6 +127,8 @@
 		SDHCI_INT_DATA_AVAIL | SDHCI_INT_SPACE_AVAIL | \
 		SDHCI_INT_DATA_TIMEOUT | SDHCI_INT_DATA_CRC | \
 		SDHCI_INT_DATA_END_BIT | SDHCI_INT_DMAERR)
+#define  SDHCI_INT_DATA_RE_MASK	(SDHCI_INT_DMA_END | \
+		SDHCI_INT_DATA_AVAIL | SDHCI_INT_SPACE_AVAIL)
 
 #define SDHCI_ACMD12_ERR	0x3C
 
@@ -147,7 +150,7 @@
 
 /* 44-47 reserved for more caps */
 #define SDHCI_WML 		0x44
-#define  SDHCI_WML_4_WORDS 	0x00010001
+#define  SDHCI_WML_4_WORDS 	0x00040004
 #define  SDHCI_WML_16_WORDS 	0x00100010
 #define  SDHCI_WML_64_WORDS 	0x00400040
 #define  SDHCI_WML_128_WORDS 	0x00800080
@@ -184,7 +187,7 @@ struct sdhci_host {
 
 	unsigned int clock;	/* Current clock (MHz) */
 	unsigned short power;	/* Current voltage */
-	struct regulator *regulator_mmc; 	/*! Regulator */
+	struct regulator *regulator_mmc;	/*! Regulator */
 
 	struct mmc_request *mrq;	/* Current request */
 	struct mmc_command *cmd;	/* Current command */
@@ -213,6 +216,7 @@ struct sdhci_host {
 
 	struct tasklet_struct card_tasklet;	/* Tasklet structures */
 	struct tasklet_struct finish_tasklet;
+	struct work_struct cd_wq;
 
 	struct timer_list timer;	/* Timer for timeouts */
 	/* Platform specific data */

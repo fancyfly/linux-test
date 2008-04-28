@@ -580,6 +580,25 @@ void gpio_sdhc_inactive(int module)
 EXPORT_SYMBOL(gpio_sdhc_inactive);
 
 /*
+ * Probe for the card. If present the GPIO data would be set.
+ */
+unsigned int sdhc_get_card_det_status(struct device *dev)
+{
+	unsigned int ret;
+
+	if (to_platform_device(dev)->id == 0) {
+		if (0 != pmic_gpio_get_designation_bit_val(2, &ret))
+			printk(KERN_ERR "Get cd status error.");
+		return ret;
+	} else {		/* config the det pin for SDHC2 */
+		return 0;
+	}
+	return 0;
+}
+
+EXPORT_SYMBOL(sdhc_get_card_det_status);
+
+/*
  *  USB Host2
  */
 int gpio_usbh2_active(void)

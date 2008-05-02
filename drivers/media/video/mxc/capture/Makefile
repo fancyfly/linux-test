@@ -14,8 +14,5 @@ obj-$(CONFIG_MXC_CAMERA_MC521DA) += mc521da_camera.o
 mt9v111_camera-objs := mt9v111.o sensor_clock.o
 obj-$(CONFIG_MXC_CAMERA_MICRON111) += mt9v111_camera.o 
 
-hv7161_camera-objs := hv7161.o sensor_clock.o
-obj-$(CONFIG_MXC_CAMERA_HV7161) += hv7161_camera.o 
-
-s5k3aaex_camera-objs := s5k3aaex.o sensor_clock.o
-obj-$(CONFIG_MXC_CAMERA_S5K3AAEX) += s5k3aaex_camera.o
+ov2640_camera-objs := ov2640.o sensor_clock.o
+obj-$(CONFIG_MXC_CAMERA_OV2640) += ov2640_camera.o

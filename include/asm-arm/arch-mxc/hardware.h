@@ -12,7 +12,7 @@
  * @file arch-mxc/hardware.h
  * @brief This file contains the hardware definitions of the board.
  *
- * @ingroup MSL_MX27 MSL_MX31 MSL_MX35 MSL_MX37 MSL_MXC91321
+ * @ingroup MSL_MX27 MSL_MX31 MSL_MX35 MSL_MX37 MSL_MX51 MSL_MXC91321
  */
 #ifndef __ASM_ARCH_MXC_HARDWARE_H__
 #define __ASM_ARCH_MXC_HARDWARE_H__
@@ -86,6 +86,13 @@ static inline int type## _rev (int rev)		\
 #define cpu_is_mx37()   (0)
 #endif
 
+#ifdef CONFIG_ARCH_MX51
+#include <asm/arch/mx51.h>
+#define cpu_is_mx51()   (1)
+#else
+#define cpu_is_mx51()   (0)
+#endif
+
 #ifdef CONFIG_ARCH_MX21
 #include <asm/arch/mx21.h>
 #define cpu_is_mx21()		(1)
@@ -119,6 +126,7 @@ MXC_REV(cpu_is_mx31);
 MXC_REV(cpu_is_mx32);
 MXC_REV(cpu_is_mx35);
 MXC_REV(cpu_is_mx37);
+MXC_REV(cpu_is_mx51);
 #endif
 
 #include <asm/arch/mxc.h>

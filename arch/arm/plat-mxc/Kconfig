@@ -32,6 +32,14 @@ config ARCH_MX35
     help
       This enables support for systems based on Freescale i.MX35
 
+config ARCH_MX51
+    bool "MX51-based"
+	select CPU_V7
+	#select USB_ARCH_HAS_EHCI
+	select MXC_TZIC
+    help
+      This enables support for systems based on Freescale i.MX51
+
 config ARCH_MX3
 	bool "MX3-based"
 	select CPU_V6
@@ -68,12 +76,9 @@ source "arch/arm/mach-mx35/Kconfig"
 
 source "arch/arm/mach-mx37/Kconfig"
 
+source "arch/arm/mach-mx51/Kconfig"
+
 source "arch/arm/mach-mxc91321/Kconfig"
-
-
-
-
-
 
 endmenu
 

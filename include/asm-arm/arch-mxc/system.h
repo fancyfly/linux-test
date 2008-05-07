@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999 ARM Limited
  *  Copyright (C) 2000 Deep Blue Solutions Ltd
- *  Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@
  * @file arch-mxc/system.h
  * @brief This file contains idle and reset functions.
  *
- * @ingroup MSL_MX27 MSL_MX31 MSL_MXC91321
+ * @ingroup MSL_MX27 MSL_MX31 MSL_MX35 MSL_MX37 MSL_MX51 MSL_MXC91321
  */
 
 /*!

@@ -15,7 +15,8 @@
 #include <asm/sizes.h>
 
 /* Start of physical RAM */
-#if defined(CONFIG_MACH_MXC30031ADS) || defined(CONFIG_MACH_MX35EVB)
+#if defined(CONFIG_MACH_MXC30031ADS) || defined(CONFIG_MACH_MX35EVB) \
+	|| defined(CONFIG_MACH_MX51_3STACK)
 #define PHYS_OFFSET             UL(0x90000000)
 #endif
 
@@ -46,12 +47,23 @@
  * @defgroup Memory_MXC91321 Memory Map
  * @ingroup MSL_MXC91321
  */
-
+/*!
+ * @defgroup Memory_MX37 Memory Map
+ * @ingroup MSL_MX37
+ */
+/*!
+  * @defgroup Memory_MX35 Memory Map
+  * @ingroup MSL_MX35
+  */
+/*!
+  * @defgroup Memory_MX51 Memory Map
+  * @ingroup MSL_MX51
+  */
 /*!
  * @file arch-mxc/memory.h
  * @brief This file contains macros needed by the Linux kernel and drivers.
  *
- * @ingroup Memory_MX27 Memory_MX31 Memory_MXC91321
+ * @ingroup Memory_MX27 Memory_MX31 Memory_MX37 Memory_MX35 Memory_MX51 Memory_MXC91321
  */
 #ifndef __ASSEMBLY__
 

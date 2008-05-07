@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -14,7 +14,7 @@
 
 /*!
  * @defgroup SPBA Shared Peripheral Bus Arbiter (SPBA)
- * @ingroup MSL_MX31 MSL_MXC91321
+ * @ingroup MSL_MX31 MSL_MX35 MSL_MX37 MSL_MX51 MSL_MXC91321
  */
 
 /*!

@@ -261,6 +261,7 @@
 #define MXC_CCM_CGR2_WDOG_MASK                	(0x3 << 24)
 #define MXC_CCM_CGR2_MAX_OFFSET              	26
 #define MXC_CCM_CGR2_MAX_MASK                	(0x3 << 26)
+#define MXC_CCM_CGR2_MAX_ENABLE                	(0x2 << 26)
 #define MXC_CCM_CGR2_AUDMUX_OFFSET              30
 #define MXC_CCM_CGR2_AUDMUX_MASK                (0x3 << 30)
 
@@ -406,8 +407,8 @@
 #define MXC_CCM_COSR_SSI2_TX_SRC_SEL_MASK       (0x3 << 22)
 #define MXC_CCM_COSR_SSI2_TX_SRC_SEL_OFFSET     22
 #define MXC_CCM_COSR_ASRC_AUDIO_EN              (1 << 24)
-#define MXC_CCM_COSR_ASRC_AUDIO_PODF_MASK       (0x3F << 25)
-#define MXC_CCM_COSR_ASRC_AUDIO_PODF_OFFSET     25
+#define MXC_CCM_COSR_ASRC_AUDIO_PODF_MASK       (0x3F << 26)
+#define MXC_CCM_COSR_ASRC_AUDIO_PODF_OFFSET     26
 
 /*
  * PMCR0 register offsets

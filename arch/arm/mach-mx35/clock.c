@@ -1259,7 +1259,7 @@ static int _clk_cko1_set_parent(struct clk *clk, struct clk *parent)
 		reg |= 0x11 << MXC_CCM_COSR_CLKOSEL_OFFSET;
 	else if (parent == &uart_clk[1])
 		reg |= 0x12 << MXC_CCM_COSR_CLKOSEL_OFFSET;
-	else if (parent == &asrc_clk[0])
+	else if (parent == &asrc_clk[1])
 		reg |= 0x13 << MXC_CCM_COSR_CLKOSEL_OFFSET;
 	else
 		return -EINVAL;

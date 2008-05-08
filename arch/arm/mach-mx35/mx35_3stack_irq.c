@@ -45,6 +45,7 @@
  */
 static unsigned long pseudo_irq_pending;
 static unsigned long pseudo_irq_enable;
+static unsigned long pseudo_irq_wakeup;
 static atomic_t pseudo_irq_state = ATOMIC_INIT(0);
 
 /*
@@ -132,12 +133,38 @@ static void pseudo_enable_irq(u32 irq)
 	schedule_work(&mcu_state_ws);
 }
 
+/*
+ * set pseudo irq as a wake-up source.
+ * @param irq           a pseudo virtual irq number
+ * @param enable	enable as wake-up if equal to non-ero
+ * @return 	This function return 0 on success
+ */
+static int pseudo_set_wake_irq(u32 irq, u32 enable)
+{
+	int index = irq - MXC_PSEUDO_IO_BASE;
+
+	if (index >= MXC_MAX_PSEUDO_IO_LINES)
+		return -ENODEV;
+
+	if (enable) {
+		if (!pseudo_irq_wakeup)
+			enable_irq_wake(MXC_PSEUDO_PARENT);
+		pseudo_irq_wakeup |= (1 << index);
+	} else {
+		pseudo_irq_wakeup &= ~(1 << index);
+		if (!pseudo_irq_wakeup)
+			disable_irq_wake(MXC_PSEUDO_PARENT);
+	}
+	return 0;
+}
+
 static struct irq_chip pseudo_irq_chip = {
 	.ack = pseudo_ack_irq,
 	.mask = pseudo_mask_irq,
 	.disable = pseudo_disable_irq,
 	.unmask = pseudo_unmask_irq,
 	.enable = pseudo_enable_irq,
+	.set_wake = pseudo_set_wake_irq,
 };
 
 static void mxc_pseudo_irq_handler(u32 irq, struct irq_desc *desc)

@@ -670,7 +670,7 @@ void gpio_usbotg_utmi_inactive(void)
 
 EXPORT_SYMBOL(gpio_usbotg_utmi_inactive);
 
-void gpio_sensor_active()
+void gpio_sensor_active(void)
 {
 	/*CSI D6 */
 	mxc_request_iomux(MX35_PIN_TX1, MUX_CONFIG_ALT6);
@@ -692,7 +692,7 @@ void gpio_sensor_active()
 
 EXPORT_SYMBOL(gpio_sensor_active);
 
-void gpio_sensor_inactive()
+void gpio_sensor_inactive(void)
 {
 	mxc_request_iomux(MX35_PIN_TX1, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX35_PIN_TX0, MUX_CONFIG_FUNC);

@@ -265,7 +265,7 @@ static struct mxc_camera_platform_data camera_data = {
 	.io_regulator = NULL,
 	.analog_regulator = "LDO7",
 	.gpo_regulator = NULL,
-	.mclk = 15000000,
+	.mclk = 24000000,
 };
 
 static struct i2c_board_info mxc_i2c_board_info[] __initdata = {

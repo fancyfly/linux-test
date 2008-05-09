@@ -198,22 +198,22 @@ static int ov2640_remove(struct i2c_client *client)
 	kfree(interface_param);
 	interface_param = NULL;
 
-	if (!IS_ERR_VALUE(io_regulator)) {
+	if (!IS_ERR_VALUE((unsigned long)io_regulator)) {
 		regulator_disable(io_regulator);
 		regulator_put(io_regulator, NULL);
 	}
 
-	if (!IS_ERR_VALUE(core_regulator)) {
+	if (!IS_ERR_VALUE((unsigned long)core_regulator)) {
 		regulator_disable(core_regulator);
 		regulator_put(core_regulator, NULL);
 	}
 
-	if (!IS_ERR_VALUE(gpo_regulator)) {
+	if (!IS_ERR_VALUE((unsigned long)gpo_regulator)) {
 		regulator_disable(gpo_regulator);
 		regulator_put(gpo_regulator, NULL);
 	}
 
-	if (!IS_ERR_VALUE(analog_regulator)) {
+	if (!IS_ERR_VALUE((unsigned long)analog_regulator)) {
 		regulator_disable(analog_regulator);
 		regulator_put(analog_regulator, NULL);
 	}
@@ -310,7 +310,7 @@ static sensor_interface *ov2640_config(int *frame_rate, int high_quality)
 	u32 out_width, out_height;
 
 	/*set io votage */
-	if (!IS_ERR_VALUE(io_regulator)) {
+	if (!IS_ERR_VALUE((unsigned long)io_regulator)) {
 		regulator_set_voltage(io_regulator, 2800000);
 		if (regulator_enable(io_regulator) != 0) {
 			dev_dbg(&ov2640_i2c_client->dev,
@@ -323,7 +323,7 @@ static sensor_interface *ov2640_config(int *frame_rate, int high_quality)
 	}
 
 	/*core votage */
-	if (!IS_ERR_VALUE(core_regulator)) {
+	if (!IS_ERR_VALUE((unsigned long)core_regulator)) {
 		regulator_set_voltage(core_regulator, 1300000);
 		if (regulator_enable(core_regulator) != 0) {
 			dev_dbg(&ov2640_i2c_client->dev,
@@ -336,7 +336,7 @@ static sensor_interface *ov2640_config(int *frame_rate, int high_quality)
 	}
 
 	/*GPO 3 */
-	if (!IS_ERR_VALUE(gpo_regulator)) {
+	if (!IS_ERR_VALUE((unsigned long)gpo_regulator)) {
 		if (regulator_enable(gpo_regulator) != 0) {
 			dev_dbg(&ov2640_i2c_client->dev,
 				"%s:gpo3 enable error\n", __func__);
@@ -347,7 +347,7 @@ static sensor_interface *ov2640_config(int *frame_rate, int high_quality)
 		}
 	}
 
-	if (!IS_ERR_VALUE(analog_regulator)) {
+	if (!IS_ERR_VALUE((unsigned long)analog_regulator)) {
 		regulator_set_voltage(analog_regulator, 2000000);
 		if (regulator_enable(analog_regulator) != 0) {
 			dev_dbg(&ov2640_i2c_client->dev,

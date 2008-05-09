@@ -25,6 +25,8 @@
 #include "iomux.h"
 #include "sdma_script_code.h"
 
+extern void gpio_spdif_active(void);
+
 void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
 {
 	sdma_script_addr->mxc_sdma_ap_2_ap_addr = ap_2_ap_ADDR;
@@ -432,6 +434,44 @@ static inline void mxc_init_dma(void)
 	(void)platform_device_register(&mxc_dma_device);
 }
 
+static struct resource spdif_resources[] = {
+	{
+	 .start = SPDIF_BASE_ADDR,
+	 .end = SPDIF_BASE_ADDR + 0x50,
+	 .flags = IORESOURCE_MEM,
+	 },
+};
+
+static struct mxc_spdif_platform_data mxc_spdif_data = {
+	.spdif_tx = 1,
+	.spdif_rx = 1,
+	.spdif_clk_44100 = 3,	/* spdif_ext_clk source for 44.1KHz */
+	.spdif_clk_48000 = 0,	/* audio osc source */
+	.spdif_clkid = 0,
+	.spdif_clk = NULL,
+};
+
+static struct platform_device mxc_alsa_spdif_device = {
+	.name = "mxc_alsa_spdif",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_spdif_data,
+		},
+	.num_resources = ARRAY_SIZE(spdif_resources),
+	.resource = spdif_resources,
+};
+
+static inline void mxc_init_spdif(void)
+{
+	mxc_spdif_data.spdif_clk = clk_get(NULL, "spdif_audio_clk");
+	clk_put(mxc_spdif_data.spdif_clk);
+	mxc_spdif_data.spdif_core_clk = clk_get(NULL, "spdif_clk");
+	clk_put(mxc_spdif_data.spdif_core_clk);
+	gpio_spdif_active();
+	platform_device_register(&mxc_alsa_spdif_device);
+}
+
 static int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
@@ -440,6 +480,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_i2c();
 	mxc_init_rtc();
 	mxc_init_dma();
+	mxc_init_spdif();
 
 	/* SPBA configuration for SSI2 - SDMA and MCU are set */
 	spba_take_ownership(SPBA_SSI2, SPBA_MASTER_C | SPBA_MASTER_A);

@@ -17,6 +17,11 @@
 
 #include "serial.h"
 
+#define MXC_SPDIF_TXFIFO_WML      8
+#define MXC_SPDIF_RXFIFO_WML      8
+#define MXC_SPDIF_TX_REG          0x2C
+#define MXC_SPDIF_RX_REG          0x14
+
 struct mxc_sdma_info_entry_s {
 	mxc_dma_device_t device;
 	mxc_sdma_channel_params_t *chnl_info;
@@ -106,6 +111,48 @@ static mxc_sdma_channel_params_t mxc_sdma_uart3_tx_params = {
 	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
 };
 
+static mxc_sdma_channel_params_t mxc_sdma_spdif_16bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SPDIF_TXFIFO_WML,
+			.per_address = SPDIF_BASE_ADDR + MXC_SPDIF_TX_REG,
+			.peripheral_type = SPDIF,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_SPDIF_TX,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SPDIF_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_spdif_32bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SPDIF_TXFIFO_WML,
+			.per_address = SPDIF_BASE_ADDR + MXC_SPDIF_TX_REG,
+			.peripheral_type = SPDIF,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_SPDIF_TX,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SPDIF_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_spdif_32bit_rx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SPDIF_RXFIFO_WML,
+			.per_address = SPDIF_BASE_ADDR + MXC_SPDIF_RX_REG,
+			.peripheral_type = SPDIF,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SPDIF_RX,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SPDIF_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
 static mxc_sdma_channel_params_t mxc_sdma_memory_params = {
 	.chnl_params = {
 			.peripheral_type = MEMORY,
@@ -124,6 +171,9 @@ static struct mxc_sdma_info_entry_s mxc_sdma_active_dma_info[] = {
 	{MXC_DMA_UART2_TX, &mxc_sdma_uart2_tx_params},
 	{MXC_DMA_UART3_RX, &mxc_sdma_uart3_rx_params},
 	{MXC_DMA_UART3_TX, &mxc_sdma_uart3_tx_params},
+	{MXC_DMA_SPDIF_16BIT_TX, &mxc_sdma_spdif_16bit_tx_params},
+	{MXC_DMA_SPDIF_32BIT_TX, &mxc_sdma_spdif_32bit_tx_params},
+	{MXC_DMA_SPDIF_32BIT_RX, &mxc_sdma_spdif_32bit_rx_params},
 	{MXC_DMA_MEMORY, &mxc_sdma_memory_params},
 };
 

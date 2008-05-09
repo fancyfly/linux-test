@@ -626,6 +626,7 @@ static struct mxc_spdif_platform_data mxc_spdif_data = {
 	.spdif_clk_44100 = 0,
 	.spdif_clk_48000 = 3,
 	.spdif_clk = NULL,
+	.spdif_core_clk = NULL,
 };
 
 static struct platform_device mxc_alsa_spdif_device = {
@@ -643,10 +644,10 @@ static inline void mxc_init_spdif(void)
 {
 	struct clk *ckih_clk;
 	ckih_clk = clk_get(NULL, "ckih");
-	mxc_spdif_data.spdif_clk = clk_get(NULL, "spdif_xtal_clk");
-	clk_set_parent(mxc_spdif_data.spdif_clk, ckih_clk);
+	mxc_spdif_data.spdif_core_clk = clk_get(NULL, "spdif_xtal_clk");
+	clk_set_parent(mxc_spdif_data.spdif_core_clk, ckih_clk);
 	clk_put(ckih_clk);
-	clk_put(mxc_spdif_data.spdif_clk);
+	clk_put(mxc_spdif_data.spdif_core_clk);
 	gpio_spdif_active();
 	platform_device_register(&mxc_alsa_spdif_device);
 }

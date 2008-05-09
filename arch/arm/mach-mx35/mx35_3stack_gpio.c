@@ -699,3 +699,37 @@ void gpio_sensor_inactive()
 }
 
 EXPORT_SYMBOL(gpio_sensor_inactive);
+
+/*!
+ * Setup GPIO for spdif tx/rx to be active
+ */
+void gpio_spdif_active(void)
+{
+	/* SPDIF OUT */
+	mxc_request_iomux(MX35_PIN_STXD5, MUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX35_PIN_STXD5, PAD_CTL_PKE_NONE | PAD_CTL_PUE_PUD);
+	/* SPDIF IN */
+	mxc_request_iomux(MX35_PIN_SRXD5, MUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX35_PIN_SRXD5, PAD_CTL_PKE_ENABLE
+			  | PAD_CTL_100K_PU | PAD_CTL_HYS_SCHMITZ);
+	mxc_iomux_set_input(MUX_IN_SPDIF_SPDIF_IN1, INPUT_CTL_PATH1);
+	/* SPDIF ext clock */
+	mxc_request_iomux(MX35_PIN_SCK5, MUX_CONFIG_ALT1);
+}
+
+EXPORT_SYMBOL(gpio_spdif_active);
+
+/*!
+ * Setup GPIO for spdif tx/rx to be inactive
+ */
+void gpio_spdif_inactive(void)
+{
+	/* SPDIF OUT */
+	mxc_free_iomux(MX35_PIN_STXD5, MUX_CONFIG_GPIO);
+	/* SPDIF IN */
+	mxc_free_iomux(MX35_PIN_SRXD5, MUX_CONFIG_GPIO);
+	/* SPDIF ext clock */
+	mxc_free_iomux(MX35_PIN_SCK5, MUX_CONFIG_GPIO);
+}
+
+EXPORT_SYMBOL(gpio_spdif_inactive);

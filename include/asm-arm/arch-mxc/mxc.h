@@ -92,7 +92,9 @@ struct mxc_spdif_platform_data {
 	int spdif_rx;
 	int spdif_clk_44100;
 	int spdif_clk_48000;
+	int spdif_clkid;
 	struct clk *spdif_clk;
+	struct clk *spdif_core_clk;
 };
 
 struct mxc_lcd_platform_data {

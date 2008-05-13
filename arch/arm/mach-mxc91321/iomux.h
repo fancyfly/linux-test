@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -12,6 +12,9 @@
  */
 #ifndef __MACH_MXC91321_IOMUX_H__
 #define __MACH_MXC91321_IOMUX_H__
+
+#include <asm/arch/gpio.h>
+#include "mxc91321_pins.h"
 
 /*!
  * @file mach-mxc91321/iomux.h

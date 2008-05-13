@@ -34,7 +34,7 @@
  * enumerated value is constructed in the following way:
  *
  * -------------------------------------------------------------------
- * 31-30 | 29 - 25 |24 - 21| 20 - 10| 9 - 0
+ * 31-29 | 28 - 24 |23 - 21| 20 - 10| 9 - 0
  * -------------------------------------------------------------------
  * IO_P  |  IO_I   | RSVD  | PAD_I | MUX_I
  * -------------------------------------------------------------------
@@ -48,20 +48,6 @@
  * The pad control register offset is: 0x368.
  */
 
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio port number (0-based) for that pin. For non-gpio pins, the bits will
- * be all 1's for error checking in the functions. (gpio port 7 is invalid)
- */
-#define MUX_IO_P	30
-
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio offset bit (0-based) for that pin. For non-gpio pins, the bits will
- * be all 0's since they are don't cares. So for port 2 pin 21, bit 31-24
- * will be (1 << MUX_IO_P) | (21 << MUX_IO_I).
- */
-#define MUX_IO_I	25
 /*!
  * Starting bit position within each entry of \b iomux_pins to represent the
  * MUX control register offset
@@ -79,7 +65,7 @@
  */
 #define RSVD_I		21
 
-#define NON_GPIO_I	0x3
+#define NON_GPIO_I	0x7
 #define PIN_TO_MUX_MASK	((1<<(PAD_I - MUX_I)) - 1)
 #define PIN_TO_PAD_MASK	((1<<(RSVD_I - PAD_I)) - 1)
 #define NON_MUX_I	PIN_TO_MUX_MASK
@@ -104,7 +90,7 @@
  * "sw_pad_ctl & sw_mux_ctl details" of the MX35 IC Spec. Each enumerated
  * value is constructed based on the rules described above.
  */
-typedef enum iomux_pins {
+enum iomux_pins {
 	MX35_PIN_CAPTURE = _MXC_BUILD_GPIO_PIN(0, 4, 0x4, 0x328),
 	MX35_PIN_COMPARE = _MXC_BUILD_GPIO_PIN(0, 5, 0x8, 0x32C),
 	MX35_PIN_WATCHDOG_RST = _MXC_BUILD_GPIO_PIN(0, 6, 0xC, 0x330),
@@ -341,7 +327,7 @@ typedef enum iomux_pins {
 	MX35_PIN_FEC_TDATA2 = _MXC_BUILD_GPIO_PIN(2, 21, 0x31C, 0x780),
 	MX35_PIN_FEC_RDATA3 = _MXC_BUILD_GPIO_PIN(2, 22, 0x320, 0x784),
 	MX35_PIN_FEC_TDATA3 = _MXC_BUILD_GPIO_PIN(2, 23, 0x324, 0x788),
-} iomux_pin_name_t;
+};
 
 #endif
 #endif

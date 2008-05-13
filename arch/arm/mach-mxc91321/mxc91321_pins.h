@@ -1,5 +1,5 @@
 /*
- *  Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -59,21 +59,6 @@
  * offset 98 and occupy the middle field within the register.
  */
 
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio port number (0-based) for that pin. For non-gpio pins, the bits will
- * be all 1's for error checking in the functions. (gpio port 7 is invalid)
- */
-#define MUX_IO_P	29
-
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio offset bit (0-based) for that pin. For non-gpio pins, the bits will
- * be all 0's since they are don't cares. So for port 2 pin 21, bit 31-24
- * will be (1 << MUX_IO_P) | (21 << MUX_IO_I).
- */
-#define MUX_IO_I	24
-
 #define MUX_RSVD	20
 
 /*!
@@ -118,7 +103,7 @@
  * "sw_pad_ctl & sw_mux_ctl details" of the IC Spec. Each enumerated
  * value is constructed based on the rules described above.
  */
-typedef enum iomux_pins {
+enum iomux_pins {
 	PIN_MSE0 = _MXC_BUILD_NON_GPIO_PIN(0, 3, 0, 0),
 	PIN_PAD1 = _MXC_BUILD_NON_GPIO_PIN(0, 2, 0, 0),
 	PIN_PAD2 = _MXC_BUILD_NON_GPIO_PIN(0, 1, 0, 0),
@@ -664,7 +649,7 @@ typedef enum iomux_pins {
 	PIN_A1_MA1 = _MXC_BUILD_NON_GPIO_PIN(107, 2, 142, 1),
 	PIN_A2_MA2 = _MXC_BUILD_NON_GPIO_PIN(107, 1, 142, 0),
 	PIN_A3_MA3 = _MXC_BUILD_NON_GPIO_PIN(107, 0, 141, 2),
-} iomux_pin_name_t;
+};
 
 #endif				/* __ASSEMBLY__ */
 #endif				/* __ASM_ARCH_MXC91321_PINS_H__ */

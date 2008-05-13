@@ -15,8 +15,6 @@
 #error "Do not include directly."
 #endif
 
-#include <asm/arch/mx31_pins.h>
-
 /*!
  * @file arch-mxc/mx31.h
  * @brief This file contains register definitions.

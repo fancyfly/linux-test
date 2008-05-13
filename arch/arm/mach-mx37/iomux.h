@@ -1,5 +1,5 @@
 /*
- * Copyright 2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -14,6 +14,8 @@
 #define __MACH_MX37_IOMUX_H__
 
 #include <linux/types.h>
+#include <asm/arch/gpio.h>
+#include "mx37_pins.h"
 
 /*!
  * @file mach-mx37/iomux.h

@@ -69,19 +69,6 @@
  * Starting bit position which is reserved.
  */
 #define RSVD_I			23
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio offset bit (0-based) for that pin. For non-gpio pins, the bits will
- * be all 0's since they are don't cares. So for port 2 pin 21, bit 31-24
- * will be (1 << MUX_IO_P) | (21 << MUX_IO_I).
- */
-#define MUX_IO_I		24
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio port number (0-based) for that pin. For non-gpio pins, the bits will
- * be all 1's for error checking in the functions. (gpio port 7 is invalid)
- */
-#define MUX_IO_P		29
 
 #define NON_GPIO_PORT		0x7
 #define PIN_TO_MUX_MASK		((1 << (PAD_I - MUX_I)) -1)
@@ -120,7 +107,7 @@
  * "sw_pad_ctl & sw_mux_ctl details" of the MX37 IC Spec. Each enumerated
  * value is constructed based on the rules described above.
  */
-typedef enum iomux_pins {
+enum iomux_pins {
 	MX37_PIN_KEY_ROW0 = _MXC_BUILD_NON_GPIO_PIN(0x8, 0x230),
 	MX37_PIN_KEY_ROW1 = _MXC_BUILD_NON_GPIO_PIN(0xC, 0x234),
 	MX37_PIN_KEY_ROW2 = _MXC_BUILD_NON_GPIO_PIN(0x10, 0x238),
@@ -263,7 +250,7 @@ typedef enum iomux_pins {
 	MX37_PIN_GRP_H9 = _MXC_BUILD_NON_GPIO_PIN(0x230, 0x494),
 	MX37_PIN_GRP_H3 = _MXC_BUILD_NON_GPIO_PIN(0x230, 0x4D0),
 	MX37_PIN_GRP_H5 = _MXC_BUILD_NON_GPIO_PIN(0x230, 0x4EC),
-} iomux_pin_name_t;
+};
 
 #endif				/*  */
 #endif				/*  */

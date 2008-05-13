@@ -1,5 +1,5 @@
 /*
- * Copyright 2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -19,6 +19,8 @@
 
 #ifndef __ARCH_ARM_MACH_MX21_GPIO_MUX_H__
 #define __ARCH_ARM_MACH_MX21_GPIO_MUX_H__
+
+#include "mx21_pins.h"
 
 /*!
  * This enumeration data type defines the modes of the pin .

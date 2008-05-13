@@ -14,6 +14,8 @@
 #define __MACH_MX35_IOMUX_H__
 
 #include <linux/types.h>
+#include <asm/arch/gpio.h>
+#include "mx35_pins.h"
 
 /*!
  * @file mach-mx35/iomux.h

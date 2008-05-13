@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -48,21 +48,6 @@
 
 /*!
  * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio port number (0-based) for that pin. For non-gpio pins, the bits will
- * be all 1's for error checking in the functions. (gpio port 7 is invalid)
- */
-#define MUX_IO_P	29
-
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio offset bit (0-based) for that pin. For non-gpio pins, the bits will
- * be all 0's since they are don't cares. So for port 2 pin 21, bit 31-24
- * will be (1 << MUX_IO_P) | (21 << MUX_IO_I).
- */
-#define MUX_IO_I	24
-
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
  * MUX control register index (0-based)
  */
 #define MUX_I		0
@@ -96,7 +81,7 @@
  * "sw_pad_ctl & sw_mux_ctl details" of the MX31 IC Spec. Each enumerated
  * value is constructed based on the rules described above.
  */
-typedef enum iomux_pins {
+enum iomux_pins {
 	MX21_PIN_LSCLK = _MX21_BUILD_PIN(0, 5),
 	MX21_PIN_LD0 = _MX21_BUILD_PIN(0, 6),
 	MX21_PIN_LD1 = _MX21_BUILD_PIN(0, 7),
@@ -242,7 +227,7 @@ typedef enum iomux_pins {
 	MX21_PIN_PF16 = _MX21_BUILD_PIN(5, 16),
 	MX21_PIN_CS4 = _MX21_BUILD_PIN(5, 21),
 	MX21_PIN_CS5 = _MX21_BUILD_PIN(5, 22),
-} iomux_pin_name_t;
+};
 
 #endif
 #endif

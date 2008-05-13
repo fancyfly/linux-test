@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -24,24 +24,9 @@
 
 #ifndef __ASSEMBLY__
 
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio port number (0-based) for that pin. For non-gpio pins, the bits will
- * be all 1's for error checking in the functions. (gpio port 7 is invalid)
- */
-#define MUX_IO_P	29
-
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio offset bit (0-based) for that pin. For non-gpio pins, the bits will
- * be all 0's since they are don't cares. So for port 2 pin 21, bit 31-24
- * will be (1 << MUX_IO_P) | (21 << MUX_IO_I).
- */
-#define MUX_IO_I	24
-
 #define _MX27_BUILD_PIN(gp,gi) (((gp) << MUX_IO_P) | ((gi) << MUX_IO_I))
 
-typedef enum iomux_pins {
+enum iomux_pins {
 	MX27_PIN_USBH2_CLK = _MX27_BUILD_PIN(0, 0),
 	MX27_PIN_USBH2_DIR = _MX27_BUILD_PIN(0, 1),
 	MX27_PIN_USBH2_DATA7 = _MX27_BUILD_PIN(0, 2),
@@ -216,7 +201,7 @@ typedef enum iomux_pins {
 	MX27_PIN_CS4_B = _MX27_BUILD_PIN(5, 21),
 	MX27_PIN_CS5_B = _MX27_BUILD_PIN(5, 22),
 	MX27_PIN_ATA_DATA15 = _MX27_BUILD_PIN(5, 23),
-} iomux_pin_name_t;
+};
 
 #endif				/* __ASSEMBLY__ */
 #endif				/* __ASM_ARCH_MXC_MX27_PINS_H__ */

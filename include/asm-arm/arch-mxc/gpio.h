@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -26,6 +26,8 @@
 
 #include <linux/interrupt.h>
 #include <asm/sizes.h>
+
+typedef unsigned int iomux_pin_name_t;
 
 /* gpio related defines */
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -56,21 +56,6 @@
 
 /*!
  * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio port number (0-based) for that pin. For non-gpio pins, the bits will
- * be all 1's for error checking in the functions. (gpio port 7 is invalid)
- */
-#define MUX_IO_P	29
-
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
- * gpio offset bit (0-based) for that pin. For non-gpio pins, the bits will
- * be all 0's since they are don't cares. So for port 2 pin 21, bit 31-24
- * will be (1 << MUX_IO_P) | (21 << MUX_IO_I).
- */
-#define MUX_IO_I	24
-
-/*!
- * Starting bit position within each entry of \b iomux_pins to represent the
  * MUX control register index (0-based)
  */
 #define MUX_I		0
@@ -104,14 +89,12 @@
 #define _MXC_BUILD_NON_GPIO_PIN(mi,mf,pi,pf) \
 		_MXC_BUILD_PIN(7,0,mi,mf,pi,pf)
 
-/*! @} End IOMUX/PAD Bit field definitions */
-
 /*!
  * This enumeration is constructed based on the Section
  * "sw_pad_ctl & sw_mux_ctl details" of the MX31 IC Spec. Each enumerated
  * value is constructed based on the rules described above.
  */
-typedef enum iomux_pins {
+enum iomux_pins {
 	MX31_PIN_CSPI3_MISO = _MXC_BUILD_NON_GPIO_PIN(0, 3, 1, 2),
 	MX31_PIN_CSPI3_SCLK = _MXC_BUILD_NON_GPIO_PIN(0, 2, 1, 1),
 	MX31_PIN_CSPI3_SPI_RDY = _MXC_BUILD_NON_GPIO_PIN(0, 1, 1, 0),
@@ -440,7 +423,7 @@ typedef enum iomux_pins {
 	MX31_PIN_COMPARE = _MXC_BUILD_GPIO_PIN(0, 8, 81, 2, 109, 1),
 	MX31_PIN_WATCHDOG_RST = _MXC_BUILD_NON_GPIO_PIN(81, 1, 109, 0),
 	MX31_PIN_PWMO = _MXC_BUILD_GPIO_PIN(0, 9, 81, 0, 108, 2),
-} iomux_pin_name_t;
+};
 
 #endif
 #endif

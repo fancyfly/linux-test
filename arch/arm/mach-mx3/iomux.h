@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -14,6 +14,8 @@
 #define __MACH_MX31_IOMUX_H__
 
 #include <linux/types.h>
+#include <asm/arch/gpio.h>
+#include "mx31_pins.h"
 
 /*!
  * @file mach-mx3/iomux.h

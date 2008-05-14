@@ -178,6 +178,7 @@ struct sdhci_host {
 	int flags;		/* Host attributes */
 #define SDHCI_USE_DMA		(1<<0)	/* Host is DMA capable */
 #define SDHCI_REQ_USE_DMA	(1<<1)	/* Use DMA for this req. */
+#define SDHCI_USE_EXTERNAL_DMA	(1<<2)	/* Use DMA for this req. */
 #define SDHCI_CD_PRESENT 	(1<<8)	/* Use DMA for this req. */
 #define SDHCI_WP_ENABLED	(1<<9)	/* Use DMA for this req. */
 

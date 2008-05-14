@@ -18,8 +18,8 @@
 #include "serial.h"
 
 #define MXC_MMC_BUFFER_ACCESS     0x20
-#define MXC_SDHC_MMC_WML          64
-#define MXC_SDHC_SD_WML           256
+#define MXC_SDHC_MMC_WML          512
+#define MXC_SDHC_SD_WML           512
 #define MXC_SSI_TX0_REG           0x0
 #define MXC_SSI_TX1_REG           0x4
 #define MXC_SSI_RX0_REG           0x8

@@ -150,7 +150,7 @@ static int imx_get_sdma_transfer(int format, int dai_port, int stream_type)
 {
 	int transfer = -1;
 
-	if ((dai_port == IMX_DAI_SSI0) || (dai_port == IMX_DAI_SSI1)) {
+	if (dai_port == IMX_DAI_SSI0) {
 		if (stream_type == SNDRV_PCM_STREAM_PLAYBACK) {
 			if (format == SNDRV_PCM_FORMAT_S16_LE) {
 				transfer = MXC_DMA_SSI1_16BIT_TX0;
@@ -168,7 +168,25 @@ static int imx_get_sdma_transfer(int format, int dai_port, int stream_type)
 				transfer = MXC_DMA_SSI1_24BIT_RX0;
 			}
 		}
-	} else if ((dai_port == IMX_DAI_SSI2) || (dai_port == IMX_DAI_SSI3)) {
+	} else if (dai_port == IMX_DAI_SSI1) {
+		if (stream_type == SNDRV_PCM_STREAM_PLAYBACK) {
+			if (format == SNDRV_PCM_FORMAT_S16_LE) {
+				transfer = MXC_DMA_SSI1_16BIT_TX1;
+			} else if (format == SNDRV_PCM_FORMAT_S24_LE) {
+				transfer = MXC_DMA_SSI1_24BIT_TX1;
+			} else if (format == SNDRV_PCM_FORMAT_S20_3LE) {
+				transfer = MXC_DMA_SSI1_24BIT_TX1;
+			}
+		} else {
+			if (format == SNDRV_PCM_FORMAT_S16_LE) {
+				transfer = MXC_DMA_SSI1_16BIT_RX1;
+			} else if (format == SNDRV_PCM_FORMAT_S24_LE) {
+				transfer = MXC_DMA_SSI1_24BIT_RX1;
+			} else if (format == SNDRV_PCM_FORMAT_S20_3LE) {
+				transfer = MXC_DMA_SSI1_24BIT_RX1;
+			}
+		}
+	} else if (dai_port == IMX_DAI_SSI2) {
 		if (stream_type == SNDRV_PCM_STREAM_PLAYBACK) {
 			if (format == SNDRV_PCM_FORMAT_S16_LE) {
 				transfer = MXC_DMA_SSI2_16BIT_TX0;
@@ -184,6 +202,24 @@ static int imx_get_sdma_transfer(int format, int dai_port, int stream_type)
 				transfer = MXC_DMA_SSI2_24BIT_RX0;
 			} else if (format == SNDRV_PCM_FORMAT_S20_3LE) {
 				transfer = MXC_DMA_SSI2_24BIT_RX0;
+			}
+		}
+	} else if (dai_port == IMX_DAI_SSI3) {
+		if (stream_type == SNDRV_PCM_STREAM_PLAYBACK) {
+			if (format == SNDRV_PCM_FORMAT_S16_LE) {
+				transfer = MXC_DMA_SSI2_16BIT_TX1;
+			} else if (format == SNDRV_PCM_FORMAT_S24_LE) {
+				transfer = MXC_DMA_SSI2_24BIT_TX1;
+			} else if (format == SNDRV_PCM_FORMAT_S20_3LE) {
+				transfer = MXC_DMA_SSI2_24BIT_TX1;
+			}
+		} else {
+			if (format == SNDRV_PCM_FORMAT_S16_LE) {
+				transfer = MXC_DMA_SSI2_16BIT_RX1;
+			} else if (format == SNDRV_PCM_FORMAT_S24_LE) {
+				transfer = MXC_DMA_SSI2_24BIT_RX1;
+			} else if (format == SNDRV_PCM_FORMAT_S20_3LE) {
+				transfer = MXC_DMA_SSI2_24BIT_RX1;
 			}
 		}
 	}
@@ -319,6 +355,9 @@ static int imx_pcm_hw_params(struct snd_pcm_substream *substream,
 				       "imx-pcm: error requesting a read dma channel\n");
 				return channel;
 			}
+			ret = mxc_dma_callback_set(channel, (mxc_dma_callback_t)
+						   audio_dma_irq,
+						   (void *)substream);
 		}
 		prtd->dma_wchannel = channel;
 		prtd->dma_alloc = 1;

@@ -317,7 +317,7 @@ static int imx_ssi_startup(struct snd_pcm_substream *substream)
 
 	/* we cant really change any SSI values after SSI is enabled
 	 * need to fix in software for max flexibility - lrg */
-	if (cpu_dai->active)
+	if (cpu_dai->playback_active || cpu_dai->capture_active)
 		return 0;
 
 	/* reset the SSI port - Sect 45.4.4 */
@@ -565,25 +565,25 @@ static void imx_ssi_shutdown(struct snd_pcm_substream *substream)
 	id = cpu_dai->id;
 
 	/* shutdown SSI if neither Tx or Rx is active */
-	if (!cpu_dai->active) {
+	if (cpu_dai->playback_active || cpu_dai->capture_active)
+		return;
 
-		if (id == IMX_DAI_SSI0 || id == IMX_DAI_SSI1) {
+	if (id == IMX_DAI_SSI0 || id == IMX_DAI_SSI1) {
 
-			if (--ssi_active[SSI1_PORT] > 1)
-				return;
+		if (--ssi_active[SSI1_PORT] > 1)
+			return;
 
-			SSI1_SCR = 0;
+		SSI1_SCR = 0;
 
-			clk_disable(ssi_clk);
-			clk_put(ssi_clk);
+		clk_disable(ssi_clk);
+		clk_put(ssi_clk);
 
-		} else {
-			if (--ssi_active[SSI2_PORT])
-				return;
-			SSI2_SCR = 0;
-			clk_disable(ssi_clk);
-			clk_put(ssi_clk);
-		}
+	} else {
+		if (--ssi_active[SSI2_PORT])
+			return;
+		SSI2_SCR = 0;
+		clk_disable(ssi_clk);
+		clk_put(ssi_clk);
 	}
 }
 
@@ -684,23 +684,23 @@ const char imx_ssi_4[SND_SOC_DAI_NAME_SIZE] = {
 
 EXPORT_SYMBOL_GPL(imx_ssi_4);
 
-static int underrun_counter;
+static int fifo_err_counter;
 
 static irqreturn_t ssi1_irq(int irq, void *dev_id)
 {
-	if (underrun_counter++ % 1000 == 0)
-		printk(KERN_ERR "ssi1_irq SISR %x SIER %x underruns=%d\n",
-		       SSI1_SISR, SSI1_SIER, underrun_counter);
-	SSI1_SISR = SSI_SIER_TUE0_EN;
+	if (fifo_err_counter++ % 1000 == 0)
+		printk(KERN_ERR "ssi1_irq SISR %x SIER %x fifo_errs=%d\n",
+		       SSI1_SISR, SSI1_SIER, fifo_err_counter);
+	SSI1_SISR = SSI_SIER_TUE0_EN | SSI_SIER_ROE0_EN;
 	return IRQ_HANDLED;
 }
 
 static irqreturn_t ssi2_irq(int irq, void *dev_id)
 {
-	if (underrun_counter++ % 1000 == 0)
-		printk(KERN_ERR "ssi2_irq SISR %x SIER %x underruns=%d\n",
-		       SSI2_SISR, SSI2_SIER, underrun_counter);
-	SSI2_SISR = SSI_SIER_TUE0_EN;
+	if (fifo_err_counter++ % 1000 == 0)
+		printk(KERN_ERR "ssi2_irq SISR %x SIER %x fifo_errs=%d\n",
+		       SSI2_SISR, SSI2_SIER, fifo_err_counter);
+	SSI2_SISR = SSI_SIER_TUE0_EN | SSI_SIER_ROE0_EN;
 	return IRQ_HANDLED;
 }
 
@@ -740,8 +740,10 @@ static int imx_ssi_probe(struct device *dev)
 		return -EBUSY;
 	}
 
-	SSI1_SIER = SSI_SIER_TIE | SSI_SIER_TUE0_EN;
-	SSI2_SIER = SSI_SIER_TIE | SSI_SIER_TUE0_EN;
+	SSI1_SIER = SSI_SIER_TIE | SSI_SIER_TUE0_EN |
+	    SSI_SIER_RIE | SSI_SIER_ROE0_EN;
+	SSI2_SIER = SSI_SIER_TIE | SSI_SIER_TUE0_EN |
+	    SSI_SIER_RIE | SSI_SIER_ROE0_EN;
 
 	return 0;
 }

@@ -45,13 +45,15 @@
 #include "imx-ssi.h"
 #include "imx-pcm.h"
 
-extern void gpio_activate_audio_ports(void);
+void gpio_activate_audio_ports(void);
 
 /* SSI BCLK and LRC master */
 #define WM8350_SSI_MASTER	1
 
 struct imx_3stack_pcm_state {
 	int lr_clk_active;
+	int playback_active;
+	int capture_active;
 };
 
 struct _wm8350_audio {
@@ -122,6 +124,10 @@ static int imx_3stack_startup(struct snd_pcm_substream *substream)
 					WM8350_LRC_ADC_SEL);
 	}
 	state->lr_clk_active++;
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		state->capture_active = 1;
+	else
+		state->playback_active = 1;
 	return 0;
 }
 #else
@@ -202,9 +208,12 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 	codec_dai->ops->set_clkdiv(codec_dai, WM8350_BCLK_CLKDIV,
 				   wm8350_audio[i].bclkdiv);
 
-	/* DAI is synchronous and clocked with DAC LRCLK */
+	/* DAI is synchronous and clocked with DAC LRCLK & ADC LRC */
 	codec_dai->ops->set_clkdiv(codec_dai,
 				   WM8350_DACLR_CLKDIV,
+				   wm8350_audio[i].lr_rate);
+	codec_dai->ops->set_clkdiv(codec_dai,
+				   WM8350_ADCLR_CLKDIV,
 				   wm8350_audio[i].lr_rate);
 
 	/* now configure DAC and ADC clocks */
@@ -229,12 +238,31 @@ static void imx_3stack_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_link *pcm_link = substream->private_data;
 	struct snd_soc_dai *codec_dai = pcm_link->codec_dai;
+	struct snd_soc_codec *codec = pcm_link->codec;
 	struct imx_3stack_pcm_state *state = pcm_link->private_data;
+	struct wm8350 *wm8350 = codec->control_data;
 
 	/* disable the PLL if there are no active Tx or Rx channels */
 	if (!codec_dai->active)
 		codec_dai->ops->set_pll(codec_dai, 0, 0, 0);
 	state->lr_clk_active--;
+
+	/*
+	 * We need to keep track of active streams in master mode and
+	 * switch LRC source if necessary.
+	 */
+
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		state->capture_active = 0;
+	else
+		state->playback_active = 0;
+
+	if (state->capture_active)
+		wm8350_set_bits(wm8350, WM8350_CLOCK_CONTROL_2,
+				WM8350_LRC_ADC_SEL);
+	else if (state->playback_active)
+		wm8350_clear_bits(wm8350, WM8350_CLOCK_CONTROL_2,
+				  WM8350_LRC_ADC_SEL);
 }
 
 /*
@@ -357,7 +385,7 @@ static const struct snd_soc_dapm_widget imx_3stack_dapm_widgets[] = {
 static const char *audio_map[][3] = {
 
 	/* SiMIC --> IN1LN (with automatic bias) via SP1 */
-	{"IN1LN", NULL, "Mic Bias"},
+	{"IN1RP", NULL, "Mic Bias"},
 	{"Mic Bias", NULL, "SiMIC"},
 
 	/* Mic 1 Jack --> IN1LN and IN1LP (with automatic bias) */
@@ -366,9 +394,9 @@ static const char *audio_map[][3] = {
 	{"Mic Bias", NULL, "Mic1 Jack"},
 
 	/* Mic 2 Jack --> IN1RN and IN1RP (with automatic bias) */
-	{"IN1RN", NULL, "Mic Bias"},
-	{"IN1RP", NULL, "Mic1 Jack"},
-	{"Mic Bias", NULL, "Mic1 Jack"},
+	{"IN1RN", NULL, "Mic2 Jack"},
+	{"IN1RP", NULL, "Mic Bias"},
+	{"Mic Bias", NULL, "Mic2 Jack"},
 
 	/* Line in Jack --> AUX (L+R) */
 	{"IN3R", NULL, "Line In Jack"},

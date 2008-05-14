@@ -68,6 +68,13 @@ struct wm8350_out_ramp {
 	struct wm8350_output out2;
 };
 
+static unsigned int wm8350_codec_cache_read(struct snd_soc_codec *codec,
+					    unsigned int reg)
+{
+	struct wm8350 *wm8350 = codec->control_data;
+	return wm8350->reg_cache[reg];
+}
+
 static unsigned int wm8350_codec_read(struct snd_soc_codec *codec, 
 	unsigned int reg)
 {
@@ -532,8 +539,8 @@ SOC_DAPM_SINGLE_TLV("L2 Capture Volume",
 	WM8350_INPUT_MIXER_VOLUME_L, 1, 7, 0, out_mix_tlv),
 SOC_DAPM_SINGLE_TLV("AUX Capture Volume", 
 	WM8350_INPUT_MIXER_VOLUME_L, 9, 7, 0, out_mix_tlv),
-SOC_DAPM_SINGLE("PGA Capture Switch", 
-	WM8350_LEFT_INPUT_VOLUME, 14, 1, 0),
+SOC_DAPM_SINGLE("PGA Capture Switch",
+	WM8350_LEFT_INPUT_VOLUME, 14, 1, 1),
 };
 
 /* Right Input Mixer */
@@ -542,8 +549,8 @@ SOC_DAPM_SINGLE_TLV("L2 Capture Volume",
 	WM8350_INPUT_MIXER_VOLUME_R, 5, 7, 0, out_mix_tlv),
 SOC_DAPM_SINGLE_TLV("AUX Capture Volume", 
 	WM8350_INPUT_MIXER_VOLUME_R, 13, 7, 0, out_mix_tlv),
-SOC_DAPM_SINGLE("PGA Capture Switch", 
-	WM8350_RIGHT_INPUT_VOLUME, 14, 1, 0),
+SOC_DAPM_SINGLE("PGA Capture Switch",
+	WM8350_RIGHT_INPUT_VOLUME, 14, 1, 1),
 };
 
 /* Left Mic Mixer */
@@ -681,7 +688,7 @@ static const char *audio_map[][3] = {
 	/* out3 playback mixer */
 	{"Out3 Mixer", "Left Playback Switch", "Left DAC"},
 	{"Out3 Mixer", "Left Capture Switch", "Left Capture Mixer"},
-	{"Out3 Mixer", "Left Mixer Switch", "Left Playback Mixer "},
+	{"Out3 Mixer", "Left Mixer Switch", "Left Playback Mixer"},
 	{"Out3 Mixer", "Out4 Playback Switch", "Out4 Mixer"},
 	{"OUT3", NULL, "Out3 Mixer"},
 
@@ -690,7 +697,7 @@ static const char *audio_map[][3] = {
 	{"Left Out2 PGA", NULL, "Left Playback Mixer"},
 	{"OUT2L", NULL, "Left Out2 PGA"},
 	{"OUT2R", NULL, "Right Out2 PGA"},
-	
+
 	/* out1 */
 	{"Right Out1 PGA", NULL, "Right Playback Mixer"},
 	{"Left Out1 PGA", NULL, "Left Playback Mixer"},
@@ -705,17 +712,27 @@ static const char *audio_map[][3] = {
 	{"Left Capture Mixer", "L2 Capture Volume", "IN2L"},
 	{"Left Capture Mixer", "AUX Capture Volume", "Left Aux PGA"},
 	{"Left Capture Mixer", "PGA Capture Switch", "Left Mic Mixer"},
-	{"Left Capture Mixer", "Left", "Out4 Capture Mux"},
-	
+	{"Left Capture Mixer", NULL, "Out4 Capture Channel"},
+
 	/* Right capture mixer */
 	{"Right Capture Mixer", "L2 Capture Volume", "IN2R"},
 	{"Right Capture Mixer", "AUX Capture Volume", "Right Aux PGA"},
 	{"Right Capture Mixer", "PGA Capture Switch", "Right Mic Mixer"},
-	{"Right Capture Mixer", "Right", "Out4 Capture Mux"},
-	
+	{"Right Capture Mixer", NULL, "Out4 Capture Channel"},
+
 	/* AUX Inputs */
-	{"Left AUX PGA", NULL, "IN3L"},
-	{"Right AUX PGA", NULL, "IN3R"},
+	{"Left Aux PGA", NULL, "IN3L"},
+	{"Right Aux PGA", NULL, "IN3R"},
+
+	/* MIC Inputs */
+	{"Left Input PGA", NULL, "IN1LN"},
+	{"Left Input PGA", NULL, "IN1LP"},
+	{"Left Input PGA", NULL, "IN2L"},
+	{"Left Capture Mixer", NULL, "Left Input PGA"},
+	{"Right Input PGA", NULL, "IN1RN"},
+	{"Right Input PGA", NULL, "IN1RP"},
+	{"Right Input PGA", NULL, "IN2R"},
+	{"Right Capture Mixer", NULL, "Right Input PGA"},
 	
 	/* Left Mic mixer */
 	{"Left Mic Mixer", "INN Capture Switch", "IN1LN"},
@@ -728,8 +745,8 @@ static const char *audio_map[][3] = {
 	{"Right Mic Mixer", "IN2 Capture Switch", "IN2R"},
 	
 	/* out 4 capture */
-	{"Out4 Capture Mux", NULL, "Out4 Mixer"},
-	
+	{"Out4 Capture Channel", NULL, "Out4 Mixer"},
+
 	/* Beep */
 	{"Beep", NULL, "Right Aux PGA"},
 	
@@ -911,6 +928,40 @@ static int wm8350_set_dai_fmt(struct snd_soc_dai *codec_dai,
 	wm8350_codec_write(codec, WM8350_AI_DAC_CONTROL, master);
 	wm8350_codec_write(codec, WM8350_DAC_LR_RATE, dac_lrc);
 	wm8350_codec_write(codec, WM8350_ADC_LR_RATE, adc_lrc);
+	return 0;
+}
+
+static int wm8350_pcm_trigger(struct snd_pcm_substream *substream,
+			      int cmd)
+{
+	struct snd_soc_pcm_link *pcm_link = substream->private_data;
+	struct snd_soc_codec *codec = pcm_link->codec;
+
+	int master = wm8350_codec_cache_read(codec, WM8350_AI_DAC_CONTROL) &
+	    WM8350_BCLK_MSTR;
+	int enabled = 0;
+
+	/* Check that the DACs or ADCs are enabled since they are
+	 * required for LRC in master mode. The DACs or ADCs need a
+	 * valid audio path i.e. pin -> ADC or DAC -> pin before
+	 * the LRC will be enabled in master mode. */
+	if (!master && cmd != SNDRV_PCM_TRIGGER_START)
+		return 0;
+
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		enabled = wm8350_codec_cache_read(codec, WM8350_POWER_MGMT_4) &
+		    (WM8350_ADCR_ENA | WM8350_ADCL_ENA);
+	} else {
+		enabled = wm8350_codec_cache_read(codec, WM8350_POWER_MGMT_4) &
+		    (WM8350_DACR_ENA | WM8350_DACL_ENA);
+	}
+
+	if (!enabled) {
+		printk(KERN_ERR
+		       "%s: invalid audio path - no clocks available\n",
+		       __func__);
+		return -EINVAL;
+	}
 	return 0;
 }
 
@@ -1260,6 +1311,7 @@ static const struct snd_soc_dai_ops wm8350_hifi_dai_ops = {
 /* audio ops, called by alsa */
 static const struct snd_soc_ops wm8350_hifi_dai_audio_ops = {
 	.hw_params = wm8350_pcm_hw_params,
+	.trigger = wm8350_pcm_trigger,
 };
 
 static int wm8350_suspend(struct device *dev, pm_message_t state)

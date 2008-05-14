@@ -383,6 +383,51 @@ static inline void mxc_init_mmc(void)
 }
 #endif
 
+#ifdef CONFIG_MXC_PSEUDO_IRQS
+/*! Device Definition for MXC SDHC1 */
+static struct platform_device mxc_pseudo_irq_device = {
+	.name = "mxc_pseudo_irq",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		},
+};
+
+static inline int mxc_init_pseudo_irq(void)
+{
+	return platform_device_register(&mxc_pseudo_irq_device);
+}
+
+late_initcall(mxc_init_pseudo_irq);
+
+/*!
+ * Power Key interrupt handler.
+ */
+static irqreturn_t power_key_int(int irq, void *dev_id)
+{
+	pr_info(KERN_INFO "on-off key pressed\n");
+	return 0;
+}
+
+/*!
+ * Power Key initialization.
+ */
+static int __init mxc_init_power_key(void)
+{
+	/*Set power key as wakeup resource */
+	int irq, ret;
+	irq = MXC_PSEUDO_IRQ_POWER_KEY;
+	set_irq_type(irq, IRQF_TRIGGER_RISING);
+	ret = request_irq(irq, power_key_int, 0, "power_key", 0);
+	if (ret)
+		pr_info("register on-off key interrupt failed\n");
+	else
+		set_irq_wake(irq, 1);
+	return ret;
+}
+
+late_initcall(mxc_init_power_key);
+#endif
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to

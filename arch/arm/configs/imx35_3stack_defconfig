@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Tue Apr 29 14:04:16 2008
+# Tue May  6 21:11:57 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -285,8 +285,13 @@ CONFIG_BINFMT_ELF=y
 #
 # Power management options
 #
-# CONFIG_PM is not set
+CONFIG_PM=y
+# CONFIG_PM_LEGACY is not set
+# CONFIG_PM_DEBUG is not set
+CONFIG_PM_SLEEP=y
 CONFIG_SUSPEND_UP_POSSIBLE=y
+CONFIG_SUSPEND=y
+# CONFIG_APM_EMULATION is not set
 
 #
 # Networking
@@ -979,6 +984,8 @@ CONFIG_USB=m
 # CONFIG_USB_DEVICEFS is not set
 CONFIG_USB_DEVICE_CLASS=y
 # CONFIG_USB_DYNAMIC_MINORS is not set
+# CONFIG_USB_SUSPEND is not set
+# CONFIG_USB_PERSIST is not set
 # CONFIG_USB_OTG is not set
 
 #
@@ -1021,7 +1028,6 @@ CONFIG_USB_STORAGE=m
 # CONFIG_USB_STORAGE_SDDR55 is not set
 # CONFIG_USB_STORAGE_JUMPSHOT is not set
 # CONFIG_USB_STORAGE_ALAUDA is not set
-# CONFIG_USB_STORAGE_ONETOUCH is not set
 # CONFIG_USB_STORAGE_KARMA is not set
 # CONFIG_USB_LIBUSUAL is not set
 

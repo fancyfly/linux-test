@@ -15,6 +15,7 @@
 #include <linux/sched.h>
 #include <linux/interrupt.h>
 #include <linux/init.h>
+#include <linux/platform_device.h>
 #include <linux/clk.h>
 
 #include <asm/hardware.h>
@@ -46,6 +47,7 @@
 static unsigned long pseudo_irq_pending;
 static unsigned long pseudo_irq_enable;
 static unsigned long pseudo_irq_wakeup;
+static unsigned long pseudo_suspend;
 static atomic_t pseudo_irq_state = ATOMIC_INIT(0);
 
 /*
@@ -55,12 +57,14 @@ static atomic_t pseudo_irq_state = ATOMIC_INIT(0);
  */
 static void mcu_event_handler(struct work_struct *work);
 static void mcu_state_handler(struct work_struct *work);
+static void mcu_event_delay(unsigned long data);
 
 /*!
  * The work structure for mcu events.
  */
 static DECLARE_WORK(mcu_event_ws, mcu_event_handler);
 static DECLARE_WORK(mcu_state_ws, mcu_state_handler);
+static DEFINE_TIMER(mcu_delay_timer, mcu_event_delay, HZ, 0);
 
 static inline void mxc_pseudo_irq_ack(void)
 {
@@ -148,12 +152,12 @@ static int pseudo_set_wake_irq(u32 irq, u32 enable)
 
 	if (enable) {
 		if (!pseudo_irq_wakeup)
-			enable_irq_wake(MXC_PSEUDO_PARENT);
+			enable_irq_wake(IOMUX_TO_IRQ(MX35_PIN_GPIO1_0));
 		pseudo_irq_wakeup |= (1 << index);
 	} else {
 		pseudo_irq_wakeup &= ~(1 << index);
 		if (!pseudo_irq_wakeup)
-			disable_irq_wake(MXC_PSEUDO_PARENT);
+			disable_irq_wake(IOMUX_TO_IRQ(MX35_PIN_GPIO1_0));
 	}
 	return 0;
 }
@@ -202,6 +206,11 @@ static void mxc_pseudo_irq_handler(u32 irq, struct irq_desc *desc)
 	}
 }
 
+static void mcu_event_delay(unsigned long data)
+{
+	schedule_work(&mcu_event_ws);
+}
+
 /*!
  * This function is called when mcu interrupt occurs on the processor.
  * It is the interrupt handler for the mcu.
@@ -213,7 +222,11 @@ static void mxc_pseudo_irq_handler(u32 irq, struct irq_desc *desc)
  */
 static irqreturn_t mcu_irq_handler(int irq, void *dev_id)
 {
-	schedule_work(&mcu_event_ws);
+	disable_irq(IOMUX_TO_IRQ(MX35_PIN_GPIO1_0));
+	if (pseudo_suspend)
+		mod_timer(&mcu_delay_timer, jiffies + HZ);
+	else
+		schedule_work(&mcu_event_ws);
 
 	return IRQ_HANDLED;
 }
@@ -253,6 +266,7 @@ static void mcu_event_handler(struct work_struct *work)
       no_new_events:
 	if (pseudo_irq_pending & pseudo_irq_enable)
 		mxc_pseudo_irq_trigger();
+	enable_irq(IOMUX_TO_IRQ(MX35_PIN_GPIO1_0));
 }
 
 static void mcu_state_handler(struct work_struct *work)
@@ -307,4 +321,51 @@ static int __init mxc_pseudo_init(void)
 }
 
 fs_initcall_sync(mxc_pseudo_init);
+
+static int mxc_pseudo_irq_suspend(struct platform_device *dev,
+				  pm_message_t mesg)
+{
+	int err, i;
+	unsigned int event1, event2;
+
+	if (!pseudo_irq_wakeup)
+		return 0;
+
+	event1 = pseudo_irq_wakeup & ((1 << MCU_INT_KEYPAD) - 1);
+	event2 = pseudo_irq_wakeup >> MCU_INT_KEYPAD;
+
+	for (i = 0; i < 3; i++) {
+		err = pmic_write_reg(REG_MCU_INT_ENABLE_1, event1, 0xFF);
+		err |= pmic_write_reg(REG_MCU_INT_ENABLE_2, event2, 0xFF);
+		if (err == PMIC_SUCCESS)
+			break;
+	}
+	pseudo_suspend = 1;
+	return err;
+}
+
+static int mxc_pseudo_irq_resume(struct platform_device *dev)
+{
+	if (!pseudo_irq_wakeup)
+		return 0;
+
+	schedule_work(&mcu_state_ws);
+	pseudo_suspend = 0;
+	return 0;
+}
+
+static struct platform_driver mxc_pseudo_irq_driver = {
+	.driver = {
+		   .name = "mxc_pseudo_irq",
+		   },
+	.suspend = mxc_pseudo_irq_suspend,
+	.resume = mxc_pseudo_irq_resume,
+};
+
+static int __init mxc_pseudo_sysinit(void)
+{
+	return platform_driver_register(&mxc_pseudo_irq_driver);
+}
+
+late_initcall(mxc_pseudo_sysinit);
 #endif				/* CONFIG_MXC_PSEUDO_IRQS */

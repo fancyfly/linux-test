@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -66,6 +66,10 @@
 #define IRAM_BASE_ADDR		0x1FFC0000	/* internal ram */
 #define IRAM_BASE_ADDR_VIRT	0xD0000000
 #define IRAM_SIZE		SZ_16K
+
+#ifdef CONFIG_USB_STATIC_IRAM
+#define USB_IRAM_BASE_ADDR	(IRAM_BASE_ADDR)
+#endif
 
 /*
  * L2CC

@@ -89,6 +89,10 @@
 #define IRAM_BASE_ADDR_VIRT	0xF80C0000
 #define IRAM_SIZE		SZ_16K
 
+#ifdef CONFIG_USB_STATIC_IRAM
+#define USB_IRAM_BASE_ADDR	(IRAM_BASE_ADDR)
+#endif
+
 /*
  * L2CC
  */

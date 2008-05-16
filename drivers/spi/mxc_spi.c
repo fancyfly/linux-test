@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -765,18 +765,6 @@ static int mxc_spi_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int suspend_devices(struct device *dev, void *pm_message)
-{
-	pm_message_t *state = pm_message;
-
-	if (dev->power.power_state.event != state->event) {
-		dev_warn(dev, "mismatch in pm state request\n");
-		return -1;
-	}
-
-	return 0;
-}
-
 static int spi_bitbang_suspend(struct spi_bitbang *bitbang)
 {
 	unsigned long flags;
@@ -822,11 +810,6 @@ static int mxc_spi_suspend(struct platform_device *pdev, pm_message_t state)
 	struct spi_master *master = platform_get_drvdata(pdev);
 	struct mxc_spi *master_drv_data = spi_master_get_devdata(master);
 	int ret = 0;
-
-	if (device_for_each_child(&pdev->dev, &state, suspend_devices) != 0) {
-		dev_warn(&pdev->dev, "suspend aborted\n");
-		return -EINVAL;
-	}
 
 	spi_bitbang_suspend(&master_drv_data->mxc_bitbang);
 	__raw_writel(MXC_CSPICTRL_DISABLE,

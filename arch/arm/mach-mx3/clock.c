@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -1160,11 +1160,16 @@ int __init mxc_clocks_init(void)
 	__raw_writel(MXC_CCM_CGR0_GPT_MASK, MXC_CCM_CGR0);
 	__raw_writel(0, MXC_CCM_CGR1);
 
-	__raw_writel(MXC_CCM_CGR2_EMI_MASK | MXC_CCM_CGR2_IPMUX1_MASK | MXC_CCM_CGR2_IPMUX2_MASK | MXC_CCM_CGR2_MXCCLKENSEL_MASK |	/*For MX32 */
-		     MXC_CCM_CGR2_CHIKCAMPEN_MASK |	/*For MX32 */
-		     MXC_CCM_CGR2_OVRVPUBUSY_MASK |	/*For MX32 */
-		     1 << 27 |	/*Bit 27 and 28 are not defined for MX32, but still requires to be set */
-		     1 << 28, MXC_CCM_CGR2);
+	reg = MXC_CCM_CGR2_EMI_MASK |	/*For MX32 */
+	    MXC_CCM_CGR2_IPMUX1_MASK |	/*For MX32 */
+	    MXC_CCM_CGR2_IPMUX2_MASK |	/*For MX32 */
+	    MXC_CCM_CGR2_MXCCLKENSEL_MASK |	/*For MX32 */
+	    MXC_CCM_CGR2_CHIKCAMPEN_MASK |	/*For MX32 */
+	    MXC_CCM_CGR2_OVRVPUBUSY_MASK |	/*For MX32 */
+	    0x3 << 27 |		/*Bit 27 and 28 are not defined for MX32,
+				   but still requires to be set */
+	    MXC_CCM_CGR2_APMSYSCLKSEL_MASK | MXC_CCM_CGR2_AOMENA_MASK;
+	__raw_writel(reg, MXC_CCM_CGR2);
 
 	cko1_clk.disable(&cko1_clk);
 	usb_pll_clk.disable(&usb_pll_clk);

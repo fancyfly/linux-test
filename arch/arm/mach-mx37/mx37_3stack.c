@@ -172,13 +172,14 @@ static u16 keymap[] = {
 	KEY_RIGHT, KEY_UP, KEY_LEFTALT,
 	KEY_TAB, KEY_ESC,
 };
+#endif
 
 static struct mxc_keyp_platform_data keypad_data = {
 	.matrix = keymap,
 	.active = gpio_keypad_active,
 	.inactive = gpio_keypad_inactive,
 };
-#endif
+
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 	 .driver_name = "TSC2007",

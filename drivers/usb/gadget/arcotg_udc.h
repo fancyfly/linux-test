@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -35,7 +35,9 @@
 struct usb_dr_device {
 	/* Capability register */
 	u32 id;
-	u32 res1[63];
+	u32 res1[35];
+	u32 sbuscfg;		/* sbuscfg ahb burst */
+	u32 res11[27];
 	u16 caplength;		/* Capability Register Length */
 	u16 hciversion;		/* Host Controller Interface Version */
 	u32 hcsparams;		/* Host Controller Structual Parameters */

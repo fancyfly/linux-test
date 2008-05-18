@@ -342,22 +342,22 @@ static void usbh2_set_serial_xcvr(void)
 	UH2_USBCMD |= UCMD_RESET;
 	while (UH2_USBCMD & UCMD_RESET);
 
-	USBCTRL &= ~(UCTRL_H2SIC_MASK); /* Disable bypass mode */
+	USBCTRL &= ~(UCTRL_H2SIC_MASK);	/* Disable bypass mode */
 	USBCTRL &= ~(UCTRL_H2PM);	/* Power Mask */
-	USBCTRL |= UCTRL_H2WIE |        /* Wakeup intr enable */
-	UCTRL_IP_PUE_DOWN |		/* ipp_pue_pulldwn_dpdm */
-	UCTRL_USBTE |			/* USBT is enabled */
-	UCTRL_H2DT;			/* Disable H2 TLL */
+	USBCTRL |= UCTRL_H2WIE |	/* Wakeup intr enable */
+	    UCTRL_IP_PUE_DOWN |	/* ipp_pue_pulldwn_dpdm */
+	    UCTRL_USBTE |	/* USBT is enabled */
+	    UCTRL_H2DT;		/* Disable H2 TLL */
 
 	USBCTRL &= ~(UCTRL_PP);
-	UH2_PORTSC1 = (UH2_PORTSC1&(~PORTSC_PTS_MASK)) | PORTSC_PTS_SERIAL;
+	UH2_PORTSC1 = (UH2_PORTSC1 & (~PORTSC_PTS_MASK)) | PORTSC_PTS_SERIAL;
 
 	if (UH2_HCSPARAMS & HCSPARAMS_PPC)
 		UH2_PORTSC1 |= PORTSC_PORT_POWER;
 
 	/* Reset controller before set host mode */
 	UH2_USBCMD |= UCMD_RESET;
-	while (UH2_USBCMD & UCMD_RESET);
+	while (UH2_USBCMD & UCMD_RESET) ;
 
 	msleep(100);
 }
@@ -582,13 +582,13 @@ static void otg_set_utmi_xcvr(void)
 	while (UOG_USBCMD & UCMD_RUN_STOP);
 
 	UOG_USBCMD |= UCMD_RESET;
-	while ((UOG_USBCMD)&(UCMD_RESET));
+	while ((UOG_USBCMD) & (UCMD_RESET));
 
-	USBCTRL &= ~UCTRL_OCE;        /* Disable OverCurrent signal */
-	USBCTRL &= ~UCTRL_PP;         /* USBOTG_PWR low active */
-	USBCTRL &= ~UCTRL_OCPOL;      /* OverCurrent Polarity is Low Active */
-	USBCTRL &= ~UCTRL_OPM;        /* OTG Power Mask */
-	USBCTRL |= UCTRL_OWIE; 	      /* ULPI intr enable */
+	USBCTRL &= ~UCTRL_OCE;	/* Disable OverCurrent signal */
+	USBCTRL &= ~UCTRL_PP;	/* USBOTG_PWR low active */
+	USBCTRL &= ~UCTRL_OCPOL;	/* OverCurrent Polarity is Low Active */
+	USBCTRL &= ~UCTRL_OPM;	/* OTG Power Mask */
+	USBCTRL |= UCTRL_OWIE;	/* ULPI intr enable */
 
 	/* set UTMI xcvr */
 	tmp = UOG_PORTSC1 & ~PORTSC_PTS_MASK;
@@ -604,8 +604,12 @@ static void otg_set_utmi_xcvr(void)
 	/* need to reset the controller here so that the ID pin
 	 * is correctly detected.
 	 */
+	/* Stop then Reset */
+	UOG_USBCMD &= ~UCMD_RUN_STOP;
+	while (UOG_USBCMD & UCMD_RUN_STOP);
+
 	UOG_USBCMD |= UCMD_RESET;
-	while ((UOG_USBCMD)&(UCMD_RESET));
+	while ((UOG_USBCMD) & (UCMD_RESET));
 
 	/* allow controller to reset, and leave time for
 	 * the ULPI transceiver to reset too.

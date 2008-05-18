@@ -24,6 +24,7 @@
 
 #include "iomux.h"
 #include "sdma_script_code.h"
+#include "board-mx35_3stack.h"
 
 extern void gpio_spdif_active(void);
 
@@ -472,6 +473,27 @@ static inline void mxc_init_spdif(void)
 	platform_device_register(&mxc_alsa_spdif_device);
 }
 
+static struct mxc_audio_platform_data mxc_audio_data;
+
+static struct platform_device mxc_alsa_device = {
+	.name = "ak4647-imx-3stack-audio",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_audio_data,
+		},
+
+};
+
+static void mxc_init_audio(void)
+{
+	mxc_audio_data.ssi_num = 1;
+	mxc_audio_data.src_port = 1;
+	mxc_audio_data.ext_port = 4;
+	mxc_audio_data.intr_id_hp = MXC_PSEUDO_IRQ_HEADPHONE;
+	platform_device_register(&mxc_alsa_device);
+}
+
 static int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
@@ -481,6 +503,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_rtc();
 	mxc_init_dma();
 	mxc_init_spdif();
+	mxc_init_audio();
 
 	/* SPBA configuration for SSI2 - SDMA and MCU are set */
 	spba_take_ownership(SPBA_SSI2, SPBA_MASTER_C | SPBA_MASTER_A);

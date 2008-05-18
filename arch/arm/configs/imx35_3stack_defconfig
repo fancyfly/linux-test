@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Tue May  6 21:11:57 2008
+# Sun May 18 15:25:43 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -952,7 +952,72 @@ CONFIG_LOGO_LINUX_CLUT224=y
 #
 # Sound
 #
-# CONFIG_SOUND is not set
+CONFIG_SOUND=y
+
+#
+# Advanced Linux Sound Architecture
+#
+CONFIG_SND=y
+CONFIG_SND_TIMER=y
+CONFIG_SND_PCM=y
+# CONFIG_SND_SEQUENCER is not set
+CONFIG_SND_OSSEMUL=y
+CONFIG_SND_MIXER_OSS=y
+CONFIG_SND_PCM_OSS=y
+CONFIG_SND_PCM_OSS_PLUGINS=y
+# CONFIG_SND_DYNAMIC_MINORS is not set
+CONFIG_SND_SUPPORT_OLD_API=y
+CONFIG_SND_VERBOSE_PROCFS=y
+# CONFIG_SND_VERBOSE_PRINTK is not set
+# CONFIG_SND_DEBUG is not set
+
+#
+# Generic devices
+#
+# CONFIG_SND_DUMMY is not set
+# CONFIG_SND_MTPAV is not set
+# CONFIG_SND_SERIAL_U16550 is not set
+# CONFIG_SND_MPU401 is not set
+
+#
+# ALSA ARM devices
+#
+# CONFIG_SND_MXC_SPDIF is not set
+
+#
+# SPI devices
+#
+
+#
+# USB devices
+#
+# CONFIG_SND_USB_AUDIO is not set
+# CONFIG_SND_USB_CAIAQ is not set
+
+#
+# PCMCIA devices
+#
+# CONFIG_SND_VXPOCKET is not set
+# CONFIG_SND_PDAUDIOCF is not set
+
+#
+# System on Chip audio support
+#
+CONFIG_SND_SOC=y
+
+#
+# SoC Audio support for SuperH
+#
+CONFIG_SND_MXC_SOC=y
+CONFIG_SND_MXC_SOC_SSI=y
+# CONFIG_SND_MXC_SOC_IRAM is not set
+# CONFIG_SND_SOC_IMX_3STACK_WM8350 is not set
+CONFIG_SND_SOC_IMX_3STACK_AK4647=y
+
+#
+# Open Sound System
+#
+# CONFIG_SOUND_PRIME is not set
 CONFIG_HID_SUPPORT=y
 CONFIG_HID=m
 # CONFIG_HID_DEBUG is not set
@@ -1113,6 +1178,7 @@ CONFIG_MMC_BLOCK_BOUNCE=y
 # CONFIG_MMC_SPI is not set
 # CONFIG_MMC_MXC is not set
 CONFIG_MMC_IMX_ESDHCI=m
+# CONFIG_MMC_IMX_ESDHCI_PIO_MODE is not set
 # CONFIG_NEW_LEDS is not set
 CONFIG_RTC_LIB=y
 CONFIG_RTC_CLASS=y

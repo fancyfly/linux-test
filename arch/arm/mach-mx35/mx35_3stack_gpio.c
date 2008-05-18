@@ -733,3 +733,26 @@ void gpio_spdif_inactive(void)
 }
 
 EXPORT_SYMBOL(gpio_spdif_inactive);
+
+/*!
+ * This function activates DAM ports 3 to enable
+ * audio I/O.
+ */
+void gpio_activate_audio_ports(void)
+{
+	unsigned int pad_val;
+
+	mxc_request_iomux(MX35_PIN_STXD4, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_SRXD4, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_SCK4, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_STXFS4, MUX_CONFIG_FUNC);
+
+	pad_val = PAD_CTL_HYS_SCHMITZ | PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+	    PAD_CTL_PUE_PUD;
+	mxc_iomux_set_pad(MX35_PIN_STXD4, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_SRXD4, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_SCK4, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_STXFS4, pad_val);
+}
+
+EXPORT_SYMBOL(gpio_activate_audio_ports);

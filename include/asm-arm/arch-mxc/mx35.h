@@ -70,6 +70,17 @@
 #define IRAM_BASE_ADDR_VIRT	0xF8400000
 #define IRAM_SIZE		SZ_128K
 
+#ifndef CONFIG_SDMA_IRAM
+#define CONFIG_SDMA_IRAM_SIZE 0
+#endif
+#ifdef CONFIG_SND_MXC_SOC_IRAM
+#define SND_RAM_SIZE 0x3000
+#else
+#define SND_RAM_SIZE 0
+#endif
+
+#define SND_RAM_BASE_ADDR       (IRAM_BASE_ADDR + CONFIG_SDMA_IRAM_SIZE)
+
 /*
  * L2CC
  */

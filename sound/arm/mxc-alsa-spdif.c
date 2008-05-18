@@ -54,6 +54,15 @@
 #include <sound/control.h>
 
 #define MXC_SPDIF_NAME "MXC_SPDIF"
+static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;
+static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;
+static int enable[SNDRV_CARDS] = SNDRV_DEFAULT_ENABLE;
+module_param_array(index, int, NULL, 0444);
+MODULE_PARM_DESC(index, "Index value for spdif sound card.");
+module_param_array(id, charp, NULL, 0444);
+MODULE_PARM_DESC(id, "ID string for spdif sound card.");
+module_param_array(enable, bool, NULL, 0444);
+MODULE_PARM_DESC(enable, "Enable spdif sound card.");
 
 #define SPDIF_MAX_BUF_SIZE      (32*1024)
 #define SPDIF_DMA_BUF_SIZE	(8*1024)
@@ -2057,6 +2066,7 @@ static int mxc_alsa_spdif_probe(struct platform_device
 				*pdev)
 {
 	int err, idx;
+	static int dev;
 	struct snd_card *card;
 	struct mxc_spdif_device *chip;
 	struct resource *res;
@@ -2067,8 +2077,15 @@ static int mxc_alsa_spdif_probe(struct platform_device
 	if (!res)
 		return -ENOENT;
 
+	if (dev >= SNDRV_CARDS)
+		return -ENODEV;
+	if (!enable[dev]) {
+		dev++;
+		return -ENOENT;
+	}
+
 	/* register the soundcard */
-	card = snd_card_new(SNDRV_DEFAULT_IDX1, "MXC SPDIF", THIS_MODULE,
+	card = snd_card_new(index[dev], id[dev], THIS_MODULE,
 			    sizeof(struct mxc_spdif_device));
 	if (card == NULL)
 		return -ENOMEM;
@@ -2118,8 +2135,7 @@ static int mxc_alsa_spdif_probe(struct platform_device
 	/* disable all the interrupts */
 	spdif_intr_enable(0xffffff, 0);
 	/* spdif interrupt register and disable */
-	if (request_irq(MXC_INT_SPDIF, spdif_isr, 0, "spdif",
-			chip->card->dev)) {
+	if (request_irq(MXC_INT_SPDIF, spdif_isr, 0, "spdif", chip->card->dev)) {
 		pr_err("MXC spdif: failed to request irq\n");
 		err = -EBUSY;
 		goto nodev;

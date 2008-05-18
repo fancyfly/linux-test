@@ -22,4 +22,5 @@ obj-$(CONFIG_SND_MXC_PMIC)	+= snd-mxc-alsa.o
 snd-mxc-alsa-objs		:= mxc-alsa-pmic.o mxc-alsa-mixer.o
 
 CFLGS_mxc_alsa_spdif.o = -I$(TOPDIR)/drivers/mxc
-obj-$(CONFIG_SND_MXC_SPDIF)	+= mxc-alsa-spdif.o
+obj-$(CONFIG_SND_MXC_SPDIF)    += snd-spdif.o
+snd-spdif-objs                 := mxc-alsa-spdif.o

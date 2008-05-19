@@ -288,6 +288,10 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	 .addr = 0x30,
 	 .platform_data = (void *)&camera_data,
 	 },
+	{
+	 .driver_name = "ak4647-i2c",
+	 .addr = 0x12,
+	 },
 };
 
 #if  defined(CONFIG_SMSC911X) || defined(CONFIG_SMSC911X_MODULE)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -303,6 +303,20 @@ void mxc_pm_lowpower(int mode)
 		/* Disable timer interrupt */
 		disable_irq(INT_GPT);
 		enable_flag = 1;
+
+		/* Enable Well Bias and set VSTBY
+		 * VSTBY pin will be asserted during SR mode. This asks the
+		 * PM IC to set the core voltage to the standby voltage
+		 * Must clear the MXC_CCM_CCMR_SBYCS bit as well           */
+		mxc_ccm_modify_reg(MXC_CCM_CCMR,
+				   MXC_CCM_CCMR_WBEN | MXC_CCM_CCMR_VSTBY |
+					MXC_CCM_CCMR_SBYCS,
+				   MXC_CCM_CCMR_WBEN | MXC_CCM_CCMR_VSTBY);
+
+		mxc_ccm_modify_reg(MXC_CCM_CCMR,
+				   MXC_CCM_CCMR_LPM_MASK,
+				   0x2 << MXC_CCM_CCMR_LPM_OFFSET);
+
 		break;
 
 	case DSM_MODE:
@@ -329,7 +343,8 @@ void mxc_pm_lowpower(int mode)
 	__raw_writel(reg, MXC_CCM_CCMR);
 	/* Executing CP15 (Wait-for-Interrupt) Instruction */
 	/* wait for interrupt */
-	__asm__ __volatile__("mcr	p15, 0, r1, c7, c0, 4\n"
+	__asm__ __volatile__("mov r1, #0x0\n"
+			     "mcr p15, 0, r1, c7, c0, 4\n"
 			     "nop\n" "nop\n" "nop\n" "nop\n" "nop\n"::);
 
 	if (enable_flag) {

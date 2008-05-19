@@ -255,12 +255,11 @@ static void mcu_event_handler(struct work_struct *work)
 		goto no_new_events;
 	}
 
-	for (i = 0; flag1 && (i < MCU_INT_KEYPAD); i++, flag1 >>= 1)
+	for (i = 0; flag1 && (i < MCU_INT_RTC); i++, flag1 >>= 1)
 		if (flag1 & 1)
 			set_bit(i, &pseudo_irq_pending);
 
-	for (i = MCU_INT_KEYPAD; flag2 && (i <= MCU_INT_TS_ADC);
-	     i++, flag2 >>= 1)
+	for (i = MCU_INT_RTC; flag2 && (i <= MCU_INT_KEYPAD); i++, flag2 >>= 1)
 		if (flag2 & 1)
 			set_bit(i, &pseudo_irq_pending);
       no_new_events:
@@ -273,8 +272,8 @@ static void mcu_state_handler(struct work_struct *work)
 {
 	int err, i;
 	unsigned int event1, event2;
-	event1 = pseudo_irq_enable & ((1 << MCU_INT_KEYPAD) - 1);
-	event2 = pseudo_irq_enable >> MCU_INT_KEYPAD;
+	event1 = pseudo_irq_enable & ((1 << MCU_INT_RTC) - 1);
+	event2 = pseudo_irq_enable >> MCU_INT_RTC;
 
 	for (i = 0; i < 3; i++) {
 		err = pmic_write_reg(REG_MCU_INT_ENABLE_1, event1, 0xFF);
@@ -331,8 +330,8 @@ static int mxc_pseudo_irq_suspend(struct platform_device *dev,
 	if (!pseudo_irq_wakeup)
 		return 0;
 
-	event1 = pseudo_irq_wakeup & ((1 << MCU_INT_KEYPAD) - 1);
-	event2 = pseudo_irq_wakeup >> MCU_INT_KEYPAD;
+	event1 = pseudo_irq_wakeup & ((1 << MCU_INT_RTC) - 1);
+	event2 = pseudo_irq_wakeup >> MCU_INT_RTC;
 
 	for (i = 0; i < 3; i++) {
 		err = pmic_write_reg(REG_MCU_INT_ENABLE_1, event1, 0xFF);

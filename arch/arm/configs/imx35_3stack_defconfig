@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Sun May 18 17:16:34 2008
+# Tue May 20 02:33:31 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1318,6 +1318,11 @@ CONFIG_MXC_HWEVENT=y
 #
 # MXC VPU(Video Processing Unit) support
 #
+
+#
+# MXC Asynchronous Sample Rate Converter support
+#
+CONFIG_MXC_ASRC=y
 
 #
 # File systems

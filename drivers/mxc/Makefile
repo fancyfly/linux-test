@@ -11,3 +11,4 @@ obj-$(CONFIG_MXC_HMP4E)         	+= hmp4e/
 obj-y                                   += security/
 obj-$(CONFIG_MXC_VPU)                   += vpu/
 obj-$(CONFIG_MXC_HWEVENT)               += hw_event/
+obj-$(CONFIG_MXC_ASRC)                 += asrc/

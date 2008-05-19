@@ -29,6 +29,14 @@
 #define MXC_SSI_TXFIFO_WML        0x4
 #define MXC_SSI_RXFIFO_WML        0x6
 
+#define MXC_ASRC_FIFO_WML	0x40
+#define MXC_ASRCA_RX_REG	0x60
+#define MXC_ASRCA_TX_REG	0x64
+#define MXC_ASRCB_RX_REG	0x68
+#define MXC_ASRCB_TX_REG	0x6C
+#define MXC_ASRCC_RX_REG        0x70
+#define MXC_ASRCC_TX_REG        0x74
+
 struct mxc_sdma_info_entry_s {
 	mxc_dma_device_t device;
 	mxc_sdma_channel_params_t *chnl_info;
@@ -507,6 +515,174 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_tx1_params = {
 	.chnl_priority = 2,
 };
 
+static mxc_sdma_channel_params_t mxc_sdma_asrca_16bit_rx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCA_RX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_ASRC_DMA1,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCA_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrca_16bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCA_TX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_ASRC_DMA4,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCA_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrcb_16bit_rx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCB_RX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_ASRC_DMA2,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCB_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrcb_16bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCB_TX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_ASRC_DMA5,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCB_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrcc_16bit_rx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML * 3,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCC_RX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_ASRC_DMA3,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCC_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrcc_16bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML * 3,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCC_TX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_ASRC_DMA6,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCC_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrca_32bit_rx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCA_RX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_ASRC_DMA1,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCA_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrca_32bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCA_TX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_ASRC_DMA4,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCA_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrcb_32bit_rx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCB_RX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_ASRC_DMA2,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCB_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrcb_32bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCB_TX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_ASRC_DMA5,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCB_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrcc_32bit_rx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML * 3,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCC_RX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_ASRC_DMA3,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCC_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_asrcc_32bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ASRC_FIFO_WML * 3,
+			.per_address = ASRC_BASE_ADDR + MXC_ASRCC_TX_REG,
+			.peripheral_type = ASRC,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_ASRC_DMA6,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ASRCC_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
 static struct mxc_sdma_info_entry_s mxc_sdma_active_dma_info[] = {
 	{MXC_DMA_UART1_RX, &mxc_sdma_uart1_rx_params},
 	{MXC_DMA_UART1_TX, &mxc_sdma_uart1_tx_params},
@@ -541,6 +717,18 @@ static struct mxc_sdma_info_entry_s mxc_sdma_active_dma_info[] = {
 	{MXC_DMA_SSI2_16BIT_TX1, &mxc_sdma_ssi2_16bit_tx1_params},
 	{MXC_DMA_SSI2_24BIT_RX1, &mxc_sdma_ssi2_24bit_rx1_params},
 	{MXC_DMA_SSI2_24BIT_TX1, &mxc_sdma_ssi2_24bit_tx1_params},
+	{MXC_DMA_ASRC_16BIT_A_RX, &mxc_sdma_asrca_16bit_rx_params},
+	{MXC_DMA_ASRC_16BIT_A_TX, &mxc_sdma_asrca_16bit_tx_params},
+	{MXC_DMA_ASRC_16BIT_B_RX, &mxc_sdma_asrcb_16bit_rx_params},
+	{MXC_DMA_ASRC_16BIT_B_TX, &mxc_sdma_asrcb_16bit_tx_params},
+	{MXC_DMA_ASRC_16BIT_C_RX, &mxc_sdma_asrcc_16bit_rx_params},
+	{MXC_DMA_ASRC_16BIT_C_TX, &mxc_sdma_asrcc_16bit_tx_params},
+	{MXC_DMA_ASRC_32BIT_A_RX, &mxc_sdma_asrca_32bit_rx_params},
+	{MXC_DMA_ASRC_32BIT_A_TX, &mxc_sdma_asrca_32bit_tx_params},
+	{MXC_DMA_ASRC_32BIT_B_RX, &mxc_sdma_asrcb_32bit_rx_params},
+	{MXC_DMA_ASRC_32BIT_B_TX, &mxc_sdma_asrcb_32bit_tx_params},
+	{MXC_DMA_ASRC_32BIT_C_RX, &mxc_sdma_asrcc_32bit_rx_params},
+	{MXC_DMA_ASRC_32BIT_C_TX, &mxc_sdma_asrcc_32bit_tx_params},
 	{MXC_DMA_MEMORY, &mxc_sdma_memory_params},
 };
 

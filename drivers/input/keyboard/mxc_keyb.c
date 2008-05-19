@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -622,6 +622,16 @@ static irqreturn_t mxc_kpp_interrupt(int irq, void *dev_id)
 		 */
 		reg_val &= ~KBD_STAT_KDIE;
 		__raw_writew(reg_val, KPSR);
+#ifdef CONFIG_PM
+	} else if (reg_val & KBD_STAT_KPKR) {
+		/*
+		 * Disable key release(KRIE status bit) interrupt - only caused
+		 * by _suspend setting the bit IF a key is down while the system
+		 * is being suspended.
+		 */
+		reg_val &= ~KBD_STAT_KRIE;
+		__raw_writew(reg_val, KPSR);
+#endif
 	} else {
 		/* spurious interrupt */
 		return IRQ_RETVAL(0);
@@ -673,9 +683,18 @@ static void mxc_kpp_close(struct input_dev *dev)
  */
 static int mxc_kpp_suspend(struct platform_device *pdev, pm_message_t state)
 {
+	unsigned short reg_val;
+
 	del_timer(&kpp_dev.poll_timer);
 
 	if (device_may_wakeup(&pdev->dev)) {
+		reg_val = __raw_readw(KPSR);
+		if ((reg_val & KBD_STAT_KDIE) == 0) {
+			/* if no depress interrupt
+			   enable the release interrupt */
+			reg_val |= KBD_STAT_KRIE;
+			__raw_writew(reg_val, KPSR);
+		}
 		enable_irq_wake(keypad->irq);
 	} else {
 		disable_irq(keypad->irq);
@@ -700,6 +719,7 @@ static int mxc_kpp_suspend(struct platform_device *pdev, pm_message_t state)
 static int mxc_kpp_resume(struct platform_device *pdev)
 {
 	if (device_may_wakeup(&pdev->dev)) {
+		/* the irq routine already cleared KRIE if it was set */
 		disable_irq_wake(keypad->irq);
 	} else {
 		gpio_keypad_active();

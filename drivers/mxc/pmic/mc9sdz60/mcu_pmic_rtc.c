@@ -36,11 +36,14 @@
  * Global variables
  */
 static int pmic_rtc_major;
+static void rtc_alarm_handler(struct work_struct *work);
+static DECLARE_WORK(rtc_alarm_event, rtc_alarm_handler);
 static void callback_alarm_asynchronous(void *);
 static void callback_alarm_synchronous(void *);
 static unsigned int pmic_rtc_poll(struct file *file, poll_table *wait);
 static DECLARE_WAIT_QUEUE_HEAD(queue_alarm);
 static DECLARE_WAIT_QUEUE_HEAD(pmic_rtc_wait);
+static pmic_event_callback_t rtc_event_callback;
 static pmic_event_callback_t alarm_callback;
 static pmic_event_callback_t rtc_callback;
 static int pmic_rtc_detected;
@@ -49,9 +52,42 @@ static struct class *pmic_rtc_class;
 struct rtc_time alarm_greg_time;
 static DECLARE_MUTEX(mutex);
 
+static DECLARE_MUTEX(event_mutex);
+struct pmic_rtc_data {
+	int irq;
+	int rtc_event_subscribed;
+};
+static struct pmic_rtc_data mcu_pmic_rtc_data;
+
 /*
  * Real Time Clock Pmic API
  */
+
+static int mcu_pmic_rtc_event_subscribe(int event,
+					pmic_event_callback_t callback)
+{
+	down_interruptible(&event_mutex);
+	rtc_event_callback.func = callback.func;
+	up(&event_mutex);
+	return 0;
+}
+
+static int mcu_pmic_rtc_event_unsubscribe(int event,
+					  pmic_event_callback_t callback)
+{
+	down_interruptible(&event_mutex);
+	rtc_event_callback.func = NULL;
+	up(&event_mutex);
+	return 0;
+}
+
+static void rtc_alarm_handler(struct work_struct *work)
+{
+	down_interruptible(&event_mutex);
+	if (NULL != rtc_event_callback.func)
+		rtc_event_callback.func(rtc_event_callback.param);
+	up(&event_mutex);
+}
 
 /*!
  * This is the callback function called on TSI Pmic event, used in asynchronous
@@ -92,13 +128,14 @@ PMIC_STATUS pmic_rtc_wait_alarm(void)
 	DEFINE_WAIT(wait);
 	alarm_callback.func = callback_alarm_synchronous;
 	alarm_callback.param = NULL;
-	CHECK_ERROR(pmic_event_subscribe(EVENT_RTC, alarm_callback));
+	CHECK_ERROR(mcu_pmic_rtc_event_subscribe(EVENT_RTC, alarm_callback));
 	prepare_to_wait(&queue_alarm, &wait, TASK_UNINTERRUPTIBLE);
 	schedule();
 	finish_wait(&queue_alarm, &wait);
-	CHECK_ERROR(pmic_event_unsubscribe(EVENT_RTC, alarm_callback));
+	CHECK_ERROR(mcu_pmic_rtc_event_unsubscribe(EVENT_RTC, alarm_callback));
 	return PMIC_SUCCESS;
 }
+
 EXPORT_SYMBOL(pmic_rtc_wait_alarm);
 
 /*!
@@ -144,6 +181,7 @@ PMIC_STATUS pmic_rtc_set_time(struct timeval *pmic_time)
 
 	return PMIC_SUCCESS;
 }
+
 EXPORT_SYMBOL(pmic_rtc_set_time);
 
 /*!
@@ -178,13 +216,14 @@ PMIC_STATUS pmic_rtc_get_time(struct timeval *pmic_time)
 	greg_time.tm_mon = BCD2BIN(reg_val);
 
 	CHECK_ERROR(pmic_read_reg(REG_MCU_YEAR, &reg_val, 0xff));
-	greg_time.tm_year = BCD2BIN(reg_val);
+	greg_time.tm_year = BCD2BIN(reg_val) + 70;
 
 	rtc_tm_to_time(&greg_time, &time);
 	pmic_time->tv_sec = time;
 
 	return PMIC_SUCCESS;
 }
+
 EXPORT_SYMBOL(pmic_rtc_get_time);
 
 /*!
@@ -222,6 +261,7 @@ PMIC_STATUS pmic_rtc_set_time_alarm(struct timeval *pmic_time)
 
 	return PMIC_SUCCESS;
 }
+
 EXPORT_SYMBOL(pmic_rtc_set_time_alarm);
 
 /*!
@@ -253,6 +293,7 @@ PMIC_STATUS pmic_rtc_get_time_alarm(struct timeval *pmic_time)
 	pmic_time->tv_sec = time;
 	return PMIC_SUCCESS;
 }
+
 EXPORT_SYMBOL(pmic_rtc_get_time_alarm);
 
 /*!
@@ -281,9 +322,11 @@ PMIC_STATUS pmic_rtc_event(t_rtc_int event, void *callback, bool sub)
 		return PMIC_PARAMETER_ERROR;
 	}
 	if (sub)
-		CHECK_ERROR(pmic_event_subscribe(rtc_event, rtc_callback));
+		CHECK_ERROR(mcu_pmic_rtc_event_subscribe
+			    (rtc_event, rtc_callback));
 	else
-		CHECK_ERROR(pmic_event_unsubscribe(rtc_event, rtc_callback));
+		CHECK_ERROR(mcu_pmic_rtc_event_unsubscribe
+			    (rtc_event, rtc_callback));
 
 	return PMIC_SUCCESS;
 }
@@ -301,6 +344,7 @@ PMIC_STATUS pmic_rtc_event_sub(t_rtc_int event, void *callback)
 	CHECK_ERROR(pmic_rtc_event(event, callback, true));
 	return PMIC_SUCCESS;
 }
+
 EXPORT_SYMBOL(pmic_rtc_event_sub);
 
 /*!
@@ -316,6 +360,7 @@ PMIC_STATUS pmic_rtc_event_unsub(t_rtc_int event, void *callback)
 	CHECK_ERROR(pmic_rtc_event(event, callback, false));
 	return PMIC_SUCCESS;
 }
+
 EXPORT_SYMBOL(pmic_rtc_event_unsub);
 
 /* Called without the kernel lock - fine */
@@ -397,12 +442,14 @@ static int pmic_rtc_ioctl(struct inode *inode, struct file *file,
 	case PMIC_RTC_ALARM_REGISTER:
 		alarm_callback.func = callback_alarm_asynchronous;
 		alarm_callback.param = NULL;
-		CHECK_ERROR(pmic_event_subscribe(EVENT_RTC, alarm_callback));
+		CHECK_ERROR(mcu_pmic_rtc_event_subscribe
+			    (EVENT_RTC, alarm_callback));
 		break;
 	case PMIC_RTC_ALARM_UNREGISTER:
 		alarm_callback.func = callback_alarm_asynchronous;
 		alarm_callback.param = NULL;
-		CHECK_ERROR(pmic_event_unsubscribe(EVENT_RTC, alarm_callback));
+		CHECK_ERROR(mcu_pmic_rtc_event_unsubscribe
+			    (EVENT_RTC, alarm_callback));
 		pmic_rtc_done = false;
 		break;
 	default:
@@ -492,13 +539,20 @@ int pmic_rtc_loaded(void)
 }
 EXPORT_SYMBOL(pmic_rtc_loaded);
 
-
 static int pmic_rtc_remove(struct platform_device *pdev)
 {
 	class_device_destroy(pmic_rtc_class, MKDEV(pmic_rtc_major, 0));
 	class_destroy(pmic_rtc_class);
 	unregister_chrdev(pmic_rtc_major, MCU_PMIC_RTC_NAME);
+	free_irq(mcu_pmic_rtc_data.irq, pdev);
 	return 0;
+}
+
+static irqreturn_t mcu_pmic_rtc_alarm_handler(int irq, void *dev_id)
+{
+	schedule_work(&rtc_alarm_event);
+	return IRQ_HANDLED;
+
 }
 
 static int pmic_rtc_probe(struct platform_device *pdev)
@@ -523,6 +577,15 @@ static int pmic_rtc_probe(struct platform_device *pdev)
 	if (IS_ERR(temp_class)) {
 		ret = PTR_ERR(temp_class);
 		goto err_out2;
+	}
+	mcu_pmic_rtc_data.irq = platform_get_irq(pdev, 0);
+	if (mcu_pmic_rtc_data.irq >= 0) {
+		if (request_irq(mcu_pmic_rtc_data.irq,
+				mcu_pmic_rtc_alarm_handler, IRQF_SHARED,
+				pdev->name, pdev) < 0) {
+			dev_warn(&pdev->dev, "interrupt not available.\n");
+			mcu_pmic_rtc_data.irq = -1;
+		}
 	}
 
 	pmic_rtc_detected = 1;
@@ -564,7 +627,7 @@ static void __exit pmic_rtc_exit(void)
  * Module entry points
  */
 
-subsys_initcall(pmic_rtc_init);
+module_init(pmic_rtc_init);
 module_exit(pmic_rtc_exit);
 
 MODULE_DESCRIPTION("Pmic_rtc driver");

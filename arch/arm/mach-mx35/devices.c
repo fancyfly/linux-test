@@ -110,6 +110,32 @@ static inline void mxc_init_rtc(void)
 }
 #endif
 
+#if defined(CONFIG_MXC_MC9SDZ60_RTC) || defined(CONFIG_MXC_MC9SDZ60_RTC_MODULE)
+static struct resource pmic_rtc_resources[] = {
+	{
+	 .start = MXC_PSEUDO_IRQ_RTC,
+	 .flags = IORESOURCE_IRQ,
+	 },
+};
+static struct platform_device pmic_rtc_device = {
+	.name = "pmic_rtc",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		},
+	.num_resources = ARRAY_SIZE(pmic_rtc_resources),
+	.resource = pmic_rtc_resources,
+};
+static void pmic_init_rtc(void)
+{
+	platform_device_register(&pmic_rtc_device);
+}
+#else
+static void pmic_init_rtc(void)
+{
+}
+#endif
+
 #if defined(CONFIG_MXC_WATCHDOG) || defined(CONFIG_MXC_WATCHDOG_MODULE)
 static struct resource wdt_resources[] = {
 	{
@@ -528,6 +554,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_ipu();
 	mxc_init_spi();
 	mxc_init_i2c();
+	pmic_init_rtc();
 	mxc_init_rtc();
 	mxc_init_dma();
 	mxc_init_spdif();

@@ -59,10 +59,6 @@ static struct platform_device power_ldm = {
 	.name = "pmic_power",
 	.id = 1,
 };
-static struct platform_device rtc_ldm = {
-	.name = "pmic_rtc",
-	.id = 1,
-};
 
 /* map reg names (enum pmic_reg in pmic_external.h) to real addr*/
 const static u8 mcu_pmic_reg_addr_table[] = {
@@ -371,7 +367,6 @@ extern void gpio_pmic_active(void);
  */
 static void pmic_pdev_register(void)
 {
-	platform_device_register(&rtc_ldm);
 	platform_device_register(&power_ldm);
 	reg_max8660_probe();
 }
@@ -382,7 +377,6 @@ static void pmic_pdev_register(void)
  */
 static void pmic_pdev_unregister(void)
 {
-	platform_device_unregister(&rtc_ldm);
 }
 
 /*!

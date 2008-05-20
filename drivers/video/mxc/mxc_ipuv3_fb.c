@@ -239,9 +239,8 @@ static int mxcfb_set_par(struct fb_info *fbi)
 		fbi->mode =
 		    (struct fb_videomode *)fb_match_mode(&fbi->var,
 							 &fbi->modelist);
+		ipu_disp_set_window_pos(mxc_fbi->ipu_ch, 0, 0);
 	}
-
-	ipu_disp_set_window_pos(mxc_fbi->ipu_ch, 0, 0);
 
 	mxc_fbi->cur_ipu_buf = 0;
 	sema_init(&mxc_fbi->flip_sem, 1);

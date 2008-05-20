@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -120,7 +120,8 @@ struct rtc_plat_data {
  * @ingroup RTC
  */
 
-#if defined (CONFIG_MXC_PMIC_SC55112_RTC) || defined (CONFIG_MXC_MC13783_RTC)
+#if defined(CONFIG_MXC_PMIC_SC55112_RTC) || defined(CONFIG_MXC_MC13783_RTC) ||
+defined(CONFIG_MXC_MC9SDZ60_RTC)
 #include <asm/arch/pmic_rtc.h>
 #else
 #define pmic_rtc_get_time(args)	MXC_EXTERNAL_RTC_NONE
@@ -807,7 +808,7 @@ static void __exit mxc_rtc_exit(void)
 
 }
 
-module_init(mxc_rtc_init);
+device_initcall_sync(mxc_rtc_init);
 module_exit(mxc_rtc_exit);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");

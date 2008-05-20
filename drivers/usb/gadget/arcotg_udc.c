@@ -346,8 +346,11 @@ static int dr_controller_setup(struct arcotg_udc *udc)
 
 	usb_slave_regs->portsc1 = cpu_to_le32(portctrl);
 
-	/* AHB burst INCR mode */
-	usb_slave_regs->sbuscfg = (usb_slave_regs->sbuscfg & (~0x07));
+	/* AHB burst INCR mode if imx35 */
+	if (cpu_is_mx35()) {
+		usb_slave_regs->sbuscfg = (usb_slave_regs->sbuscfg & (~0x07));
+	}
+
 	fsl_platform_set_vbus_power(pdata, 0);
 
 	return 0;

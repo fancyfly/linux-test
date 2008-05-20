@@ -588,7 +588,7 @@ static void otg_set_utmi_xcvr(void)
 	USBCTRL &= ~UCTRL_PP;	/* USBOTG_PWR low active */
 	USBCTRL &= ~UCTRL_OCPOL;	/* OverCurrent Polarity is Low Active */
 	USBCTRL &= ~UCTRL_OPM;	/* OTG Power Mask */
-	USBCTRL |= UCTRL_OWIE;	/* ULPI intr enable */
+	USBCTRL |= UCTRL_OWIE;	/* OTG Wakeup Intr Enable */
 
 	/* set UTMI xcvr */
 	tmp = UOG_PORTSC1 & ~PORTSC_PTS_MASK;

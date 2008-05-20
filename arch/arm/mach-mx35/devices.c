@@ -302,7 +302,6 @@ static struct mxc_i2c_platform_data mxci2c1_data = {
 };
 #endif
 
-#ifdef CONFIG_I2C_MXC_SELECT2
 /*!
  * Resource definition for the I2C2
  */
@@ -323,7 +322,6 @@ static struct resource mxci2c2_resources[] = {
 static struct mxc_i2c_platform_data mxci2c2_data = {
 	.i2c_clk = 100000,
 };
-#endif
 
 #ifdef CONFIG_I2C_MXC_SELECT3
 /*!
@@ -361,9 +359,8 @@ static struct platform_device mxci2c_devices[] = {
 	 .num_resources = ARRAY_SIZE(mxci2c1_resources),
 	 .resource = mxci2c1_resources,},
 #endif
-#ifdef CONFIG_I2C_MXC_SELECT2
 	{
-	 .name = "mxc_i2c",
+	 .name = "mxc_i2c_slave",
 	 .id = 1,
 	 .dev = {
 		 .release = mxc_nop_release,
@@ -371,7 +368,6 @@ static struct platform_device mxci2c_devices[] = {
 		 },
 	 .num_resources = ARRAY_SIZE(mxci2c2_resources),
 	 .resource = mxci2c2_resources,},
-#endif
 #ifdef CONFIG_I2C_MXC_SELECT3
 	{
 	 .name = "mxc_i2c",

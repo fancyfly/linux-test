@@ -292,6 +292,12 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	 .driver_name = "ak4647-i2c",
 	 .addr = 0x12,
 	 },
+#if defined(CONFIG_I2C_SLAVE_CLIENT)
+	{
+	 .driver_name = "i2c-slave-client",
+	 .addr = 0x55,
+	 },
+#endif
 };
 
 #if  defined(CONFIG_SMSC911X) || defined(CONFIG_SMSC911X_MODULE)

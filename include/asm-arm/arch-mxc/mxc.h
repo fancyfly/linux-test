@@ -98,6 +98,11 @@ struct mxc_spdif_platform_data {
 	struct clk *spdif_core_clk;
 };
 
+struct mxc_asrc_platform_data {
+	struct clk *asrc_core_clk;
+	struct clk *asrc_audio_clk;
+};
+
 struct mxc_lcd_platform_data {
 	char *io_reg;
 	char *core_reg;

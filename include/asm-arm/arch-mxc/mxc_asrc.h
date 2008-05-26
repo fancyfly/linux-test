@@ -22,44 +22,19 @@
 #ifndef __MXC_ASRC_H__
 #define __MXC_ASRC_H__
 
-#include <asm/semaphore.h>
+#define ASRC_IOC_MAGIC	'C'
 
-#define ASRC_ASRCTR_REG 	0x00
-#define ASRC_ASRIER_REG 	0x04
-#define ASRC_ASRCNCR_REG 	0x0C
-#define ASRC_ASRCFG_REG 	0x10
-#define ASRC_ASRCSR_REG 	0x14
-#define ASRC_ASRCDR1_REG 	0x18
-#define ASRC_ASRCDR2_REG 	0x1C
-#define ASRC_ASRSTR_REG 	0x20
-#define ASRC_ASRRA_REG 		0x24
-#define ASRC_ASRRB_REG 		0x28
-#define ASRC_ASRRC_REG 		0x2C
-#define ASRC_ASRPM1_REG 	0x40
-#define ASRC_ASRPM2_REG 	0x44
-#define ASRC_ASRPM3_REG 	0x48
-#define ASRC_ASRPM4_REG 	0x4C
-#define ASRC_ASRPM5_REG 	0x50
-#define ASRC_ASRTFR1		0x54
-#define ASRC_ASRCCR_REG 	0x5C
-#define ASRC_ASRDIA_REG 	0x60
-#define ASRC_ASRDOA_REG 	0x64
-#define ASRC_ASRDIB_REG 	0x68
-#define ASRC_ASRDOB_REG 	0x6C
-#define ASRC_ASRDIC_REG 	0x70
-#define ASRC_ASRDOC_REG 	0x74
-#define ASRC_ASRIDRHA_REG 	0x80
-#define ASRC_ASRIDRLA_REG 	0x84
-#define ASRC_ASRIDRHB_REG 	0x88
-#define ASRC_ASRIDRLB_REG 	0x8C
-#define ASRC_ASRIDRHC_REG 	0x90
-#define ASRC_ASRIDRLC_REG 	0x94
-#define ASRC_ASR76K_REG 	0x98
-#define ASRC_ASR56K_REG 	0x9C
+#define ASRC_REQ_PAIR	_IOWR(ASRC_IOC_MAGIC, 0, struct asrc_req)
+#define ASRC_CONIFG_PAIR	_IOWR(ASRC_IOC_MAGIC, 1, struct asrc_config)
+#define ASRC_RELEASE_PAIR	_IOW(ASRC_IOC_MAGIC, 2, enum asrc_pair_index)
+#define ASRC_QUERYBUF	_IOWR(ASRC_IOC_MAGIC, 3, struct asrc_buffer)
+#define ASRC_Q_INBUF	_IOW(ASRC_IOC_MAGIC, 4, struct asrc_buffer)
+#define ASRC_DQ_INBUF	_IOW(ASRC_IOC_MAGIC, 5, struct asrc_buffer)
+#define ASRC_Q_OUTBUF	_IOW(ASRC_IOC_MAGIC, 6, struct asrc_buffer)
+#define ASRC_DQ_OUTBUF	_IOW(ASRC_IOC_MAGIC, 7, struct asrc_buffer)
+#define ASRC_START_CONV	_IOW(ASRC_IOC_MAGIC, 8, enum asrc_pair_index)
+#define ASRC_STOP_CONV	_IOW(ASRC_IOC_MAGIC, 9, enum asrc_pair_index)
 
-#define ASRC_DMA_BUFFER_NUM 8
-
-/*ASRC driver enum and architecture */
 enum asrc_pair_index {
 	ASRC_PAIR_A,
 	ASRC_PAIR_B,
@@ -96,7 +71,6 @@ enum asrc_outclk {
 
 struct asrc_config {
 	enum asrc_pair_index pair;
-	unsigned int frame_bits;
 	unsigned int channel_num;
 	unsigned int buffer_num;
 	unsigned int dma_buffer_size;
@@ -113,11 +87,6 @@ struct asrc_pair {
 	unsigned int active;
 };
 
-struct asrc_data {
-	struct asrc_pair asrc_pair[3];
-};
-
-/*Stream interface structure */
 struct asrc_req {
 	unsigned int chn_num;
 	enum asrc_pair_index index;
@@ -135,6 +104,43 @@ struct asrc_buffer {
 	unsigned int index;
 	unsigned int length;
 };
+
+#ifdef __KERNEL__
+
+#define ASRC_DMA_BUFFER_NUM 8
+
+#define ASRC_ASRCTR_REG 	0x00
+#define ASRC_ASRIER_REG 	0x04
+#define ASRC_ASRCNCR_REG 	0x0C
+#define ASRC_ASRCFG_REG 	0x10
+#define ASRC_ASRCSR_REG 	0x14
+#define ASRC_ASRCDR1_REG 	0x18
+#define ASRC_ASRCDR2_REG 	0x1C
+#define ASRC_ASRSTR_REG 	0x20
+#define ASRC_ASRRA_REG 		0x24
+#define ASRC_ASRRB_REG 		0x28
+#define ASRC_ASRRC_REG 		0x2C
+#define ASRC_ASRPM1_REG 	0x40
+#define ASRC_ASRPM2_REG 	0x44
+#define ASRC_ASRPM3_REG 	0x48
+#define ASRC_ASRPM4_REG 	0x4C
+#define ASRC_ASRPM5_REG 	0x50
+#define ASRC_ASRTFR1		0x54
+#define ASRC_ASRCCR_REG 	0x5C
+#define ASRC_ASRDIA_REG 	0x60
+#define ASRC_ASRDOA_REG 	0x64
+#define ASRC_ASRDIB_REG 	0x68
+#define ASRC_ASRDOB_REG 	0x6C
+#define ASRC_ASRDIC_REG 	0x70
+#define ASRC_ASRDOC_REG 	0x74
+#define ASRC_ASRIDRHA_REG 	0x80
+#define ASRC_ASRIDRLA_REG 	0x84
+#define ASRC_ASRIDRHB_REG 	0x88
+#define ASRC_ASRIDRLB_REG 	0x8C
+#define ASRC_ASRIDRHC_REG 	0x90
+#define ASRC_ASRIDRLC_REG 	0x94
+#define ASRC_ASR76K_REG 	0x98
+#define ASRC_ASR56K_REG 	0x9C
 
 struct dma_block {
 	unsigned int index;
@@ -168,6 +174,10 @@ struct asrc_pair_params {
 	struct semaphore busy_lock;
 };
 
+struct asrc_data {
+	struct asrc_pair asrc_pair[3];
+};
+
 char *asrc_pair_id[] = {
 	[0] = "ASRC RX PAIR A",
 	[1] = "ASRC TX PAIR A",
@@ -177,23 +187,12 @@ char *asrc_pair_id[] = {
 	[5] = "ASRC TX PAIR C",
 };
 
-#define ASRC_IOC_MAGIC	'C'
-
-#define ASRC_REQ_PAIR	_IOWR(ASRC_IOC_MAGIC, 0, struct asrc_req)
-#define ASRC_CONIFG_PAIR	_IOWR(ASRC_IOC_MAGIC, 1, struct asrc_config)
-#define ASRC_RELEASE_PAIR	_IOW(ASRC_IOC_MAGIC, 2, enum asrc_pair_index)
-#define ASRC_QUERYBUF	_IOWR(ASRC_IOC_MAGIC, 3, struct asrc_buffer)
-#define ASRC_Q_INBUF	_IOW(ASRC_IOC_MAGIC, 4, struct asrc_buffer)
-#define ASRC_DQ_INBUF	_IOW(ASRC_IOC_MAGIC, 5, struct asrc_buffer)
-#define ASRC_Q_OUTBUF	_IOW(ASRC_IOC_MAGIC, 6, struct asrc_buffer)
-#define ASRC_DQ_OUTBUF	_IOW(ASRC_IOC_MAGIC, 7, struct asrc_buffer)
-#define ASRC_START_CONV	_IOW(ASRC_IOC_MAGIC, 8, enum asrc_pair_index)
-#define ASRC_STOP_CONV	_IOW(ASRC_IOC_MAGIC, 9, enum asrc_pair_index)
-
 extern int asrc_req_pair(int chn_num, enum asrc_pair_index *index);
 extern void asrc_release_pair(enum asrc_pair_index index);
 extern int asrc_config_pair(struct asrc_config *config);
 extern void asrc_start_conv(enum asrc_pair_index index);
 extern void asrc_stop_conv(enum asrc_pair_index index);
+
+#endif				/* __kERNEL__ */
 
 #endif				/* __MXC_ASRC_H__ */

@@ -23,6 +23,7 @@
 #include <linux/platform_device.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/clk.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/ctype.h>
@@ -31,12 +32,12 @@
 #include <linux/types.h>
 #include <linux/version.h>
 #include <linux/interrupt.h>
-#include <asm/arch/dma.h>
-#include <asm/irq.h>
-#include <asm/memory.h>
 #include <linux/proc_fs.h>
 #include <linux/dma-mapping.h>
-#include "mxc_asrc.h"
+#include <asm/irq.h>
+#include <asm/memory.h>
+#include <asm/arch/dma.h>
+#include <asm/arch/mxc_asrc.h>
 
 static int asrc_major;
 static struct class *asrc_class;
@@ -109,6 +110,7 @@ static const unsigned char asrc_divider_table[] = {
 static struct asrc_data *g_asrc_data;
 static struct proc_dir_entry *proc_asrc;
 static unsigned long asrc_vrt_base_addr;
+static struct mxc_asrc_platform_data *mxc_asrc_data;
 
 static int asrc_set_clock_ratio(enum asrc_pair_index index,
 				int input_sample_rate, int output_sample_rate)
@@ -344,10 +346,11 @@ void asrc_start_conv(enum asrc_pair_index index)
 	unsigned long lock_flags;
 	spin_lock_irqsave(&data_lock, lock_flags);
 	reg = __raw_readl(asrc_vrt_base_addr + ASRC_ASRCTR_REG);
+	if ((reg & 0x0E) == 0)
+		clk_enable(mxc_asrc_data->asrc_audio_clk);
 	reg |= (1 << (1 + index));
 	__raw_writel(reg, asrc_vrt_base_addr + ASRC_ASRCTR_REG);
 	spin_unlock_irqrestore(&data_lock, lock_flags);
-
 	return;
 }
 
@@ -358,10 +361,11 @@ void asrc_stop_conv(enum asrc_pair_index index)
 	int reg;
 	unsigned long lock_flags;
 	spin_lock_irqsave(&data_lock, lock_flags);
-
 	reg = __raw_readl(asrc_vrt_base_addr + ASRC_ASRCTR_REG);
 	reg &= ~(1 << (1 + index));
 	__raw_writel(reg, asrc_vrt_base_addr + ASRC_ASRCTR_REG);
+	if ((reg & 0x0E) == 0)
+		clk_disable(mxc_asrc_data->asrc_audio_clk);
 	spin_unlock_irqrestore(&data_lock, lock_flags);
 	return;
 }
@@ -468,13 +472,7 @@ static void asrc_input_dma_callback(void *data, int error, unsigned int count)
 
 	params = data;
 	spin_lock_irqsave(&input_int_lock, lock_flags);
-	block = list_entry(params->input_queue.next, struct dma_block, queue);
-	list_del(params->input_queue.next);
-	list_add_tail(&block->queue, &params->input_done_queue);
-	params->input_counter++;
-	if (params->input_counter > 1)
-		pr_info("asrc_input_dma_callback - counter: %d\n",
-			params->input_counter);
+	params->input_queue_empty--;
 	if (!list_empty(&params->input_queue)) {
 		block =
 		    list_entry(params->input_queue.next,
@@ -486,8 +484,11 @@ static void asrc_input_dma_callback(void *data, int error, unsigned int count)
 		mxc_dma_config(params->input_dma_channel, &dma_request,
 			       1, MXC_DMA_MODE_WRITE);
 		mxc_dma_enable(params->input_dma_channel);
-	} else
-		params->input_queue_empty = 1;
+		list_del(params->input_queue.next);
+		list_add_tail(&block->queue, &params->input_done_queue);
+		params->input_queue_empty++;
+	}
+	params->input_counter++;
 	wake_up_interruptible(&params->input_wait_queue);
 	spin_unlock_irqrestore(&input_int_lock, lock_flags);
 	return;
@@ -502,13 +503,7 @@ static void asrc_output_dma_callback(void *data, int error, unsigned int count)
 
 	params = data;
 	spin_lock_irqsave(&output_int_lock, lock_flags);
-	block = list_entry(params->output_queue.next, struct dma_block, queue);
-	list_del(params->output_queue.next);
-	list_add_tail(&block->queue, &params->output_done_queue);
-	params->output_counter++;
-	if (params->output_counter > 1)
-		pr_info("asrc_output_dma_callback - counter: %d\n",
-			params->output_counter);
+	params->output_queue_empty--;
 
 	if (!list_empty(&params->output_queue)) {
 		block =
@@ -521,8 +516,12 @@ static void asrc_output_dma_callback(void *data, int error, unsigned int count)
 		mxc_dma_config(params->output_dma_channel, &dma_request,
 			       1, MXC_DMA_MODE_READ);
 		mxc_dma_enable(params->output_dma_channel);
-	} else
-		params->output_queue_empty = 1;
+		list_del(params->output_queue.next);
+		list_add_tail(&block->queue, &params->output_done_queue);
+		params->output_queue_empty++;
+	}
+
+	params->output_counter++;
 	wake_up_interruptible(&params->output_wait_queue);
 	spin_unlock_irqrestore(&output_int_lock, lock_flags);
 	return;
@@ -661,33 +660,18 @@ static int asrc_ioctl(struct inode *inode, struct file *file,
 
 			/* TBD - need to update when new SDMA interface ready */
 			if (config.pair == ASRC_PAIR_A) {
-				if (config.frame_bits > 16) {
-					rx_id = MXC_DMA_ASRC_32BIT_A_RX;
-					tx_id = MXC_DMA_ASRC_32BIT_A_TX;
-				} else {
-					rx_id = MXC_DMA_ASRC_16BIT_A_RX;
-					tx_id = MXC_DMA_ASRC_16BIT_A_TX;
-				}
+				rx_id = MXC_DMA_ASRC_A_RX;
+				tx_id = MXC_DMA_ASRC_A_TX;
 				rx_name = asrc_pair_id[0];
 				tx_name = asrc_pair_id[1];
 			} else if (config.pair == ASRC_PAIR_B) {
-				if (config.frame_bits > 16) {
-					rx_id = MXC_DMA_ASRC_32BIT_B_RX;
-					tx_id = MXC_DMA_ASRC_32BIT_B_TX;
-				} else {
-					rx_id = MXC_DMA_ASRC_16BIT_B_RX;
-					tx_id = MXC_DMA_ASRC_16BIT_B_TX;
-				}
+				rx_id = MXC_DMA_ASRC_B_RX;
+				tx_id = MXC_DMA_ASRC_B_TX;
 				rx_name = asrc_pair_id[2];
 				tx_name = asrc_pair_id[3];
 			} else {
-				if (config.frame_bits > 16) {
-					rx_id = MXC_DMA_ASRC_32BIT_C_RX;
-					tx_id = MXC_DMA_ASRC_32BIT_C_TX;
-				} else {
-					rx_id = MXC_DMA_ASRC_16BIT_C_RX;
-					tx_id = MXC_DMA_ASRC_16BIT_C_TX;
-				}
+				rx_id = MXC_DMA_ASRC_C_RX;
+				tx_id = MXC_DMA_ASRC_C_TX;
 				rx_name = asrc_pair_id[4];
 				tx_name = asrc_pair_id[5];
 			}
@@ -776,8 +760,7 @@ static int asrc_ioctl(struct inode *inode, struct file *file,
 			params->input_dma[buf.index].length = buf.length;
 			list_add_tail(&params->input_dma[buf.index].
 				      queue, &params->input_queue);
-			if (params->input_queue_empty == 1) {
-				pr_info("INPUT QUEUE empty\n");
+			if (params->input_queue_empty == 0) {
 				block =
 				    list_entry(params->input_queue.next,
 					       struct dma_block, queue);
@@ -791,8 +774,11 @@ static int asrc_ioctl(struct inode *inode, struct file *file,
 					       input_dma_channel,
 					       &dma_request, 1,
 					       MXC_DMA_MODE_WRITE);
-				params->input_queue_empty = 0;
 				mxc_dma_enable(params->input_dma_channel);
+				params->input_queue_empty++;
+				list_del(params->input_queue.next);
+				list_add_tail(&block->queue,
+					      &params->input_done_queue);
 			}
 			spin_unlock_irqrestore(&input_int_lock, lock_flags);
 			break;
@@ -852,8 +838,7 @@ static int asrc_ioctl(struct inode *inode, struct file *file,
 			params->output_dma[buf.index].length = buf.length;
 			list_add_tail(&params->output_dma[buf.index].
 				      queue, &params->output_queue);
-			if (params->output_queue_empty == 1) {
-				pr_info("OUTPUT QUEUE empty\n");
+			if (params->output_queue_empty == 0) {
 				block =
 				    list_entry(params->output_queue.
 					       next, struct dma_block, queue);
@@ -867,8 +852,11 @@ static int asrc_ioctl(struct inode *inode, struct file *file,
 					       output_dma_channel,
 					       &dma_request, 1,
 					       MXC_DMA_MODE_READ);
-				params->output_queue_empty = 0;
 				mxc_dma_enable(params->output_dma_channel);
+				list_del(params->output_queue.next);
+				list_add_tail(&block->queue,
+					      &params->output_done_queue);
+				params->output_queue_empty++;
 			}
 			spin_unlock_irqrestore(&output_int_lock, lock_flags);
 			break;
@@ -930,26 +918,44 @@ static int asrc_ioctl(struct inode *inode, struct file *file,
 				    ("ASRC_START_CONV - no block available\n");
 				break;
 			}
+			while (!list_empty(&params->input_queue)) {
+				block =
+				    list_entry(params->input_queue.next,
+					       struct dma_block, queue);
 
-			block =
-			    list_entry(params->input_queue.next,
-				       struct dma_block, queue);
+				dma_request.num_of_bytes = block->length;
+				dma_request.src_addr =
+				    (dma_addr_t) block->dma_paddr;
+				dma_request.dst_addr =
+				    (ASRC_BASE_ADDR + ASRC_ASRDIA_REG +
+				     (index << 3));
+				mxc_dma_config(params->input_dma_channel,
+					       &dma_request, 1,
+					       MXC_DMA_MODE_WRITE);
+				params->input_queue_empty++;
+				list_del(params->input_queue.next);
+				list_add_tail(&block->queue,
+					      &params->input_done_queue);
+			}
 
-			dma_request.num_of_bytes = block->length;
-			dma_request.src_addr = (dma_addr_t) block->dma_paddr;
-			dma_request.dst_addr =
-			    (ASRC_BASE_ADDR + ASRC_ASRDIA_REG + (index << 3));
-			mxc_dma_config(params->input_dma_channel,
-				       &dma_request, 1, MXC_DMA_MODE_WRITE);
-			block =
-			    list_entry(params->output_queue.next,
-				       struct dma_block, queue);
-			dma_request.num_of_bytes = block->length;
-			dma_request.src_addr =
-			    (ASRC_BASE_ADDR + ASRC_ASRDOA_REG + (index << 3));
-			dma_request.dst_addr = (dma_addr_t) block->dma_paddr;
-			mxc_dma_config(params->output_dma_channel,
-				       &dma_request, 1, MXC_DMA_MODE_READ);
+			while (!list_empty(&params->output_queue)) {
+				block =
+				    list_entry(params->output_queue.next,
+					       struct dma_block, queue);
+				dma_request.num_of_bytes = block->length;
+				dma_request.src_addr =
+				    (ASRC_BASE_ADDR + ASRC_ASRDOA_REG +
+				     (index << 3));
+				dma_request.dst_addr =
+				    (dma_addr_t) block->dma_paddr;
+				mxc_dma_config(params->output_dma_channel,
+					       &dma_request, 1,
+					       MXC_DMA_MODE_READ);
+				params->output_queue_empty++;
+				list_del(params->output_queue.next);
+				list_add_tail(&block->queue,
+					      &params->output_done_queue);
+			}
 			params->asrc_active = 1;
 
 			mxc_dma_enable(params->input_dma_channel);
@@ -1194,6 +1200,10 @@ static int mxc_asrc_probe(struct platform_device *pdev)
 	asrc_vrt_base_addr =
 	    (unsigned long)ioremap(res->start, res->end - res->start + 1);
 
+	mxc_asrc_data =
+	    (struct mxc_asrc_platform_data *)pdev->dev.platform_data;
+	clk_enable(mxc_asrc_data->asrc_core_clk);
+
 	asrc_proc_create();
 	err = mxc_init_asrc();
 	if (err < 0)
@@ -1202,6 +1212,7 @@ static int mxc_asrc_probe(struct platform_device *pdev)
 	goto out;
 
       err_out_class:
+	clk_disable(mxc_asrc_data->asrc_core_clk);
 	class_device_destroy(asrc_class, MKDEV(asrc_major, 0));
 	class_destroy(asrc_class);
       err_out_chrdev:
@@ -1223,6 +1234,8 @@ static int mxc_asrc_remove(struct platform_device *pdev)
 {
 	free_irq(MXC_INT_ASRC, NULL);
 	kfree(g_asrc_data);
+	clk_disable(mxc_asrc_data->asrc_core_clk);
+	mxc_asrc_data = NULL;
 	iounmap((unsigned long __iomem *)asrc_vrt_base_addr);
 	remove_proc_entry(proc_asrc->name, NULL);
 	class_device_destroy(asrc_class, MKDEV(asrc_major, 0));

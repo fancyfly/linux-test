@@ -524,11 +524,14 @@ static struct resource asrc_resources[] = {
 	 },
 };
 
-static struct platform_device mxc_alsa_asrc_device = {
+static struct mxc_asrc_platform_data mxc_asrc_data;
+
+static struct platform_device mxc_asrc_device = {
 	.name = "mxc_asrc",
 	.id = 0,
 	.dev = {
 		.release = mxc_nop_release,
+		.platform_data = &mxc_asrc_data,
 		},
 	.num_resources = ARRAY_SIZE(asrc_resources),
 	.resource = asrc_resources,
@@ -536,16 +539,12 @@ static struct platform_device mxc_alsa_asrc_device = {
 
 static inline void mxc_init_asrc(void)
 {
-	struct clk *asrc_clk;
-	struct clk *asrc_audio_clk;
-	asrc_clk = clk_get(NULL, "asrc_clk");
-	clk_enable(asrc_clk);
-	clk_put(asrc_clk);
-	asrc_audio_clk = clk_get(NULL, "asrc_audio_clk");
-	clk_enable(asrc_audio_clk);
-	clk_set_rate(asrc_audio_clk, 768000);
-	clk_put(asrc_audio_clk);
-	platform_device_register(&mxc_alsa_asrc_device);
+	mxc_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
+	clk_put(mxc_asrc_data.asrc_core_clk);
+	mxc_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_audio_clk");
+	clk_set_rate(mxc_asrc_data.asrc_audio_clk, 768000);
+	clk_put(mxc_asrc_data.asrc_audio_clk);
+	platform_device_register(&mxc_asrc_device);
 }
 
 static int __init mxc_init_devices(void)

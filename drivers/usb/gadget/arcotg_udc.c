@@ -85,6 +85,10 @@ volatile static struct usb_dr_device *usb_slave_regs;
 /* it is initialized in probe()  */
 static struct arcotg_udc *udc_controller;
 
+/* workqueue function for using msleep to allow the USB HW to go into a
+  * test mode */
+static struct delayed_work usbhset_work;
+
 /*ep name is important in gadget, it should obey the convention of ep_match()*/
 /* even numbered EPs are OUT or setup, odd are IN/INTERRUPT */
 static const char *const ep_name[] = {
@@ -1779,9 +1783,20 @@ static void setup_received_irq(struct arcotg_udc *udc,
 	}
 
 	if (ptc) {
+		if (ep0_prime_status(udc, EP_DIR_IN))
+			Ep0Stall(udc);
+
 		usb_slave_regs->portsc1 |= ptc << 16;
 		pr_debug("udc: switch to test mode.\n");
+		/* schedule a msleep wait for the USB HW to go into test mode */
+		schedule_delayed_work(&usbhset_work, 0);
 	}
+}
+
+/* use a global workqueue to use msleep, and not mdelay */
+static void usbhset_workqueue_handler(struct work_struct *work)
+{
+	msleep(10);
 }
 
 static void ep0_req_complete(struct arcotg_udc *udc, struct arcotg_ep *ep0,
@@ -3086,6 +3101,8 @@ static struct platform_driver udc_driver = {
 static int __init udc_init(void)
 {
 	int rc;
+
+	INIT_DELAYED_WORK(&usbhset_work, usbhset_workqueue_handler);
 
 	printk(KERN_INFO "%s version %s init \n", driver_desc, DRIVER_VERSION);
 	rc = platform_driver_register(&udc_driver);

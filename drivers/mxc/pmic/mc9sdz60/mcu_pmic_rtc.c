@@ -171,8 +171,8 @@ PMIC_STATUS pmic_rtc_set_time(struct timeval *pmic_time)
 	reg_val |= ((greg_time.tm_mday / 10) << 4);
 	CHECK_ERROR(pmic_write_reg(REG_MCU_DATE, reg_val, 0x3f));
 
-	reg_val = greg_time.tm_mon % 10;
-	reg_val |= ((greg_time.tm_mon / 10) << 4);
+	reg_val = (greg_time.tm_mon + 1) % 10;
+	reg_val |= (((greg_time.tm_mon + 1) / 10) << 4);
 	CHECK_ERROR(pmic_write_reg(REG_MCU_MONTH, reg_val, 0x1f));
 
 	reg_val = greg_time.tm_year % 10;
@@ -213,14 +213,14 @@ PMIC_STATUS pmic_rtc_get_time(struct timeval *pmic_time)
 	greg_time.tm_mday = BCD2BIN(reg_val);
 
 	CHECK_ERROR(pmic_read_reg(REG_MCU_MONTH, &reg_val, 0x1f));
-	greg_time.tm_mon = BCD2BIN(reg_val);
+	greg_time.tm_mon =
+		(0 == reg_val) ? (BCD2BIN(reg_val)) : (BCD2BIN(reg_val) - 1);
 
 	CHECK_ERROR(pmic_read_reg(REG_MCU_YEAR, &reg_val, 0xff));
-	greg_time.tm_year = BCD2BIN(reg_val) + 70;
+	greg_time.tm_year = BCD2BIN(reg_val);
 
 	rtc_tm_to_time(&greg_time, &time);
 	pmic_time->tv_sec = time;
-
 	return PMIC_SUCCESS;
 }
 
@@ -557,6 +557,7 @@ static irqreturn_t mcu_pmic_rtc_alarm_handler(int irq, void *dev_id)
 
 static int pmic_rtc_probe(struct platform_device *pdev)
 {
+	int val;
 	int ret = 0;
 	struct class_device *temp_class;
 
@@ -589,6 +590,14 @@ static int pmic_rtc_probe(struct platform_device *pdev)
 	}
 
 	pmic_rtc_detected = 1;
+
+	/* check  if need to init year/mon/day */
+	pmic_read_reg(REG_MCU_MONTH, &val, 0x1F);
+	if (0 == val) {
+		pmic_write_reg(REG_MCU_YEAR, 0x70, 0xFF);
+		pmic_write_reg(REG_MCU_MONTH, 0x01, 0xFF);
+		pmic_write_reg(REG_MCU_DATE, 0x1, 0xFF);
+	}
 
 	/* start RTC */
 	pmic_write_reg(REG_MCU_SECS, 0x80, 0x80);

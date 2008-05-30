@@ -712,7 +712,6 @@ void gpio_spdif_active(void)
 	mxc_request_iomux(MX35_PIN_SRXD5, MUX_CONFIG_ALT1);
 	mxc_iomux_set_pad(MX35_PIN_SRXD5, PAD_CTL_PKE_ENABLE
 			  | PAD_CTL_100K_PU | PAD_CTL_HYS_SCHMITZ);
-	mxc_iomux_set_input(MUX_IN_SPDIF_SPDIF_IN1, INPUT_CTL_PATH1);
 	/* SPDIF ext clock */
 	mxc_request_iomux(MX35_PIN_SCK5, MUX_CONFIG_ALT1);
 }

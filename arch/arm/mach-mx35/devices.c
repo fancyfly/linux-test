@@ -471,7 +471,7 @@ static struct mxc_spdif_platform_data mxc_spdif_data = {
 	.spdif_clk_44100 = 3,	/* spdif_ext_clk source for 44.1KHz */
 	.spdif_clk_48000 = 0,	/* audio osc source */
 	.spdif_clkid = 0,
-	.spdif_clk = NULL,
+	.spdif_clk = NULL,	/* spdif bus clk */
 };
 
 static struct platform_device mxc_alsa_spdif_device = {
@@ -487,7 +487,7 @@ static struct platform_device mxc_alsa_spdif_device = {
 
 static inline void mxc_init_spdif(void)
 {
-	mxc_spdif_data.spdif_clk = clk_get(NULL, "spdif_audio_clk");
+	mxc_spdif_data.spdif_clk = clk_get(NULL, "spdif_ipg_clk");
 	clk_put(mxc_spdif_data.spdif_clk);
 	mxc_spdif_data.spdif_core_clk = clk_get(NULL, "spdif_clk");
 	clk_put(mxc_spdif_data.spdif_core_clk);

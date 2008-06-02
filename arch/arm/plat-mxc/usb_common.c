@@ -337,10 +337,10 @@ static void usbh2_set_serial_xcvr(void)
 
 	/* Stop then Reset */
 	UH2_USBCMD &= ~UCMD_RUN_STOP;
-	while (UH2_USBCMD & UCMD_RUN_STOP);
+	while (UH2_USBCMD & UCMD_RUN_STOP) ;
 
 	UH2_USBCMD |= UCMD_RESET;
-	while (UH2_USBCMD & UCMD_RESET);
+	while (UH2_USBCMD & UCMD_RESET) ;
 
 	USBCTRL &= ~(UCTRL_H2SIC_MASK);	/* Disable bypass mode */
 	USBCTRL &= ~(UCTRL_H2PM);	/* Power Mask */
@@ -579,10 +579,10 @@ static void otg_set_utmi_xcvr(void)
 
 	/* Stop then Reset */
 	UOG_USBCMD &= ~UCMD_RUN_STOP;
-	while (UOG_USBCMD & UCMD_RUN_STOP);
+	while (UOG_USBCMD & UCMD_RUN_STOP) ;
 
 	UOG_USBCMD |= UCMD_RESET;
-	while ((UOG_USBCMD) & (UCMD_RESET));
+	while ((UOG_USBCMD) & (UCMD_RESET)) ;
 
 	USBCTRL &= ~UCTRL_OCE;	/* Disable OverCurrent signal */
 	USBCTRL &= ~UCTRL_PP;	/* USBOTG_PWR low active */
@@ -606,10 +606,10 @@ static void otg_set_utmi_xcvr(void)
 	 */
 	/* Stop then Reset */
 	UOG_USBCMD &= ~UCMD_RUN_STOP;
-	while (UOG_USBCMD & UCMD_RUN_STOP);
+	while (UOG_USBCMD & UCMD_RUN_STOP) ;
 
 	UOG_USBCMD |= UCMD_RESET;
-	while ((UOG_USBCMD) & (UCMD_RESET));
+	while ((UOG_USBCMD) & (UCMD_RESET)) ;
 
 	/* allow controller to reset, and leave time for
 	 * the ULPI transceiver to reset too.

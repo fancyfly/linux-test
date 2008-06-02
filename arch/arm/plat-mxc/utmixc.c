@@ -22,6 +22,7 @@
 
 #include <asm/hardware.h>
 #include <asm/arch/arc_otg.h>
+#include <asm/mach-types.h>
 
 static void usb_utmi_init(struct fsl_xcvr_ops *this)
 {
@@ -31,11 +32,38 @@ static void usb_utmi_uninit(struct fsl_xcvr_ops *this)
 {
 }
 
+/*!
+ * set vbus power
+ *
+ * @param       view  viewport register
+ * @param       on    power on or off
+ */
+static void set_power(u32 *view, int on)
+{
+	struct device *dev;
+	struct platform_device *pdev;
+	struct regulator *usbotg_regux;
+
+	pr_debug("real %s(on=%d) view=0x%p\n", __FUNCTION__, on, view);
+	if (machine_is_mx37_3ds()) {
+		pdev = (struct platform_device *)view;
+		dev = &(pdev->dev);
+		usbotg_regux = regulator_get(dev, "DCDC2");
+		if (on) {
+			regulator_enable(usbotg_regux);
+		} else {
+			regulator_disable(usbotg_regux);
+		}
+		regulator_put(usbotg_regux, dev);
+	}
+}
+
 static struct fsl_xcvr_ops utmi_ops = {
 	.name = "utmi",
 	.xcvr_type = PORTSC_PTS_UTMI,
 	.init = usb_utmi_init,
 	.uninit = usb_utmi_uninit,
+	.set_vbus_power = set_power,
 };
 
 extern void fsl_usb_xcvr_register(struct fsl_xcvr_ops *xcvr_ops);

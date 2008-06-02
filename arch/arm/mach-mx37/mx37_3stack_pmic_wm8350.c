@@ -293,6 +293,14 @@ int wm8350_init(struct wm8350 *wm8350)
 		wm8350_gpio_set_status(wm8350, 7, 1);
 	else
 		printk(KERN_ERR "Error in setting Wolfson GPIO pin 7 \n");
+	/* enable gpio4:USB_VBUS_EN */
+	ret =
+	    wm8350_gpio_config(wm8350, 4, WM8350_GPIO_DIR_IN,
+			       WM8350_GPIO4_MR_IN, WM8350_GPIO_ACTIVE_HIGH,
+			       WM8350_GPIO_PULL_UP, WM8350_GPIO_INVERT_OFF,
+			       WM8350_GPIO_DEBOUNCE_OFF);
+	if (ret)
+		printk(KERN_ERR "Error in setting USB VBUS enable pin\n");
 
 	/* register sound */
 	printk("Registering imx37_snd_device");

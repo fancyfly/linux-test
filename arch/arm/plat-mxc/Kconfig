@@ -17,7 +17,7 @@ config ARCH_MX37
     bool "MX37-based"
 	select CPU_V6
 	select CACHE_L2X0
-	#select USB_ARCH_HAS_EHCI
+	select USB_ARCH_HAS_EHCI
 	select ARCH_HAS_EVTMON
 	select MXC_TZIC
     help

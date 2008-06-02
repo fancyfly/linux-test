@@ -46,12 +46,21 @@
 #include <asm/mach-types.h>
 #include <asm/arch/arc_otg.h>
 
+extern struct platform_device *host_pdev_register(struct resource *res,
+						  int n_res,
+						  struct fsl_usb2_platform_data
+						  *config);
+
 extern int usbotg_init(struct platform_device *pdev);
 extern void usbotg_uninit(struct fsl_usb2_platform_data *pdata);
 extern int gpio_usbotg_hs_active(void);
 extern void gpio_usbotg_hs_inactive(void);
 
 #if defined(CONFIG_USB_EHCI_ARC_OTG) || defined(CONFIG_USB_GADGET_ARC)
+
+static int usbotg_init_ext(struct platform_device *pdev);
+static void usbotg_uninit_ext(struct fsl_usb2_platform_data *pdata);
+
 static struct resource otg_resources[] = {
 	{
 	 .start = (u32) (OTG_BASE_ADDR),
@@ -63,11 +72,24 @@ static struct resource otg_resources[] = {
 	 .flags = IORESOURCE_IRQ,
 	 },
 };
+static struct fsl_usb2_platform_data mxc_utmi_host_config = {
+	.name = "OTG",
+	.platform_init = usbotg_init_ext,
+	.platform_uninit = usbotg_uninit_ext,
+	.usbmode = (u32) &UOG_USBMODE,
+	.viewport = (u32) &UOG_ULPIVIEW,
+	.does_otg = 0,
+	.operating_mode = FSL_USB2_DR_HOST,
+	.power_budget = 150,	/* 150 mA max power */
+	.gpio_usb_active = gpio_usbotg_hs_active,
+	.gpio_usb_inactive = gpio_usbotg_hs_inactive,
+	.transceiver = "utmi",
+};
 
-/* Notes: configure USB clock*/
 static int usbotg_init_ext(struct platform_device *pdev)
 {
 	struct clk *usb_clk;
+	struct fsl_usb2_platform_data *pdata;
 
 	usb_clk = clk_get(NULL, "usboh2_clk");
 	clk_enable(usb_clk);
@@ -82,8 +104,27 @@ static int usbotg_init_ext(struct platform_device *pdev)
 	clk_disable(usb_clk);
 	clk_put(usb_clk);
 
+	pdata = (struct fsl_usb2_platform_data *)pdev->dev.platform_data;
+	pdata->viewport = (u32) pdev;
 	return usbotg_init(pdev);
 }
+
+static void usbotg_uninit_ext(struct fsl_usb2_platform_data *pdata)
+{
+	struct clk *usb_clk;
+
+	usb_clk = clk_get(NULL, "usboh2_clk");
+	clk_disable(usb_clk);
+	clk_put(usb_clk);
+
+	usb_clk = clk_get(NULL, "usb_phy_clk");
+	clk_disable(usb_clk);
+	clk_put(usb_clk);
+
+	usbotg_uninit(pdata);
+}
+
+
 #endif
 
 #if defined(CONFIG_USB_GADGET_ARC)
@@ -100,7 +141,7 @@ static u64 udc_dmamask = ~(u32) 0;
 static struct fsl_usb2_platform_data mxc_utmi_peripheral_config = {
 	.name = "OTG",
 	.platform_init = usbotg_init_ext,
-	.platform_uninit = usbotg_uninit,
+	.platform_uninit = usbotg_uninit_ext,
 	.usbmode = (u32) &UOG_USBMODE,
 	.does_otg = 0,
 	.operating_mode = FSL_USB2_DR_DEVICE,
@@ -134,6 +175,10 @@ static int __init mx37_usb_init(void)
 	} else {
 		pr_debug("usb: OTG Gadget registered\n");
 	}
+#endif
+#ifdef CONFIG_USB_EHCI_ARC_OTG
+	host_pdev_register(otg_resources, ARRAY_SIZE(otg_resources),
+			   &mxc_utmi_host_config);
 #endif
 
 	return 0;

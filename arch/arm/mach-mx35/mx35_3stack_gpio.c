@@ -627,7 +627,7 @@ int gpio_usbh2_active(void)
 	mxc_iomux_set_pad(MX35_PIN_I2C2_CLK, 0x0040);
 
 	mxc_request_iomux(MX35_PIN_I2C2_DAT, MUX_CONFIG_ALT2);
-	mxc_iomux_set_input(MUX_IN_USB_UH2_USB_OC, INPUT_CTL_PATH1);
+	mxc_iomux_set_input(MUX_IN_USB_UH2_USB_OC, INPUT_CTL_PATH0);
 	mxc_iomux_set_pad(MX35_PIN_I2C2_DAT, 0x01c0);
 
 	return 0;

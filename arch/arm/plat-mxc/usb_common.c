@@ -344,6 +344,7 @@ static void usbh2_set_serial_xcvr(void)
 
 	USBCTRL &= ~(UCTRL_H2SIC_MASK);	/* Disable bypass mode */
 	USBCTRL &= ~(UCTRL_H2PM);	/* Power Mask */
+	USBCTRL &= ~UCTRL_OCPOL;	/* OverCurrent Polarity is Low Active */
 	USBCTRL |= UCTRL_H2WIE |	/* Wakeup intr enable */
 	    UCTRL_IP_PUE_DOWN |	/* ipp_pue_pulldwn_dpdm */
 	    UCTRL_USBTE |	/* USBT is enabled */
@@ -584,7 +585,6 @@ static void otg_set_utmi_xcvr(void)
 	UOG_USBCMD |= UCMD_RESET;
 	while ((UOG_USBCMD) & (UCMD_RESET)) ;
 
-	USBCTRL &= ~UCTRL_OCE;	/* Disable OverCurrent signal */
 	USBCTRL &= ~UCTRL_PP;	/* USBOTG_PWR low active */
 	USBCTRL &= ~UCTRL_OCPOL;	/* OverCurrent Polarity is Low Active */
 	USBCTRL &= ~UCTRL_OPM;	/* OTG Power Mask */

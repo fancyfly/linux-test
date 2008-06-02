@@ -24,6 +24,8 @@
 
 #include "crm_regs.h"
 
+extern int mxc_jtag_enabled;
+
 static unsigned long pll_base[] = {
 	(unsigned long)MXC_DPLL1_BASE,
 	(unsigned long)MXC_DPLL2_BASE,
@@ -1904,9 +1906,15 @@ int __init mxc_clocks_init(void)
 		clk_register(*clkp);
 	}
 	/* Turn off all possible clocks */
-	__raw_writel(MXC_CCM_CCGR0_CG0_MASK | MXC_CCM_CCGR0_CG1_MASK |
-		     MXC_CCM_CCGR0_CG12_MASK | MXC_CCM_CCGR0_CG13_MASK |
-		     MXC_CCM_CCGR0_CG14_MASK, MXC_CCM_CCGR0);
+	if (mxc_jtag_enabled)
+		__raw_writel(MXC_CCM_CCGR0_CG0_MASK | MXC_CCM_CCGR0_CG1_MASK |
+			     MXC_CCM_CCGR0_CG2_MASK | MXC_CCM_CCGR0_CG12_MASK |
+			     MXC_CCM_CCGR0_CG13_MASK |
+			     MXC_CCM_CCGR0_CG14_MASK, MXC_CCM_CCGR0);
+	else
+		__raw_writel(MXC_CCM_CCGR0_CG0_MASK | MXC_CCM_CCGR0_CG1_MASK |
+			     MXC_CCM_CCGR0_CG12_MASK | MXC_CCM_CCGR0_CG13_MASK |
+			     MXC_CCM_CCGR0_CG14_MASK, MXC_CCM_CCGR0);
 	__raw_writel(0, MXC_CCM_CCGR1);
 	__raw_writel(0, MXC_CCM_CCGR2);
 	__raw_writel(0, MXC_CCM_CCGR3);

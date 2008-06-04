@@ -277,6 +277,19 @@ EXPORT_SYMBOL(gpio_ata_inactive);
  */
 void gpio_keypad_active(void)
 {
+	/*
+	 * Configure the IOMUX control register for keypad signals.
+	 */
+	mxc_request_iomux(MX51_PIN_KEY_COL0, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_KEY_COL1, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_KEY_COL2, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_KEY_COL3, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_KEY_COL4, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_KEY_COL5, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_KEY_ROW0, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_KEY_ROW1, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_KEY_ROW2, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_KEY_ROW3, IOMUX_CONFIG_ALT0);
 }
 EXPORT_SYMBOL(gpio_keypad_active);
 
@@ -286,6 +299,27 @@ EXPORT_SYMBOL(gpio_keypad_active);
  */
 void gpio_keypad_inactive(void)
 {
+	mxc_request_gpio(MX51_PIN_KEY_COL0);
+	mxc_request_gpio(MX51_PIN_KEY_COL1);
+	mxc_request_gpio(MX51_PIN_KEY_COL2);
+	mxc_request_gpio(MX51_PIN_KEY_COL3);
+	mxc_request_gpio(MX51_PIN_KEY_COL4);
+	mxc_request_gpio(MX51_PIN_KEY_COL5);
+	mxc_request_gpio(MX51_PIN_KEY_ROW0);
+	mxc_request_gpio(MX51_PIN_KEY_ROW1);
+	mxc_request_gpio(MX51_PIN_KEY_ROW2);
+	mxc_request_gpio(MX51_PIN_KEY_ROW3);
+
+	mxc_free_iomux(MX51_PIN_KEY_COL0, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_KEY_COL1, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_KEY_COL2, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_KEY_COL3, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_KEY_COL4, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_KEY_COL5, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_KEY_ROW0, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_KEY_ROW1, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_KEY_ROW2, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_KEY_ROW3, IOMUX_CONFIG_GPIO);
 }
 EXPORT_SYMBOL(gpio_keypad_inactive);
 

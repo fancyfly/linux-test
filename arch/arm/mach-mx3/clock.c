@@ -1185,13 +1185,6 @@ int __init mxc_clocks_init(void)
 
 	clk_enable(&serial_pll_clk);
 
-	if (cpu_is_mx31_rev(CHIP_REV_2_0) > 0 || cpu_is_mx32()) {
-		reg = __raw_readl(MXC_CCM_PMCR1);
-		/* No PLL restart on DVFS switch; enable auto EMI handshake */
-		reg |= MXC_CCM_PMCR1_PLLRDIS | MXC_CCM_PMCR1_EMIRQ_EN;
-		__raw_writel(reg, MXC_CCM_PMCR1);
-	}
-
 	cpu_curr_wp = cpu_clk.rate / ahb_clk.rate - 1;
 	cpu_wp_tbl = get_cpu_wp(&cpu_wp_nr);
 

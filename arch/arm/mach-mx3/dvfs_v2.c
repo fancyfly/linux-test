@@ -324,15 +324,8 @@ void pmic_voltage_init(void)
 {
 	t_regulator_voltage volt;
 
-	/* Enable 4 mc13783 output voltages */
-	pmic_write_reg(REG_ARBITRATION_SWITCHERS, 0, (1 << 5));
-
-	/* Enable mc13783 voltage ready signal */
-	pmic_write_reg(REG_INTERRUPT_MASK_1, 0, (1 << 11));
-
 	/* Set mc13783 DVS speed 25mV each 4us */
-	pmic_write_reg(REG_SWITCHERS_4, 1, (1 << 6));
-	pmic_write_reg(REG_SWITCHERS_4, 0, (1 << 7));
+	pmic_write_reg(REG_SWITCHERS_4, (0 << 6), (3 << 6));
 
 	volt.sw1a = SW1A_1_625V;
 	pmic_power_regulator_set_voltage(SW_SW1A, volt);

@@ -89,7 +89,7 @@
 #endif
 
 #ifdef CONFIG_USB_GADGET_ARC
-#define	gadget_is_arcotg(g)	!strcmp("arc_udc", (g)->name)
+#define	gadget_is_arcotg(g)	!strcmp("fsl-usb2-udc", (g)->name)
 #else
 #define	gadget_is_arcotg(g)	0
 #endif

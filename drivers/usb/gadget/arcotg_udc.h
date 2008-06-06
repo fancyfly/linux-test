@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -69,7 +69,18 @@ struct usb_dr_device {
 	u32 endptstatus;	/* Endpoint Status Register */
 	u32 endptcomplete;	/* Endpoint Complete Register */
 	u32 endptctrl[8 * 2];	/* Endpoint Control Registers */
-} __attribute__ ((packed));
+};
+
+ /* non-EHCI USB system interface registers (Big Endian) */
+struct usb_sys_interface {
+	u32 snoop1;
+	u32 snoop2;
+	u32 age_cnt_thresh;	/* Age Count Threshold Register */
+	u32 pri_ctrl;		/* Priority Control Register */
+	u32 si_ctrl;		/* System Interface Control Register */
+	u8 res[236];
+	u32 control;		/* General Purpose Control Register */
+};
 
 /* ep0 transfer state */
 #define WAIT_FOR_SETUP          0
@@ -77,6 +88,10 @@ struct usb_dr_device {
 #define DATA_STATE_NEED_ZLP     2
 #define WAIT_FOR_OUT_STATUS     3
 #define DATA_STATE_RECV         4
+
+/* Device Controller Capability Parameter register */
+#define DCCPARAMS_DC				0x00000080
+#define DCCPARAMS_DEN_MASK			0x0000001f
 
 /* Frame Index Register Bit Masks */
 #define	USB_FRINDEX_MASKS			(0x3fff)
@@ -221,7 +236,9 @@ struct usb_dr_device {
 #define  USB_MODE_CTRL_MODE_IDLE              (0x00000000)
 #define  USB_MODE_CTRL_MODE_DEVICE            (0x00000002)
 #define  USB_MODE_CTRL_MODE_HOST              (0x00000003)
+#define  USB_MODE_CTRL_MODE_MASK              0x00000003
 #define  USB_MODE_CTRL_MODE_RSV               (0x00000001)
+#define  USB_MODE_ES                          0x00000004 /* (big) Endian Sel */
 #define  USB_MODE_SETUP_LOCK_OFF              (0x00000008)
 #define  USB_MODE_STREAM_DISABLE              (0x00000010)
 /* Endpoint Flush Register */
@@ -371,6 +388,7 @@ struct ep_queue_head {
 #define  EP_QUEUE_HEAD_STATUS_HALT	      (0x00000040)
 #define  EP_QUEUE_HEAD_STATUS_ACTIVE          (0x00000080)
 #define  EP_QUEUE_CURRENT_OFFSET_MASK         (0x00000FFF)
+#define  EP_QUEUE_HEAD_NEXT_POINTER_MASK      0xFFFFFFE0
 #define  EP_QUEUE_FRINDEX_MASK                (0x000007FF)
 #define  EP_MAX_LENGTH_TRANSFER               (0x4000)
 
@@ -441,11 +459,18 @@ struct ep_td_struct {
 #define  DTD_STATUS_DATA_BUFF_ERR             (0x00000020)
 #define  DTD_STATUS_TRANSACTION_ERR           (0x00000008)
 #define  DTD_RESERVED_FIELDS                  (0x80007300)
+#define  DTD_ADDR_MASK                        0xFFFFFFE0
 #define  DTD_PACKET_SIZE                      (0x7FFF0000)
 #define  DTD_LENGTH_BIT_POS                   (16)
 #define  DTD_ERROR_MASK                       (DTD_STATUS_HALTED | \
                                                DTD_STATUS_DATA_BUFF_ERR | \
                                                DTD_STATUS_TRANSACTION_ERR)
+/* Alignment requirements; must be a power of two */
+#define DTD_ALIGNMENT				0x20
+#define QH_ALIGNMENT				2048
+
+/* Controller dma boundary */
+#define UDC_DMA_BOUNDARY			0x1000
 
 /* -----------------------------------------------------------------------*/
 /* ##### enum data
@@ -459,12 +484,12 @@ typedef enum {
 
 /*-------------------------------------------------------------------------*/
 
-struct arcotg_req {
+struct fsl_req {
 	struct usb_request req;
 	struct list_head queue;
 	/* ep_queue() func will add
 	   a request->queue into a udc_ep->queue 'd tail */
-	struct arcotg_ep *ep;
+	struct fsl_ep *ep;
 	unsigned mapped;
 
 	struct ep_td_struct *head, *tail;	/* For dTD List
@@ -474,55 +499,45 @@ struct arcotg_req {
 
 #define REQ_UNCOMPLETE		(1)
 
-struct arcotg_ep {
+struct fsl_ep {
 	struct usb_ep ep;
 	struct list_head queue;
-	struct arcotg_udc *udc;
+	struct fsl_udc *udc;
+	struct ep_queue_head *qh;
 	const struct usb_endpoint_descriptor *desc;
 	struct usb_gadget *gadget;
 
-	u8 already_seen;
-	u8 setup_stage;
-	u32 last_io;		/* timestamp */
-
 	char name[14];
-#if 0
-	u16 maxpacket;
-	u8 bEndpointAddress;
-	u8 bmAttributes;
-#endif
-	unsigned double_buf:1;
 	unsigned stopped:1;
-	unsigned fnf:1;
-	unsigned has_dma:1;
-	u8 ackwait;
-	u8 dma_channel;
-	u16 dma_counter;
-	int lch;
-
-	struct timer_list timer;
-
 };
 
 #define EP_DIR_IN	1
 #define EP_DIR_OUT	0
 
-struct arcotg_udc {
+struct fsl_udc {
 	struct usb_gadget gadget;
 	struct usb_gadget_driver *driver;
-	struct arcotg_ep eps[USB_MAX_ENDPOINTS * 2];
+	struct fsl_usb2_platform_data *pdata;
+	struct fsl_ep *eps;
+	unsigned int max_ep;
+	unsigned int irq;
+
 	struct usb_ctrlrequest local_setup_buff;
 	spinlock_t lock;
-	struct fsl_usb2_platform_data *pdata;
 	u32 xcvr_type;
 	struct otg_transceiver *transceiver;
 	unsigned softconnect:1;
 	unsigned vbus_active:1;
 	unsigned stopped:1;
+	unsigned remote_wakeup:1;
 
 	struct ep_queue_head *ep_qh;	/* Endpoints Queue-Head */
-	int ep_qh_size;		/* Endpoints Queue-Head */
-	struct arcotg_req *status_req;	/* ep0 status request */
+	struct fsl_req *status_req;	/* ep0 status request */
+	struct dma_pool *td_pool;	/* dma pool for DTD */
+	enum fsl_usb2_phy_modes phy_mode;
+
+	size_t ep_qh_size;		/* size after alignment adjustment*/
+	dma_addr_t ep_qh_dma;		/* dma address of QH */
 
 	u32 max_pipes;		/* Device max pipes */
 	u32 max_use_endpts;	/* Max endpointes to be used */
@@ -530,17 +545,24 @@ struct arcotg_udc {
 	u32 resume_state;	/* USB state to resume */
 	u32 usb_state;		/* USB current state */
 	u32 usb_next_state;	/* USB next state */
-	u32 ep0_state;		/* Enpoint zero state */
-	u32 ep0_dir;		/* Enpoint zero direction: can be
+	u32 ep0_state;		/* Endpoint zero state */
+	u32 ep0_dir;		/* Endpoint zero direction: can be
 				   USB_DIR_IN or USB_DIR_OUT */
 	u32 usb_sof_count;	/* SOF count */
 	u32 errors;		/* USB ERRORs count */
-	dma_addr_t ep_qh_dma;	/* DMA address of ep_qh */
-	struct dma_pool *dtd_pool;
 	u8 device_address;	/* Device USB address */
 
 	struct completion *done;	/* to make sure release() is done */
 };
+
+/*-------------------------------------------------------------------------*/
+
+#ifdef DEBUG
+#define DBG(fmt, args...) 	printk(KERN_DEBUG "[%s]  " fmt "\n", \
+				__func__, ## args)
+#else
+#define DBG(fmt, args...)	do {} while (0)
+#endif
 
 #if 0
 static void dump_msg(const char *label, const u8 * buf, unsigned int length)
@@ -570,6 +592,16 @@ static void dump_msg(const char *label, const u8 * buf, unsigned int length)
 }
 #endif
 
+#ifdef VERBOSE
+#define VDBG		DBG
+#else
+#define VDBG(stuff...)	do {} while (0)
+#endif
+
+#define ERR(stuff...)		printk(KERN_ERR "udc: " stuff)
+#define WARN(stuff...)		printk(KERN_WARNING "udc: " stuff)
+#define INFO(stuff...)		printk(KERN_INFO "udc: " stuff)
+
 /*-------------------------------------------------------------------------*/
 
 /* ### Add board specific defines here
@@ -593,8 +625,16 @@ static void dump_msg(const char *label, const u8 * buf, unsigned int length)
 
 #define get_ep_by_pipe(udc, pipe)	((pipe == 1)? &udc->eps[0]: \
 					&udc->eps[pipe])
+#define get_pipe_by_windex(windex)	((windex & USB_ENDPOINT_NUMBER_MASK) \
+					* 2 + ((windex & USB_DIR_IN) ? 1 : 0))
 
 /* Bulk only class request */
 #define USB_BULK_RESET_REQUEST          0xff
+
+#ifdef CONFIG_ARCH_MXC
+#include <asm/arch/fsl_usb_gadget.h>
+#elif CONFIG_PPC32
+#include <asm/fsl_usb_gadget.h>
+#endif
 
 #endif				/* __ARCOTG_UDC_H */

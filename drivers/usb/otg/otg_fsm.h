@@ -1,14 +1,18 @@
-/*
- * Copyright 2006-2007 Freescale Semiconductor, Inc. All Rights Reserved.
- */
-
-/*
- * The code contained herein is licensed under the GNU General Public
- * License. You may obtain a copy of the GNU General Public License
- * Version 2 or later at the following locations:
+/* Copyright (C) 2006-2008 Freescale Semiconductor, Inc.
  *
- * http://www.opensource.org/licenses/gpl-license.html
- * http://www.gnu.org/copyleft/gpl.html
+ * This program is free software; you can redistribute  it and/or modify it
+ * under  the terms of  the GNU General  Public License as published by the
+ * Free Software Foundation;  either version 2 of the  License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the  GNU General Public License along
+ * with this program; if not, write  to the Free Software Foundation, Inc.,
+ * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #if 0
@@ -17,28 +21,22 @@
 #endif
 
 #ifdef DEBUG
-
-/*
-#define DBG(fmt, args...) 	printk("[%s]  " fmt "\n", \
-				__FUNCTION__, ## args)
-*/
-#define DBG(fmt, args...) printk("j=%lu  [%s]  " fmt "\n", \
-		jiffies, __FUNCTION__, ## args)
-
+#define DBG(fmt, args...) printk(KERN_DEBUG "j=%lu [%s] " fmt "\n", jiffies, \
+				 __func__, ## args)
 #else
-#define DBG(fmt, args...)	do{}while(0)
+#define DBG(fmt, args...)	do {} while (0)
 #endif
 
 #ifdef VERBOSE
 #define VDBG		DBG
 #else
-#define VDBG(stuff...)	do{}while(0)
+#define VDBG(stuff...)	do {} while (0)
 #endif
 
 #ifdef VERBOSE
 #define MPC_LOC printk("Current Location [%s]:[%d]\n", __FILE__, __LINE__)
 #else
-#define MPC_LOC do{}while(0)
+#define MPC_LOC do {} while (0)
 #endif
 
 #define PROTO_UNDEF	(0)
@@ -94,16 +92,17 @@ struct otg_fsm {
 };
 
 struct otg_fsm_ops {
-	void (*chrg_vbus) (int on);
-	void (*drv_vbus) (int on);
-	void (*loc_conn) (int on);
-	void (*loc_sof) (int on);
-	void (*start_pulse) (void);
-	void (*add_timer) (void *timer);
-	void (*del_timer) (void *timer);
-	int (*start_host) (struct otg_fsm * fsm, int on);
-	int (*start_gadget) (struct otg_fsm * fsm, int on);
+	void	(*chrg_vbus)(int on);
+	void	(*drv_vbus)(int on);
+	void	(*loc_conn)(int on);
+	void	(*loc_sof)(int on);
+	void	(*start_pulse)(void);
+	void	(*add_timer)(void *timer);
+	void	(*del_timer)(void *timer);
+	int	(*start_host)(struct otg_fsm *fsm, int on);
+	int	(*start_gadget)(struct otg_fsm *fsm, int on);
 };
+
 
 static inline void otg_chrg_vbus(struct otg_fsm *fsm, int on)
 {

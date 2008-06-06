@@ -1,73 +1,58 @@
-/*
- * Copyright 2006-2007 Freescale Semiconductor, Inc. All Rights Reserved.
- */
-
-/*
- * The code contained herein is licensed under the GNU General Public
- * License. You may obtain a copy of the GNU General Public License
- * Version 2 or later at the following locations:
+/* OTG Finite State Machine from OTG spec
  *
- * http://www.opensource.org/licenses/gpl-license.html
- * http://www.gnu.org/copyleft/gpl.html
+ * Copyright (C) 2006-2008 Freescale Semiconductor, Inc.
+ *
+ * Author: 	Li Yang <LeoLi@freescale.com>
+ * 		Jerry Huang <Chang-Ming.Huang@freescale.com>
+ *
+ * This program is free software; you can redistribute  it and/or modify it
+ * under  the terms of  the GNU General  Public License as published by the
+ * Free Software Foundation;  either version 2 of the  License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the  GNU General Public License along
+ * with this program; if not, write  to the Free Software Foundation, Inc.,
+ * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <asm/types.h>
 #include <linux/kernel.h>
+#include <linux/types.h>
 #include <linux/usb/otg.h>
 #include <linux/spinlock.h>
 #include <linux/delay.h>
 #include <linux/usb.h>
-#include <linux/usb_gadget.h>
+#include <linux/usb/gadget.h>
 
+#include <asm/types.h>
 #include "otg_fsm.h"
+
 
 /* Defined by device specific driver, for different timer implementation */
 extern void *a_wait_vrise_tmr, *a_wait_bcon_tmr, *a_aidl_bdis_tmr,
-    *b_ase0_brst_tmr, *b_se0_srp_tmr, *b_srp_fail_tmr, *a_wait_enum_tmr;
+	*b_ase0_brst_tmr, *b_se0_srp_tmr, *b_srp_fail_tmr, *a_wait_enum_tmr;
 
 const char *state_string(enum usb_otg_state state)
 {
 	switch (state) {
-	case OTG_STATE_A_IDLE:
-		return "a_idle";
-	case OTG_STATE_A_WAIT_VRISE:
-		return "a_wait_vrise";
-	case OTG_STATE_A_WAIT_BCON:
-		return "a_wait_bcon";
-	case OTG_STATE_A_HOST:
-		return "a_host";
-	case OTG_STATE_A_SUSPEND:
-		return "a_suspend";
-	case OTG_STATE_A_PERIPHERAL:
-		return "a_peripheral";
-	case OTG_STATE_A_WAIT_VFALL:
-		return "a_wait_vfall";
-	case OTG_STATE_A_VBUS_ERR:
-		return "a_vbus_err";
-	case OTG_STATE_B_IDLE:
-		return "b_idle";
-	case OTG_STATE_B_SRP_INIT:
-		return "b_srp_init";
-	case OTG_STATE_B_PERIPHERAL:
-		return "b_peripheral";
-	case OTG_STATE_B_WAIT_ACON:
-		return "b_wait_acon";
-	case OTG_STATE_B_HOST:
-		return "b_host";
-	default:
-		return "UNDEFINED";
-	}
-}
-
-const char *protocol_string(int p)
-{
-	switch (p) {
-	case PROTO_HOST:
-		return "Host";
-	case PROTO_GADGET:
-		return "Peripheral";
-	default:
-		return "undef";
+	case OTG_STATE_A_IDLE:		return "a_idle";
+	case OTG_STATE_A_WAIT_VRISE:	return "a_wait_vrise";
+	case OTG_STATE_A_WAIT_BCON:	return "a_wait_bcon";
+	case OTG_STATE_A_HOST:		return "a_host";
+	case OTG_STATE_A_SUSPEND:	return "a_suspend";
+	case OTG_STATE_A_PERIPHERAL:	return "a_peripheral";
+	case OTG_STATE_A_WAIT_VFALL:	return "a_wait_vfall";
+	case OTG_STATE_A_VBUS_ERR:	return "a_vbus_err";
+	case OTG_STATE_B_IDLE:		return "b_idle";
+	case OTG_STATE_B_SRP_INIT:	return "b_srp_init";
+	case OTG_STATE_B_PERIPHERAL:	return "b_peripheral";
+	case OTG_STATE_B_WAIT_ACON:	return "b_wait_acon";
+	case OTG_STATE_B_HOST:		return "b_host";
+	default:			return "UNDEFINED";
 	}
 }
 
@@ -77,9 +62,8 @@ static int otg_set_protocol(struct otg_fsm *fsm, int protocol)
 	int ret = 0;
 
 	if (fsm->protocol != protocol) {
-		VDBG("Change role from %s to %s",
-		     protocol_string(fsm->protocol), protocol_string(protocol));
-
+		VDBG("Changing role fsm->protocol= %d; new protocol= %d\n",
+				fsm->protocol, protocol);
 		/* stop old protocol */
 		if (fsm->protocol == PROTO_HOST)
 			ret = fsm->ops->start_host(fsm, 0);
@@ -103,7 +87,7 @@ static int otg_set_protocol(struct otg_fsm *fsm, int protocol)
 	return 0;
 }
 
-static int state_changed = 0;
+static int state_changed;
 
 /* Called when leaving a state.  Do state clean up jobs here */
 void otg_leave_state(struct otg_fsm *fsm, enum usb_otg_state old_state)
@@ -160,11 +144,8 @@ int otg_set_state(struct otg_fsm *fsm, enum usb_otg_state new_state)
 	state_changed = 1;
 	if (fsm->transceiver->state == new_state)
 		return 0;
-
-	VDBG("chg state to %s", state_string(new_state));
-
+	VDBG("Set state: %s \n", state_string(new_state));
 	otg_leave_state(fsm, fsm->transceiver->state);
-
 	switch (new_state) {
 	case OTG_STATE_B_IDLE:
 		otg_drv_vbus(fsm, 0);
@@ -200,7 +181,7 @@ int otg_set_state(struct otg_fsm *fsm, enum usb_otg_state new_state)
 		otg_loc_sof(fsm, 1);
 		otg_set_protocol(fsm, PROTO_HOST);
 		usb_bus_start_enum(fsm->transceiver->host,
-				   fsm->transceiver->host->otg_port);
+				fsm->transceiver->host->otg_port);
 		break;
 	case OTG_STATE_A_IDLE:
 		otg_drv_vbus(fsm, 0);
@@ -229,8 +210,7 @@ int otg_set_state(struct otg_fsm *fsm, enum usb_otg_state new_state)
 		otg_loc_sof(fsm, 1);
 		otg_set_protocol(fsm, PROTO_HOST);
 		/* When HNP is triggered while a_bus_req = 0, a_host will
-		 * suspend too fast to complete a_set_b_hnp_en
-		 */
+		 * suspend too fast to complete a_set_b_hnp_en */
 		if (!fsm->a_bus_req || fsm->a_suspend_req)
 			otg_add_timer(fsm, a_wait_enum_tmr);
 		break;
@@ -280,18 +260,15 @@ int otg_statemachine(struct otg_fsm *fsm)
 	state_changed = 0;
 	/* State machine state change judgement */
 
-	VDBG("top: curr state=%s", state_string(state));
-
 	switch (state) {
 	case OTG_STATE_UNDEFINED:
-		VDBG("fsm->id = %d", fsm->id);
+		VDBG("fsm->id = %d \n", fsm->id);
 		if (fsm->id)
 			otg_set_state(fsm, OTG_STATE_B_IDLE);
 		else
 			otg_set_state(fsm, OTG_STATE_A_IDLE);
 		break;
 	case OTG_STATE_B_IDLE:
-		VDBG("gadget: %p", fsm->transceiver->gadget);
 		if (!fsm->id)
 			otg_set_state(fsm, OTG_STATE_A_IDLE);
 		else if (fsm->b_sess_vld && fsm->transceiver->gadget)
@@ -306,9 +283,8 @@ int otg_statemachine(struct otg_fsm *fsm)
 	case OTG_STATE_B_PERIPHERAL:
 		if (!fsm->id || !fsm->b_sess_vld)
 			otg_set_state(fsm, OTG_STATE_B_IDLE);
-		else if (fsm->b_bus_req &&
-			 fsm->transceiver->gadget->b_hnp_enable &&
-			 fsm->a_bus_suspend)
+		else if (fsm->b_bus_req && fsm->transceiver->
+				gadget->b_hnp_enable && fsm->a_bus_suspend)
 			otg_set_state(fsm, OTG_STATE_B_WAIT_ACON);
 		break;
 	case OTG_STATE_B_WAIT_ACON:
@@ -335,7 +311,7 @@ int otg_statemachine(struct otg_fsm *fsm)
 		break;
 	case OTG_STATE_A_WAIT_VRISE:
 		if (fsm->id || fsm->a_bus_drop || fsm->a_vbus_vld ||
-		    fsm->a_wait_vrise_tmout) {
+				fsm->a_wait_vrise_tmout) {
 			otg_set_state(fsm, OTG_STATE_A_WAIT_BCON);
 		}
 		break;
@@ -349,7 +325,7 @@ int otg_statemachine(struct otg_fsm *fsm)
 		break;
 	case OTG_STATE_A_HOST:
 		if ((!fsm->a_bus_req || fsm->a_suspend_req) &&
-		    fsm->transceiver->host->b_hnp_enable)
+				fsm->transceiver->host->b_hnp_enable)
 			otg_set_state(fsm, OTG_STATE_A_SUSPEND);
 		else if (fsm->id || !fsm->b_conn || fsm->a_bus_drop)
 			otg_set_state(fsm, OTG_STATE_A_WAIT_BCON);
@@ -377,8 +353,8 @@ int otg_statemachine(struct otg_fsm *fsm)
 			otg_set_state(fsm, OTG_STATE_A_VBUS_ERR);
 		break;
 	case OTG_STATE_A_WAIT_VFALL:
-		if (fsm->id || fsm->a_bus_req ||
-		    (!fsm->a_sess_vld && !fsm->b_conn))
+		if (fsm->id || fsm->a_bus_req || (!fsm->a_sess_vld &&
+					!fsm->b_conn))
 			otg_set_state(fsm, OTG_STATE_A_IDLE);
 		break;
 	case OTG_STATE_A_VBUS_ERR:
@@ -390,5 +366,6 @@ int otg_statemachine(struct otg_fsm *fsm)
 	}
 	spin_unlock_irqrestore(&fsm->lock, flags);
 
+	/*	VDBG("quit statemachine, changed = %d \n", state_changed); */
 	return state_changed;
 }

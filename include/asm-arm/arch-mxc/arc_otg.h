@@ -37,7 +37,6 @@
 #define UOG_HWHOST		USBOTG_REG32(0x08)	/* Host h/w params */
 #define UOG_HWTXBUF		USBOTG_REG32(0x10)	/* TX buffer h/w params */
 #define UOG_HWRXBUF		USBOTG_REG32(0x14)	/* RX buffer h/w params */
-#define UOG_SBUSCFG             USBOTG_REG32(0x90)      /* System bus interface */
 #define UOG_CAPLENGTH		USBOTG_REG16(0x100)	/* Capability register length */
 #define UOG_HCIVERSION		USBOTG_REG16(0x102)	/* Host Interface version */
 #define UOG_HCSPARAMS		USBOTG_REG32(0x104)	/* Host control structural params */
@@ -200,7 +199,7 @@
 #define  OTGSC_IE_A_SESSION_VALID	(1 << 26)
 #define  OTGSC_IE_B_SESSION_VALID	(1 << 27)
 #define  OTGSC_IE_B_SESSION_END		(1 << 28)
-#define  OTGSC_IE_1ms_TIMER		(1 << 19)
+#define  OTGSC_IE_1ms_TIMER		(1 << 29)
 #define  OTGSC_IE_DATA_PULSE		(1 << 30)
 
 #if 1				/* FIXME these here for compatibility between my names and Leo's */
@@ -211,6 +210,14 @@
 /* OTG interrupt status bit masks */
 #define  OTGSC_INTERRUPT_STATUS_BITS_MASK	OTGSC_IS_MASK
 #endif
+
+/* x_USBMODE */
+#define USBMODE_SLOM		(1 << 3)	/* setup lockout mode */
+#define USBMODE_ES		(1 << 2)	/* (big) endian select */
+#define USBMODE_CM_MASK		(3 << 0)	/* controller mode mask */
+#define USBMODE_CM_HOST		(3 << 0)	/* host */
+#define USBMODE_CM_DEVICE	(2 << 0)	/* device */
+#define USBMODE_CM_reserved	(1 << 0)	/* reserved */
 
 /* USBCTRL */
 #define UCTRL_OWIR		(1 << 31)	/* OTG wakeup intr request received */
@@ -243,7 +250,7 @@
 #define UCTRL_H1SIC_SU6		(2 << 13)	/* single-ended/unidirectional 6 wire */
 #define UCTRL_H1SIC_SB3		(3 << 13)	/* single-ended/bidirectional  3 wire */
 
-#define UCTRL_PP                (1 << 11)       /* The power polarity bit controls the polarity of the pwr output signal*/
+#define UCTRL_PP                (1 << 11)       /* power polarity bit */
 #define UCTRL_H1WIE		(1 << 11)	/* HOST1 wakeup intr enable */
 #define UCTRL_H1BPVAL_RXDP	(1 << 10)	/* HOST1 RxDp status in bypass mode */
 #define UCTRL_XCSO              (1 << 10)       /* Xcvr Clock Select for OTG port */
@@ -281,6 +288,7 @@
 #define USB_UTMI_PHYCTRL_UTMI_ENABLE   0x01000000
 
 /* ULPIVIEW register bits */
+#define ULPIVW_OFF		(0x170)
 #define ULPIVW_WU		(1 << 31)	/* Wakeup */
 #define ULPIVW_RUN		(1 << 30)	/* read/write run */
 #define ULPIVW_WRITE		(1 << 29)	/* 0=read  1=write */

@@ -16,6 +16,7 @@
 #include <linux/types.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
+#include <linux/fsl_devices.h>
 #include <linux/delay.h>
 #include <linux/usb/fsl_xcvr.h>
 
@@ -59,7 +60,7 @@
  * @param       view  the ULPI VIEWPORT register address
  * @return	return isp1504 register value
  */
-static u8 isp1504_read(int reg, volatile u32 * view)
+static u8 isp1504_read(int reg, volatile u32 *view)
 {
 	u32 data;
 
@@ -88,7 +89,7 @@ static u8 isp1504_read(int reg, volatile u32 * view)
  * @param	reg   which register
  * @param       view  the ULPI VIEWPORT register address
  */
-static void isp1504_set(u8 bits, int reg, volatile u32 * view)
+static void isp1504_set(u8 bits, int reg, volatile u32 *view)
 {
 	u32 data;
 
@@ -116,7 +117,7 @@ static void isp1504_set(u8 bits, int reg, volatile u32 * view)
  * @param	reg   in this register
  * @param       view  the ULPI VIEWPORT register address
  */
-static void isp1504_clear(u8 bits, int reg, volatile u32 * view)
+static void isp1504_clear(u8 bits, int reg, volatile u32 *view)
 {
 	__raw_writel((ULPIVW_RUN | ULPIVW_WRITE |
 		      ((reg + ISP1504_REG_CLEAR) << ULPIVW_ADDR_SHIFT) |
@@ -129,7 +130,7 @@ static void isp1504_clear(u8 bits, int reg, volatile u32 * view)
 
 extern int gpio_usbotg_hs_active(void);
 
-static void isp1508_fix(u32 * view)
+static void isp1508_fix(u32 *view)
 {
 	if (!machine_is_mx31_3ds())
 		gpio_usbotg_hs_active();
@@ -147,8 +148,10 @@ static void isp1508_fix(u32 * view)
  * @param       view  viewport register
  * @param       on    power on or off
  */
-static void isp1504_set_vbus_power(u32 * view, int on)
+static void isp1504_set_vbus_power(struct fsl_xcvr_ops *this, int on)
 {
+	u32 *view = this->pdata->regs + ULPIVW_OFF;
+
 	pr_debug("real %s(on=%d) view=0x%p\n", __FUNCTION__, on, view);
 
 	pr_debug("ULPI Vendor ID 0x%x    Product ID 0x%x\n",
@@ -223,8 +226,6 @@ static struct fsl_xcvr_ops isp1504_ops = {
 	.init = isp1504_init,
 	.uninit = isp1504_uninit,
 	.suspend = isp1504_suspend,
-	.set_host = NULL,
-	.set_device = NULL,
 	.set_vbus_power = isp1504_set_vbus_power,
 	.set_remote_wakeup = isp1504_set_remote_wakeup,
 };

@@ -60,7 +60,10 @@ static int fsl_check_usbclk(void)
 	unsigned long freq;
 
 	usb_ahb_clk = clk_get(NULL, "usb_ahb_clk");
-	clk_enable(usb_ahb_clk);
+	if (clk_enable(usb_ahb_clk)) {
+		printk(KERN_ERR "clk_enable(usb_ahb_clk) failed\n");
+		return -EINVAL;
+	}
 	clk_put(usb_ahb_clk);
 
 	usb_clk = clk_get(NULL, "usb_clk");
@@ -78,7 +81,7 @@ void fsl_usb_xcvr_register(struct fsl_xcvr_ops *xcvr_ops)
 {
 	int i;
 
-	pr_debug("%s\n", __FUNCTION__);
+	pr_debug("%s\n", __func__);
 	for (i = 0; i < MXC_NUMBER_USB_TRANSCEIVER; i++) {
 		if (g_xc_ops[i] == NULL) {
 			g_xc_ops[i] = xcvr_ops;
@@ -86,16 +89,15 @@ void fsl_usb_xcvr_register(struct fsl_xcvr_ops *xcvr_ops)
 		}
 	}
 
-	pr_debug("Failed %s\n", __FUNCTION__);
+	pr_debug("Failed %s\n", __func__);
 }
-
 EXPORT_SYMBOL(fsl_usb_xcvr_register);
 
 void fsl_usb_xcvr_unregister(struct fsl_xcvr_ops *xcvr_ops)
 {
 	int i;
 
-	pr_debug("%s\n", __FUNCTION__);
+	pr_debug("%s\n", __func__);
 	for (i = 0; i < MXC_NUMBER_USB_TRANSCEIVER; i++) {
 		if (g_xc_ops[i] == xcvr_ops) {
 			g_xc_ops[i] = NULL;
@@ -103,18 +105,17 @@ void fsl_usb_xcvr_unregister(struct fsl_xcvr_ops *xcvr_ops)
 		}
 	}
 
-	pr_debug("Failed %s\n", __FUNCTION__);
+	pr_debug("Failed %s\n", __func__);
 }
-
 EXPORT_SYMBOL(fsl_usb_xcvr_unregister);
 
 static struct fsl_xcvr_ops *fsl_usb_get_xcvr(char *name)
 {
 	int i;
 
-	pr_debug("%s\n", __FUNCTION__);
+	pr_debug("%s\n", __func__);
 	if (name == NULL) {
-		printk(KERN_ERR "None tranceiver name be passed\n");
+		printk(KERN_ERR "get_xcvr(): No tranceiver name\n");
 		return NULL;
 	}
 
@@ -123,7 +124,7 @@ static struct fsl_xcvr_ops *fsl_usb_get_xcvr(char *name)
 			return g_xc_ops[i];
 		}
 	}
-	pr_debug("Failed %s\n", __FUNCTION__);
+	pr_debug("Failed %s\n", __func__);
 	return NULL;
 }
 
@@ -146,8 +147,8 @@ static u64 ehci_dmamask = ~(u32) 0;
  * to register each host interface.
  */
 static int instance_id = 0;
-struct platform_device *host_pdev_register(struct resource *res, int n_res, struct fsl_usb2_platform_data
-					   *config)
+struct platform_device *host_pdev_register(struct resource *res, int n_res,
+					   struct fsl_usb2_platform_data *config)
 {
 	struct platform_device *pdev;
 	int rc;
@@ -179,7 +180,8 @@ struct platform_device *host_pdev_register(struct resource *res, int n_res, stru
 		return NULL;
 	}
 
-	printk(KERN_INFO "usb: %s registered\n", config->name);
+	printk(KERN_INFO "usb: %s host (%s) registered\n", config->name,
+	       config->transceiver);
 	pr_debug("pdev=0x%p  dev=0x%p  resources=0x%p  pdata=0x%p\n",
 		 pdev, &pdev->dev, pdev->resource, pdev->dev.platform_data);
 
@@ -188,89 +190,21 @@ struct platform_device *host_pdev_register(struct resource *res, int n_res, stru
 	return pdev;
 }
 
-static int fsl_usb_mem_init(struct platform_device *pdev)
-{
-	struct resource *res;
-	struct fsl_usb2_platform_data *pdata;
-
-	pdata = (struct fsl_usb2_platform_data *)pdev->dev.platform_data;
-
-	pr_debug("%s: pdev=0x%p  pdata=0x%p\n", __FUNCTION__, pdev, pdata);
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
-		dev_err(&pdev->dev, "no MEM resource.\n");
-		return -ENODEV;
-	}
-
-	pdata->r_start = res->start;
-	pdata->r_len = res->end - res->start + 1;
-	pr_debug("%s: MEM resource start=0x%x  len=0x%x\n", pdata->name,
-		 res->start, pdata->r_len);
-
-	if (!request_mem_region(pdata->r_start, pdata->r_len, "OTG")) {
-		dev_err(&pdev->dev, "request_mem_region failed\n");
-		return -EBUSY;
-	}
-	pdata->regs = ioremap(pdata->r_start, pdata->r_len);
-	pr_debug("ioremapped to 0x%p\n", pdata->regs);
-
-	if (pdata->regs == NULL) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		release_mem_region(pdata->r_start, pdata->r_len);
-		return -EFAULT;
-	}
-
-	pr_debug("%s: success\n", __FUNCTION__);
-	return 0;
-}
-
-static int fsl_usb_mem_map(struct platform_device *pdev)
-{
-	struct resource *res;
-	struct fsl_usb2_platform_data *pdata;
-
-	pdata = (struct fsl_usb2_platform_data *)pdev->dev.platform_data;
-
-	pr_debug("%s: pdev=0x%p  pdata=0x%p\n", __FUNCTION__, pdev, pdata);
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
-		dev_err(&pdev->dev, "no MEM resource.\n");
-		return -ENODEV;
-	}
-
-	pdata->r_start = res->start;
-	pdata->r_len = res->end - res->start + 1;
-	pr_debug("%s: MEM resource start=0x%x  len=0x%x\n", pdata->name,
-		 res->start, pdata->r_len);
-
-	pdata->regs = ioremap(pdata->r_start, pdata->r_len);
-	pr_debug("ioremapped to 0x%p\n", pdata->regs);
-
-	if (pdata->regs == NULL) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		return -EFAULT;
-	}
-
-	pr_debug("%s: success\n", __FUNCTION__);
-	return 0;
-}
-
+/* DDD looks like this is needed by Belcarra code */
 void fsl_platform_set_vbus_power(struct fsl_usb2_platform_data *pdata, int on)
 {
 	if (pdata->xcvr_ops && pdata->xcvr_ops->set_vbus_power)
-		pdata->xcvr_ops->set_vbus_power((u32 *) pdata->viewport, on);
+		pdata->xcvr_ops->set_vbus_power(pdata->xcvr_ops, on);
 }
-
 EXPORT_SYMBOL(fsl_platform_set_vbus_power);
 
+/* DDD looks like this is needed by Belcarra code */
 void fsl_platform_perform_remote_wakeup(struct fsl_usb2_platform_data *pdata)
 {
 	if (pdata->xcvr_ops && pdata->xcvr_ops->set_remote_wakeup)
-		pdata->xcvr_ops->set_remote_wakeup((u32 *) pdata->viewport);
+		pdata->xcvr_ops->set_remote_wakeup(
+			(u32 *)(pdata->regs + ULPIVW_OFF));
 }
-
 EXPORT_SYMBOL(fsl_platform_perform_remote_wakeup);
 
 #if defined(CONFIG_USB_OTG)
@@ -285,47 +219,70 @@ static struct otg_transceiver *xceiv;
  */
 struct otg_transceiver *otg_get_transceiver(void)
 {
-	pr_debug("%s xceiv=0x%p\n", __FUNCTION__, xceiv);
+	pr_debug("%s xceiv=0x%p\n", __func__, xceiv);
 	if (xceiv)
 		get_device(xceiv->dev);
 	return xceiv;
 }
-
 EXPORT_SYMBOL(otg_get_transceiver);
 
 int otg_set_transceiver(struct otg_transceiver *x)
 {
-	pr_debug("%s xceiv=0x%p  x=0x%p\n", __FUNCTION__, xceiv, x);
+	pr_debug("%s xceiv=0x%p  x=0x%p\n", __func__, xceiv, x);
 	if (xceiv && x)
 		return -EBUSY;
 	xceiv = x;
 	return 0;
 }
-
 EXPORT_SYMBOL(otg_set_transceiver);
+
+static struct resource *otg_resources;
+
+struct resource *otg_get_resources(void)
+{
+	return otg_resources;
+}
+EXPORT_SYMBOL(otg_get_resources);
+
+int otg_set_resources(struct resource *resources)
+{
+	otg_resources = resources;
+	return 0;
+}
+EXPORT_SYMBOL(otg_set_resources);
 #endif
 
 static void usbh1_set_serial_xcvr(void)
 {
-	pr_debug("%s: \n", __FUNCTION__);
-	USBCTRL &= ~(UCTRL_H1SIC_MASK | UCTRL_BPE);	/* disable bypass mode */
-	USBCTRL |= UCTRL_H1SIC_SU6 |	/* single-ended / unidir. */
-	    UCTRL_H1WIE | UCTRL_H1DT |	/* disable H1 TLL */
-	    UCTRL_H1PM;		/* power mask */
-	UH1_PORTSC1 &= ~PORTSC_PTS_MASK;
-	UH1_PORTSC1 |= PORTSC_PTS_SERIAL;
+	pr_debug("%s: \n", __func__);
+	USBCTRL &= ~(UCTRL_H1SIC_MASK | UCTRL_BPE); /* disable bypass mode */
+	USBCTRL |= UCTRL_H1SIC_SU6 |		/* single-ended / unidir. */
+		   UCTRL_H1WIE | UCTRL_H1DT |	/* disable H1 TLL */
+		   UCTRL_H1PM;			/* power mask */
 }
 
 static void usbh2_set_ulpi_xcvr(void)
 {
-	USBCTRL &= ~(UCTRL_H2SIC_MASK | UCTRL_BPE);	/* disable bypass mode */
-	USBCTRL |= UCTRL_H2WIE |	/* wakeup intr enable */
-	    UCTRL_H2UIE |	/* ULPI intr enable */
-	    UCTRL_H2DT |	/* disable H2 TLL */
-	    UCTRL_H2PM;		/* power mask */
+	u32 tmp;
 
-	/* set ULPI xcvr */
-	UH2_PORTSC1 = (UH2_PORTSC1 & (~PORTSC_PTS_MASK)) | PORTSC_PTS_ULPI;
+	pr_debug("%s\n", __func__);
+	USBCTRL &= ~(UCTRL_H2SIC_MASK | UCTRL_BPE);
+	USBCTRL |= UCTRL_H2WIE |	/* wakeup intr enable */
+		   UCTRL_H2UIE |	/* ULPI intr enable */
+		   UCTRL_H2DT |		/* disable H2 TLL */
+		   UCTRL_H2PM;		/* power mask */
+
+	/* must set ULPI phy before turning off clock */
+	tmp = UH2_PORTSC1 & ~PORTSC_PTS_MASK;
+	tmp |= PORTSC_PTS_ULPI;
+	UH2_PORTSC1 = tmp;
+
+	UH2_USBCMD |= UCMD_RESET;	/* reset the controller */
+
+	/* allow controller to reset, and leave time for
+	 * the ULPI transceiver to reset too.
+	 */
+	msleep(100);
 
 	/* Turn off the usbpll for ulpi tranceivers */
 	clk_disable(usb_clk);
@@ -368,14 +325,10 @@ extern void usbh2_put_xcvr_power(struct device *dev);
 
 int fsl_usb_host_init(struct platform_device *pdev)
 {
-	struct fsl_usb2_platform_data *pdata;
+	struct fsl_usb2_platform_data *pdata = pdev->dev.platform_data;
 	struct fsl_xcvr_ops *xops;
-	int rc;
 
-	pdata = (struct fsl_usb2_platform_data *)pdev->dev.platform_data;
-
-	pr_debug("%s: pdev=0x%p  pdata=0x%p\n", __FUNCTION__, pdev,
-		 pdata->name);
+	pr_debug("%s: pdev=0x%p  pdata=0x%p\n", __func__, pdev, pdata);
 
 	xops = fsl_usb_get_xcvr(pdata->transceiver);
 	if (!xops) {
@@ -384,6 +337,8 @@ int fsl_usb_host_init(struct platform_device *pdev)
 	}
 	pdata->xcvr_ops = xops;
 	pdata->xcvr_type = xops->xcvr_type;
+	pdata->pdev = pdev;
+	xops->pdata = pdata;
 
 	if (fsl_check_usbclk() != 0)
 		return -EINVAL;
@@ -399,17 +354,14 @@ int fsl_usb_host_init(struct platform_device *pdev)
 		usbh2_get_xcvr_power(&(pdev->dev));
 	}
 
-	pr_debug("%s: grab pins\n", __FUNCTION__);
+	pr_debug("%s: grab pins\n", __func__);
 	if (pdata->gpio_usb_active())
 		return -EINVAL;
 
-	/* request_mem_region and ioremap registers */
-	if ((rc = fsl_usb_mem_init(pdev))) {
-		pdata->gpio_usb_inactive();	/* release our pins */
-		return rc;
+	if (clk_enable(usb_clk)) {
+		printk(KERN_ERR "clk_enable(usb_clk) failed\n");
+		return -EINVAL;
 	}
-
-	clk_enable(usb_clk);
 
 	if (xops->init)
 		xops->init(xops);
@@ -423,24 +375,19 @@ int fsl_usb_host_init(struct platform_device *pdev)
 		usbh2_set_ulpi_xcvr();
 	}
 
-	pr_debug("%s: %s success\n", __FUNCTION__, pdata->name);
+	pr_debug("%s: %s success\n", __func__, pdata->name);
 	return 0;
 }
-
 EXPORT_SYMBOL(fsl_usb_host_init);
 
 void fsl_usb_host_uninit(struct fsl_usb2_platform_data *pdata)
 {
-	pr_debug("%s\n", __FUNCTION__);
+	pr_debug("%s\n", __func__);
 
 	if (pdata->xcvr_ops && pdata->xcvr_ops->uninit)
 		pdata->xcvr_ops->uninit(pdata->xcvr_ops);
 
-	iounmap(pdata->regs);
-	release_mem_region(pdata->r_start, pdata->r_len);
-
 	pdata->regs = NULL;
-	pdata->r_start = pdata->r_len = 0;
 
 	pdata->gpio_usb_inactive();
 	if (pdata->xcvr_type == PORTSC_PTS_SERIAL)
@@ -451,20 +398,16 @@ void fsl_usb_host_uninit(struct fsl_usb2_platform_data *pdata)
 		kfree(pdata->xcvr_pwr);
 	}
 }
-
 EXPORT_SYMBOL(fsl_usb_host_uninit);
 
 static void otg_set_serial_xcvr(void)
 {
-	u32 tmp;
-
-	tmp = UOG_PORTSC1 & ~PORTSC_PTS_MASK;
-	tmp |= PORTSC_PTS_SERIAL;
-	UOG_PORTSC1 = tmp;
+	pr_debug("%s\n", __func__);
 }
 
 void otg_set_serial_host(void)
 {
+	pr_debug("%s\n", __func__);
 	/* set USBCTRL for host operation
 	 * disable: bypass mode,
 	 * set: single-ended/unidir/6 wire, OTG wakeup intr enable,
@@ -487,7 +430,6 @@ void otg_set_serial_host(void)
 
 	USB_OTG_MIRROR = OTGM_VBUSVAL | OTGM_ASESVLD;	/* 0xa */
 }
-
 EXPORT_SYMBOL(otg_set_serial_host);
 
 void otg_set_serial_peripheral(void)
@@ -514,13 +456,13 @@ void otg_set_serial_peripheral(void)
 
 	USB_OTG_MIRROR = OTGM_VBUSVAL | OTGM_BSESVLD | OTGM_IDIDG;	/* oxd */
 }
-
 EXPORT_SYMBOL(otg_set_serial_peripheral);
 
 static void otg_set_ulpi_xcvr(void)
 {
 	u32 tmp;
 
+	pr_debug("%s\n", __func__);
 	USBCTRL &= ~UCTRL_OSIC_MASK;
 #if defined(CONFIG_ARCH_MX27) || defined(CONFIG_ARCH_MX3)
 	USBCTRL &= ~UCTRL_BPE;
@@ -529,7 +471,7 @@ static void otg_set_ulpi_xcvr(void)
 	    UCTRL_OWIE |	/* OTG wakeup intr enable */
 	    UCTRL_OPM;		/* power mask */
 
-	/* set ULPI xcvr */
+	/* must set ULPI phy before turning off clock */
 	tmp = UOG_PORTSC1 & ~PORTSC_PTS_MASK;
 	tmp |= PORTSC_PTS_ULPI;
 	UOG_PORTSC1 = tmp;
@@ -571,7 +513,6 @@ int fsl_usb_xcvr_suspend(struct fsl_xcvr_ops *xcvr_ops)
 	}
 	return 0;
 }
-
 EXPORT_SYMBOL(fsl_usb_xcvr_suspend);
 
 static void otg_set_utmi_xcvr(void)
@@ -621,35 +562,32 @@ static int otg_used = 0;
 
 int usbotg_init(struct platform_device *pdev)
 {
-	struct fsl_usb2_platform_data *pdata;
+	struct fsl_usb2_platform_data *pdata = pdev->dev.platform_data;
 	struct fsl_xcvr_ops *xops;
-	int rc;
 
-	pdata = (struct fsl_usb2_platform_data *)pdev->dev.platform_data;
-
-	pr_debug("%s: pdev=0x%p  pdata=0x%p\n", __FUNCTION__, pdev, pdata);
+	pr_debug("%s: pdev=0x%p  pdata=0x%p\n", __func__, pdev, pdata);
 
 	xops = fsl_usb_get_xcvr(pdata->transceiver);
 	if (!xops) {
-		printk(KERN_ERR "OTG transceiver ops missing\n");
+		printk(KERN_ERR "DR transceiver ops missing\n");
 		return -EINVAL;
 	}
 	pdata->xcvr_ops = xops;
 	pdata->xcvr_type = xops->xcvr_type;
+	pdata->pdev = pdev;
+	xops->pdata = pdata;
 
 	if (!otg_used) {
 		if (fsl_check_usbclk() != 0)
 			return -EINVAL;
 
-		pr_debug("%s: grab pins\n", __FUNCTION__);
+		pr_debug("%s: grab pins\n", __func__);
 		if (pdata->gpio_usb_active())
 			return -EINVAL;
 
-		clk_enable(usb_clk);
-
-		/* request_mem_region and ioremap registers */
-		if ((rc = fsl_usb_mem_init(pdev))) {
-			return rc;
+		if (clk_enable(usb_clk)) {
+			printk(KERN_ERR "clk_enable(usb_clk) failed\n");
+			return -EINVAL;
 		}
 
 		if (xops->init)
@@ -669,31 +607,24 @@ int usbotg_init(struct platform_device *pdev)
 		} else if (xops->xcvr_type == PORTSC_PTS_UTMI) {
 			otg_set_utmi_xcvr();
 		}
-	} else {
-		fsl_usb_mem_map(pdev);
 	}
 
 	otg_used++;
-	pr_debug("%s: success\n", __FUNCTION__);
+	pr_debug("%s: success\n", __func__);
 	return 0;
 }
-
 EXPORT_SYMBOL(usbotg_init);
 
 void usbotg_uninit(struct fsl_usb2_platform_data *pdata)
 {
-	pr_debug("%s\n", __FUNCTION__);
+	pr_debug("%s\n", __func__);
 
 	otg_used--;
 	if (!otg_used) {
 		if (pdata->xcvr_ops && pdata->xcvr_ops->uninit)
 			pdata->xcvr_ops->uninit(pdata->xcvr_ops);
 
-		iounmap(pdata->regs);
-		release_mem_region(pdata->r_start, pdata->r_len);
-
 		pdata->regs = NULL;
-		pdata->r_start = pdata->r_len = 0;
 
 		if (machine_is_mx31_3ds()) {
 			if (pdata->xcvr_ops && pdata->xcvr_ops->suspend)
@@ -706,5 +637,4 @@ void usbotg_uninit(struct fsl_usb2_platform_data *pdata)
 			clk_disable(usb_clk);
 	}
 }
-
 EXPORT_SYMBOL(usbotg_uninit);

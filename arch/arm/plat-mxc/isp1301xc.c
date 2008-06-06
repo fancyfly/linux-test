@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -195,7 +195,7 @@ static inline void isp1301_set_serial_host(void)
 			  (VBUS_DRV | DP_PULLDOWN | DM_PULLDOWN));
 }
 
-/* set ISP1301 as USB device*/
+/* set ISP1301 as USB device */
 static inline void isp1301_set_serial_dev(void)
 {
 	pr_debug("%s\n", __FUNCTION__);
@@ -219,7 +219,7 @@ static inline void isp1301_set_serial_dev(void)
 			  (DP_PULLDOWN | DM_PULLDOWN | DP_PULLUP));
 }
 
-static void isp1301_set_vbus_power(u32 * view, int on)
+static void isp1301_set_vbus_power(struct fsl_xcvr_ops *this, int on)
 {
 	pr_debug("%s(on=%d)\n", __FUNCTION__, on);
 	if (on) {
@@ -239,6 +239,19 @@ static void isp1301_set_vbus_power(u32 * view, int on)
 	}
 }
 
+/*
+ * Enable or disable the D+ pullup.
+ */
+static void isp1301_pullup(int on)
+{
+	pr_debug("%s(%d)\n", __func__, on);
+
+	if (on)
+		isp1301_write_reg(ISP1301_CTRL_REG1_SET, DP_PULLUP);
+	else
+		isp1301_write_reg(ISP1301_CTRL_REG1_CLR, DP_PULLUP);
+}
+
 static struct fsl_xcvr_ops isp1301_ops_otg = {
 	.name = "isp1301",
 	.xcvr_type = PORTSC_PTS_SERIAL,
@@ -247,6 +260,7 @@ static struct fsl_xcvr_ops isp1301_ops_otg = {
 	.set_host = isp1301_set_serial_host,
 	.set_device = isp1301_set_serial_dev,
 	.set_vbus_power = isp1301_set_vbus_power,
+	.pullup = isp1301_pullup,
 };
 
 extern void fsl_usb_xcvr_register(struct fsl_xcvr_ops *xcvr_ops);

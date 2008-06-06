@@ -99,33 +99,30 @@ enum fsl_usb2_phy_modes {
 	FSL_USB2_PHY_SERIAL,
 };
 
+struct platform_device;
 struct fsl_usb2_platform_data {
 	/* board specific information */
-	enum fsl_usb2_operating_modes operating_mode;
-	enum fsl_usb2_phy_modes phy_mode;
-	unsigned int port_enables;
+	enum fsl_usb2_operating_modes	operating_mode;
+	enum fsl_usb2_phy_modes		phy_mode;
+	unsigned int			port_enables;
 
-	/* DDD this could arguably be moved to a separate
-	 * fsl usb2 device header file
-	 */
 	char *name;		/* pretty print */
 	int (*platform_init) (struct platform_device *);
 	void (*platform_uninit) (struct fsl_usb2_platform_data *);
-	int (*platform_verify) (struct platform_device *);
+	void __iomem *regs;	/* ioremap'd register base */
 	u32 xcvr_type;		/* PORTSC_PTS_* */
 	char *transceiver;	/* transceiver name */
-	// DDD combine usbmode and view into 1 register-base variable
-	u32 usbmode;		/* address of usbmode register */
-	u32 viewport;		/* address of ulpiview register */
-	u32 r_start;		/* start of MEM resource */
-	u32 r_len;		/* length of MEM resource */
-	void __iomem *regs;	/* ioremap'd register base */
-	int does_otg;
 	unsigned power_budget;	/* for hcd->power_budget */
+	struct platform_device *pdev;
 	struct fsl_xcvr_ops *xcvr_ops;
 	struct fsl_xcvr_power *xcvr_pwr;
 	int (*gpio_usb_active) (void);
 	void (*gpio_usb_inactive) (void);
+	unsigned			big_endian_mmio : 1;
+	unsigned			big_endian_desc : 1;
+	unsigned			es : 1;	/* need USBMODE:ES */
+	unsigned			have_sysif_regs : 1;
+	unsigned			le_setup_buf : 1;
 };
 
 /* Flags in fsl_usb2_mph_platform_data */

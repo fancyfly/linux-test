@@ -14,10 +14,12 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/types.h>
+#include <linux/device.h>
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/err.h>
 #include <linux/platform_device.h>
+#include <linux/fsl_devices.h>
 #include <linux/usb/fsl_xcvr.h>
 
 #include <asm/hardware.h>
@@ -38,16 +40,13 @@ static void usb_utmi_uninit(struct fsl_xcvr_ops *this)
  * @param       view  viewport register
  * @param       on    power on or off
  */
-static void set_power(u32 *view, int on)
+static void set_power(struct fsl_xcvr_ops *this, int on)
 {
-	struct device *dev;
-	struct platform_device *pdev;
+	struct device *dev = &this->pdata->pdev->dev;
 	struct regulator *usbotg_regux;
 
-	pr_debug("real %s(on=%d) view=0x%p\n", __FUNCTION__, on, view);
+	pr_debug("real %s(on=%d) pdata=0x%p\n", __func__, on, this->pdata);
 	if (machine_is_mx37_3ds()) {
-		pdev = (struct platform_device *)view;
-		dev = &(pdev->dev);
 		usbotg_regux = regulator_get(dev, "DCDC2");
 		if (on) {
 			regulator_enable(usbotg_regux);

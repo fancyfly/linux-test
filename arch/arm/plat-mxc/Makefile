@@ -28,12 +28,9 @@ obj-$(CONFIG_LEDS) += leds.o
 
 # USB support
 obj-$(CONFIG_ISP1504_MXC) += isp1504xc.o
-
 obj-$(CONFIG_ISP1301_MXC) += isp1301xc.o
-
-obj-$(CONFIG_INTERN_UTMI) += utmixc.o
-
 obj-$(CONFIG_MC13783_MXC) += mc13783_xc.o
+obj-$(CONFIG_USB_EHCI_FSL_UTMI) += utmixc.o
 
 ifneq ($(CONFIG_USB_EHCI_ARC_H1),)
 obj-y += serialxc.o

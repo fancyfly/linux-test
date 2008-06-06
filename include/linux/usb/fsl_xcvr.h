@@ -9,19 +9,22 @@
  * @uninit: transceiver- and board-specific uninitialization function
  * @set_host:
  * @set_device:
+ * @pullup: enable or disable D+ pullup
  *
  */
 struct fsl_xcvr_ops {
 	char *name;
 	u32 xcvr_type;
+	struct fsl_usb2_platform_data *pdata;
 
-	void (*init) (struct fsl_xcvr_ops * ops);
-	void (*uninit) (struct fsl_xcvr_ops * ops);
-   void (*suspend) (struct fsl_xcvr_ops *ops);
-	void (*set_host) (void);
-	void (*set_device) (void);
-	void (*set_vbus_power) (u32 * view, int on);
-	void (*set_remote_wakeup) (u32 * view);
+	void (*init)(struct fsl_xcvr_ops *ops);
+	void (*uninit)(struct fsl_xcvr_ops *ops);
+	void (*suspend)(struct fsl_xcvr_ops *ops);
+	void (*set_host)(void);
+	void (*set_device)(void);
+	void (*set_vbus_power)(struct fsl_xcvr_ops *ops, int on);
+	void (*set_remote_wakeup)(u32 *view);
+	void (*pullup)(int on);
 };
 
 struct fsl_xcvr_power {

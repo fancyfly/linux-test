@@ -237,8 +237,8 @@ static struct resource mxcspi3_resources[] = {
 	       .flags = IORESOURCE_MEM,
 	       },
 	[1] = {
-	       .start = MXC_INT_CSPI3,
-	       .end = MXC_INT_CSPI3,
+	       .start = MXC_INT_CSPI,
+	       .end = MXC_INT_CSPI,
 	       .flags = IORESOURCE_IRQ,
 	       },
 };
@@ -246,7 +246,7 @@ static struct resource mxcspi3_resources[] = {
 /*! Platform Data for MXC CSPI3 */
 static struct mxc_spi_master mxcspi3_data = {
 	.maxchipselect = 4,
-	.spi_version = 23,
+	.spi_version = 7,
 };
 
 /*! Device Definition for MXC CSPI3 */
@@ -265,7 +265,7 @@ static struct platform_device mxcspi3_device = {
 void __init mxc_init_spi(void)
 {
 	/* SPBA configuration for CSPI2 - MCU is set */
-	spba_take_ownership(SPBA_CSPI2, SPBA_MASTER_A);
+	spba_take_ownership(SPBA_CSPI1, SPBA_MASTER_A);
 #ifdef CONFIG_SPI_MXC_SELECT1
 	if (platform_device_register(&mxcspi1_device) < 0)
 		printk(KERN_ERR "Error: Registering the SPI Controller_1\n");

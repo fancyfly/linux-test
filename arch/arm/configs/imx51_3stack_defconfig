@@ -668,11 +668,28 @@ CONFIG_DEVPORT=y
 # CONFIG_I2C is not set
 # CONFIG_I2C_SLAVE is not set
 
+ #
+ # SPI support
+ #
+CONFIG_SPI=y
+CONFIG_SPI_MASTER=y
+
 #
-# SPI support
+# SPI Master Controller Drivers
 #
-# CONFIG_SPI is not set
-# CONFIG_SPI_MASTER is not set
+CONFIG_SPI_BITBANG=y
+CONFIG_SPI_MXC=y
+# CONFIG_SPI_MXC_TEST_LOOPBACK is not set
+CONFIG_SPI_MXC_SELECT1=y
+CONFIG_SPI_MXC_SELECT2=y
+# CONFIG_SPI_MXC_SELECT3 is not set
+
+#
+# SPI Protocol Masters
+#
+# CONFIG_SPI_AT25 is not set
+# CONFIG_SPI_SPIDEV is not set
+# CONFIG_SPI_TLE62X0 is not set
 # CONFIG_W1 is not set
 # CONFIG_POWER_SUPPLY is not set
 # CONFIG_HWMON is not set

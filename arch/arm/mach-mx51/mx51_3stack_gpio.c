@@ -68,9 +68,55 @@ void gpio_uart_active(int port, int no_irda)
 				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
 				  PAD_CTL_DRV_HIGH);
 		break;
+		/* UART 2 IOMUX Configs */
 	case 1:
+		mxc_request_iomux(MX51_PIN_UART2_RXD, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_UART2_RXD, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_input(MUX_IN_UART2_IPP_UART_RXD_MUX_SELECT_INPUT,
+				    INPUT_CTL_PATH0);
+		mxc_request_iomux(MX51_PIN_UART2_TXD, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_UART2_TXD, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		/* UART2_RTS */
+		mxc_request_iomux(MX51_PIN_EIM_D26, IOMUX_CONFIG_ALT4);
+		mxc_iomux_set_pad(MX51_PIN_EIM_D26, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_input(MUX_IN_UART2_IPP_UART_RTS_B_SELECT_INPUT,
+				    INPUT_CTL_PATH2);
+		/* UART2_CTS */
+		mxc_request_iomux(MX51_PIN_EIM_D25, IOMUX_CONFIG_ALT4);
+		mxc_iomux_set_pad(MX51_PIN_EIM_D25, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
 		break;
 	case 2:
+		/* UART 3 IOMUX Configs */
+		mxc_request_iomux(MX51_PIN_UART3_RXD, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_UART3_RXD, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_input(MUX_IN_UART3_IPP_UART_RXD_MUX_SELECT_INPUT,
+				    INPUT_CTL_PATH0);
+		mxc_request_iomux(MX51_PIN_UART3_TXD, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_UART3_TXD, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		/* UART3_RTS */
+		mxc_request_iomux(MX51_PIN_EIM_D27, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX51_PIN_EIM_D27, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_input(MUX_IN_UART3_IPP_UART_RTS_B_SELECT_INPUT,
+				    INPUT_CTL_PATH2);
+		/* UART3_CTS */
+		mxc_request_iomux(MX51_PIN_EIM_D24, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX51_PIN_EIM_D24, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
 		break;
 	default:
 		break;
@@ -86,7 +132,44 @@ EXPORT_SYMBOL(gpio_uart_active);
  */
 void gpio_uart_inactive(int port, int no_irda)
 {
+	switch (port) {
+		/* UART 1 */
+	case 0:
+		mxc_request_gpio(MX51_PIN_UART1_RXD);
+		mxc_request_gpio(MX51_PIN_UART1_TXD);
+		mxc_request_gpio(MX51_PIN_UART1_RTS);
+		mxc_request_gpio(MX51_PIN_UART1_CTS);
 
+		mxc_free_iomux(MX51_PIN_UART1_RXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX51_PIN_UART1_TXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX51_PIN_UART1_RTS, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX51_PIN_UART1_CTS, IOMUX_CONFIG_GPIO);
+		break;
+		/* UART 2 */
+	case 1:
+		mxc_request_gpio(MX51_PIN_UART2_RXD);
+		mxc_request_gpio(MX51_PIN_UART2_TXD);
+
+		mxc_free_iomux(MX51_PIN_UART2_RXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX51_PIN_UART2_TXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX51_PIN_EIM_D26, IOMUX_CONFIG_ALT4);
+		mxc_free_iomux(MX51_PIN_EIM_D25, IOMUX_CONFIG_ALT4);
+		break;
+	case 2:
+		/* UART 3 */
+		mxc_request_gpio(MX51_PIN_UART3_RXD);
+		mxc_request_gpio(MX51_PIN_UART3_TXD);
+		mxc_request_gpio(MX51_PIN_EIM_D27);
+		mxc_request_gpio(MX51_PIN_EIM_D24);
+
+		mxc_free_iomux(MX51_PIN_UART3_RXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX51_PIN_UART3_TXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX51_PIN_EIM_D27, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX51_PIN_EIM_D24, IOMUX_CONFIG_GPIO);
+		break;
+	default:
+		break;
+	}
 }
 EXPORT_SYMBOL(gpio_uart_inactive);
 

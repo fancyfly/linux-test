@@ -338,6 +338,7 @@ static int imx_ssi_startup(struct snd_pcm_substream *substream)
 		    SSI_SFCSR_RFWM0(SSI_RXFIFO_WATERMARK) |
 		    SSI_SFCSR_TFWM1(SSI_TXFIFO_WATERMARK) |
 		    SSI_SFCSR_TFWM0(SSI_TXFIFO_WATERMARK);
+		SSI1_SIER = 0;
 	} else {
 
 		if (ssi_active[SSI2_PORT]++)
@@ -352,6 +353,7 @@ static int imx_ssi_startup(struct snd_pcm_substream *substream)
 		    SSI_SFCSR_RFWM0(SSI_RXFIFO_WATERMARK) |
 		    SSI_SFCSR_TFWM1(SSI_TXFIFO_WATERMARK) |
 		    SSI_SFCSR_TFWM0(SSI_TXFIFO_WATERMARK);
+		SSI2_SIER = 0;
 	}
 
 	SSI_DUMP();

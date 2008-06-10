@@ -52,6 +52,7 @@
  *
  * @ingroup MSL_MX37
  */
+extern void gpio_lcd_active();
 extern void mxc_map_io(void);
 extern void mxc_init_irq(void);
 extern void mxc_cpu_init(void) __init;
@@ -242,6 +243,7 @@ static void mxc_init_fb(void)
 	(void)platform_device_register(&mxc_fb_device[0]);
 	(void)platform_device_register(&mxc_fb_device[1]);
 	(void)platform_device_register(&mxc_fb_device[2]);
+	gpio_lcd_active();
 }
 #else
 static inline void mxc_init_fb(void)

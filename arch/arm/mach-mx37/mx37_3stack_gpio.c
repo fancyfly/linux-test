@@ -127,6 +127,9 @@ void gpio_spi_active(int cspi_mod)
 		mxc_iomux_set_pad(MX37_PIN_CSPI2_SCLK, PAD_CTL_HYS_ENABLE |
 				  PAD_CTL_SRE_FAST);
 
+		mxc_request_iomux(MX37_PIN_CSPI2_SS1, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX37_PIN_CSPI2_SS1, PAD_CTL_SRE_FAST);
+
 		mxc_request_iomux(MX37_PIN_CSPI2_SS0, IOMUX_CONFIG_ALT0);
 		mxc_iomux_set_pad(MX37_PIN_CSPI2_SS0, PAD_CTL_SRE_FAST);
 		mxc_iomux_set_pad(MX37_PIN_GRP_H10, PAD_CTL_HYS_ENABLE);
@@ -400,7 +403,10 @@ EXPORT_SYMBOL(sdhc_init_card_det);
  */
 void gpio_lcd_active(void)
 {
- /*TODO*/}
+	mxc_request_iomux(MX37_PIN_DI1_PIN2, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX37_PIN_PAD_DI1_PIN3, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX37_PIN_DISP_CLK, IOMUX_CONFIG_ALT0);
+}
 
 /*!
  * Setup GPIO for LCD to be inactive
@@ -623,8 +629,8 @@ void gpio_keypad_active(void)
 
 	mxc_set_gpio_direction(MX37_PIN_DISP1_DAT18, 0);
 	mxc_set_gpio_direction(MX37_PIN_GPIO1_3, 1);
-
 }
+
 EXPORT_SYMBOL(gpio_keypad_active);
 
 /*!
@@ -638,6 +644,7 @@ void gpio_keypad_inactive(void)
 	/*KEY_WAKE */
 	mxc_request_iomux(MX37_PIN_DISP1_DAT18, IOMUX_CONFIG_ALT0);
 }
+
 EXPORT_SYMBOL(gpio_keypad_inactive);
 
 /*

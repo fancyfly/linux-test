@@ -150,8 +150,8 @@ static void nfc_memcpy(void *dst, const void *src, int len)
 /*
  * Functions to transfer data to/from spare erea.
  */
-static void copy_spare(struct mtd_info *mtd, char *pbuf, char *pspare, int len,
-		       bool bfrom)
+static void
+copy_spare(struct mtd_info *mtd, void *pbuf, void *pspare, int len, bool bfrom)
 {
 	u16 ooblen = mtd->oobsize;
 	u8 i, count, size;
@@ -160,21 +160,19 @@ static void copy_spare(struct mtd_info *mtd, char *pbuf, char *pspare, int len,
 	size = (ooblen / count >> 1) << 1;
 
 	if (bfrom) {
-		for (i = 0; i < count - 1; i++) {
-			nfc_memcpy((void *)(pbuf + i * size),
-				   (void *)(pspare + i * SPARE_LEN), size);
-		}
+		for (i = 0; i < count - 1; i++)
+			nfc_memcpy((pbuf + i * size), (pspare + i * SPARE_LEN),
+				   size);
 
-		nfc_memcpy((void *)(pbuf + i * size),
-			   (void *)(pspare + i * SPARE_LEN), len - i * size);
+		nfc_memcpy((pbuf + i * size), (pspare + i * SPARE_LEN),
+			   len - i * size);
 	} else {
-		for (i = 0; i < count - 1; i++) {
-			nfc_memcpy((void *)(pspare + i * SPARE_LEN),
-				   (void *)(pbuf + i * size), size);
-		}
+		for (i = 0; i < count - 1; i++)
+			nfc_memcpy((pspare + i * SPARE_LEN), (pbuf + i * size),
+				   size);
 
-		nfc_memcpy((void *)(pspare + i * SPARE_LEN),
-			   (void *)(pbuf + i * size), len - i * size);
+		nfc_memcpy((pspare + i * SPARE_LEN), (pbuf + i * size),
+			   len - i * size);
 	}
 }
 
@@ -211,11 +209,12 @@ static void wait_op_done(int maxRetries, bool useirq)
 		}
 		if (maxRetries <= 0) {
 			DEBUG(MTD_DEBUG_LEVEL0, "%s(%d): INT not set\n",
-			      __FUNCTION__);
+			      __FUNCTION__, __LINE__);
 		}
 	}
 }
 
+static void send_addr(u16 addr, bool useirq);
 /*!
  * This function issues the specified command to the NAND device and
  * waits for completion.
@@ -227,12 +226,59 @@ static void send_cmd(u16 cmd, bool useirq)
 {
 	DEBUG(MTD_DEBUG_LEVEL3, "send_cmd(0x%x, %d)\n", cmd, useirq);
 
+#ifdef NFC_AUTO_MODE_ENABLE
+	switch (cmd) {
+	case NAND_CMD_READ0:
+	case NAND_CMD_READOOB:
+		raw_write(NAND_CMD_READ0, REG_NFC_FLASH_CMD);
+		break;
+
+	case NAND_CMD_SEQIN:
+	case NAND_CMD_ERASE1:
+		raw_write(cmd, REG_NFC_FLASH_CMD);
+		break;
+
+	case NAND_CMD_PAGEPROG:
+	case NAND_CMD_ERASE2:
+	case NAND_CMD_READSTART:
+		raw_write(raw_read(REG_NFC_FLASH_CMD) | cmd << NFC_CMD_1_SHIFT,
+			  REG_NFC_FLASH_CMD);
+
+		if (cmd == NAND_CMD_ERASE2) {
+			raw_write(NFC_AUTO_ERASE, REG_NFC_OPS);
+		} else if (cmd == NAND_CMD_PAGEPROG) {
+			NFC_SET_RBA(0);
+			raw_write(NFC_AUTO_PROG, REG_NFC_OPS);
+		} else if (cmd == NAND_CMD_READSTART) {
+			NFC_SET_RBA(0);
+			raw_write(NFC_AUTO_READ, REG_NFC_OPS);
+		}
+
+		wait_op_done(TROP_US_DELAY, useirq);
+		break;
+
+	case NAND_CMD_READID:
+		raw_write(cmd, REG_NFC_FLASH_CMD);
+		ACK_OPS;
+		raw_write(NFC_CMD, REG_NFC_OPS);
+		wait_op_done(TROP_US_DELAY, useirq);
+		send_addr(0, false);
+		break;
+
+	case NAND_CMD_STATUS:
+		raw_write(NFC_AUTO_STATE, REG_NFC_OPS);
+		break;
+	}
+	DEBUG(MTD_DEBUG_LEVEL3, "AutoMode:CMD REG value is 0x%x \n",
+	      raw_read(REG_NFC_FLASH_CMD));
+#else
 	raw_write(cmd, REG_NFC_FLASH_CMD);
 	ACK_OPS;
 	raw_write(NFC_CMD, REG_NFC_OPS);
 
 	/* Wait for operation to complete */
 	wait_op_done(TROP_US_DELAY, useirq);
+#endif
 }
 
 /*!
@@ -263,19 +309,17 @@ static void send_addr(u16 addr, bool useirq)
  */
 static void send_prog_page(u8 buf_id)
 {
-	u32 val = buf_id;
+#ifndef NFC_AUTO_MODE_ENABLE
 	DEBUG(MTD_DEBUG_LEVEL3, "%s\n", __FUNCTION__);
 
-	NFC_SET_RBA(val, RBA_BUFFER0);	/* defined only for V3 */
-
-	/* Set RBA bits for BUFFER val */
-	raw_write(val, REG_NFC_SET_RBA);
+	NFC_SET_RBA(buf_id);
 
 	ACK_OPS;		/* defined only for V3 */
-	raw_write(NFC_INPUT, REG_NFC_OPS);
 
+	raw_write(NFC_INPUT, REG_NFC_OPS);
 	/* Wait for operation to complete */
 	wait_op_done(TROP_US_DELAY, true);
+#endif
 }
 
 /*!
@@ -286,18 +330,17 @@ static void send_prog_page(u8 buf_id)
  */
 static void send_read_page(u8 buf_id)
 {
-	u32 val = buf_id;
-	DEBUG(MTD_DEBUG_LEVEL3, "%s\n", __FUNCTION__);
+#ifndef NFC_AUTO_MODE_ENABLE
+	DEBUG(MTD_DEBUG_LEVEL3, "%s(%d)\n", __FUNCTION__, buf_id);
 
-	NFC_SET_RBA(val, RBA_BUFFER0);	/* defined only for V3 */
-	/* Set RBA bits for BUFFER val */
-	raw_write(val, REG_NFC_SET_RBA);
+	NFC_SET_RBA(buf_id);
 
 	ACK_OPS;		/* defined only for V3 */
-	raw_write(NFC_OUTPUT, REG_NFC_OPS);
 
+	raw_write(NFC_OUTPUT, REG_NFC_OPS);
 	/* Wait for operation to complete */
 	wait_op_done(TROP_US_DELAY, true);
+#endif
 }
 
 /*!
@@ -306,15 +349,15 @@ static void send_read_page(u8 buf_id)
  */
 static void send_read_id(void)
 {
-	u32 val = 0;
+	u8 val = 0;
 
 	/* NFC buffer 0 is used for device ID output */
 	/* Set RBA bits for BUFFER0 */
+	NFC_SET_RBA(val);
 
-	NFC_SET_RBA(val, RBA_BUFFER0);	/* defined only for V3 */
-	raw_write(val, REG_NFC_SET_RBA);
+	/* defined only for V3 */
+	ACK_OPS;
 
-	ACK_OPS;		/* defined only for V3 */
 	/* Read ID into main buffer */
 	raw_write(NFC_ID, REG_NFC_OPS);
 
@@ -331,9 +374,16 @@ static void send_read_id(void)
  */
 static u16 get_dev_status(void)
 {
+#ifdef NFC_AUTO_MODE_ENABLE
+	u16 status;
+	do {
+		status = (raw_read(NFC_CONFIG1) & 0x00FF0000) >> 16;
+	} while ((status & 0x40) == 0);
+	return status;
+#else
 	volatile u16 *mainBuf = MAIN_AREA1;
 	volatile u32 store;
-	u32 val = 1;
+	u8 val = 1;
 	u16 ret;
 	/* Issue status request to NAND device */
 
@@ -347,10 +397,10 @@ static u16 get_dev_status(void)
 	 */
 
 	/* Set RBA bits for BUFFER1 */
-	NFC_SET_RBA(val, RBA_BUFFER1);	/* defined only for V3 */
-	raw_write(val, REG_NFC_SET_RBA);
+	NFC_SET_RBA(val);
 
-	ACK_OPS;		/* defined only for V3 */
+	/* defined only for V3 */
+	ACK_OPS;
 	/* Read status into main buffer */
 	raw_write(NFC_STATUS, REG_NFC_OPS);
 
@@ -362,6 +412,7 @@ static u16 get_dev_status(void)
 	ret = mainBuf[0];
 	*((u32 *) mainBuf) = store;
 	return ret;
+#endif
 }
 
 /*!
@@ -654,6 +705,25 @@ static void mxc_nand_select_chip(struct mtd_info *mtd, int chip)
  */
 static void mxc_do_addr_cycle(struct mtd_info *mtd, int column, int page_addr)
 {
+#ifdef NFC_AUTO_MODE_ENABLE
+
+	if (page_addr != -1 && column != -1) {
+		/* the column address */
+		raw_write(column & 0x0000FFFF, NFC_FLASH_ADDR0);
+		raw_write((raw_read(NFC_FLASH_ADDR0) |
+			   ((page_addr & 0x0000FFFF) << 16)), NFC_FLASH_ADDR0);
+		/* the row address */
+		raw_write(((raw_read(NFC_FLASH_ADDR8) & 0xFFFF0000) |
+			   ((page_addr & 0xFFFF0000) >> 16)), NFC_FLASH_ADDR8);
+	} else if (page_addr != -1) {
+		raw_write(page_addr, NFC_FLASH_ADDR0);
+	}
+
+	DEBUG(MTD_DEBUG_LEVEL3,
+	      "AutoMode:the ADDR REGS value is (0x%x, 0x%x)\n",
+	      raw_read(NFC_FLASH_ADDR0), raw_read(NFC_FLASH_ADDR8));
+#else
+
 	u32 page_mask = g_page_mask;
 
 	if (column != -1) {
@@ -673,7 +743,7 @@ static void mxc_do_addr_cycle(struct mtd_info *mtd, int column, int page_addr)
 			page_addr >>= 8;
 		} while (page_mask != 0);
 	}
-
+#endif
 }
 
 /*
@@ -974,10 +1044,10 @@ static int mxc_nand_scan_bbt(struct mtd_info *mtd)
 	g_page_mask = this->pagemask;
 
 	if (IS_2K_PAGE_NAND) {
-		SET_NFMS(1 << NFMS_NF_PG_SZ);
+		NFC_SET_NFMS(1 << NFMS_NF_PG_SZ);
 		this->ecc.layout = &nand_hw_eccoob_2k;
 	} else if (IS_4K_PAGE_NAND) {
-		SET_NFMS(1 << NFMS_NF_PG_SZ);
+		NFC_SET_NFMS(1 << NFMS_NF_PG_SZ);
 		this->ecc.layout = &nand_hw_eccoob_4k;
 	} else {
 		this->ecc.layout = &nand_hw_eccoob_512;
@@ -1063,7 +1133,7 @@ static int __init mxcnd_probe(struct platform_device *pdev)
 	if (flash->width == 2) {
 		this->read_byte = mxc_nand_read_byte16;
 		this->options |= NAND_BUSWIDTH_16;
-		SET_NFMS(1 << NFMS_NF_DWIDTH);
+		NFC_SET_NFMS(1 << NFMS_NF_DWIDTH);
 	}
 
 	nfc_clk = clk_get(&pdev->dev, "nfc_clk");

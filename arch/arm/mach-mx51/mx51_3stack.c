@@ -123,6 +123,61 @@ static inline void mxc_init_keypad(void)
 }
 #endif
 
+/* MTD NAND flash */
+#if defined(CONFIG_MTD_NAND_MXC) \
+	|| defined(CONFIG_MTD_NAND_MXC_MODULE) \
+	|| defined(CONFIG_MTD_NAND_MXC_V2) \
+	|| defined(CONFIG_MTD_NAND_MXC_V2_MODULE) \
+	|| defined(CONFIG_MTD_NAND_MXC_V3)
+
+static struct mtd_partition mxc_nand_partitions[] = {
+	{
+	 .name = "bootloader",
+	 .offset = 0,
+	 .size = 1024 * 1024},
+	{
+	 .name = "nand.kernel",
+	 .offset = MTDPART_OFS_APPEND,
+	 .size = 5 * 1024 * 1024},
+	{
+	 .name = "nand.rootfs",
+	 .offset = MTDPART_OFS_APPEND,
+	 .size = 128 * 1024 * 1024},
+	{
+	 .name = "nand.userfs1",
+	 .offset = MTDPART_OFS_APPEND,
+	 .size = 256 * 1024 * 1024},
+	{
+	 .name = "nand.userfs2",
+	 .offset = MTDPART_OFS_APPEND,
+	 .size = MTDPART_SIZ_FULL},
+};
+
+static struct flash_platform_data mxc_nand_data = {
+	.parts = mxc_nand_partitions,
+	.nr_parts = ARRAY_SIZE(mxc_nand_partitions),
+	.width = 1,
+};
+
+static struct platform_device mxc_nandv2_mtd_device = {
+	.name = "mxc_nandv2_flash",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_nand_data,
+		},
+};
+
+static void mxc_init_nand_mtd(void)
+{
+	(void)platform_device_register(&mxc_nandv2_mtd_device);
+}
+#else
+static inline void mxc_init_nand_mtd(void)
+{
+}
+#endif
+
 #if defined(CONFIG_FB_MXC_SYNC_PANEL) || \
 	defined(CONFIG_FB_MXC_SYNC_PANEL_MODULE)
 static struct platform_device mxc_fb_device[] = {
@@ -232,7 +287,7 @@ static void mxc_expio_irq_handler(u32 irq, struct irq_desc *desc)
 		d->handle_irq(expio_irq, d);
 	}
 
-out:
+      out:
 	desc->chip->ack(irq);
 	desc->chip->unmask(irq);
 }
@@ -380,6 +435,7 @@ static void __init mxc_board_init(void)
 	mxc_init_enet();
 	mxc_init_fb();
 	mxc_init_keypad();
+	mxc_init_nand_mtd();
 }
 
 /*

@@ -36,6 +36,8 @@
 /* Allocate the key transfer structures from the previously allocated pool */
 #include <linux/smp_lock.h>
 
+bool use_iram_qtd;
+
 struct memDesc {
 	u32 start;
 	u32 end;
@@ -201,18 +203,18 @@ static int address_to_buffer(struct ehci_hcd *ehci, int address)
 {
 	int i;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < IRAM_NTD; i++) {
 		if (ehci->usb_address[i] == address)
 			return i;
 	}
-	return 2;
+	return IRAM_NTD;
 }
 
 static void use_buffer(struct ehci_hcd *ehci, int address)
 {
 	int i;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < IRAM_NTD; i++) {
 		if (ehci->usb_address[i] == address)
 			return;
 	}
@@ -265,9 +267,13 @@ static struct ehci_qtd *ehci_qtd_alloc(struct ehci_hcd *ehci, gfp_t flags)
 	struct ehci_qtd *qtd;
 	dma_addr_t dma;
 
-	dma = usb_malloc(sizeof(struct ehci_qtd), flags);
-	if (dma != 0)
-		qtd = (struct ehci_qtd *)IO_ADDRESS(dma);
+	if (use_iram_qtd) {
+		dma = usb_malloc(sizeof(struct ehci_qtd), flags);
+		if (dma != 0)
+			qtd = (struct ehci_qtd *)IO_ADDRESS(dma);
+		else
+			qtd = dma_pool_alloc(ehci->qtd_pool, flags, &dma);
+	}
 	else
 		qtd = dma_pool_alloc(ehci->qtd_pool, flags, &dma);
 
@@ -305,7 +311,7 @@ static void qh_destroy(struct ehci_qh *qh)
 	if (qh->dummy)
 		ehci_qtd_free(ehci, qh->dummy);
 	int i;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < IRAM_NTD; i++) {
 		if (ehci->usb_address[i] == (qh->hw_info1 & 0x7F))
 			ehci->usb_address[i] = 0;
 	}
@@ -422,8 +428,14 @@ static int ehci_mem_init(struct ehci_hcd *ehci, gfp_t flags)
 	g_debug_qH_allocated = 0;
 	g_alloc_map = 0;
 
-	usb_pool_initialize(USB_IRAM_BASE_ADDR + IRAM_TD_SIZE * IRAM_NTD * 4,
-			    16384 - IRAM_TD_SIZE * IRAM_NTD * 4, 32);
+	if (cpu_is_mx37())
+		use_iram_qtd = 0;
+	else
+		use_iram_qtd = 1;
+
+	usb_pool_initialize(USB_IRAM_BASE_ADDR + IRAM_TD_SIZE * IRAM_NTD * 2,
+			    USB_IRAM_SIZE - IRAM_TD_SIZE * IRAM_NTD * 2, 32);
+
 	if (!ehci->iram_buffer[0]) {
 		ehci->iram_buffer[0] = alloc_iram_buf();
 		ehci->iram_buffer_v[0] = IO_ADDRESS(ehci->iram_buffer[0]);

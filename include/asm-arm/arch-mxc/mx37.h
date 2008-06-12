@@ -81,6 +81,13 @@
 
 #define SND_RAM_BASE_ADDR	(IRAM_BASE_ADDR + CONFIG_SDMA_IRAM_SIZE)
 
+#define USB_IRAM_BASE_ADDR	(SND_RAM_BASE_ADDR + SND_RAM_SIZE)
+#ifdef CONFIG_USB_STATIC_IRAM
+#define USB_IRAM_SIZE	(2*SZ_8K)
+#else
+#define USB_IRAM_SIZE 0
+#endif
+
 /*
  * NFC
  */
@@ -292,6 +299,8 @@
 
 #define NFC_BASE_ADDR_AXI_IO_ADDRESS(x) \
         (((x) - NFC_BASE_ADDR_AXI) + NFC_BASE_ADDR_AXI_VIRT)
+
+#define IS_MEM_DEVICE_NONSHARED(x)	((x) >= 0x80000000)
 
 /*
  * DMA request assignments

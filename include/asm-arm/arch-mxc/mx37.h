@@ -74,7 +74,7 @@
 #define CONFIG_SDMA_IRAM_SIZE 0
 #endif
 #ifdef CONFIG_SND_MXC_SOC_IRAM
-#define SND_RAM_SIZE 0x3000
+#define SND_RAM_SIZE 0x6000
 #else
 #define SND_RAM_SIZE 0
 #endif

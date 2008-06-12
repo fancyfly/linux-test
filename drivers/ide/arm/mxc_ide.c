@@ -134,7 +134,11 @@ static struct {
 		    100,.tMLI = 20,.tAZ = 10,.tZAH = 20,.tENV_min =
 		    20,.tSR = 20,.tRFS = 60,.tRP = 100,.tACK = 20,.tSS =
 		    50,.tDZFS = 47},[3] = {
-	.t2CYC = 86,.tCYC = 39,.tDS = 7,.tDH = 5,.tDVS = 20,.tDVH =
+		/*
+		 * change tDVS from 20 to 30 since the "drive ready,
+		 * seek complete, bad crc error"
+		 */
+	.t2CYC = 86, .tCYC = 39, .tDS = 7, .tDH = 5, .tDVS = 30, .tDVH =
 		    6,.tCVS = 20,.tCVH = 6,.tFS_min = 0,.tLI_max =
 		    100,.tMLI = 20,.tAZ = 10,.tZAH = 20,.tENV_min =
 		    20,.tSR = 20,.tRFS = 60,.tRP = 100,.tACK = 20,.tSS =
@@ -370,7 +374,7 @@ static int mxc_ide_dma_on(ide_drive_t * drive)
 	 */
 	rc = mxc_ide_config_drive(drive, XFER_UDMA_3);
 	pr_info("%s: enabling UDMA3 mode %s\n", drive->name,
-	       rc == 0 ? "success" : "failed");
+		rc == 0 ? "success" : "failed");
 	drive->using_dma = 1;
 
 	blk_queue_max_hw_segments(drive->queue, MXC_IDE_DMA_BD_NR);
@@ -875,7 +879,7 @@ static void mxc_ide_dma_init(ide_hwif_t * hwif)
 	}
 
 	pr_info("%s: read chan=%d , write chan=%d \n",
-	       hwif->name, priv->dma_read_chan, priv->dma_write_chan);
+		hwif->name, priv->dma_read_chan, priv->dma_write_chan);
 
 	set_ata_bus_timing(0, UDMA);
 

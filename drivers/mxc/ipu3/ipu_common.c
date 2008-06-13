@@ -105,17 +105,6 @@ static struct clk di_clk[] = {
 	 .rate = 27000000,},
 };
 
-static void _ipu_dmfc_init(void)
-{
-	__raw_writel(0x2, DMFC_IC_CTRL);
-	/* 1 - segment 0 and 1; 2, 1C and 2C unused */
-	__raw_writel(0x00000090, DMFC_WR_CHAN);
-	__raw_writel(0x20202000, DMFC_WR_CHAN_DEF);
-	/* 5B - segment 2 and 3; 5F - segment 4 and 5; */
-	/* 6B - segment 6; 6F - segment 7 */
-	__raw_writel(0x1F1E9492, DMFC_DP_CHAN);
-}
-
 /*!
  * This function is called by the driver framework to initialize the IPU
  * hardware.
@@ -651,6 +640,8 @@ int32_t ipu_init_channel_buffer(ipu_channel_t channel, ipu_buffer_t type,
 		_ipu_ch_param_set_burst_size(dma_chan, 8);
 		_ipu_ch_param_set_block_mode(dma_chan);
 	}
+
+	_ipu_dmfc_set_wait4eot(dma_chan, width);
 
 	if (_ipu_chan_is_interlaced(channel))
 		_ipu_ch_param_set_interlaced_scan(dma_chan);

@@ -31,6 +31,59 @@
 
 #define SYNC_WAVE 0
 
+/* all value below is determined by fix reg setting in _ipu_dmfc_init*/
+#define DMFC_FIFO_SIZE_28	(128*4)
+#define DMFC_FIFO_SIZE_29	(64*4)
+#define DMFC_FIFO_SIZE_24	(64*4)
+#define DMFC_FIFO_SIZE_27	(128*4)
+#define DMFC_FIFO_SIZE_23	(128*4)
+
+void _ipu_dmfc_init(void)
+{
+	/* disable DMFC-IC channel*/
+	__raw_writel(0x2, DMFC_IC_CTRL);
+	/* 1 - segment 0 and 1; 2, 1C and 2C unused */
+	__raw_writel(0x00000090, DMFC_WR_CHAN);
+	__raw_writel(0x20202000, DMFC_WR_CHAN_DEF);
+	/* 5B - segment 2 and 3; 5F - segment 4 and 5; */
+	/* 6B - segment 6; 6F - segment 7 */
+	__raw_writel(0x1F1E9492, DMFC_DP_CHAN);
+}
+
+void _ipu_dmfc_set_wait4eot(int dma_chan, int width)
+{
+	u32 dmfc_gen1 = __raw_readl(DMFC_GENERAL1);
+
+	if (dma_chan == 23) { /*5B*/
+		if (DMFC_FIFO_SIZE_23/width > 3)
+			dmfc_gen1 |= 1UL << 20;
+		else
+			dmfc_gen1 &= ~(1UL << 20);
+	} else if (dma_chan == 24) { /*6B*/
+		if (DMFC_FIFO_SIZE_24/width > 1)
+			dmfc_gen1 |= 1UL << 22;
+		else
+			dmfc_gen1 &= ~(1UL << 22);
+	} else if (dma_chan == 27) { /*5F*/
+		if (DMFC_FIFO_SIZE_27/width > 2)
+			dmfc_gen1 |= 1UL << 21;
+		else
+			dmfc_gen1 &= ~(1UL << 21);
+	} else if (dma_chan == 28) { /*1*/
+		if (DMFC_FIFO_SIZE_28/width > 2)
+			dmfc_gen1 |= 1UL << 16;
+		else
+			dmfc_gen1 &= ~(1UL << 16);
+	} else if (dma_chan == 29) { /*6F*/
+		if (DMFC_FIFO_SIZE_29/width > 1)
+			dmfc_gen1 |= 1UL << 23;
+		else
+			dmfc_gen1 &= ~(1UL << 23);
+	}
+
+	__raw_writel(dmfc_gen1, DMFC_GENERAL1);
+}
+
 static void _ipu_di_data_wave_config(int di,
 				     int wave_gen,
 				     int access_size, int component_size)

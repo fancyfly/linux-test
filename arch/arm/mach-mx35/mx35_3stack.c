@@ -25,6 +25,7 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
 #include <linux/mtd/partitions.h>
+#include <linux/delay.h>
 
 #include <asm/mach/flash.h>
 #endif
@@ -38,6 +39,7 @@
 #include <asm/arch/memory.h>
 #include <asm/arch/gpio.h>
 #include <asm/arch/mmc.h>
+#include <asm/arch/pmic_external.h>
 
 #include "board-mx35_3stack.h"
 #include "crm_regs.h"
@@ -268,6 +270,36 @@ static struct mxc_camera_platform_data camera_data = {
 	.mclk = 24000000,
 };
 
+void si4702_reset(void)
+{
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 4, 0);
+	msleep(100);
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 4, 1);
+	msleep(100);
+}
+
+void si4702_clock_ctl(int flag)
+{
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 7, flag);
+}
+
+static void si4702_gpio_get(void)
+{
+}
+
+static void si4702_gpio_put(void)
+{
+}
+
+static struct mxc_fm_platform_data si4702_data = {
+	.reg_vio = "SW1",
+	.reg_vdd = "SW2",
+	.gpio_get = si4702_gpio_get,
+	.gpio_put = si4702_gpio_put,
+	.reset = si4702_reset,
+	.clock_ctl = si4702_clock_ctl,
+};
+
 static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	{
 	 .driver_name = "mc9sdz60",
@@ -298,6 +330,11 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	 .addr = 0x55,
 	 },
 #endif
+	{
+	 .driver_name = "si4702",
+	 .addr = 0x10,
+	 .platform_data = (void *)&si4702_data,
+	 },
 };
 
 #if  defined(CONFIG_SMSC911X) || defined(CONFIG_SMSC911X_MODULE)

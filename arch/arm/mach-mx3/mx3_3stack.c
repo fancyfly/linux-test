@@ -235,9 +235,9 @@ struct mxc_tvout_platform_data tvout_data = {
 void si4702_reset(void)
 {
 	mxc_set_gpio_dataout(MX31_PIN_SRST0, 0);
-	mdelay(100);
+	msleep(100);
 	mxc_set_gpio_dataout(MX31_PIN_SRST0, 1);
-	mdelay(100);
+	msleep(100);
 }
 
 void si4702_clock_ctl(int flag)

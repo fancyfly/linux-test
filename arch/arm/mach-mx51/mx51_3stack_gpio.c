@@ -283,6 +283,35 @@ EXPORT_SYMBOL(gpio_spi_active);
  */
 void gpio_spi_inactive(int cspi_mod)
 {
+	switch (cspi_mod) {
+	case 0:
+		/* SPI1 */
+		break;
+	case 1:
+		/* SPI2 */
+		mxc_request_iomux(MX51_PIN_NANDF_RB2, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_NANDF_RB2, PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_PKE_ENABLE);
+
+		mxc_request_iomux(MX51_PIN_NANDF_RB3, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_NANDF_RB3, PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_PKE_ENABLE);
+
+		mxc_request_iomux(MX51_PIN_NANDF_RB4, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_NANDF_RB4, PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_PKE_ENABLE);
+
+		mxc_request_iomux(MX51_PIN_NANDF_RB7, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_NANDF_RB7, PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_100K_PU);
+		break;
+	case 2:
+		/* SPI3 */
+		break;
+	default:
+		break;
+	}
 
 }
 EXPORT_SYMBOL(gpio_spi_inactive);

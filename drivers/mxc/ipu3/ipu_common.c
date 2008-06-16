@@ -634,7 +634,10 @@ int32_t ipu_init_channel_buffer(ipu_channel_t channel, ipu_buffer_t type,
 	/* IC and ROT channels have restriction of 8 or 16 pix burst length */
 	if ((channel == MEM_PRP_ENC_MEM) || (channel == MEM_PRP_VF_MEM) ||
 	    (channel == MEM_PP_MEM)) {
-		_ipu_ch_param_set_burst_size(dma_chan, 16);
+		if ((width % 16) == 0)
+			_ipu_ch_param_set_burst_size(dma_chan, 16);
+		else
+			_ipu_ch_param_set_burst_size(dma_chan, 8);
 	} else if ((channel == MEM_ROT_ENC_MEM) ||
 		   (channel == MEM_ROT_VF_MEM) || (channel == MEM_ROT_PP_MEM)) {
 		_ipu_ch_param_set_burst_size(dma_chan, 8);

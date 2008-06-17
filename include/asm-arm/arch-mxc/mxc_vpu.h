@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -43,6 +43,7 @@ typedef struct vpu_mem_desc {
 #define VPU_IOC_PHYMEM_DUMP	_IO(VPU_IOC_MAGIC, 3)
 #define VPU_IOC_REG_DUMP	_IO(VPU_IOC_MAGIC, 4)
 #define VPU_IOC_VL2CC_FLUSH	_IO(VPU_IOC_MAGIC, 5)
+#define VPU_IOC_IRAM_SETTING	_IO(VPU_IOC_MAGIC, 6)
 
 int vl2cc_init(u32 vl2cc_hw_base);
 void vl2cc_enable(void);

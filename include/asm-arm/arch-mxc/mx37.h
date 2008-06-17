@@ -88,6 +88,13 @@
 #define USB_IRAM_SIZE 0
 #endif
 
+#define VPU_IRAM_BASE_ADDR	(USB_IRAM_BASE_ADDR + USB_IRAM_SIZE)
+#ifdef CONFIG_MXC_VPU_IRAM
+#define VPU_IRAM_SIZE	(IRAM_BASE_ADDR + IRAM_SIZE - VPU_IRAM_BASE_ADDR)
+#else
+#define VPU_IRAM_SIZE 0
+#endif
+
 /*
  * NFC
  */

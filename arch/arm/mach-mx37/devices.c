@@ -579,6 +579,14 @@ struct mxc_gpio_port mxc_gpio_ports[GPIO_PORT_NUM] = {
 };
 
 #if defined(CONFIG_MXC_VPU) || defined(CONFIG_MXC_VPU_MODULE)
+static struct resource vpu_resources[] = {
+	{
+	 .start = VPU_IRAM_BASE_ADDR,
+	 .end = VPU_IRAM_BASE_ADDR + VPU_IRAM_SIZE,
+	 .flags = IORESOURCE_MEM,
+	 },
+};
+
 /*! Platform Data for MXC VPU */
 static struct platform_device mxcvpu_device = {
 	.name = "mxc_vpu",
@@ -586,6 +594,8 @@ static struct platform_device mxcvpu_device = {
 	.dev = {
 		.release = mxc_nop_release,
 		},
+	.num_resources = ARRAY_SIZE(vpu_resources),
+	.resource = vpu_resources,
 };
 
 static inline void mxc_init_vpu(void)

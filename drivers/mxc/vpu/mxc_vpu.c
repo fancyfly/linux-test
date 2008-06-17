@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2006-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -54,6 +54,11 @@ typedef struct memalloc_record {
 	vpu_mem_desc mem;
 } memalloc_record;
 
+struct iram_setting {
+	u32 start;
+	u32 end;
+};
+
 static DEFINE_SPINLOCK(vpu_lock);
 static LIST_HEAD(head);
 
@@ -62,6 +67,9 @@ static struct class *vpu_class;
 static struct vpu_t vpu_data;
 static u8 open_count = 0;
 static struct clk *vpu_clk;
+
+/* IRAM setting */
+static struct iram_setting iram;
 
 /* implement the blocking ioctl */
 static int codec_done = 0;
@@ -271,6 +279,17 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 			vl2cc_flush();
 		}
 		break;
+	case VPU_IOC_IRAM_SETTING:
+		{
+			ret = copy_to_user((void __user *)arg, &iram,
+					   sizeof(struct iram_setting));
+			if (ret) {
+				ret = -EFAULT;
+				break;
+			}
+
+			break;
+		}
 	case VPU_IOC_REG_DUMP:
 		break;
 	case VPU_IOC_PHYMEM_DUMP:
@@ -389,6 +408,16 @@ static int vpu_dev_probe(struct platform_device *pdev)
 		err = vl2cc_init(res->start);
 		if (err != 0)
 			return err;
+	}
+
+	if (cpu_is_mx37()) {
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		if (!res) {
+			printk(KERN_ERR "vpu: unable to get VPU IRAM base\n");
+			return -ENOENT;
+		}
+		iram.start = res->start;
+		iram.end = res->end;
 	}
 
 	vpu_major = register_chrdev(vpu_major, "mxc_vpu", &vpu_fops);

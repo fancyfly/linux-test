@@ -416,7 +416,7 @@ static unsigned qh_completions(struct ehci_hcd *ehci, struct ehci_qh *qh)
 				urb->use_iram = 0;
 				qtd2 =
 				    list_entry(tmp, struct ehci_qtd, qtd_list);
-				if (qtd2) {
+				if (tmp != &qh->qtd_list) {
 					urb2 = qtd2->urb;
 					if (urb2 && urb2->use_iram == 1) {
 						ehci->

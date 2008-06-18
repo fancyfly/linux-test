@@ -457,13 +457,6 @@ static irqreturn_t dc_irq_handler(int irq, void *dev_id)
 	reg &= ~DC_WR_CH_CONF_PROG_TYPE_MASK;
 	__raw_writel(reg, dc_ch_conf);
 
-	reg = __raw_readl(IPU_DISP_GEN);
-	if (g_ipu_di_channel[0] == channel)
-		reg &= ~DI0_COUNTER_RELEASE;
-	else if (g_ipu_di_channel[1] == channel)
-		reg &= ~DI1_COUNTER_RELEASE;
-	__raw_writel(reg, IPU_DISP_GEN);
-
 	complete(comp);
 	return IRQ_HANDLED;
 }
@@ -518,6 +511,14 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 		return;
 	}
 	ret = wait_for_completion_timeout(&dc_comp, msecs_to_jiffies(50));
+
+	reg = __raw_readl(IPU_DISP_GEN);
+	if (g_ipu_di_channel[0] == channel)
+		reg &= ~DI0_COUNTER_RELEASE;
+	else if (g_ipu_di_channel[1] == channel)
+		reg &= ~DI1_COUNTER_RELEASE;
+	__raw_writel(reg, IPU_DISP_GEN);
+
 	dev_dbg(g_ipu_dev, "DC stop timeout - %d * 10ms\n", 5 - ret);
 	ipu_free_irq(irq, &dc_comp);
 }

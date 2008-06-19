@@ -53,6 +53,7 @@
 #include <asm/arch/gpio.h>
 #include <asm/arch/mmc.h>
 #include <asm/arch/spba.h>
+#include <asm/arch/pmic_power.h>
 
 #include "board-mx3_3stack.h"
 #include "crm_regs.h"
@@ -860,6 +861,9 @@ static void __init mxc_board_init(void)
 	mxc_init_mmc();
 	mxc_init_ide();
 	mxc_init_pata();
+
+	/* set power off hook to mc13783 power off */
+	pm_power_off = pmic_power_off;
 }
 
 #define PLL_PCTL_REG(pd, mfd, mfi, mfn)		\

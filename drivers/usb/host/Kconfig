@@ -60,10 +60,16 @@ config USB_EHCI_ARC_OTG
 	  Enable support for the USB OTG port in HS/FS Host mode.
 
 config USB_STATIC_IRAM
-	bool "Apply static IRAM patch"
+	bool "Use IRAM for USB"
 	depends on USB_EHCI_ARC
 	---help---
-	  Apply static IRAM patch to EHCI driver.
+	  Enable this option to use IRAM instead of DRAM for USB
+	  structures and buffers.  This option will reduce bus
+	  contention on systems with large (VGA+) framebuffer
+	  devices and heavy USB activity.  There are performance
+	  penalties and usage restrictions when using this option.
+
+	  If in doubt, say N.
 
 choice
 	prompt "Select transceiver for DR port"

@@ -926,3 +926,74 @@ void gpio_ata_inactive(void)
 }
 
 EXPORT_SYMBOL(gpio_ata_inactive);
+
+/*!
+ * This function activates ESAI ports to enable
+ * surround sound I/O
+ */
+void gpio_activate_esai_ports(void)
+{
+	unsigned int pad_val;
+	/* ESAI TX - WM8580 */
+	mxc_request_iomux(MX35_PIN_HCKT, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_SCKT, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_FST, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_TX0, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_TX1, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_TX2_RX3, MUX_CONFIG_FUNC);
+
+	/* ESAI RX - AK5702 */
+	/*mxc_request_iomux(MX35_PIN_HCKR, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_SCKR, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_FSR, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_TX3_RX2, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_TX4_RX1, MUX_CONFIG_FUNC);*/
+
+	pad_val = PAD_CTL_HYS_SCHMITZ | PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+	    PAD_CTL_PUE_PUD;
+	/* ESAI TX - WM8580 */
+	mxc_iomux_set_pad(MX35_PIN_SCKT, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_FST, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_TX0, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_TX1, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_TX2_RX3, pad_val);
+
+	/* ESAI RX - AK5702 */
+	/*mxc_iomux_set_pad(MX35_PIN_SCKR, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_FSR, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_TX3_RX2, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_TX4_RX1, pad_val);*/
+
+	pad_val =
+	    PAD_CTL_DRV_HIGH | PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+	    PAD_CTL_PUE_PUD;
+
+	/* ESAI TX - WM8580 */
+	mxc_iomux_set_pad(MX35_PIN_HCKT, pad_val);
+	/* ESAI RX - AK5702 */
+	/*mxc_iomux_set_pad(MX35_PIN_HCKR, pad_val);*/
+}
+
+EXPORT_SYMBOL(gpio_activate_esai_ports);
+
+/*!
+ * This function deactivates ESAI ports to disable
+ * surround sound I/O
+ */
+void gpio_deactivate_esai_ports(void)
+{
+
+	mxc_free_iomux(MX35_PIN_HCKT, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_SCKT, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_FST, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_TX0, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_TX1, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_TX2_RX3, MUX_CONFIG_GPIO);
+	/*mxc_free_iomux(MX35_PIN_HCKR, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_SCKR, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_FSR, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_TX3_RX2, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_TX4_RX1, MUX_CONFIG_GPIO);*/
+}
+
+EXPORT_SYMBOL(gpio_deactivate_esai_ports);

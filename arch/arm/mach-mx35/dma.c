@@ -37,6 +37,10 @@
 #define MXC_ASRCC_RX_REG        0x70
 #define MXC_ASRCC_TX_REG        0x74
 
+#define MXC_ESAI_TX_REG	0x00
+#define MXC_ESAI_RX_REG	0x04
+#define MXC_ESAI_FIFO_WML 0x40
+
 struct mxc_sdma_info_entry_s {
 	mxc_dma_device_t device;
 	mxc_sdma_channel_params_t *chnl_info;
@@ -599,6 +603,62 @@ static mxc_sdma_channel_params_t mxc_sdma_asrcc_tx_params = {
 	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
 };
 
+static mxc_sdma_channel_params_t mxc_sdma_esai_16bit_rx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ESAI_FIFO_WML,
+			.per_address = ESAI_BASE_ADDR + MXC_ESAI_RX_REG,
+			.peripheral_type = ESAI,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_ESAI_RX,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ESAI_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_esai_16bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ESAI_FIFO_WML,
+			.per_address = ESAI_BASE_ADDR + MXC_ESAI_TX_REG,
+			.peripheral_type = ESAI,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_ESAI_TX,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ESAI_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_esai_24bit_rx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ESAI_FIFO_WML,
+			.per_address = ESAI_BASE_ADDR + MXC_ESAI_RX_REG,
+			.peripheral_type = ESAI,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_ESAI_RX,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ESAI_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_esai_24bit_tx_params = {
+	.chnl_params = {
+			.watermark_level = MXC_ESAI_FIFO_WML,
+			.per_address = ESAI_BASE_ADDR + MXC_ESAI_TX_REG,
+			.peripheral_type = ESAI,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_ESAI_TX,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_ESAI_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
 static struct mxc_sdma_info_entry_s mxc_sdma_active_dma_info[] = {
 	{MXC_DMA_UART1_RX, &mxc_sdma_uart1_rx_params},
 	{MXC_DMA_UART1_TX, &mxc_sdma_uart1_tx_params},
@@ -639,6 +699,10 @@ static struct mxc_sdma_info_entry_s mxc_sdma_active_dma_info[] = {
 	{MXC_DMA_ASRC_B_TX, &mxc_sdma_asrcb_tx_params},
 	{MXC_DMA_ASRC_C_RX, &mxc_sdma_asrcc_rx_params},
 	{MXC_DMA_ASRC_C_TX, &mxc_sdma_asrcc_tx_params},
+	{MXC_DMA_ESAI_16BIT_RX, &mxc_sdma_esai_16bit_rx_params},
+	{MXC_DMA_ESAI_16BIT_TX, &mxc_sdma_esai_16bit_tx_params},
+	{MXC_DMA_ESAI_24BIT_RX, &mxc_sdma_esai_24bit_rx_params},
+	{MXC_DMA_ESAI_24BIT_TX, &mxc_sdma_esai_24bit_tx_params},
 	{MXC_DMA_MEMORY, &mxc_sdma_memory_params},
 };
 

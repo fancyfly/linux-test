@@ -516,6 +516,19 @@ static void mxc_init_audio(void)
 	platform_device_register(&mxc_alsa_device);
 }
 
+static struct platform_device mxc_alsa_surround_device = {
+	.name = "imx-3stack-wm8580",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		},
+};
+
+static void mxc_init_surround_audio(void)
+{
+	platform_device_register(&mxc_alsa_surround_device);
+}
+
 static struct resource asrc_resources[] = {
 	{
 	 .start = ASRC_BASE_ADDR,
@@ -558,6 +571,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_dma();
 	mxc_init_spdif();
 	mxc_init_audio();
+	mxc_init_surround_audio();
 	mxc_init_asrc();
 
 	/* SPBA configuration for SSI2 - SDMA and MCU are set */

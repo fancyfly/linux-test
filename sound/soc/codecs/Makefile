@@ -6,6 +6,7 @@ snd-soc-wm8753-objs := wm8753.o
 snd-soc-wm9712-objs := wm9712.o
 snd-soc-cs4270-objs := cs4270.o
 snd-soc-ak4647-objs := ak4647.o
+snd-soc-wm8580-objs := wm8580.o
 
 obj-$(CONFIG_SND_SOC_AC97_CODEC)	+= snd-soc-ac97.o
 obj-$(CONFIG_SND_SOC_WM8350)	+= snd-soc-wm8350.o
@@ -15,3 +16,4 @@ obj-$(CONFIG_SND_SOC_WM8753)	+= snd-soc-wm8753.o
 obj-$(CONFIG_SND_SOC_WM9712)	+= snd-soc-wm9712.o
 obj-$(CONFIG_SND_SOC_CS4270)	+= snd-soc-cs4270.o
 obj-$(CONFIG_SND_SOC_AK4647)	+= snd-soc-ak4647.o
+obj-$(CONFIG_SND_SOC_WM8580)    += snd-soc-wm8580.o

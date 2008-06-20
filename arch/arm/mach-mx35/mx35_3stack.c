@@ -339,6 +339,15 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	 },
 };
 
+static struct spi_board_info mxc_spi_board_info[] __initdata = {
+	{
+	 .modalias = "wm8580_spi",
+	 .max_speed_hz = 8000000,	/* max spi SCK clock speed in HZ */
+	 .bus_num = 1,
+	 .chip_select = 1,
+	 },
+};
+
 #if  defined(CONFIG_SMSC911X) || defined(CONFIG_SMSC911X_MODULE)
 static struct resource smsc911x_resources[] = {
 	{
@@ -590,6 +599,9 @@ static void __init mxc_board_init(void)
 
 	i2c_register_board_info(0, mxc_i2c_board_info,
 				ARRAY_SIZE(mxc_i2c_board_info));
+
+	spi_register_board_info(mxc_spi_board_info,
+				ARRAY_SIZE(mxc_spi_board_info));
 	mxc_init_mmc();
 	mxc_init_pata();
 }

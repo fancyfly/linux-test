@@ -382,19 +382,8 @@ static u16 get_dev_status(void)
 	return status;
 #else
 	volatile u16 *mainBuf = MAIN_AREA1;
-	volatile u32 store;
 	u8 val = 1;
 	u16 ret;
-	/* Issue status request to NAND device */
-
-	/* store the main area1 first word, later do recovery */
-	store = *((u32 *) mainBuf);
-	*(u32 *) mainBuf = 0x0;
-
-	/*
-	 * NFC buffer 1 is used for device status to prevent
-	 * corruption of read/write buffer on status requests.
-	 */
 
 	/* Set RBA bits for BUFFER1 */
 	NFC_SET_RBA(val);
@@ -409,8 +398,8 @@ static u16 get_dev_status(void)
 
 	/* Status is placed in first word of main buffer */
 	/* get status, then recovery area 1 data */
-	ret = mainBuf[0];
-	*((u32 *) mainBuf) = store;
+	ret = *mainBuf;
+
 	return ret;
 #endif
 }

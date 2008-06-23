@@ -327,7 +327,11 @@ void pmic_voltage_init(void)
 	/* Set mc13783 DVS speed 25mV each 4us */
 	pmic_write_reg(REG_SWITCHERS_4, (0 << 6), (3 << 6));
 
-	volt.sw1a = SW1A_1_625V;
+	if (cpu_is_mx31())
+		volt.sw1a = SW1A_1_625V;
+	else
+		volt.sw1a = SW1A_1_425V;
+
 	pmic_power_regulator_set_voltage(SW_SW1A, volt);
 
 	volt.sw1a = SW1A_1_25V;

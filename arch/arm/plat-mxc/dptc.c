@@ -416,14 +416,14 @@ static struct platform_driver mxc_dptc_v2_driver = {
 
 static int __init dptc_init(void)
 {
-	if (platform_driver_register(&mxc_dptc_v2_driver) != 0) {
-		printk(KERN_ERR
-		       "Driver register failed for mxc_dptc_v2_driver\n");
-		return -ENODEV;
+	if (cpu_is_mx31()) {
+		if (platform_driver_register(&mxc_dptc_v2_driver) != 0) {
+			printk(KERN_ERR "mxc_dptc_v2_driver register failed\n");
+			return -ENODEV;
+		}
+
+		printk(KERN_INFO "DPTC driver module loaded\n");
 	}
-
-	printk("DPTC driver module loaded\n");
-
 	return 0;
 }
 

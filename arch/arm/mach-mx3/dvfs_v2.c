@@ -324,23 +324,21 @@ void pmic_voltage_init(void)
 {
 	t_regulator_voltage volt;
 
-	/* Enable 4 mc13783 output voltages */
-	pmic_write_reg(REG_ARBITRATION_SWITCHERS, 1, (1 << 5));
-
-	/* Enable mc13783 voltage ready signal */
-	pmic_write_reg(REG_INTERRUPT_MASK_1, 0, (1 << 11));
-
 	/* Set mc13783 DVS speed 25mV each 4us */
-	pmic_write_reg(REG_SWITCHERS_4, 1 << 6, (3 << 6));
+	pmic_write_reg(REG_SWITCHERS_4, (0 << 6), (3 << 6));
 
-	/* Set mc13783 SW1A operating mode in normal mode */
-	pmic_write_reg(REG_SWITCHERS_4, (1 << 0), (3 << 0));
+	if (cpu_is_mx31())
+		volt.sw1a = SW1A_1_625V;
+	else
+		volt.sw1a = SW1A_1_425V;
 
-	volt.sw1a = SW1A_1_625V;
 	pmic_power_regulator_set_voltage(SW_SW1A, volt);
 
 	volt.sw1a = SW1A_1_25V;
 	pmic_power_switcher_set_dvs(SW_SW1A, volt);
+
+	volt.sw1a = SW1A_0_975V;
+	pmic_power_switcher_set_stby(SW_SW1A, volt);
 
 	volt.sw1b = SW1A_1_25V;
 	pmic_power_switcher_set_dvs(SW_SW1B, volt);

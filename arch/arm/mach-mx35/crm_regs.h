@@ -309,14 +309,6 @@
 #define MXC_CCM_LTR3_WSW_OFFSET(x)     	(5 + (x) * 3)
 #define MXC_CCM_LTR3_WSW_MASK(x)       	(0x7 << MXC_CCM_LTR3_WSW_OFFSET((x)))
 
-#define MXC_CCM_PMCR0_DFSUP1                    0x80000000
-#define MXC_CCM_PMCR0_DFSUP1_SPLL               (0 << 31)
-#define MXC_CCM_PMCR0_DFSUP1_MPLL               (1 << 31)
-#define MXC_CCM_PMCR0_DFSUP0                    0x40000000
-#define MXC_CCM_PMCR0_DFSUP0_PLL                (0 << 30)
-#define MXC_CCM_PMCR0_DFSUP0_PDR                (1 << 30)
-#define MXC_CCM_PMCR0_DFSUP_MASK                (0x3 << 30)
-
 #define DVSUP_TURBO				0
 #define DVSUP_HIGH				1
 #define DVSUP_MEDIUM				2
@@ -327,21 +319,7 @@
 #define MXC_CCM_PMCR0_DVSUP_LOW                 (DVSUP_LOW << 28)
 #define MXC_CCM_PMCR0_DVSUP_OFFSET              28
 #define MXC_CCM_PMCR0_DVSUP_MASK                (0x3 << 28)
-#define MXC_CCM_PMCR0_UDSC                      0x08000000
-#define MXC_CCM_PMCR0_UDSC_MASK                 (1 << 27)
-#define MXC_CCM_PMCR0_UDSC_UP                   (1 << 27)
-#define MXC_CCM_PMCR0_UDSC_DOWN                 (0 << 27)
-
-#define MXC_CCM_PMCR0_VSCNT_1                   (0x0 << 24)
-#define MXC_CCM_PMCR0_VSCNT_2                   (0x1 << 24)
-#define MXC_CCM_PMCR0_VSCNT_3                   (0x2 << 24)
-#define MXC_CCM_PMCR0_VSCNT_4                   (0x3 << 24)
-#define MXC_CCM_PMCR0_VSCNT_5                   (0x4 << 24)
-#define MXC_CCM_PMCR0_VSCNT_6                   (0x5 << 24)
-#define MXC_CCM_PMCR0_VSCNT_7                   (0x6 << 24)
-#define MXC_CCM_PMCR0_VSCNT_8                   (0x7 << 24)
-#define MXC_CCM_PMCR0_VSCNT_OFFSET              24
-#define MXC_CCM_PMCR0_VSCNT_MASK                (0x7 << 24)
+#define MXC_CCM_PMCR0_DVFS_UPDATE_FINISH        0x01000000
 #define MXC_CCM_PMCR0_DVFEV                     0x00800000
 #define MXC_CCM_PMCR0_DVFIS                     0x00400000
 #define MXC_CCM_PMCR0_LBMI                      0x00200000
@@ -353,8 +331,8 @@
 #define MXC_CCM_PMCR0_LBCF_OFFSET               18
 #define MXC_CCM_PMCR0_LBCF_MASK                 (0x3 << 18)
 #define MXC_CCM_PMCR0_PTVIS                     0x00020000
-#define MXC_CCM_PMCR0_UPDTEN                    0x00010000
-#define MXC_CCM_PMCR0_UPDTEN_MASK               (0x1 << 16)
+#define MXC_CCM_PMCR0_DVFS_START                0x00010000
+#define MXC_CCM_PMCR0_DVFS_START_MASK           0x1 << 16)
 #define MXC_CCM_PMCR0_FSVAIM                    0x00008000
 #define MXC_CCM_PMCR0_FSVAI_OFFSET              13
 #define MXC_CCM_PMCR0_FSVAI_MASK                (0x3 << 13)

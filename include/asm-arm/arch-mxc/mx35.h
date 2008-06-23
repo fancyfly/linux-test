@@ -422,8 +422,8 @@
  * Interrupt Number for ARM11 PMU
  */
 #define ARM11_PMU_IRQ		MXC_INT_EVTMON
-/* Check this*/
-#define INT_DVFS           	MXC_INT_POWERFAIL
+/* DVFS interrupt*/
+#define MXC_INT_DVFS           	MXC_INT_CCM
 
 #define	MXC_GPIO_INT_BASE	(MXC_MAX_INT_LINES)
 

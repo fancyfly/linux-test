@@ -51,9 +51,9 @@ static int g_clk_mux_auto[8] = {
 };
 
 static int g_clk_mux_consumer[16] = {
-	CLK_CODE(1, 4, 0), CLK_CODE(1, 3, 1), CLK_CODE(1, 3, 1), -1,
+	CLK_CODE(1, 4, 0), CLK_CODE(1, 3, 1), CLK_CODE(2, 2, 0), -1,
 	-1, -1, CLK_CODE(4, 1, 0), CLK_CODE(1, 5, 0),
-	CLK_CODE(1, 8, 1), CLK_CODE(1, 6, 1), CLK_CODE(2, 4, 0), -1,
+	CLK_CODE(1, 8, 0), CLK_CODE(1, 6, 1), CLK_CODE(2, 4, 0), -1,
 	-1, -1, CLK_CODE(4, 2, 0), -1,
 };
 
@@ -140,10 +140,10 @@ static unsigned long _clk_round_rate(struct clk *clk, unsigned long rate)
 	return clk->parent->rate / (pre * post);
 }
 
-static int __switch_cpu_wp(unsigned long rate)
+static int __switch_cpu_wp(struct clk *clk, unsigned long rate)
 {
 	int i;
-	if (cpu_wp_tbl[cpu_curr_wp].cpu_rate > rate) {
+	if (cpu_wp_tbl[cpu_curr_wp].cpu_rate < rate) {
 		for (i = cpu_curr_wp + 2; i < cpu_wp_nr; i += 2) {
 			if (rate == cpu_wp_tbl[i].cpu_rate)
 				goto found;
@@ -151,7 +151,7 @@ static int __switch_cpu_wp(unsigned long rate)
 		return -EINVAL;
 	} else {
 		for (i = cpu_curr_wp - 2; i >= 0; i -= 2) {
-			if (rate == cpu_wp_tbl[cpu_curr_wp].cpu_rate)
+			if (rate == cpu_wp_tbl[i].cpu_rate)
 				goto found;
 		}
 		return -EINVAL;
@@ -160,17 +160,18 @@ static int __switch_cpu_wp(unsigned long rate)
 	__raw_writel(cpu_wp_tbl[i].pdr0_reg, MXC_CCM_PDR0);
 
 	if (cpu_wp_tbl[i].pll_rate != cpu_wp_tbl[cpu_curr_wp].pll_rate)
-		clk_set_rate(&mcu_pll_clk, cpu_wp_tbl[i].pll_rate);
+		clk_set_rate(clk->parent, cpu_wp_tbl[i].pll_rate);
 	cpu_curr_wp = i;
+	clk->rate = rate;
 	return 0;
 }
 
-static int __switch_cpu_rate(unsigned long rate)
+static int __switch_cpu_rate(struct clk *clk, unsigned long rate)
 {
 	int prev;
 	unsigned long tmp;
 	int arm_div, fi, fd, start, end;
-	if (cpu_wp_tbl[cpu_curr_wp].cpu_rate > rate) {
+	if (cpu_wp_tbl[cpu_curr_wp].cpu_rate < rate) {
 		start = cpu_curr_wp + 2;
 		end = cpu_wp_nr;
 		prev = cpu_curr_wp;
@@ -203,6 +204,7 @@ static int __switch_cpu_rate(unsigned long rate)
 	__raw_writel(cpu_wp_tbl[prev].pdr0_reg, MXC_CCM_PDR0);
 
 	cpu_curr_wp = prev;
+	clk->rate = rate;
 	return 0;
 }
 
@@ -391,10 +393,12 @@ static int _clk_cpu_set_rate(struct clk *clk, unsigned long rate)
 		return -EINVAL;
 	}
 
-	if (clk->parent->rate == cpu_wp_tbl[cpu_curr_wp].pll_rate)
-		return __switch_cpu_wp(rate);
+	if (clk->rate == rate)
+		return 0;
 
-	return __switch_cpu_rate(rate);
+	if (clk->parent->rate == cpu_wp_tbl[cpu_curr_wp].pll_rate)
+		return __switch_cpu_wp(clk, rate);
+	return __switch_cpu_rate(clk, rate);
 }
 
 static void _clk_pll_recalc(struct clk *clk)

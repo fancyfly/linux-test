@@ -755,3 +755,175 @@ void gpio_activate_audio_ports(void)
 }
 
 EXPORT_SYMBOL(gpio_activate_audio_ports);
+
+/*!
+ * Setup GPIO for ATA interface
+ *
+ */
+void gpio_ata_active(void)
+{
+	/*IOMUX Settings */
+	/*PATA_DIOR */
+	mxc_request_iomux(MX35_PIN_ATA_DIOR, MUX_CONFIG_FUNC);
+	/*PATA_DIOW */
+	mxc_request_iomux(MX35_PIN_ATA_DIOW, MUX_CONFIG_FUNC);
+	/*PATA_DMARQ_B */
+	mxc_request_iomux(MX35_PIN_ATA_DMARQ, MUX_CONFIG_FUNC);
+	/*PATA_DMACK */
+	mxc_request_iomux(MX35_PIN_ATA_DMACK, MUX_CONFIG_FUNC);
+	/*PATA_RESET_B */
+	mxc_request_iomux(MX35_PIN_ATA_RESET_B, MUX_CONFIG_FUNC);
+	/*PATA_IORDY */
+	mxc_request_iomux(MX35_PIN_ATA_IORDY, MUX_CONFIG_FUNC);
+	/*PATA_INTRQ_B */
+	mxc_request_iomux(MX35_PIN_ATA_INTRQ, MUX_CONFIG_FUNC);
+	/*PATA_CS_0 */
+	mxc_request_iomux(MX35_PIN_ATA_CS0, MUX_CONFIG_FUNC);
+	/*PATA_CS_1 */
+	mxc_request_iomux(MX35_PIN_ATA_CS1, MUX_CONFIG_FUNC);
+	/*PATA_DA0 */
+	mxc_request_iomux(MX35_PIN_ATA_DA0, MUX_CONFIG_FUNC);
+	/*PATA_DA1 */
+	mxc_request_iomux(MX35_PIN_ATA_DA1, MUX_CONFIG_FUNC);
+	/*PATA_DA2 */
+	mxc_request_iomux(MX35_PIN_ATA_DA2, MUX_CONFIG_FUNC);
+	/* BUFFER_ENABLE - HDD_ENABLE_B  */
+	mxc_request_iomux(MX35_PIN_ATA_BUFF_EN, MUX_CONFIG_FUNC);
+
+	/*PATA_D0 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA0, MUX_CONFIG_FUNC);
+	/*PATA_D1 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA1, MUX_CONFIG_FUNC);
+	/*PATA_D2 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA2, MUX_CONFIG_FUNC);
+	/*PATA_D3 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA3, MUX_CONFIG_FUNC);
+	/*PATA_D4 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA4, MUX_CONFIG_FUNC);
+	/*PATA_D5 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA5, MUX_CONFIG_FUNC);
+	/*PATA_D6 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA6, MUX_CONFIG_FUNC);
+	/*PATA_D7 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA7, MUX_CONFIG_FUNC);
+	/*PATA_D8 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA8, MUX_CONFIG_FUNC);
+	/*PATA_D9 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA9, MUX_CONFIG_FUNC);
+	/*PATA_D10 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA10, MUX_CONFIG_FUNC);
+	/*PATA_D11 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA11, MUX_CONFIG_FUNC);
+	/*PATA_D12 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA12, MUX_CONFIG_FUNC);
+	/*PATA_D13 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA13, MUX_CONFIG_FUNC);
+	/*PATA_D14 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA14, MUX_CONFIG_FUNC);
+	/*PATA_D15 */
+	mxc_request_iomux(MX35_PIN_ATA_DATA15, MUX_CONFIG_FUNC);
+
+	/* IOMUX Pad Settings */
+#define ATA_CTL_PAD_CFG (PAD_CTL_SRE_SLOW | PAD_CTL_DRV_NORMAL | \
+			 PAD_CTL_ODE_CMOS | PAD_CTL_PKE_ENABLE | \
+			 PAD_CTL_PUE_PUD | PAD_CTL_100K_PD | \
+			 PAD_CTL_HYS_CMOS | PAD_CTL_DRV_3_3V)
+
+#define ATA_DAT_PAD_CFG (PAD_CTL_SRE_FAST | PAD_CTL_DRV_MAX | \
+			 PAD_CTL_ODE_CMOS | PAD_CTL_PKE_ENABLE | \
+			 PAD_CTL_PUE_PUD | PAD_CTL_100K_PD | \
+			 PAD_CTL_HYS_SCHMITZ | PAD_CTL_DRV_3_3V)
+
+	mxc_iomux_set_pad(MX35_PIN_ATA_DMARQ, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DIOR, ATA_CTL_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DIOW, ATA_CTL_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DMACK, ATA_CTL_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_RESET_B, PAD_CTL_SRE_SLOW |
+			  PAD_CTL_DRV_NORMAL | PAD_CTL_ODE_CMOS |
+			  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PUD |
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_CMOS |
+			  PAD_CTL_DRV_3_3V);
+	mxc_iomux_set_pad(MX35_PIN_ATA_IORDY, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_INTRQ, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_CS0, ATA_CTL_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_CS1, ATA_CTL_PAD_CFG);
+
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA0, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA1, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA2, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA3, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA4, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA5, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA6, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA7, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA8, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA9, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA10, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA11, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA12, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA13, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA14, ATA_DAT_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DATA15, ATA_DAT_PAD_CFG);
+
+	mxc_iomux_set_pad(MX35_PIN_ATA_DA0, ATA_CTL_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DA1, ATA_CTL_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_DA2, ATA_CTL_PAD_CFG);
+	mxc_iomux_set_pad(MX35_PIN_ATA_BUFF_EN, ATA_CTL_PAD_CFG);
+#undef ATA_CTL_PAD_CFG
+#undef ATA_DAT_PAD_CFG
+
+	/* HDD_ENBALE */
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 3, 0);
+	/* Power On the HDD */
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 4, 1);
+	msleep(300);
+}
+
+EXPORT_SYMBOL(gpio_ata_active);
+
+/*!
+ * Restore ATA interface pins to reset values
+ *
+ */
+void gpio_ata_inactive(void)
+{
+	/*Turn off the IOMUX for ATA group B signals */
+	mxc_free_iomux(MX35_PIN_ATA_DATA0, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA1, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA2, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA3, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA4, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA5, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA6, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA7, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA8, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA9, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA10, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA11, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA12, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA13, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA14, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DATA15, MUX_CONFIG_FUNC);
+
+	/* Config the multiplex pin of ATA interface DIR, DA0-2, INTRQ, DMARQ */
+	mxc_free_iomux(MX35_PIN_ATA_DMARQ, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DIOR, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DIOW, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DMACK, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_RESET_B, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_IORDY, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_INTRQ, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_CS0, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_CS1, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DA0, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DA1, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_DA2, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_ATA_BUFF_EN, MUX_CONFIG_FUNC);
+
+	/* Power Off the HDD */
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 4, 0);
+	/* HDD_ENBALE */
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 3, 1);
+}
+
+EXPORT_SYMBOL(gpio_ata_inactive);

@@ -144,7 +144,10 @@ struct fsl_spi_platform_data {
 };
 
 struct fsl_ata_platform_data {
+       int     adma_flag;      /* AMDA mode is used or not, 1:used.*/
        int     udma_mask;      /* UDMA modes h/w can handle */
+       int     mwdma_mask;      /* MDMA modes h/w can handle */
+       int     pio_mask;      /* PIO modes h/w can handle */
        int     fifo_alarm;     /* value for fifo_alarm reg */
        int     max_sg;         /* longest sglist h/w can handle */
        int     (*init)(struct platform_device *pdev);

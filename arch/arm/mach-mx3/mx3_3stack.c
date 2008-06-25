@@ -34,6 +34,7 @@
 #include <linux/i2c.h>
 #include <linux/regulator/regulator-platform.h>
 #include <linux/regulator/regulator.h>
+#include <linux/ata.h>
 #if defined(CONFIG_MTD) || defined(CONFIG_MTD_MODULE)
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
@@ -775,7 +776,9 @@ static void ata_exit(void)
 }
 
 static struct fsl_ata_platform_data ata_data = {
-	.udma_mask = 0x0F,	/* board can handle up to UDMA3 */
+	.udma_mask = ATA_UDMA3,	/* board can handle up to UDMA3 */
+	.mwdma_mask = ATA_MWDMA2,
+	.pio_mask = ATA_PIO4,
 	.fifo_alarm = MXC_IDE_DMA_WATERMARK / 2,
 	.max_sg = MXC_IDE_DMA_BD_NR,
 	.init = ata_init,
@@ -812,11 +815,11 @@ static void __init mxc_init_pata(void)
 {
 	(void)platform_device_register(&pata_fsl_device);
 }
-#else /* CONFIG_PATA_FSL */
+#else				/* CONFIG_PATA_FSL */
 static void __init mxc_init_pata(void)
 {
 }
-#endif /* CONFIG_PATA_FSL */
+#endif				/* CONFIG_PATA_FSL */
 
 /*!
  * Board specific initialization.

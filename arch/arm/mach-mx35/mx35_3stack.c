@@ -21,6 +21,8 @@
 #include <linux/spi/spi.h>
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
+#include <linux/fsl_devices.h>
+#include <linux/ata.h>
 #if defined(CONFIG_MTD) || defined(CONFIG_MTD_MODULE)
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
@@ -475,6 +477,72 @@ static int __init mxc_init_power_key(void)
 
 late_initcall(mxc_init_power_key);
 #endif
+
+#if defined(CONFIG_PATA_FSL) || defined(CONFIG_PATA_FSL_MODULE)
+extern void gpio_ata_active(void);
+extern void gpio_ata_inactive(void);
+
+static int ata_init(struct platform_device *pdev)
+{
+	/* Configure the pins */
+	gpio_ata_active();
+
+	return 0;
+}
+
+static void ata_exit(void)
+{
+	/* Free the pins */
+	gpio_ata_inactive();
+}
+
+static struct fsl_ata_platform_data ata_data = {
+	.adma_flag = 1,
+	.udma_mask = 0x0,
+	.mwdma_mask = 0x0,
+	.pio_mask = ATA_PIO4,
+	.fifo_alarm = MXC_IDE_DMA_WATERMARK / 2,
+	.max_sg = MXC_IDE_DMA_BD_NR,
+	.init = ata_init,
+	.exit = ata_exit,
+	.core_reg = NULL,	/*"LDO2", */
+	.io_reg = NULL,		/*"LDO3", */
+};
+
+static struct resource pata_fsl_resources[] = {
+	[0] = {			/* I/O */
+	       .start = ATA_BASE_ADDR,
+	       .end = ATA_BASE_ADDR + 0x000000C8,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[2] = {			/* IRQ */
+	       .start = MXC_INT_ATA,
+	       .end = MXC_INT_ATA,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+static struct platform_device pata_fsl_device = {
+	.name = "pata_fsl",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(pata_fsl_resources),
+	.resource = pata_fsl_resources,
+	.dev = {
+		.platform_data = &ata_data,
+		.coherent_dma_mask = ~0,
+		},
+};
+
+static void __init mxc_init_pata(void)
+{
+	(void)platform_device_register(&pata_fsl_device);
+}
+#else				/* CONFIG_PATA_FSL */
+static void __init mxc_init_pata(void)
+{
+}
+#endif				/* CONFIG_PATA_FSL */
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -523,6 +591,7 @@ static void __init mxc_board_init(void)
 	i2c_register_board_info(0, mxc_i2c_board_info,
 				ARRAY_SIZE(mxc_i2c_board_info));
 	mxc_init_mmc();
+	mxc_init_pata();
 }
 
 #define PLL_PCTL_REG(brmo, pd, mfd, mfi, mfn)		\

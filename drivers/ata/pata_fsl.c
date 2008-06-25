@@ -55,6 +55,12 @@ enum {
 	FSL_ATA_INT_EN = 0x2C,
 	FSL_ATA_INT_CLEAR = 0x30,
 	FSL_ATA_FIFO_ALARM = 0x34,
+	FSL_ATA_ADMA_ERROR_STATUS = 0x38,
+	FSL_ATA_SYS_DMA_BADDR = 0x3C,
+	FSL_ATA_ADMA_SYS_ADDR = 0x40,
+	FSL_ATA_BLOCK_COUNT = 0x48,
+	FSL_ATA_BURST_LENGTH = 0x4C,
+	FSL_ATA_SECTOR_SIZE = 0x50,
 	FSL_ATA_DRIVE_DATA = 0xA0,
 	FSL_ATA_DRIVE_CONTROL = 0xD8,
 
@@ -575,8 +581,8 @@ static int __devinit pata_fsl_probe(struct platform_device *pdev)
 	ap->ioaddr.ctl_addr = (void *)(ata_regs + FSL_ATA_DRIVE_CONTROL);
 	ap->ioaddr.altstatus_addr = ap->ioaddr.ctl_addr;
 	ap->ops = &pata_fsl_port_ops;
-	ap->pio_mask = 0x7F;
-	ap->mwdma_mask = 0x7F;
+	ap->pio_mask = plat->pio_mask;	/* support pio 0~4 */
+	ap->mwdma_mask = plat->mwdma_mask;	/* support mdma 0~2 */
 	ap->udma_mask = plat->udma_mask;
 	pata_fsl_sht.sg_tablesize = plat->max_sg;
 
@@ -604,6 +610,7 @@ static int __devinit pata_fsl_probe(struct platform_device *pdev)
 		core_reg = regulator_get(&pdev->dev, plat->core_reg);
 		if (regulator_enable(core_reg))
 			printk(KERN_INFO "enable core regulator error.\n");
+		msleep(100);
 
 	} else
 		core_reg = NULL;
@@ -612,14 +619,17 @@ static int __devinit pata_fsl_probe(struct platform_device *pdev)
 		io_reg = regulator_get(&pdev->dev, plat->io_reg);
 		if (regulator_enable(io_reg))
 			printk(KERN_INFO "enable io regulator error.\n");
+		msleep(100);
 
 	} else
 		io_reg = NULL;
 
 	/* Set initial timing and mode */
 	set_ata_bus_timing(XFER_PIO_4, pdev);
-    /* get DMA ready */
-	pata_fsl_dma_init(ap);
+
+	/* get DMA ready */
+	if (plat->adma_flag == 0)
+		pata_fsl_dma_init(ap);
 
 	/*
 	 * Enable the ATA INTRQ interrupt from the bus, but
@@ -630,7 +640,7 @@ static int __devinit pata_fsl_probe(struct platform_device *pdev)
 
 	/* activate */
 	ret = ata_host_activate(host, platform_get_irq(pdev, 0), ata_interrupt,
-				 0, &pata_fsl_sht);
+				0, &pata_fsl_sht);
 
 	if (ret < 0)
 		goto err2;

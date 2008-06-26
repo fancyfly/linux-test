@@ -1387,7 +1387,7 @@ static struct clk wdog_clk = {
 
 static struct clk csi_clk = {
 	.name = "csi_clk",
-	.parent = &peri_pll_clk,
+	.parent = &cpu_clk,
 	.recalc = _clk_csi_recalc,
 	.round_rate = _clk_round_rate,
 	.set_rate = _clk_csi_set_rate,

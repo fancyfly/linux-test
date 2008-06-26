@@ -267,7 +267,7 @@ static struct mxc_camera_platform_data camera_data = {
 	.io_regulator = NULL,
 	.analog_regulator = "LDO7",
 	.gpo_regulator = NULL,
-	.mclk = 24000000,
+	.mclk = 20000000,
 };
 
 void si4702_reset(void)

@@ -111,6 +111,7 @@ struct mxc_lcd_platform_data {
 
 struct mxc_tsc_platform_data {
 	char *vdd_reg;
+	int penup_threshold;
 	void (*active) (void);
 	void (*inactive) (void);
 };

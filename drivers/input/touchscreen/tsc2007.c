@@ -77,6 +77,7 @@ struct tsc2007_data {
 	struct completion penup_completion;
 	enum tsc2007_m m;
 	int penirq;
+	int penup_threshold;
 	struct regulator *vdd_reg;
 };
 
@@ -186,14 +187,14 @@ static int tsc2007ts_thread(void *v)
 		input_report_abs(d->idev, ABS_PRESSURE, p);
 		input_sync(d->idev);
 
-		while (p > 10) {
+		while (p > d->penup_threshold) {
 			tsc2007_restart_pen_up_timer(d);
 			wait_for_completion_interruptible(&d->penup_completion);
 			/* Pen Down */
 			tsc2007_read_xpos(d, PD_PENIRQ_DISARM, &x);
 			tsc2007_read_ypos(d, PD_PENIRQ_DISARM, &y);
 			tsc2007_read_pressure(d, PD_PENIRQ_DISARM, &p);
-			if (p <= 10)
+			if (p <= d->penup_threshold)
 				break;
 
 			input_report_abs(d->idev, ABS_X, 4096 - x);
@@ -328,13 +329,22 @@ static int tsc2007_i2c_probe(struct i2c_client *client)
 
 	tsc_data = (struct mxc_tsc_platform_data *)(client->dev).platform_data;
 	if (tsc_data && tsc_data->vdd_reg) {
+		if (tsc_data->penup_threshold > (ADC_MAX >> 3))
+			data->penup_threshold = (ADC_MAX >> 3);
+		else if (tsc_data->penup_threshold > 0)
+			data->penup_threshold = tsc_data->penup_threshold;
+		else
+			data->penup_threshold = 10;
+
 		data->vdd_reg = regulator_get(&client->dev, tsc_data->vdd_reg);
 		if (data->vdd_reg)
 			regulator_enable(data->vdd_reg);
 		if (tsc_data->active)
 			tsc_data->active();
-	} else
+	} else {
 		data->vdd_reg = NULL;
+		data->penup_threshold = 10;
+	}
 
 	err = tsc2007_powerdown(data);
 	if (err >= 0) {

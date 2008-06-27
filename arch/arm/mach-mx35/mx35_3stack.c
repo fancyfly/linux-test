@@ -260,6 +260,7 @@ static inline void mxc_init_bl(void)
 
 static struct mxc_tsc_platform_data tsc2007_data = {
 	.vdd_reg = "SW1",
+	.penup_threshold = 30,
 	.active = gpio_tsc_active,
 	.inactive = gpio_tsc_inactive,
 };

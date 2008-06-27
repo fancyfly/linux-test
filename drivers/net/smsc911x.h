@@ -24,6 +24,9 @@
 #ifdef CONFIG_MACH_MX37_3DS
 #define SMSC_CAN_USE_SPI	1
 #define SMSC_CAN_USE_32BIT	0
+#elif defined(CONFIG_MACH_MX31_3DS) || defined(CONFIG_MACH_MX35_3DS)
+#define SMSC_CAN_USE_32BIT      0
+#define SMSC_CAN_USE_SPI        0
 #else
 #define SMSC_CAN_USE_32BIT	1
 #define SMSC_CAN_USE_SPI	0

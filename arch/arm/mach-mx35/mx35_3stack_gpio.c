@@ -827,7 +827,7 @@ void gpio_ata_active(void)
 
 	/* IOMUX Pad Settings */
 	ata_ctl_pad_cfg = PAD_CTL_SRE_SLOW | PAD_CTL_DRV_NORMAL |
-	    PAD_CTL_ODE_COMS | PAD_CTL_PKE_ENABLE |
+	    PAD_CTL_ODE_CMOS | PAD_CTL_PKE_ENABLE |
 	    PAD_CTL_PUE_PUD | PAD_CTL_100K_PD |
 	    PAD_CTL_HYS_CMOS | PAD_CTL_DRV_3_3V;
 	ata_dat_pad_cfg = PAD_CTL_SRE_FAST | PAD_CTL_DRV_MAX |

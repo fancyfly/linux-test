@@ -783,7 +783,7 @@ static int mxc_v4l2_s_param(cam_data * cam, struct v4l2_streamparm *parm)
 	csi_param.Hsync_pol = param->Hsync_pol;
 	ipu_csi_init_interface(param->width, param->height,
 			       param->pixel_fmt, csi_param);
-	ipu_csi_set_window_size(param->width + 1, param->height + 1);
+	ipu_csi_set_window_size(param->active_width, param->active_height);
 
 	if (parm->parm.capture.capturemode != V4L2_MODE_HIGHQUALITY) {
 		cam->streamparm.parm.capture.capturemode = 0;
@@ -1397,10 +1397,17 @@ mxc_v4l_do_ioctl(struct inode *inode, struct file *file,
 	case VIDIOC_G_STD:{
 			v4l2_std_id *e = arg;
 			*e = cam->standard.id;
+			if (cam->cam_sensor->get_std)
+				cam->cam_sensor->get_std(e);
+			retval = 0;
 			break;
 		}
 
 	case VIDIOC_S_STD:{
+			v4l2_std_id * e = arg;
+			if (cam->cam_sensor->set_std)
+				cam->cam_sensor->set_std(*e);
+			retval = 0;
 			break;
 		}
 

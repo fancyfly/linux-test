@@ -278,6 +278,8 @@ static void ov2640_interface(sensor_interface *param, u32 width, u32 height)
 	param->Hsync_pol = 0x0;
 	param->width = width - 1;
 	param->height = height - 1;
+	param->active_width = width;
+	param->active_height = height;
 	param->pixel_fmt = IPU_PIX_FMT_UYVY;
 	param->mclk = mclk;
 }

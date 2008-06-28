@@ -338,6 +338,10 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	 .addr = 0x10,
 	 .platform_data = (void *)&si4702_data,
 	 },
+	{
+	 .driver_name = "adv7180",
+	 .addr = 0x21,
+	 },
 };
 
 static struct spi_board_info mxc_spi_board_info[] __initdata = {

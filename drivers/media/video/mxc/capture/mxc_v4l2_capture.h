@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -64,6 +64,8 @@ typedef struct {
 	u16 height;
 	u32 pixel_fmt;
 	u32 mclk;
+	u16 active_width;
+	u16 active_height;
 } sensor_interface;
 
 /* Sensor control function */
@@ -76,6 +78,8 @@ struct camera_sensor {
 	void (*get_ae_mode) (int *ae_mode);
 	sensor_interface *(*config) (int *frame_rate, int high_quality);
 	sensor_interface *(*reset) (void);
+	void (*get_std) (v4l2_std_id *std);
+	void (*set_std) (v4l2_std_id std);
 };
 
 /*!

@@ -545,8 +545,6 @@ static int mxc_v4l2out_streamon(vout_data * vout)
 			fbvar.xres = fbvar.xres_virtual = out_width;
 			fbvar.yres = out_height;
 			fbvar.yres_virtual = out_height * 2;
-
-			fb_set_var(fbi, &fbvar);
 		} else if (vout->cur_disp_output == 5) {
 			vout->display_ch = MEM_DC_SYNC;
 			fbvar.bits_per_pixel = 16;
@@ -555,11 +553,12 @@ static int mxc_v4l2out_streamon(vout_data * vout)
 			fbvar.xres = fbvar.xres_virtual = out_width;
 			fbvar.yres = out_height;
 			fbvar.yres_virtual = out_height * 2;
-
-			fb_set_var(fbi, &fbvar);
 		} else {
 			vout->display_ch = MEM_BG_SYNC;
 		}
+
+		fbvar.activate |= FB_ACTIVATE_FORCE;
+		fb_set_var(fbi, &fbvar);
 
 		fb_pos.x = vout->crop_current.left;
 		fb_pos.y = vout->crop_current.top;
@@ -571,8 +570,8 @@ static int mxc_v4l2out_streamon(vout_data * vout)
 			set_fs(old_fs);
 		}
 
-		vout->display_bufs[0] = fbi->fix.smem_start;
-		vout->display_bufs[1] = fbi->fix.smem_start +
+		vout->display_bufs[1] = fbi->fix.smem_start;
+		vout->display_bufs[0] = fbi->fix.smem_start +
 		    (fbi->fix.line_length * fbi->var.yres);
 		vout->display_buf_size = vout->crop_current.width *
 		    vout->crop_current.height * fbi->var.bits_per_pixel / 8;

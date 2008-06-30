@@ -26,7 +26,6 @@
 /*!
  * Include files
  */
-#define DEBUG
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
@@ -242,17 +241,18 @@ static int mxcfb_set_par(struct fb_info *fbi)
 		ipu_disp_set_window_pos(mxc_fbi->ipu_ch, 0, 0);
 	}
 
-	mxc_fbi->cur_ipu_buf = 0;
+	mxc_fbi->cur_ipu_buf = 1;
 	sema_init(&mxc_fbi->flip_sem, 1);
+	fbi->var.xoffset = fbi->var.yoffset = 0;
 
 	retval = ipu_init_channel_buffer(mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
 					 bpp_to_pixfmt(fbi),
 					 fbi->var.xres, fbi->var.yres,
 					 fbi->fix.line_length,
 					 IPU_ROTATE_NONE,
-					 fbi->fix.smem_start,
 					 fbi->fix.smem_start +
 					 (fbi->fix.line_length * fbi->var.yres),
+					 fbi->fix.smem_start,
 					 0, 0);
 	if (retval) {
 		dev_err(fbi->device,
@@ -261,7 +261,6 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	}
 
 	if (mxc_fbi->blank == FB_BLANK_UNBLANK) {
-		ipu_select_buffer(mxc_fbi->ipu_ch, IPU_INPUT_BUFFER, 0);
 		ipu_enable_channel(mxc_fbi->ipu_ch);
 	}
 

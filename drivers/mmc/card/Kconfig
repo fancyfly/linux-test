@@ -39,3 +39,13 @@ config SDIO_UART
 	  SDIO function driver for SDIO cards that implements the UART
 	  class, as well as the GPS class which appears like a UART.
 
+config SDIO_UNIFI_FS
+	tristate "UniFi SDIO glue for Freescale MMC/SDIO"
+	depends on MMC_MXC && MACH_MX31_3DS
+	help
+	  This provides an interface between the CSR UniFi WiFi
+	  driver and the Freescale MMC/SDIO interface.
+	  If you have a MXC platform with a UniFi WiFi chip,
+	  say M here.
+
+	  If unsure, say N.

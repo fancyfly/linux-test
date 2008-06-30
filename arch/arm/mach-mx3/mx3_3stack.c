@@ -687,6 +687,38 @@ static struct resource mxcsdhc1_resources[] = {
 	       },
 };
 
+static struct mxc_mmc_platform_data mmc1_data = {
+	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30 |
+		    MMC_VDD_31_32,
+	.min_clk = 150000,
+	.max_clk = 25000000,
+	.card_fixed = 1,
+	.card_inserted_state = 1,
+	.status = sdhc_get_card_det_status,
+	.power_mmc = "VMMC2",
+};
+
+/*!
+ * Resource definition for the SDHC1
+ */
+static struct resource mxcsdhc2_resources[] = {
+	[0] = {
+	       .start = MMC_SDHC2_BASE_ADDR,
+	       .end = MMC_SDHC2_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_MMC_SDHC2,
+	       .end = MXC_INT_MMC_SDHC2,
+	       .flags = IORESOURCE_IRQ,
+	       },
+	[2] = {
+	       .start = 0,
+	       .end = 0,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
 /*! Device Definition for MXC SDHC1 */
 static struct platform_device mxcsdhc1_device = {
 	.name = "mxcmci",
@@ -699,6 +731,18 @@ static struct platform_device mxcsdhc1_device = {
 	.resource = mxcsdhc1_resources,
 };
 
+/*! Device Definition for MXC SDHC2 */
+static struct platform_device mxcsdhc2_device = {
+	.name = "mxcmci",
+	.id = 1,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mmc1_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcsdhc2_resources),
+	.resource = mxcsdhc2_resources,
+};
+
 static inline void mxc_init_mmc(void)
 {
 	int cd_irq;
@@ -709,8 +753,17 @@ static inline void mxc_init_mmc(void)
 		mxcsdhc1_device.resource[2].end = cd_irq;
 	}
 
+	cd_irq = sdhc_init_card_det(1);
+	if (cd_irq) {
+		mxcsdhc2_device.resource[2].start = cd_irq;
+		mxcsdhc2_device.resource[2].end = cd_irq;
+	}
+
 	spba_take_ownership(SPBA_SDHC1, SPBA_MASTER_A | SPBA_MASTER_C);
 	(void)platform_device_register(&mxcsdhc1_device);
+
+	spba_take_ownership(SPBA_SDHC2, SPBA_MASTER_A | SPBA_MASTER_C);
+	(void)platform_device_register(&mxcsdhc2_device);
 }
 #else
 static inline void mxc_init_mmc(void)
@@ -864,6 +917,37 @@ static void mxc_init_bluetooth(void)
 {
 	(void)platform_device_register(&mxc_bt_device);
 }
+
+static void mxc_unifi_hardreset(void)
+{
+	mxc_set_gpio_dataout(MX31_PIN_DCD_DCE1, 0);
+	msleep(100);
+	mxc_set_gpio_dataout(MX31_PIN_DCD_DCE1, 1);
+}
+
+static struct mxc_unifi_platform_data unifi_data = {
+	.hardreset = mxc_unifi_hardreset,
+
+	/* GPO3 -> enables SW2B 1.8V out - this becomes 1V8 on personality
+	 * board, then 1V8_EXT, then BT_VUSB
+	 */
+	.reg_gpo1 = "GPO3",
+
+	/* GPO4 -> WiFi_PWEN, but this signal is not used on current boards */
+	.reg_gpo2 = "GPO4",
+
+	.reg_1v5_ana_bb = "VRF1",	/* VRF1 -> WL_1V5ANA and WL_1V5BB */
+	.reg_vdd_vpa = "VMMC2",		/* VMMC2 -> WL_VDD and WL_VPA */
+	.reg_1v5_dd = "VRF2",		/* VRF2 -> WL_1V5DD */
+
+	.host_id = 1,
+};
+
+struct mxc_unifi_platform_data *get_unifi_plat_data(void)
+{
+	return &unifi_data;
+}
+EXPORT_SYMBOL(get_unifi_plat_data);
 
 #if defined(CONFIG_GPS_IOCTRL) || defined(CONFIG_GPS_IOCTRL_MODULE)
 static struct mxc_gps_platform_data gps_data = {

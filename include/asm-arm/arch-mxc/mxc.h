@@ -173,6 +173,21 @@ struct mxc_keyp_platform_data {
 	void (*inactive) (void);
 };
 
+struct mxc_unifi_platform_data {
+	void (*hardreset) (void);
+
+	/* power parameters */
+	char *reg_gpo1;
+	char *reg_gpo2;
+	char *reg_1v5_ana_bb;
+	char *reg_vdd_vpa;
+	char *reg_1v5_dd;
+
+	int host_id;
+
+	void *priv;
+};
+
 struct mxc_gps_platform_data {
 	char *core_reg;
 	char *analog_reg;
@@ -195,6 +210,8 @@ int mxc_snoop_get_status(u32 num, u32 * statl, u32 * stath);
 struct platform_device;
 void mxc_pg_enable(struct platform_device *pdev);
 void mxc_pg_disable(struct platform_device *pdev);
+
+struct mxc_unifi_platform_data *get_unifi_plat_data(void);
 
 #endif				/* __ASSEMBLY__ */
 

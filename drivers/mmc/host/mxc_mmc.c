@@ -291,6 +291,11 @@ struct mxcmci_host {
 	unsigned int mxc_mmc_suspend_flag;
 
 	/*!
+	 * sdio_irq enable/disable ref count
+	 */
+	int sdio_irq_cnt;
+
+	/*!
 	 * Platform specific data
 	 */
 	struct mxc_mmc_platform_data *plat_data;
@@ -306,6 +311,18 @@ static int mxcmci_data_done(struct mxcmci_host *host, unsigned int stat);
 
 /* Wait count to start the clock */
 #define CMD_WAIT_CNT 100
+
+#define MAX_HOST 10
+static struct mmc_host *hosts[MAX_HOST];
+
+struct mmc_host *mxc_mmc_get_host(int id)
+{
+	if (id < MAX_HOST)
+		return hosts[id];
+	else
+		return NULL;
+}
+EXPORT_SYMBOL(mxc_mmc_get_host);
 
 /*!
  * This function sets the SDHC register to stop the clock and waits for the
@@ -1053,13 +1070,20 @@ static void mxcmci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	unsigned long flags;
 
 	spin_lock_irqsave(&host->lock, flags);
-	intctrl = __raw_readl(host->base + MMC_INT_CNTR);
-	intctrl &= ~INT_CNTR_SDIO_IRQ_EN;
 
 	if (enable)
-		intctrl |= INT_CNTR_SDIO_IRQ_EN;
+		host->sdio_irq_cnt++;
+	else
+		host->sdio_irq_cnt--;
 
-	__raw_writel(intctrl, host->base + MMC_INT_CNTR);
+	if (host->sdio_irq_cnt == 1 || host->sdio_irq_cnt == 0) {
+		intctrl = __raw_readl(host->base + MMC_INT_CNTR);
+		intctrl &= ~INT_CNTR_SDIO_IRQ_EN;
+		if (host->sdio_irq_cnt)
+			intctrl |= INT_CNTR_SDIO_IRQ_EN;
+		__raw_writel(intctrl, host->base + MMC_INT_CNTR);
+	}
+
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
@@ -1223,25 +1247,26 @@ static int mxcmci_probe(struct platform_device *pdev)
 		goto out3;
 	}
 
-	host->detect_irq = platform_get_irq(pdev, 1);
-	if (!host->detect_irq) {
-		goto out3;
-	}
+	if (!host->plat_data->card_fixed) {
+		host->detect_irq = platform_get_irq(pdev, 1);
+		if (!host->detect_irq)
+			goto out3;
 
-	do {
-		card_gpio_status = host->plat_data->status(host->mmc->parent);
-		if (card_gpio_status) {
-			set_irq_type(host->detect_irq, IRQT_FALLING);
-		} else {
-			set_irq_type(host->detect_irq, IRQT_RISING);
-		}
-	} while (card_gpio_status !=
-		 host->plat_data->status(host->mmc->parent));
+		do {
+			card_gpio_status =
+				host->plat_data->status(host->mmc->parent);
+			if (card_gpio_status)
+				set_irq_type(host->detect_irq, IRQT_FALLING);
+			else
+				set_irq_type(host->detect_irq, IRQT_RISING);
 
-	ret =
-	    request_irq(host->detect_irq, mxcmci_gpio_irq, 0, pdev->name, host);
-	if (ret) {
-		goto out3;
+		} while (card_gpio_status !=
+			 host->plat_data->status(host->mmc->parent));
+
+		ret = request_irq(host->detect_irq, mxcmci_gpio_irq, 0,
+				  pdev->name, host);
+		if (ret)
+			goto out3;
 	}
 
 	mxcmci_softreset(host);
@@ -1265,6 +1290,8 @@ static int mxcmci_probe(struct platform_device *pdev)
 	}
 
 	printk(KERN_INFO "%s-%d found\n", pdev->name, pdev->id);
+	if (host->id < MAX_HOST)
+		hosts[host->id] = host->mmc;
 
 	return 0;
 
@@ -1302,6 +1329,7 @@ static int mxcmci_remove(struct platform_device *pdev)
 	if (mmc) {
 		struct mxcmci_host *host = mmc_priv(mmc);
 
+		hosts[host->id] = NULL;
 		mmc_remove_host(mmc);
 		free_irq(host->irq, host);
 		free_irq(host->detect_irq, host);

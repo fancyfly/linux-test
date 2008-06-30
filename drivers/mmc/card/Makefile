@@ -11,3 +11,4 @@ mmc_block-objs			:= block.o queue.o
 
 obj-$(CONFIG_SDIO_UART)		+= sdio_uart.o
 
+obj-$(CONFIG_SDIO_UNIFI_FS)	+= unifi_fs/

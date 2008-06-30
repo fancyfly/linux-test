@@ -19,7 +19,9 @@ struct mxc_mmc_platform_data {
 	unsigned int ocr_mask;	/* available voltages */
 	unsigned int min_clk;
 	unsigned int max_clk;
-	unsigned int card_inserted_state;
+	unsigned int reserved:16;
+	unsigned int card_fixed:1;
+	unsigned int card_inserted_state:1;
 //      u32 (*translate_vdd)(struct device *, unsigned int);
 	unsigned int (*status) (struct device *);
 	int (*wp_status) (void);

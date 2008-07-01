@@ -1265,6 +1265,9 @@ static struct clk rtic_clk = {
 static struct clk scc_clk = {
 	.name = "scc_clk",
 	.parent = &ipg_clk,
+	.enable_reg = MXC_CCM_CGR2,
+	.enable_shift = MXC_CCM_CGR2_SCC_OFFSET,
+	.disable = _clk_disable,
 };
 
 static struct clk sdma_clk[] = {
@@ -1472,7 +1475,7 @@ static void _clk_cko1_recalc(struct clk *clk)
 	post = (reg & MXC_CCM_COSR_CLKOUT_PRODIV_MASK) >>
 	    MXC_CCM_COSR_CLKOUT_PRODIV_OFFSET;
 
-	factor = ((reg & MXC_CCM_COSR_CLKOUTDIV_1) != 0) << 1;
+	factor = 1 << ((reg & MXC_CCM_COSR_CLKOUTDIV_1) != 0);
 	clk->rate = clk->parent->rate / (factor * (pre + 1) * (post + 1));
 }
 

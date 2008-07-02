@@ -466,6 +466,7 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 	int ret;
 	uint32_t lock_flags;
 	uint32_t reg;
+	uint32_t csc;
 	uint32_t *dc_ch_conf;
 	int irq = 0;
 	int timeout = 50;
@@ -483,7 +484,12 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 		spin_lock_irqsave(&ipu_lock, lock_flags);
 
 		reg = __raw_readl(DP_COM_CONF(DP_SYNC));
-		__raw_writel(reg & ~DP_COM_CONF_FG_EN, DP_COM_CONF(DP_SYNC));
+		csc = reg & DP_COM_CONF_CSC_DEF_MASK;
+		if (csc == DP_COM_CONF_CSC_DEF_FG)
+			reg &= ~DP_COM_CONF_CSC_DEF_MASK;
+
+		reg &= ~DP_COM_CONF_FG_EN;
+		__raw_writel(reg, DP_COM_CONF(DP_SYNC));
 
 		reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
 		__raw_writel(reg, IPU_SRM_PRI2);

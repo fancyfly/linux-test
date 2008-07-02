@@ -69,8 +69,25 @@ struct _wm8350_audio {
 /* in order of power consumption per rate (lowest first) */
 static const struct _wm8350_audio wm8350_audio[] = {
 	/* 16bit mono modes */
-	{1, SNDRV_PCM_FORMAT_S16_LE, 8000, 12288000 >> 1,
-	 WM8350_BCLK_DIV_48, WM8350_DACDIV_3, 16,},
+
+	{1, SNDRV_PCM_FORMAT_S16_LE, 8000, 12288000,
+	WM8350_BCLK_DIV_48, WM8350_DACDIV_6, 32,},
+	{1, SNDRV_PCM_FORMAT_S16_LE, 16000, 12288000,
+	 WM8350_BCLK_DIV_24, WM8350_DACDIV_6, 32,},
+	{1, SNDRV_PCM_FORMAT_S16_LE, 32000, 12288000,
+	 WM8350_BCLK_DIV_12, WM8350_DACDIV_3, 32,},
+	{1, SNDRV_PCM_FORMAT_S16_LE, 48000, 12288000,
+	 WM8350_BCLK_DIV_8, WM8350_DACDIV_2, 32,},
+	{1, SNDRV_PCM_FORMAT_S16_LE, 96000, 24576000,
+	 WM8350_BCLK_DIV_8, WM8350_DACDIV_2, 32,},
+	{1, SNDRV_PCM_FORMAT_S16_LE, 11025, 11289600,
+	 WM8350_BCLK_DIV_32, WM8350_DACDIV_4, 32,},
+	{1, SNDRV_PCM_FORMAT_S16_LE, 22050, 11289600,
+	 WM8350_BCLK_DIV_16, WM8350_DACDIV_4, 32,},
+	{1, SNDRV_PCM_FORMAT_S16_LE, 44100, 11289600,
+	 WM8350_BCLK_DIV_8, WM8350_DACDIV_2, 32,},
+	{1, SNDRV_PCM_FORMAT_S16_LE, 88200, 22579200,
+	 WM8350_BCLK_DIV_8, WM8350_DACDIV_2, 32,},
 
 	/* 16 bit stereo modes */
 	{2, SNDRV_PCM_FORMAT_S16_LE, 8000, 12288000,
@@ -160,8 +177,18 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 			break;
 		}
 	}
-	if (!found)
+	if (!found) {
+		printk(KERN_ERR "%s: invalid params\n", __func__);
 		return -EINVAL;
+	}
+
+#if WM8350_SSI_MASTER
+	/* codec FLL input is 32768 kHz from MCLK */
+	codec_dai->ops->set_pll(codec_dai, 0, 32768, wm8350_audio[i].sysclk);
+#else
+	/* codec FLL input is rate from DAC LRC */
+	codec_dai->ops->set_pll(codec_dai, 0, rate, wm8350_audio[i].sysclk);
+#endif
 
 #if WM8350_SSI_MASTER
 	dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
@@ -222,14 +249,6 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 
 	codec_dai->ops->set_clkdiv(codec_dai,
 				   WM8350_ADC_CLKDIV, wm8350_audio[i].clkdiv);
-
-#if WM8350_SSI_MASTER
-	/* codec FLL input is 32768 kHz from MCLK */
-	codec_dai->ops->set_pll(codec_dai, 0, 32768, wm8350_audio[i].sysclk);
-#else
-	/* codec FLL input is rate from DAC LRC */
-	codec_dai->ops->set_pll(codec_dai, 0, rate, wm8350_audio[i].sysclk);
-#endif
 
 	return 0;
 }

@@ -99,6 +99,9 @@ int ipu_probe(struct platform_device *pdev)
 	g_ipu_dev = &pdev->dev;
 	g_ipu_hw_rev = ipu_conf->rev;
 
+	/* resetting the CONF register of the IPU */
+	__raw_writel(0x00000000, IPU_CONF);
+
 	/* Register IPU interrupts */
 	g_ipu_irq[0] = platform_get_irq(pdev, 0);
 	if (g_ipu_irq[0] < 0)

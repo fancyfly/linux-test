@@ -653,7 +653,7 @@ static int imx_esai_hw_tx_params(struct snd_pcm_substream
 	channels = params_channels(params);
 	tfcr &= ESAI_TFCR_TE_MASK;
 	tfcr |= ESAI_TFCR_TE(channels);
-	tfcr |= ESAI_TFCR_TFEN | ESAI_TFCR_TIEN;
+	tfcr |= ESAI_TFCR_TFEN;
 
 	tfcr |= ESAI_TFCR_TFWM(64);
 
@@ -734,7 +734,7 @@ static int imx_esai_hw_params(struct snd_pcm_substream
 
 static int imx_esai_trigger(struct snd_pcm_substream *substream, int cmd)
 {
-	u32 i, reg;
+	u32 reg;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		reg = __raw_readl(ESAI_TCR);
@@ -747,9 +747,6 @@ static int imx_esai_trigger(struct snd_pcm_substream *substream, int cmd)
 	}
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
-		/* Before SDMA data transfer, fifo needs to be initialized */
-		for (i = 0; i < 120; i++)
-			__raw_writel(0x00, ESAI_ETDR);
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)

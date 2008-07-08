@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -49,12 +49,26 @@
 #include <asm/arch/iim.h>
 #include <asm/arch/mxc_scc.h>
 
+/* TODO: The define for SCC_FUSE seems to be missing from some archetectures.
+ *       As a workaround, assume that the SCC has not been disabled. On at
+ *       least one it is defined as:
+ *
+ *       #define SCC_FUSE IO_ADDRESS(IIM_BASE_ADDR + MXC_IIMHWV1)
+ */
+
+#if 1
+
+#define SCC_ENABLED() (1)
+
+#else
+
 /*!
  * This macro is used to determine whether the SCC is enabled/available
  * on the platform.  This macro may need to be ported.
  */
-#define SCC_FUSE IO_ADDRESS(IIM_BASE_ADDR + MXC_IIMHWV1)
 #define SCC_ENABLED() ((SCC_FUSE & MXC_IIMHWV1_SCC_DISABLE) == 0)
+
+#endif
 
 /*!
  * Turn on generation of run-time operational, debug, and error messages
@@ -144,7 +158,7 @@
 /*!
  * @def SCC_READ_REGISTER
  * Read a 32-bit value from an SCC register.  Macro which depends upon
- * #scc_base.  Linux __raw_readl()/__raw_writel() macros operate on 32-bit quantities, as
+ * #scc_base.  Linux readl()/writel() macros operate on 32-bit quantities, as
  * do SCC register reads/writes.
  *
  * @param     offset  Register offset within SCC.
@@ -159,7 +173,7 @@
 
 /*!
  * Write a 32-bit value to an SCC register.  Macro depends upon #scc_base.
- * Linux __raw_readl()/__raw_writel() macros operate on 32-bit quantities, as do SCC
+ * Linux readl()/writel() macros operate on 32-bit quantities, as do SCC
  * register reads/writes.
  *
  * @param   offset  Register offset within SCC.
@@ -230,6 +244,23 @@
 /*! Name of the driver.  Used (on Linux, anyway) when registering interrupts */
 #define SCC_DRIVER_NAME "scc"
 
+/* Port -- these symbols are defined in Linux 2.6 and later.  They are defined
+ * here for backwards compatibility because this started life as a 2.4
+ * driver, and as a guide to portation to other platforms.
+ */
+
+#if !defined(LINUX_VERSION_CODE) || LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
+
+#define irqreturn_t void	/* Return type of an interrupt handler */
+
+#define IRQ_HANDLED		/* Would be '1' for handled -- as in return IRQ_HANDLED; */
+
+#define IRQ_NONE		/* would be '0' for not handled -- as in return IRQ_NONE; */
+
+#define IRQ_RETVAL(x)		/* Return x==0 (not handled) or non-zero (handled) */
+
+#endif				/* LINUX earlier than 2.5 */
+
 /* These are nice to have around */
 #ifndef FALSE
 #define FALSE 0
@@ -265,7 +296,15 @@ static int scc_init(void);
 static void scc_cleanup(void);
 
 /* Forward defines of internal functions */
-static irqreturn_t scc_irq(int irq, void *dev_id);
+static irqreturn_t scc_irq(int irq, void *dev_id, struct pt_regs *regs);
+/*! Perform callbacks registered by #scc_monitor_security_failure().
+ *
+ *  Make sure callbacks only happen once...  Since there may be some reason why
+ *  the interrupt isn't generated, this routine could be called from base(task)
+ *  level.
+ *
+ *  One at a time, go through #scc_callbacks[] and call any non-null pointers.
+ */
 static void scc_perform_callbacks(void);
 static uint32_t copy_to_scc(const uint8_t * from, uint32_t to,
 			    unsigned long count_bytes, uint16_t * crc);
@@ -277,9 +316,34 @@ static uint32_t scc_update_state(void);
 static void scc_init_ccitt_crc(void);
 static uint32_t scc_grab_config_values(void);
 static int setup_interrupt_handling(void);
+/*!
+ * Perform an encryption on the input.  If @c verify_crc is true, a CRC must be
+ * calculated on the plaintext, and appended, with padding, before computing
+ * the ciphertext.
+ *
+ * @param[in]     count_in_bytes  Count of bytes of plaintext
+ * @param[in]     data_in         Pointer to the plaintext
+ * @param[in]     scm_control     Bit values for the SCM_CONTROL register
+ * @param[in,out] data_out        Pointer for storing ciphertext
+ * @param[in]     add_crc         Flag for computing CRC - 0 no, else yes
+ * @param[in,out] count_out_bytes Number of bytes available at @c data_out
+ */
 static scc_return_t scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in,
 				uint32_t scm_control, uint8_t * data_out,
 				int add_crc, unsigned long *count_out_bytes);
+/*!
+ * Perform a decryption on the input.  If @c verify_crc is true, the last block
+ * (maybe the two last blocks) is special - it should contain a CRC and
+ * padding.  These must be stripped and verified.
+ *
+ * @param[in]     count_in_bytes  Count of bytes of ciphertext
+ * @param[in]     data_in         Pointer to the ciphertext
+ * @param[in]     scm_control     Bit values for the SCM_CONTROL register
+ * @param[in,out] data_out        Pointer for storing plaintext
+ * @param[in]     verify_crc      Flag for running CRC - 0 no, else yes
+ * @param[in,out] count_out_bytes Number of bytes available at @c data_out
+
+ */
 static scc_return_t scc_decrypt(uint32_t count_in_bytes, uint8_t * data_in,
 				uint32_t scm_control, uint8_t * data_out,
 				int verify_crc, unsigned long *count_out_bytes);
@@ -289,7 +353,7 @@ static scc_return_t check_register_accessible(uint32_t offset,
 					      uint32_t smn_status,
 					      uint32_t scm_status);
 static scc_return_t check_register_offset(uint32_t offset);
-uint8_t make_vpu_partition(void);
+/*uint8_t make_vpu_partition(void);*/
 
 #ifdef SCC_REGISTER_DEBUG
 static uint32_t dbg_scc_read_register(uint32_t offset);
@@ -311,7 +375,7 @@ EXPORT_SYMBOL(scc_load_slot);
 EXPORT_SYMBOL(scc_encrypt_slot);
 EXPORT_SYMBOL(scc_decrypt_slot);
 EXPORT_SYMBOL(scc_get_slot_info);
-EXPORT_SYMBOL(make_vpu_partition);
+/*EXPORT_SYMBOL(make_vpu_partition);*/
 
 /* Tell Linux where to invoke driver at boot/module load time */
 module_init(scc_init);

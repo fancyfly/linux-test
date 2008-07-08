@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -47,6 +47,12 @@
 #define FSL_HAVE_RTIC
 #define FSL_HAVE_SCC
 #define USE_OLD_PTRS
+
+#elif defined(CONFIG_ARCH_MX37)
+
+#define FSL_HAVE_SCC2
+#define FSL_HAVE_RNGC
+#define FSL_HAVE_RTIC2
 
 #elif defined(CONFIG_ARCH_MXC91131)
 

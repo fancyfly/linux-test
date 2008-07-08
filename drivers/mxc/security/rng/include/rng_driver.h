@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -82,7 +82,7 @@ typedef enum rng_return {
  * data_local to data_user) will get made if status was good.
  */
 typedef struct rng_work_entry {
-	struct shw_queue_entry hdr;	/*!< Standards SHW queue info.  */
+	struct shw_queue_entry_t hdr;	/*!< Standards SHW queue info.  */
 	uint32_t length;	/*!< Number of bytes still needed to satisfy request. */
 	uint32_t *data_local;	/*!< Where data from RNG FIFO gets placed. */
 	uint8_t *data_user;	/*!< Ultimate target of data.  */

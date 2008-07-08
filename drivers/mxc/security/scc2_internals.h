@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -13,13 +13,13 @@
 #ifndef SCC_INTERNALS_H
 #define SCC_INTERNALS_H
 
-/** @file scc_internals.h
+/** @file scc2_internals.h
  *
  * @brief This is intended to be the file which contains most or all of the
  * code or changes need to port the driver.  It also includes other definitions
  * needed by the driver.
  *
- *  This header file should only ever be included by scc_driver.c
+ *  This header file should only ever be included by scc2_driver.c
  *
  *  Compile-time flags minimally needed:
  *
@@ -67,7 +67,7 @@
  * Define the number of Stored Keys which the SCC driver will make available.
  * Value shall be from 0 to 20.  Default is zero (0).
  */
-#define SCC_KEY_SLOTS   20
+/*#define SCC_KEY_SLOTS   20*/
 
 
 /* Temporarily define compile-time flags to make Doxygen happy. */
@@ -290,11 +290,30 @@
  * @return   (void)
  */
 #ifndef SCC_REGISTER_DEBUG
-#define SCC_WRITE_REGISTER(offset,value) (void)__raw_writel(value, scc_base+(offset))
+#define SCC_WRITE_REGISTER(offset,value) \
+	(void)__raw_writel(value, scc_base+(offset))
 #else
-#define SCC_WRITE_REGISTER(offset,value) dbg_scc_write_register(offset, value)
+#define SCC_WRITE_REGISTER(offset,value) \
+	dbg_scc_write_register(offset, value)
 #endif
 
+/**
+ * Calculate the physical address of a partition from the partition number.
+ */
+#define SCM_PART_PHYS_ADDRESS(part)                                     \
+ ((uint32_t)scm_ram_phys_base + (part*scc_configuration.partition_size_bytes))
+
+/**
+ * Calculate the kernel virtual address of a partition from the partition number.
+ */
+#define SCM_PART_ADDRESS(part)                                          \
+ (scm_ram_base + (part*scc_configuration.partition_size_bytes))
+
+/**
+ * Calculate the partition number from the kernel virtual address.
+ */
+#define SCM_PART_NUMBER(address)                                        \
+ ((address - (uint32_t)scm_ram_base)/scc_configuration.partition_size_bytes)
 
 /**
  * Calculates the byte offset into a word
@@ -415,7 +434,8 @@ static int scc_init(void);
 static void scc_cleanup(void);
 
 /* Forward defines of internal functions */
-static irqreturn_t scc_irq(int irq, void *dev_id);
+OS_DEV_ISR(scc_irq);
+/*static irqreturn_t scc_irq(int irq, void *dev_id);*/
 /** Perform callbacks registered by #scc_monitor_security_failure().
  *
  *  Make sure callbacks only happen once...  Since there may be some reason why
@@ -425,12 +445,9 @@ static irqreturn_t scc_irq(int irq, void *dev_id);
  *  One at a time, go through #scc_callbacks[] and call any non-null pointers.
  */
 static void scc_perform_callbacks(void);
-static uint32_t copy_to_scc(const uint8_t* from, uint32_t to,
-                            unsigned long count_bytes, uint16_t* crc);
-static uint32_t copy_from_scc(const uint32_t from, uint8_t* to,
-                              unsigned long count_bytes, uint16_t* crc);
-static scc_return_t scc_strip_padding(uint8_t* from,
-                                      unsigned* count_bytes_stripped);
+/*static uint32_t copy_to_scc(const uint8_t* from, uint32_t to, unsigned long count_bytes, uint16_t* crc);
+static uint32_t copy_from_scc(const uint32_t from, uint8_t* to,unsigned long count_bytes, uint16_t* crc);
+static scc_return_t scc_strip_padding(uint8_t* from,unsigned* count_bytes_stripped);*/
 static uint32_t scc_update_state(void);
 static void scc_init_ccitt_crc(void);
 static uint32_t scc_grab_config_values(void);
@@ -447,9 +464,7 @@ static int setup_interrupt_handling(void);
  * @param[in]     add_crc         Flag for computing CRC - 0 no, else yes
  * @param[in,out] count_out_bytes Number of bytes available at @c data_out
  */
-static scc_return_t scc_encrypt(uint32_t count_in_bytes, uint8_t* data_in,
-                                uint32_t scm_control, uint8_t* data_out,
-                                int add_crc, unsigned long* count_out_bytes);
+/*static scc_return_t scc_encrypt(uint32_t count_in_bytes, uint8_t* data_in, uint32_t scm_control, uint8_t* data_out,int add_crc, unsigned long* count_out_bytes);*/
 /**
  * Perform a decryption on the input.  If @c verify_crc is true, the last block
  * (maybe the two last blocks) is special - it should contain a CRC and
@@ -463,17 +478,17 @@ static scc_return_t scc_encrypt(uint32_t count_in_bytes, uint8_t* data_in,
  * @param[in,out] count_out_bytes Number of bytes available at @c data_out
 
  */
-static scc_return_t scc_decrypt(uint32_t count_in_bytes, uint8_t* data_in,
-                                uint32_t scm_control, uint8_t* data_out,
-                                int verify_crc,
-                                unsigned long* count_out_bytes);
+/*static scc_return_t scc_decrypt(uint32_t count_in_bytes, uint8_t* data_in, uint32_t scm_control, uint8_t* data_out, int verify_crc, unsigned long* count_out_bytes);*/
+static uint32_t host_owns_partition(uint32_t part_no);
+static uint32_t partition_engaged(uint32_t part_no);
+
 static scc_return_t scc_wait_completion(uint32_t* scm_status);
 static int is_cipher_done(uint32_t* scm_status);
 static scc_return_t check_register_accessible (uint32_t offset,
                                                uint32_t smn_status,
                                                uint32_t scm_status);
 static scc_return_t check_register_offset(uint32_t offset);
-uint8_t make_vpu_partition(void);
+/*uint8_t make_vpu_partition(void);*/
 
 #ifdef SCC_REGISTER_DEBUG
 static uint32_t dbg_scc_read_register(uint32_t offset);
@@ -484,19 +499,19 @@ static void dbg_scc_write_register(uint32_t offset, uint32_t value);
 /* For Linux kernel, export the API functions to other kernel modules */
 EXPORT_SYMBOL(scc_get_configuration);
 EXPORT_SYMBOL(scc_zeroize_memories);
-EXPORT_SYMBOL(scc_crypt);
+/*EXPORT_SYMBOL(scc_crypt);*/
 EXPORT_SYMBOL(scc_set_sw_alarm);
 EXPORT_SYMBOL(scc_monitor_security_failure);
 EXPORT_SYMBOL(scc_stop_monitoring_security_failure);
 EXPORT_SYMBOL(scc_read_register);
 EXPORT_SYMBOL(scc_write_register);
-EXPORT_SYMBOL(scc_alloc_slot);
-EXPORT_SYMBOL(scc_dealloc_slot);
-EXPORT_SYMBOL(scc_load_slot);
-EXPORT_SYMBOL(scc_encrypt_slot);
-EXPORT_SYMBOL(scc_decrypt_slot);
-EXPORT_SYMBOL(scc_get_slot_info);
-EXPORT_SYMBOL(make_vpu_partition);
+EXPORT_SYMBOL(scc_allocate_partition);
+EXPORT_SYMBOL(scc_engage_partition);
+EXPORT_SYMBOL(scc_release_partition);
+EXPORT_SYMBOL(scc_diminish_permissions);
+EXPORT_SYMBOL(scc_encrypt_region);
+EXPORT_SYMBOL(scc_decrypt_region);
+/*EXPORT_SYMBOL(make_vpu_partition);*/
 /* Tell Linux where to invoke driver at boot/module load time */
 module_init(scc_init);
 /* Tell Linux where to invoke driver on module unload  */

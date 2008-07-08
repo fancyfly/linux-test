@@ -216,6 +216,7 @@ static inline void mxc_init_scc(void)
 	uint32_t *MAP_base;
 	uint8_t i;
 	uint32_t partition_no;
+	uint32_t scc_partno;
 	void *scm_ram_base;
 	void *scc_base;
 
@@ -260,6 +261,19 @@ static inline void mxc_init_scc(void)
 		    SCM_PERM_HD_READ | SCM_PERM_HD_WRITE |
 		    SCM_PERM_TH_READ | SCM_PERM_TH_WRITE;
 
+	}
+
+	/*Freeing 2 partitions for SCC2*/
+	scc_partno = 9 - (SCC_IRAM_SIZE / SZ_8K);
+	for (partition_no = scc_partno; partition_no < 9; partition_no++) {
+		reg_value = ((partition_no << SCM_ZCMD_PART_SHIFT) &
+			     SCM_ZCMD_PART_MASK) | ((0x03 <<
+						     SCM_ZCMD_CCMD_SHIFT)
+						    & SCM_ZCMD_CCMD_MASK);
+		__raw_writel(reg_value, scc_base + SCM_ZCMD_REG);
+
+			 while ((__raw_readl(scc_base + SCM_STATUS_REG) &
+				 SCM_STATUS_SRS_READY) != SCM_STATUS_SRS_READY);
 	}
 	iounmap(scm_ram_base);
 	iounmap(scc_base);

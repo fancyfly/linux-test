@@ -250,6 +250,13 @@ static inline void _ipu_ch_param_init(int ch,
 		u_offset = (u == 0) ? stride * height : u;
 		v_offset = (v == 0) ? u_offset + u_offset / 2 : v;
 		break;
+	case IPU_PIX_FMT_NV12:
+		/* BPP & pixel format */
+		ipu_ch_param_set_field(&params, 1, 85, 4, 4);	/* pix format */
+		ipu_ch_param_set_field(&params, 1, 78, 7, 31);	/* burst size */
+		uv_stride = stride;
+		u_offset = (u == 0) ? stride * height : u;
+		break;
 	default:
 		dev_err(g_ipu_dev, "mxc ipu: unimplemented pixel format\n");
 		break;

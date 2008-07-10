@@ -32,7 +32,7 @@
  */
 #define KPP_DEBUG        0
 
-#ifdef KPP_DEBUG
+#if KPP_DEBUG
 #define	DEBUG
 #include <linux/kernel.h>
 #endif

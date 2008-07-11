@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -111,21 +111,24 @@ extern "C" {
 #define SCC_DRIVER_MINOR_VERSION_0 0
 /*! Old Minor Version of the driver. */
 #define SCC_DRIVER_MINOR_VERSION_4 4
+/*! Old Minor Version of the driver. */
+#define SCC_DRIVER_MINOR_VERSION_5 5
 /*! Minor Version of the driver.  Used for
     scc_configuration->driver_minor_version */
-#define SCC_DRIVER_MINOR_VERSION_5 5
+#define SCC_DRIVER_MINOR_VERSION_6 6
+
 
 /*!
  * @typedef scc_return_t (enum scc_return)
  */
 /*! Common status return values from SCC driver functions. */
-	typedef enum scc_return {
+	typedef enum scc_return_t {
 		SCC_RET_OK = 0,	/*!< Function succeeded  */
-		SCC_RET_FAIL = -1,	/*!< Non-specific failure */
-		SCC_RET_VERIFICATION_FAILED = -2,	/*!< Decrypt validation failed */
-		SCC_RET_TOO_MANY_FUNCTIONS = -3,	/*!< At maximum registered functions */
-		SCC_RET_BUSY = -4,	/*!< SCC is busy and cannot handle request */
-		SCC_RET_INSUFFICIENT_SPACE = -5,	/*!< Encryption or decryption failed because
+		SCC_RET_FAIL,	/*!< Non-specific failure */
+		SCC_RET_VERIFICATION_FAILED,	/*!< Decrypt validation failed */
+		SCC_RET_TOO_MANY_FUNCTIONS,	/*!< At maximum registered functions */
+		SCC_RET_BUSY,	/*!< SCC is busy and cannot handle request */
+		SCC_RET_INSUFFICIENT_SPACE,	/*!< Encryption or decryption failed because
 							   @c count_out_bytes says that @c data_out is
 							   too small to hold the value. */
 	} scc_return_t;
@@ -140,7 +143,7 @@ extern "C" {
  * allow the user of the driver to determine the size of the SCC's memories and
  * the version of the SCC and the driver.
  */
-	typedef struct scc_config {
+	typedef struct scc_config_t {
 		int driver_major_version;	/*!< Major version of the SCC driver code  */
 		int driver_minor_version;	/*!< Minor version of the SCC driver code  */
 		int scm_version;	/*!< Version from SCM Configuration register */
@@ -159,7 +162,7 @@ extern "C" {
  * function as an encryption or decryption.  Used as an argument to
  * #scc_crypt().
  */
-	typedef enum scc_enc_dec {
+	typedef enum scc_enc_dec_t {
 		SCC_ENCRYPT,	/*!< Encrypt (from Red to Black) */
 		SCC_DECRYPT	/*!< Decrypt (from Black to Red) */
 	} scc_enc_dec_t;
@@ -172,7 +175,7 @@ extern "C" {
  * codebook) or CBC (cipher-block chaining) mode.  Used as an argument to
  * #scc_crypt().
  */
-	typedef enum scc_crypto_mode {
+	typedef enum scc_crypto_mode_t {
 		SCC_ECB_MODE,	/*!< Electronic Codebook Mode */
 		SCC_CBC_MODE	/*!< Cipher Block Chaining Mode  */
 	} scc_crypto_mode_t;
@@ -187,7 +190,7 @@ extern "C" {
  * encryption.  During decryption, the check value will be verified after
  * decryption, and then stripped from the message.
  */
-	typedef enum scc_verify {
+	typedef enum scc_verify_t {
 		/*! No verification value added or checked.  Input plaintext data must be
 		 *  be a multiple of the blocksize (#scc_get_configuration()).  */
 		SCC_VERIFY_MODE_NONE,
@@ -197,6 +200,19 @@ extern "C" {
 		   stripped, and the CRC will be verified. */
 		SCC_VERIFY_MODE_CCITT_CRC
 	} scc_verify_t;
+
+/*!
+ * Determine if the given credentials match that of the key slot.
+ *
+ * @param[in]  owner_id     A value which will control access to the slot.
+ * @param[in]  slot         Key Slot to query
+ * @param[in]  access_len   Length of the key
+ *
+ * @return     0 on success, non-zero on failure.  See #scc_return_t.
+ */
+	 scc_return_t
+	    scc_verify_slot_access(uint64_t owner_id, uint32_t slot,
+				   uint32_t access_len);
 
 /*!
  * Retrieve configuration information from the SCC.
@@ -444,7 +460,8 @@ extern "C" {
  * accessible (e.g. not busy, not in failed state) at the time of the call.
  *
  * @param[in]   register_offset  The (byte) offset within the SCC block
- *                               of the register to be queried.
+ *                               of the register to be queried. See
+ *                              @ref scmregs and @ref smnregs.
  * @param[out]  value            Pointer to where value from the register
  *                               should be placed.
  * @return      0 if OK, non-zero on error.  See #scc_return_t.
@@ -468,7 +485,8 @@ extern "C" {
  * accessible (e.g. not busy, not in failed state) at the time of the call.
  *
  * @param[in]  register_offset  The (byte) offset within the SCC block
- *                              of the register to be modified.  
+ *                              of the register to be modified. See
+ *                              @ref scmregs and @ref smnregs.
  * @param[in]  value            The value to store into the register.
  * @return     0 if OK, non-zero on error.  See #scc_return_t.
  *
@@ -485,17 +503,18 @@ extern "C" {
  *
  * All of the doxygen comments for the register offset values are in this the
  * following comment section.  Any changes to register names or definitions
- * must be reflected in this section and other versions of the memory map.
- *
+ * must be reflected in this section and in both the TAHITI and non-TAHITI
+ *version of the memory map.
  */
 
 /*!
- * @name SCM Registers
+ * @defgroup scmregs SCM Registers
  *
  * These values are offsets into the SCC for the Secure Memory
  * (SCM) registers.  They are used in the @c register_offset parameter of
  * #scc_read_register() and #scc_write_register().
  */
+/*! @addtogroup scmregs */
 /*! @{ */
 /*! @def SCM_RED_START
  * Starting block offset in red memory for cipher function. */
@@ -508,28 +527,28 @@ extern "C" {
 
 /*! @def SCM_CONTROL
  * SCM Control register.
- * See "SCM Control Register definitions" for details.
+ * See @ref scmcontrolregdefs "SCM Control Register definitions" for details.
  */
 
 /*! @def SCM_STATUS
  * SCM Status register.
- * See "SCM Status Register Definitions" for details.
+ * See @ref scmstatusregdefs "SCM Status Register Definitions" for details.
  */
 
 /*! @def SCM_ERROR_STATUS
  * SCM Error Status Register.
- * See "SCM Error Status Register definitions" for
+ * See @ref scmerrstatdefs "SCM Error Status Register definitions" for
  * details. */
 
 /*! @def SCM_INTERRUPT_CTRL
  * SCM Interrupt Control Register.
- * See "SCM Interrupt Control Register definitions"
+ * See @ref scminterruptcontroldefs "SCM Interrupt Control Register definitions"
  * for details.
  */
 
 /*! @def SCM_CONFIGURATION
  * SCM Configuration Register.
- * See "SCM Configuration Register Definitions" for
+ * See @ref scmconfigdefs "SCM Configuration Register Definitions" for
  * details.
  */
 
@@ -548,22 +567,23 @@ extern "C" {
 	/*! @} *//* end of SCM group */
 
 /*!
- * @name SMN Registers
+ * @defgroup smnregs SMN Registers
  *
  * These values are offsets into the SCC for the Security Monitor
  * (SMN) registers.  They are used in the @c register_offset parameter of the
  * #scc_read_register() and #scc_write_register().
  */
+/*! @addtogroup smnregs */
 /*! @{ */
 /*! @def SMN_STATUS
  * Status register for SMN.
- * See "SMN Status Register definitions" for further
+ * See @ref smnstatusregdefs "SMN Status Register definitions" for further
  * information.
  */
 
 /** @def SMN_COMMAND
  * Command register for SMN. See
- * "Command Register Definitions" for further
+ * @ref smncommandregdefs "Command Register Definitions" for further
  * information.
  */
 
@@ -609,12 +629,12 @@ extern "C" {
 
 /*! @def SMN_TIMER_CONTROL
  * Timer Control register.
- * See "SMN Timer Control Register definitions".
+ * See @ref smntimercontroldefs "SMN Timer Control Register definitions".
  */
 
 /*! @def SMN_DEBUG_DETECT_STAT
  * Debug Detector Status Register
- * See "SMN Debug Detector Status Register"for definitions.
+ * See @ref smndbgdetdefs "SMN Debug Detector Status Register"for definitions.
  */
 
 /*! @def SMN_TIMER
@@ -663,7 +683,7 @@ extern "C" {
 #define SCC_ADDRESS_RANGE    0x103c
 
 /*!
- * @name SMN Status Register definitions (SMN_STATUS)
+ * @defgroup smnstatusregdefs SMN Status Register definitions (SMN_STATUS)
  */
 /*! @{ */
 /*! SMN version id. */
@@ -719,8 +739,9 @@ extern "C" {
 /*! @} */
 
 /*!
- * @name SMN Model Secure State Controller States (SMN_STATE_MASK)
+ * @defgroup sccscmstates SMN Model Secure State Controller States (SMN_STATE_MASK)
  */
+/*! @addtogroup sccscmstates */
 /*! @{ */
 /*! This is the first state of the SMN after power-on reset  */
 #define SMN_STATE_START         0x0
@@ -737,8 +758,9 @@ extern "C" {
 /*! @} */
 
 /*!
- * @name SCM Configuration Register definitions (SCM_CONFIGURATION)
+ * @defgroup scmconfigdefs SCM Configuration Register definitions (SCM_CONFIGURATION)
  **/
+/*! @addtogroup scmconfigdefs */
 /*! @{ */
 /*! Version number of the Secure Memory. */
 #define SCM_CFG_VERSION_ID_MASK         0xf8000000
@@ -761,8 +783,9 @@ extern "C" {
 /*! @} */
 
 /*!
- * @name SMN Command Register Definitions (SMN_COMMAND)
+ * @defgroup smncommandregdefs SMN Command Register Definitions (SMN_COMMAND)
  */
+/*! @addtogroup smncommandregdefs */
 /*! @{ */
 #define SMN_COMMAND_ZEROS_MASK   0xfffffff0	/*!< These bits are unimplemented
 						   or reserved */
@@ -773,8 +796,9 @@ extern "C" {
 /*! @} */
 
 /*!
- * @name SMN Timer Control Register definitions (SMN_TIMER_CONTROL)
+ * @defgroup smntimercontroldefs SMN Timer Control Register definitions (SMN_TIMER_CONTROL)
  */
+/*! @addtogroup smntimercontroldefs */
 /*! @{ */
 /*! These bits are reserved or zero */
 #define SMN_TIMER_CTRL_ZEROS_MASK 0xfffffffc
@@ -787,7 +811,7 @@ extern "C" {
 /*! @} */
 
 /*!
- * @name SCM Interrupt Control Register definitions (SCM_INTERRUPT_CTRL)
+ * @defgroup scminterruptcontroldefs SCM Interrupt Control Register definitions (SCM_INTERRUPT_CTRL)
  *
  * These are the bit definitions for the #SCM_INTERRUPT_CTRL register.
  */

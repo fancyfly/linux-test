@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -30,7 +30,7 @@
 #include "portable_os.h"
 #include "shw_driver.h"
 
-#include <asm/arch/mxc_scc_driver.h>
+//#include <asm/arch/mxc_scc_driver.h>
 
 /*! @defgroup shwcompileflags SHW Compile Flags
  *
@@ -68,6 +68,8 @@
  * This flag is undefined by default.
  */
 /* REQ-FSLSHW-DEBUG-001 */
+#define SHW_DEBUG
+#undef SHW_DEBUG
 
 /*! @} */
 #endif				/* end DOXYGEN_HACK */
@@ -80,9 +82,7 @@
 #define SHW_DRIVER_NAME "fsl_shw"
 /*! @} */
 #endif
-#ifdef __KERNEL__
-static fsl_shw_uco_t *user_list;
-#endif
+
 /*!
  * Add a user context onto the list of registered users.
  *
@@ -147,6 +147,12 @@ static os_error_code get_random(fsl_shw_uco_t * user_ctx,
 				void *user_mode_get_random_req);
 static os_error_code add_entropy(fsl_shw_uco_t * user_ctx,
 				 void *user_mode_add_entropy_req);
+
+void* wire_user_memory(void* address, uint32_t length, void** page_ctx);
+void unwire_user_memory(void** page_ctx);
+os_error_code map_user_memory(struct vm_area_struct* vma, 
+                              uint32_t physical_addr, uint32_t size);
+os_error_code unmap_user_memory(uint32_t user_addr, uint32_t size);
 
 #if defined(LINUX_VERSION_CODE)
 

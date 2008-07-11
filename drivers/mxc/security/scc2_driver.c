@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -65,10 +65,7 @@
 
 #include <linux/dmapool.h>
 
-#define SAHARA_PART_NO 4
-#define VPU_PART_NO   0
-
-/*!
+/**
  * This is the set of errors which signal that access to the SCM RAM has
  * failed or will fail.
  */
@@ -92,7 +89,7 @@ typedef char *(*reg_print_routine_t) (uint32_t value, char *print_buffer,
 
 #endif
 
-/*!
+/**
  * This is type void* so that a) it cannot directly be dereferenced,
  * and b) pointer arithmetic on it will function in a 'normal way' for
  * the offsets in scc_defines.h
@@ -111,40 +108,24 @@ typedef char *(*reg_print_routine_t) (uint32_t value, char *print_buffer,
  */
 static volatile void *scc_base;
 
-/*! Array to hold function pointers registered by
+/** Array to hold function pointers registered by
     #scc_monitor_security_failure() and processed by
     #scc_perform_callbacks() */
 static void (*scc_callbacks[SCC_CALLBACK_SIZE]) (void);
 
-uint32_t scm_ram_phys_base = SCM_RAM_BASE_ADDR;
+uint32_t scm_ram_phys_base = SCC_IRAM_BASE_ADDR;
 
 void *scm_ram_base = NULL;
 
-/*!
- * Starting address of Sahara key partition
- */
-uint8_t *sahara_partition_base;
-dma_addr_t sahara_partition_phys;
-
-uint8_t *scm_black_part_virt;
-uint32_t scm_black_part_phys;
-
-uint8_t *scm_red_part_virt;
-uint32_t scm_red_part_cmd;
-/*!
- * Starting address of VPU Partition
- */
-uint8_t *vpu_partition_base;
-dma_addr_t vpu_partition_phys;
-/*! Calculated once for quick reference to size of the unreserved space in
+/** Calculated once for quick reference to size of the unreserved space in
  *  RAM in SCM.
  */
 uint32_t scm_memory_size_bytes;
 
-/*! Structure returned by #scc_get_configuration() */
+/** Structure returned by #scc_get_configuration() */
 static scc_config_t scc_configuration = {
-	.driver_major_version = SCC_DRIVER_MAJOR_VERSION_1,
-	.driver_minor_version = SCC_DRIVER_MINOR_VERSION_97,
+	.driver_major_version = SCC_DRIVER_MAJOR_VERSION,
+	.driver_minor_version = SCC_DRIVER_MINOR_VERSION,
 	.scm_version = -1,
 	.smn_version = -1,
 	.block_size_bytes = -1,
@@ -152,65 +133,357 @@ static scc_config_t scc_configuration = {
 	.partition_count = -1,
 };
 
-/*! Key Control Information.  Integrity is controlled by use of
-    #scc_crypto_lock. */
-static struct scc_key_slot scc_key_info[SCC_KEY_SLOTS];
-
-/*! Internal flag to know whether SCC is in Failed state (and thus many
+/** Internal flag to know whether SCC is in Failed state (and thus many
  *  registers are unavailable).  Once it goes failed, it never leaves it. */
 static volatile enum scc_status scc_availability = SCC_STATUS_INITIAL;
 
-/*! Flag to say whether interrupt handler has been registered for
+/** Flag to say whether interrupt handler has been registered for
  * SMN interrupt */
 static int smn_irq_set = 0;
 
-/*! Flag to say whether interrupt handler has been registered for
+/** Flag to say whether interrupt handler has been registered for
  * SCM interrupt */
 static int scm_irq_set = 0;
 
-/*! This lock protects the #scc_callbacks list as well as the @c
+/** This lock protects the #scc_callbacks list as well as the @c
  * callbacks_performed flag in #scc_perform_callbacks.  Since the data this
  * protects may be read or written from either interrupt or base level, all
  * operations should use the irqsave/irqrestore or similar to make sure that
  * interrupts are inhibited when locking from base level.
  */
-static spinlock_t scc_callbacks_lock = SPIN_LOCK_UNLOCKED;
+static os_lock_t scc_callbacks_lock = NULL;
 
-/*!
- * Ownership of this lock prevents conflicts on the crypto operation in the SCC
- * and the integrity of the #scc_key_info.
+/**
+ * Ownership of this lock prevents conflicts on the crypto operation in the
+ * SCC.
  */
-static spinlock_t scc_crypto_lock = SPIN_LOCK_UNLOCKED;
-
-/*! Calculated once for quick reference to size of SCM address space */
-//static uint32_t scm_highest_memory_address;
+static os_lock_t scc_crypto_lock = NULL;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18))
-/*! Pointer to SCC's clock information.  Initialized during scc_init(). */
+/** Pointer to SCC's clock information.  Initialized during scc_init(). */
 static struct clk *scc_clk = NULL;
 #endif
 
-/*! The lookup table for an 8-bit value.  Calculated once
+/** The lookup table for an 8-bit value.  Calculated once
  * by #scc_init_ccitt_crc().
  */
 static uint16_t scc_crc_lookup_table[256];
 
-/*! Fixed padding for appending to plaintext to fill out a block */
-static uint8_t scc_block_padding[16] =
-    { SCC_DRIVER_PAD_CHAR, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-static scc_return_t make_sahara_partition(void);
-uint8_t make_vpu_partition(void);
 /******************************************************************************
  *
  *  Function Implementations - Externally Accessible
  *
  *****************************************************************************/
 
+/**
+ * Allocate a partition of secure memory
+ *
+ * @param       smid_value  Value to use for the SMID register.  Must be 0 for
+ *                          kernel mode access.
+ * @param[out]  part_no     (If successful) Assigned partition number.
+ * @param[out]  part_base   Kernel virtual address of the partition.
+ * @param[out]  part_phys   Physical address of the partition.
+ *
+ * @return
+ */
+scc_return_t scc_allocate_partition(uint32_t smid_value,
+				    int *part_no,
+				    void **part_base, uint32_t *part_phys)
+{
+	uint32_t i;
+	os_lock_context_t irq_flags = 0;	/* for IRQ save/restore */
+	int local_part;
+	scc_return_t retval = SCC_RET_FAIL;
+	void *base_addr = NULL;
+	uint32_t reg_value;
+
+	local_part = -1;
+
+	if (scc_availability == SCC_STATUS_INITIAL) {
+		scc_init();
+	}
+	if (scc_availability == SCC_STATUS_UNIMPLEMENTED) {
+		goto out;
+	}
+
+	/* ACQUIRE LOCK to prevent others from using crypto or acquiring a
+	 * partition.  Note that crypto operations could take a long time, so the
+	 * calling process could potentially spin for some time.
+	 */
+	os_lock_save_context(scc_crypto_lock, irq_flags);
+
+	do {
+		/* Find current state of partition ownership */
+		reg_value = SCC_READ_REGISTER(SCM_PART_OWNERS_REG);
+
+		/* Search for a free one */
+		for (i = 0; i < scc_configuration.partition_count; i++) {
+			if (((reg_value >> (SCM_POWN_SHIFT * i))
+			     & SCM_POWN_MASK) == SCM_POWN_PART_FREE) {
+				break;	/* found a free one */
+			}
+		}
+		if (i == local_part) {
+			/* found this one last time, and failed to allocated it */
+			pr_debug(KERN_ERR "Partition %d cannot be allocated\n",
+				 i);
+			goto out;
+		}
+		if (i >= scc_configuration.partition_count) {
+			retval = SCC_RET_INSUFFICIENT_SPACE;	/* all used up */
+			goto out;
+		}
+
+		pr_debug
+		    ("SCC2: Attempting to allocate partition %i, owners:%08x\n",
+		     i, SCC_READ_REGISTER(SCM_PART_OWNERS_REG));
+
+		local_part = i;
+		/* Store SMID to grab a partition */
+		SCC_WRITE_REGISTER(SCM_SMID0_REG +
+				   SCM_SMID_WIDTH * (local_part), smid_value);
+		mdelay(2);
+
+		/* Now make sure it is ours... ? */
+		reg_value = SCC_READ_REGISTER(SCM_PART_OWNERS_REG);
+
+		if (((reg_value >> (SCM_POWN_SHIFT * (local_part)))
+		     & SCM_POWN_MASK) != SCM_POWN_PART_OWNED) {
+			continue;	/* try for another */
+		}
+		base_addr = scm_ram_base +
+		    (local_part * scc_configuration.partition_size_bytes);
+		break;
+	} while (1);
+
+out:
+
+	/* Free the lock */
+	os_unlock_restore_context(scc_callbacks_lock, irq_flags);
+
+	/* If the base address was assigned, then a partition was successfully
+	 * acquired.
+	 */
+	if (base_addr != NULL) {
+		pr_debug("SCC2 Part owners: %08x, engaged: %08x\n",
+			 reg_value, SCC_READ_REGISTER(SCM_PART_ENGAGED_REG));
+		pr_debug("SCC2 MAP for part %d: %08x\n",
+			 local_part,
+			 SCC_READ_REGISTER(SCM_ACC0_REG + 8 * local_part));
+
+		/* Copy the partition information to the data structures passed by the
+		 * user.
+		 */
+		*part_no = local_part;
+		*part_base = base_addr;
+		*part_phys = (uint32_t) scm_ram_phys_base
+		    + (local_part * scc_configuration.partition_size_bytes);
+		retval = SCC_RET_OK;
+
+		pr_debug
+		    ("SCC2 partition engaged.  Kernel address: %p.  Physical "
+		     "address: %p, pfn: %08x\n", *part_base, (void *)*part_phys,
+		     __phys_to_pfn(*part_phys));
+	}
+
+	return retval;
+}				/* allocate_partition() */
+
+/**
+ * Release a partition of secure memory
+ *
+ * @param   part_base   Kernel virtual address of the partition to be released.
+ *
+ * @return  SCC_RET_OK if successful.
+ */
+scc_return_t scc_release_partition(void *part_base)
+{
+	uint32_t partition_no;
+
+	if (part_base == NULL) {
+		return SCC_RET_FAIL;
+	}
+
+	/* Ensure that this is a proper partition location */
+	partition_no = SCM_PART_NUMBER((uint32_t) part_base);
+
+	pr_debug("SCC2: Attempting to release partition %i, owners:%08x\n",
+		 partition_no, SCC_READ_REGISTER(SCM_PART_OWNERS_REG));
+
+	/* check that the partition is ours to de-establish */
+	if (!host_owns_partition(partition_no)) {
+		return SCC_RET_FAIL;
+	}
+
+	/* TODO: The state of the zeroize engine (SRS field in the Command Status
+	 * Register) should be examined before issuing the zeroize command here.
+	 * To make the driver thread-safe, a lock should be taken out before
+	 * issuing the check and released after the zeroize command has been
+	 * issued.
+	 */
+
+	/* Zero the partition to release it */
+	scc_write_register(SCM_ZCMD_REG,
+			   (partition_no << SCM_ZCMD_PART_SHIFT) |
+			   (ZCMD_DEALLOC_PART << SCM_ZCMD_CCMD_SHIFT));
+	mdelay(2);
+
+	pr_debug("SCC2: done releasing partition %i, owners:%08x\n",
+		 partition_no, SCC_READ_REGISTER(SCM_PART_OWNERS_REG));
+
+	/* Check that the de-assignment went correctly */
+	if (host_owns_partition(partition_no)) {
+		return SCC_RET_FAIL;
+	}
+
+	return SCC_RET_OK;
+}
+
+/**
+ * Diminish the permissions on a partition of secure memory
+ *
+ * @param   part_base     Kernel virtual address of the partition.
+ * @param   permissions   ORed values of the type SCM_PERM_* which will be used as
+ *                        initial partition permissions.  SHW API users should use
+ *                        the FSL_PERM_* definitions instead.
+ *
+ * @return  SCC_RET_OK if successful.
+ */
+scc_return_t scc_diminish_permissions(void *part_base, uint32_t permissions)
+{
+	uint32_t partition_no;
+	uint32_t permissions_requested;
+	permissions_requested = permissions;
+
+	/* ensure that this is a proper partition location */
+	partition_no = SCM_PART_NUMBER((uint32_t) part_base);
+
+	/* invert the permissions, masking out unused bits */
+	permissions = (~permissions) & SCM_PERM_MASK;
+
+	/* attempt to diminish the permissions */
+	scc_write_register(SCM_ACC0_REG + 8 * partition_no, permissions);
+	mdelay(2);
+
+	/* Reading it back puts it into the original form */
+	permissions = SCC_READ_REGISTER(SCM_ACC0_REG + 8 * partition_no);
+	if (permissions == permissions_requested) {
+		pr_debug("scc_partition_diminish_perms: successful\n");
+		pr_debug("scc_partition_diminish_perms: successful\n");
+		return SCC_RET_OK;
+	}
+	pr_debug("scc_partition_diminish_perms: not successful\n");
+
+	return SCC_RET_FAIL;
+}
+
+extern scc_partition_status_t scc_partition_status(void *part_base)
+{
+	uint32_t part_no;
+	uint32_t part_owner;
+
+	/* Determine the partition number from the address */
+	part_no = SCM_PART_NUMBER((uint32_t) part_base);
+
+	/* Check if the partition is implemented */
+	if (part_no >= scc_configuration.partition_count) {
+		return SCC_PART_S_UNUSABLE;
+	}
+
+	/* Determine the value of the partition owners register */
+	part_owner = (SCC_READ_REGISTER(SCM_PART_OWNERS_REG)
+		      >> (part_no * SCM_POWN_SHIFT)) & SCM_POWN_MASK;
+
+	switch (part_owner) {
+	case SCM_POWN_PART_OTHER:
+		return SCC_PART_S_UNAVAILABLE;
+		break;
+	case SCM_POWN_PART_FREE:
+		return SCC_PART_S_AVAILABLE;
+		break;
+	case SCM_POWN_PART_OWNED:
+		/* could be allocated or engaged*/
+		if (partition_engaged(part_no)) {
+			return SCC_PART_S_ENGAGED;
+		} else {
+			return SCC_PART_S_ALLOCATED;
+		}
+		break;
+	case SCM_POWN_PART_UNUSABLE:
+	default:
+		return SCC_PART_S_UNUSABLE;
+		break;
+	}
+}
+
+/**
+ * Calculate the physical address from the kernel virtual address.
+ *
+ * @param   address Kernel virtual address of data in an Secure Partition.
+ * @return  Physical address of said data.
+ */
+uint32_t scc_virt_to_phys(void *address)
+{
+	return (uint32_t) address - (uint32_t) scm_ram_base
+	    + (uint32_t) scm_ram_phys_base;
+}
+
+/**
+ * Engage partition of secure memory
+ *
+ * @param part_base (kernel) Virtual
+ * @param UMID NULL, or 16-byte UMID for partition security
+ * @param permissions ORed values from fsl_shw_permission_t which
+ * will be used as initial partiition permissions.
+ *
+ * @return SCC_RET_OK if successful.
+ */
+
+scc_return_t
+scc_engage_partition(void *part_base,
+		     const uint8_t *UMID, uint32_t permissions)
+{
+	uint32_t partition_no;
+	uint8_t *UMID_base = part_base + 0x10;
+	uint32_t *MAP_base = part_base;
+	uint8_t i;
+
+	partition_no = SCM_PART_NUMBER((uint32_t) part_base);
+
+	if (!host_owns_partition(partition_no) ||
+	    partition_engaged(partition_no) ||
+	    !(SCC_READ_REGISTER(SCM_SMID0_REG + (partition_no * 8)) == 0)) {
+
+		return SCC_RET_FAIL;
+	}
+
+	if (UMID != NULL) {
+		for (i = 0; i < 16; i++) {
+			UMID_base[i] = UMID[i];
+		}
+	}
+
+	MAP_base[0] = permissions;
+
+	udelay(20);
+
+	/* Check that the partition was engaged correctly, and that it has the
+	 * proper permissions.
+	 */
+
+	if ((!partition_engaged(partition_no)) ||
+	    (permissions !=
+	     SCC_READ_REGISTER(SCM_ACC0_REG + 8 * partition_no))) {
+		return SCC_RET_FAIL;
+	}
+
+	return SCC_RET_OK;
+}
+
 /*****************************************************************************/
 /* fn scc_init()                                                             */
 /*****************************************************************************/
-/*!
+/**
  *  Initialize the driver at boot time or module load time.
  *
  *  Register with the kernel as the interrupt handler for the SCC interrupt
@@ -254,18 +527,27 @@ static int scc_init(void)
 		}
 #endif
 
+		/* Set up the hardware access locks */
+		scc_callbacks_lock = os_lock_alloc_init();
+		scc_crypto_lock = os_lock_alloc_init();
+		if (scc_callbacks_lock == NULL || scc_crypto_lock == NULL) {
+			os_printk(KERN_ERR
+				  "SCC2: Failed to allocate context locks.  Exiting.\n");
+			goto out;
+		}
+
 		/* See whether there is an SCC available */
 		if (0 && !SCC_ENABLED()) {
-			printk(KERN_ERR
-			       "SCC2: Fuse for SCC is set to disabled.  Exiting.\n");
+			os_printk(KERN_ERR
+				  "SCC2: Fuse for SCC is set to disabled.  Exiting.\n");
 			goto out;
 		}
 		/* Map the SCC (SCM and SMN) memory on the internal bus into
 		   kernel address space */
 		scc_base = (void *)IO_ADDRESS(SCC_BASE);
 		if (scc_base == NULL) {
-			printk(KERN_ERR
-			       "SCC2: Register mapping failed.  Exiting.\n");
+			os_printk(KERN_ERR
+				  "SCC2: Register mapping failed.  Exiting.\n");
 			goto out;
 		}
 
@@ -288,53 +570,38 @@ static int scc_init(void)
 			goto out;
 		}
 
-		scm_ram_base =
-		    (void *)ioremap_nocache(scm_ram_phys_base,
-					    scc_configuration.partition_count *
-					    scc_configuration.
-					    partition_size_bytes);
+		scm_ram_base = (void *)ioremap_nocache(scm_ram_phys_base,
+						       scc_configuration.
+						       partition_count *
+						       scc_configuration.
+						       partition_size_bytes);
 		if (scm_ram_base == NULL) {
-			printk(KERN_ERR
-			       "SCC2: RAM failed to remap: %p for %d bytes\n",
-			       (void *)scm_ram_phys_base,
-			       scc_configuration.partition_count *
-			       scc_configuration.partition_size_bytes);
+			os_printk(KERN_ERR
+				  "SCC2: RAM failed to remap: %p for %d bytes\n",
+				  (void *)scm_ram_phys_base,
+				  scc_configuration.partition_count *
+				  scc_configuration.partition_size_bytes);
 			goto out;
 		}
 		pr_debug("SCC2: RAM at Physical %p / Virtual %p\n",
 			 (void *)scm_ram_phys_base, scm_ram_base);
 
-		return_value = make_sahara_partition();
-		if (return_value != SCC_RET_OK) {
-			scc_availability = SCC_STATUS_UNIMPLEMENTED;
-			goto out;
-		}
-
-		/* Initialize key slots */
-		for (i = 0; i < SCC_KEY_SLOTS; i++) {
-			scc_key_info[i].offset = i * SCC_KEY_SLOT_SIZE;
-			scc_key_info[i].part_ctl =
-			    (((i * SCC_KEY_SLOT_SIZE) /
-			      SCC_BLOCK_SIZE_BYTES() << SCM_CCMD_OFFSET_SHIFT)
-			     | (SAHARA_PART_NO << SCM_CCMD_PART_SHIFT));
-			scc_key_info[i].status = 0;	/* unassigned */
-		}
+		pr_debug("Secure Partition Table: Found %i partitions\n",
+			 scc_configuration.partition_count);
 
 		if (setup_interrupt_handling() != 0) {
 			unsigned err_cond;
-			/*!
-			 * The error could be only that the SCM interrupt was
-			 * not set up.  This interrupt is always masked, so
-			 * that is not an issue.
-			 *
-			 * The SMN's interrupt may be shared on that line, it
-			 * may be separate, or it may not be wired.  Do what
-			 * is necessary to check its status.
-			 *
-			 * Although the driver is coded for possibility of not
-			 * having SMN interrupt, the fact that there is one
-			 * means it should be available and used.
-			 */
+	    /**
+		* The error could be only that the SCM interrupt was
+		* not set up.  This interrupt is always masked, so
+		* that is not an issue.
+		* The SMN's interrupt may be shared on that line, it
+		* may be separate, or it may not be wired.  Do what
+		* is necessary to check its status.
+		* Although the driver is coded for possibility of not
+		* having SMN interrupt, the fact that there is one
+		* means it should be available and used.
+		*/
 #ifdef USE_SMN_INTERRUPT
 			err_cond = !smn_irq_set;	/* Separate. Check SMN binding */
 #elif !defined(NO_SMN_INTERRUPT)
@@ -371,15 +638,15 @@ static int scc_init(void)
 		}
 	}
 	/* ! STATUS_INITIAL */
-	printk("SCC2: Driver Status is %s\n",
-	       (scc_availability == SCC_STATUS_INITIAL) ? "INITIAL" :
-	       (scc_availability == SCC_STATUS_CHECKING) ? "CHECKING" :
-	       (scc_availability ==
-		SCC_STATUS_UNIMPLEMENTED) ? "UNIMPLEMENTED" : (scc_availability
-							       ==
-							       SCC_STATUS_OK) ?
-	       "OK" : (scc_availability ==
-		       SCC_STATUS_FAILED) ? "FAILED" : "UNKNOWN");
+	os_printk(KERN_ALERT "SCC2: Driver Status is %s\n",
+		  (scc_availability == SCC_STATUS_INITIAL) ? "INITIAL" :
+		  (scc_availability == SCC_STATUS_CHECKING) ? "CHECKING" :
+		  (scc_availability ==
+		   SCC_STATUS_UNIMPLEMENTED) ? "UNIMPLEMENTED"
+		  : (scc_availability ==
+		     SCC_STATUS_OK) ? "OK" : (scc_availability ==
+					      SCC_STATUS_FAILED) ? "FAILED" :
+		  "UNKNOWN");
 
 	return return_value;
 }				/* scc_init */
@@ -387,7 +654,7 @@ static int scc_init(void)
 /*****************************************************************************/
 /* fn scc_cleanup()                                                          */
 /*****************************************************************************/
-/*!
+/**
  * Perform cleanup before driver/module is unloaded by setting the machine
  * state close to what it was when the driver was loaded.  This function is
  * called when the kernel is shutting down or when this driver is being
@@ -400,10 +667,14 @@ static int scc_init(void)
  * In any case, cleanup the callback table (by clearing out all of the
  * pointers).  Deregister the interrupt handler(s).  Unmap SCC registers.
  *
+ * Note that this will not release any partitions that have been allocated.
+ *
  */
 static void scc_cleanup(void)
 {
 	int i;
+
+    /******************************************************/
 
 	/* Mark the driver / SCC as unusable. */
 	scc_availability = SCC_STATUS_UNIMPLEMENTED;
@@ -423,24 +694,30 @@ static void scc_cleanup(void)
 				   SMN_COMMAND_CLEAR_INTERRUPT);
 	}
 
-	if (sahara_partition_base != NULL) {
-
-	}
 	/* Now that interrupts cannot occur, disassociate driver from the interrupt
 	 * lines.
 	 */
 
 	/* Deregister SCM interrupt handler */
 	if (scm_irq_set) {
-		free_irq(INT_SCC_SCM, NULL);
+		os_deregister_interrupt(INT_SCC_SCM);
 	}
 
 	/* Deregister SMN interrupt handler */
 	if (smn_irq_set) {
 #ifdef USE_SMN_INTERRUPT
-		free_irq(INT_SCC_SMN, NULL);
+		os_deregister_interrupt(INT_SCC_SMN);
 #endif
 	}
+
+	/* Finally, release the mapped memory */
+	iounmap(scm_ram_base);
+
+	if (scc_callbacks_lock != NULL)
+		os_lock_deallocate(scc_callbacks_lock);
+
+	if (scc_crypto_lock != NULL)
+		os_lock_deallocate(scc_crypto_lock);
 
 	pr_debug("SCC2 driver cleaned up.\n");
 
@@ -459,10 +736,10 @@ scc_config_t *scc_get_configuration(void)
 		scc_init();
 	}
 
-	/*!
-	 * If there is no SCC, yet the driver exists, the value -1 will be in
-	 * the #scc_config_t fields for other than the driver versions.
-	 */
+    /**
+     * If there is no SCC, yet the driver exists, the value -1 will be in
+     * the #scc_config_t fields for other than the driver versions.
+     */
 	return &scc_configuration;
 }				/* scc_get_configuration */
 
@@ -475,120 +752,6 @@ scc_return_t scc_zeroize_memories(void)
 
 	return return_status;
 }				/* scc_zeroize_memories */
-
-/*****************************************************************************/
-/* fn scc_crypt()                                                            */
-/*****************************************************************************/
-scc_return_t
-scc_crypt(unsigned long count_in_bytes, uint8_t * data_in,
-	  uint8_t * init_vector, scc_enc_dec_t direction,
-	  scc_crypto_mode_t crypto_mode, scc_verify_t check_mode,
-	  uint8_t * data_out, unsigned long *count_out_bytes)
-{
-	uint32_t scm_command = scm_red_part_cmd;
-	unsigned long irq_flags;	/* for IRQ save/restore */
-	unsigned locked = FALSE;
-	scc_return_t return_code = SCC_RET_FAIL;
-
-	if (scc_availability == SCC_STATUS_INITIAL) {
-		scc_init();
-	}
-	(void)scc_update_state();	/* in case no interrupt line from SMN */
-	/* make initial error checks */
-	if (scc_availability != SCC_STATUS_OK
-	    || count_in_bytes == 0
-	    || data_in == 0
-	    || data_out == 0
-	    || (crypto_mode != SCC_CBC_MODE && crypto_mode != SCC_ECB_MODE)
-	    || (crypto_mode == SCC_CBC_MODE && init_vector == NULL)
-	    || (direction != SCC_ENCRYPT && direction != SCC_DECRYPT)
-	    || (check_mode == SCC_VERIFY_MODE_NONE &&
-		count_in_bytes % SCC_BLOCK_SIZE_BYTES() != 0)
-	    || (direction == SCC_DECRYPT &&
-		count_in_bytes % SCC_BLOCK_SIZE_BYTES() != 0)
-	    || (check_mode != SCC_VERIFY_MODE_NONE &&
-		check_mode != SCC_VERIFY_MODE_CCITT_CRC)) {
-		pr_debug("SCC2: scc_crypt() detected bad argument\n");
-		goto out;
-	}
-	/* Lock access to crypto memory of the SCC */
-	spin_lock_irqsave(&scc_crypto_lock, irq_flags);
-	locked = TRUE;
-	/* Special needs for CBC Mode */
-	if (crypto_mode == SCC_CBC_MODE) {
-		scm_command |= SCM_CCMD_CBC;	/* change default of ECB */
-		/* Put in Initial Context.  Vector registers are contiguous */
-		copy_to_scc(init_vector,
-			    (uint32_t) (scc_base + SCM_AES_CBC_IV0_REG),
-			    SCC_BLOCK_SIZE_BYTES(), NULL);
-	}
-
-	/* Fill the BLACK_START register */
-	SCC_WRITE_REGISTER(SCM_C_BLACK_ST_REG, scm_black_part_phys);
-
-	if (direction == SCC_ENCRYPT) {
-		/* Check for sufficient space in data_out */
-		if (check_mode == SCC_VERIFY_MODE_NONE) {
-			if (*count_out_bytes < count_in_bytes) {
-				return_code = SCC_RET_INSUFFICIENT_SPACE;
-				goto out;
-			}
-		} else {	/* SCC_VERIFY_MODE_CCITT_CRC */
-			/* Calculate extra bytes needed for crc (2) and block
-			   padding */
-			int padding_needed =
-			    CRC_SIZE_BYTES + SCC_BLOCK_SIZE_BYTES() -
-			    ((count_in_bytes + CRC_SIZE_BYTES)
-			     % SCC_BLOCK_SIZE_BYTES());
-
-			/* Verify space is available */
-			if (*count_out_bytes < count_in_bytes + padding_needed) {
-				return_code = SCC_RET_INSUFFICIENT_SPACE;
-				goto out;
-			}
-		}
-		return_code =
-		    scc_encrypt(count_in_bytes, data_in, scm_command, data_out,
-				check_mode == SCC_VERIFY_MODE_CCITT_CRC,
-				count_out_bytes);
-	}
-	/* direction == SCC_ENCRYPT */
-	else {			/* SCC_DECRYPT */
-		/* Check for sufficient space in data_out */
-		if (check_mode == SCC_VERIFY_MODE_NONE) {
-			if (*count_out_bytes < count_in_bytes) {
-				return_code = SCC_RET_INSUFFICIENT_SPACE;
-			}
-		} else {	/* SCC_VERIFY_MODE_CCITT_CRC */
-			/* Do initial check.  Assume last block (of padding) and CRC
-			 * will get stripped.  After decipher is done and padding is
-			 * removed, will know exact value.
-			 */
-			int possible_size = (int)count_in_bytes - CRC_SIZE_BYTES
-			    - SCC_BLOCK_SIZE_BYTES();
-			if ((int)*count_out_bytes < possible_size) {
-				pr_debug
-				    ("SCC2: insufficient decrypt space %ld/%d.\n",
-				     *count_out_bytes, possible_size);
-				return_code = SCC_RET_INSUFFICIENT_SPACE;
-				goto out;
-			}
-		}
-
-		return_code =
-		    scc_decrypt(count_in_bytes, data_in, scm_command, data_out,
-				check_mode == SCC_VERIFY_MODE_CCITT_CRC,
-				count_out_bytes);
-	}			/* SCC_DECRYPT */
-
-      out:
-	/* unlock the SCC */
-	if (locked) {
-		spin_unlock_irqrestore(&scc_crypto_lock, irq_flags);
-	}
-
-	return return_code;
-}				/* scc_crypt */
 
 /*****************************************************************************/
 /* fn scc_set_sw_alarm()                                                     */
@@ -627,7 +790,7 @@ void scc_set_sw_alarm(void)
 scc_return_t scc_monitor_security_failure(void callback_func(void))
 {
 	int i;
-	unsigned long irq_flags;	/* for IRQ save/restore */
+	os_lock_context_t irq_flags;	/* for IRQ save/restore */
 	scc_return_t return_status = SCC_RET_TOO_MANY_FUNCTIONS;
 	int function_stored = FALSE;
 
@@ -638,7 +801,7 @@ scc_return_t scc_monitor_security_failure(void callback_func(void))
 	/* Acquire lock of callbacks table.  Could be spin_lock_irq() if this
 	 * routine were just called from base (not interrupt) level
 	 */
-	spin_lock_irqsave(&scc_callbacks_lock, irq_flags);
+	os_lock_save_context(scc_callbacks_lock, irq_flags);
 
 	/* Search through table looking for empty slot */
 	for (i = 0; i < SCC_CALLBACK_SIZE; i++) {
@@ -659,7 +822,7 @@ scc_return_t scc_monitor_security_failure(void callback_func(void))
 	}
 
 	/* Free the lock */
-	spin_unlock_irqrestore(&scc_callbacks_lock, irq_flags);
+	os_unlock_restore_context(scc_callbacks_lock, irq_flags);
 
 	return return_status;
 }				/* scc_monitor_security_failure */
@@ -669,7 +832,7 @@ scc_return_t scc_monitor_security_failure(void callback_func(void))
 /*****************************************************************************/
 void scc_stop_monitoring_security_failure(void callback_func(void))
 {
-	unsigned long irq_flags;	/* for IRQ save/restore */
+	os_lock_context_t irq_flags;	/* for IRQ save/restore */
 	int i;
 
 	if (scc_availability == SCC_STATUS_INITIAL) {
@@ -679,7 +842,7 @@ void scc_stop_monitoring_security_failure(void callback_func(void))
 	/* Acquire lock of callbacks table.  Could be spin_lock_irq() if this
 	 * routine were just called from base (not interrupt) level
 	 */
-	spin_lock_irqsave(&scc_callbacks_lock, irq_flags);
+	os_lock_save_context(scc_callbacks_lock, irq_flags);
 
 	/* Search every entry of the table for this function */
 	for (i = 0; i < SCC_CALLBACK_SIZE; i++) {
@@ -690,7 +853,7 @@ void scc_stop_monitoring_security_failure(void callback_func(void))
 	}
 
 	/* Free the lock */
-	spin_unlock_irqrestore(&scc_callbacks_lock, irq_flags);
+	os_unlock_restore_context(scc_callbacks_lock, irq_flags);
 
 	return;
 }				/* scc_stop_monitoring_security_failure */
@@ -787,7 +950,7 @@ scc_return_t scc_write_register(int register_offset, uint32_t value)
 /*****************************************************************************/
 /* fn scc_irq()                                                              */
 /*****************************************************************************/
-/*!
+/**
  * This is the interrupt handler for the SCC.
  *
  * This function checks the SMN Status register to see whether it
@@ -800,11 +963,8 @@ scc_return_t scc_write_register(int register_offset, uint32_t value)
  * The SCM Interrupt should be masked, as this driver uses polling to determine
  * when the SCM has completed a crypto or zeroing operation.  Therefore, if the
  * interrupt is active, the driver will just clear the interrupt and (re)mask.
- *
- * @param irq Channel number for the IRQ. (@c SCC_INT_SMN or @c SCC_INT_SCM).
- * @param dev_id Pointer to the identification of the device.  Ignored.
  */
-static irqreturn_t scc_irq(int irq, void *dev_id)
+OS_DEV_ISR(scc_irq)
 {
 	uint32_t smn_status;
 	uint32_t scm_status;
@@ -822,7 +982,8 @@ static irqreturn_t scc_irq(int irq, void *dev_id)
 
 	/* SMN is on its own interrupt line.  Verify the IRQ was triggered
 	 * before clearing the interrupt and marking it handled.  */
-	if ((irq == smn_irq) && (smn_status & SMN_STATUS_SMN_STATUS_IRQ)) {
+	if ((os_dev_get_irq() == smn_irq) &&
+	    (smn_status & SMN_STATUS_SMN_STATUS_IRQ)) {
 		SCC_WRITE_REGISTER(SMN_COMMAND_REG,
 				   SMN_COMMAND_CLEAR_INTERRUPT);
 		handled++;	/* tell kernel that interrupt was handled */
@@ -832,20 +993,20 @@ static irqreturn_t scc_irq(int irq, void *dev_id)
 	scm_status = SCC_READ_REGISTER(SCM_STATUS_REG);
 
 	/* The driver masks interrupts, so this should never happen. */
-	if (irq == INT_SCC_SCM) {
+	if (os_dev_get_irq() == INT_SCC_SCM) {
 		/* but if it does, try to prevent it in the future */
 		SCC_WRITE_REGISTER(SCM_INT_CTL_REG, 0);
 		handled++;
 	}
 
 	/* Any non-zero value of handled lets kernel know we got something */
-	return IRQ_RETVAL(handled);
+	os_dev_isr_return(handled);
 }
 
 /*****************************************************************************/
 /* fn scc_perform_callbacks()                                                */
 /*****************************************************************************/
-/*! Perform callbacks registered by #scc_monitor_security_failure().
+/** Perform callbacks registered by #scc_monitor_security_failure().
  *
  *  Make sure callbacks only happen once...  Since there may be some reason why
  *  the interrupt isn't generated, this routine could be called from base(task)
@@ -860,7 +1021,7 @@ static void scc_perform_callbacks(void)
 	int i;
 
 	/* Acquire lock of callbacks table and callbacks_performed flag */
-	spin_lock_irqsave(&scc_callbacks_lock, irq_flags);
+	os_lock_save_context(scc_callbacks_lock, irq_flags);
 
 	if (!callbacks_performed) {
 		callbacks_performed = 1;
@@ -874,218 +1035,15 @@ static void scc_perform_callbacks(void)
 		}
 	}
 
-	spin_unlock_irqrestore(&scc_callbacks_lock, irq_flags);
+	os_unlock_restore_context(scc_callbacks_lock, irq_flags);
 
 	return;
 }
 
 /*****************************************************************************/
-/* fn copy_to_scc()                                                          */
-/*****************************************************************************/
-/*!
- *  Move data from possibly unaligned source and realign for SCC, possibly
- *  while calculating CRC.
- *
- *  Multiple calls can be made to this routine (without intervening calls to
- *  #copy_from_scc(), as long as the sum total of bytes copied is a multiple of
- *  four (SCC native word size).
- *
- *  @param[in]     from        Location in memory
- *  @param[out]    to          Location in SCC
- *  @param[in]     count_bytes Number of bytes to copy
- *  @param[in,out] crc         Pointer to CRC.  Initial value must be
- *                             #CRC_CCITT_START if this is the start of
- *                             message.  Output is the resulting (maybe
- *                             partial) CRC.  If NULL, no crc is calculated.
- *
- * @return  Zero - success.  Non-zero - SCM status bits defining failure.
- */
-static uint32_t
-copy_to_scc(const uint8_t * from, uint32_t to, unsigned long count_bytes,
-	    uint16_t * crc)
-{
-	int i;
-	uint32_t scm_word;
-	uint16_t current_crc = 0;	/* local copy for fast access */
-
-	pr_debug("SCC2: copying %ld bytes to 0x%0x.\n", count_bytes, to);
-
-	if (crc) {
-		current_crc = *crc;
-	}
-
-	/* Initialize value being built for SCM.  If we are starting 'clean',
-	 * set it to zero.  Otherwise pick up partial value which had been saved
-	 * earlier. */
-	if (SCC_BYTE_OFFSET(to) == 0) {
-		scm_word = 0;
-	} else {
-		scm_word = *(uint32_t *) SCC_WORD_PTR(to);	/* recover */
-	}
-
-	/* Now build up SCM words and write them out when each is full */
-	for (i = 0; i < count_bytes; i++) {
-		uint8_t byte = *from++;	/* value from plaintext */
-
-#ifdef __BIG_ENDIAN
-		scm_word = (scm_word << 8) | byte;	/* add byte to SCM word */
-#else
-		scm_word = (byte << 24) | (scm_word >> 8);
-#endif
-		/* now calculate CCITT CRC */
-		if (crc) {
-			CALC_CRC(byte, current_crc);
-		}
-
-		to++;		/* bump location in SCM */
-
-		/* check for full word */
-		if (SCC_BYTE_OFFSET(to) == 0) {
-			*(uint32_t *) (to - 4) = scm_word;	/* write it out */
-		}
-	}
-
-	/* If at partial word after previous loop, save it in SCM memory for
-	   next time. */
-	if (SCC_BYTE_OFFSET(to) != 0) {
-		*(uint32_t *) SCC_WORD_PTR(to) = scm_word;	/* save */
-	}
-
-	/* Copy CRC back */
-	if (crc) {
-		*crc = current_crc;
-	}
-
-	return SCC_RET_OK;
-}
-
-/*****************************************************************************/
-/* fn copy_from_scc()                                                        */
-/*****************************************************************************/
-/*!
- *  Move data from aligned 32-bit source and place in (possibly unaligned)
- *  target, and maybe calculate CRC at the same time.
- *
- *  Multiple calls can be made to this routine (without intervening calls to
- *  #copy_to_scc(), as long as the sum total of bytes copied is be a multiple
- *  of four.
- *
- *  @param[in]     from        Location in SCC
- *  @param[out]    to          Location in memory
- *  @param[in]     count_bytes Number of bytes to copy
- *  @param[in,out] crc         Pointer to CRC.  Initial value must be
- *                             #CRC_CCITT_START if this is the start of
- *                             message.  Output is the resulting (maybe
- *                             partial) CRC.  If NULL, crc is not calculated.
- *
- * @return  Zero - success.  Non-zero - SCM status bits defining failure.
- */
-static uint32_t
-copy_from_scc(const uint32_t from, uint8_t * to, unsigned long count_bytes,
-	      uint16_t * crc)
-{
-	uint32_t running_from = from;
-	uint32_t scm_word;
-	uint16_t current_crc = 0;	/* local copy for fast access */
-
-	pr_debug("SCC2: copying %ld bytes from 0x%x.\n", count_bytes, from);
-
-	if (crc) {
-		current_crc = *crc;
-	}
-
-	/* Read word which is sitting in SCM memory.  Ignore byte offset */
-	scm_word = *(uint32_t *) SCC_WORD_PTR(running_from);
-	pr_debug("%08x ", scm_word);
-	/* If necessary, move the 'first' byte into place */
-	if (SCC_BYTE_OFFSET(running_from) != 0) {
-#ifdef __BIG_ENDIAN
-		scm_word <<= 8 * SCC_BYTE_OFFSET(running_from);
-#else
-		scm_word >>= 8 * SCC_BYTE_OFFSET(running_from);
-#endif
-	}
-
-	/* Now build up SCM words and write them out when each is full */
-	while (count_bytes--) {
-		uint8_t byte;	/* value from plaintext */
-
-#ifdef __BIG_ENDIAN
-		byte = (scm_word & 0xff000000) >> 24;	/* pull byte out of SCM word */
-		scm_word <<= 8;	/* shift over to remove the just-pulled byte */
-#else
-		byte = (scm_word & 0xff);
-		scm_word >>= 8;	/* shift over to remove the just-pulled byte */
-#endif
-		*to++ = byte;	/* send byte to memory */
-
-		/* now calculate CRC */
-		if (crc) {
-			CALC_CRC(byte, current_crc);
-		}
-
-		running_from++;
-		/* check for empty word */
-		if (count_bytes && SCC_BYTE_OFFSET(running_from) == 0) {
-			/* read one in */
-			scm_word = *(uint32_t *) running_from;
-			pr_debug("%08x ", scm_word);
-		}
-	}
-
-	pr_debug("\n");
-	if (crc) {
-		*crc = current_crc;
-	}
-
-	return SCC_RET_OK;
-}
-
-/*****************************************************************************/
-/* fn scc_strip_padding()                                                    */
-/*****************************************************************************/
-/*!
- *  Remove padding from plaintext.  Search backwards for #SCC_DRIVER_PAD_CHAR,
- *  verifying that each byte passed over is zero (0).  Maximum number of bytes
- *  to examine is 8.
- *
- *  @param[in]     from           Pointer to byte after end of message
- *  @param[out]    count_bytes_stripped Number of padding bytes removed by this
- *                                      function.
- *
- *  @return   #SCC_RET_OK if all goes, well, #SCC_RET_FAIL if padding was
- *            not present.
-*/
-static scc_return_t
-scc_strip_padding(uint8_t * from, unsigned *count_bytes_stripped)
-{
-	int i = SCC_BLOCK_SIZE_BYTES();
-	scc_return_t return_code = SCC_RET_VERIFICATION_FAILED;
-
-	/*
-	 * Search backwards looking for the magic marker.  If it isn't found,
-	 * make sure that a 0 byte is there in its place.  Stop after the maximum
-	 * amount of padding (8 bytes) has been searched);
-	 */
-	while (i-- > 0) {
-		if (*--from == SCC_DRIVER_PAD_CHAR) {
-			*count_bytes_stripped = SCC_BLOCK_SIZE_BYTES() - i;
-			return_code = SCC_RET_OK;
-			break;
-		} else if (*from != 0) {	/* if not marker, check for 0 */
-			pr_debug("SCC2: Found non-zero interim pad: 0x%x\n",
-				 *from);
-			break;
-		}
-	}
-
-	return return_code;
-}
-
-/*****************************************************************************/
 /* fn scc_update_state()                                                     */
 /*****************************************************************************/
-/*!
+/**
  * Make certain SCC is still running.
  *
  * Side effect is to update #scc_availability and, if the state goes to failed,
@@ -1094,7 +1052,7 @@ scc_strip_padding(uint8_t * from, unsigned *count_bytes_stripped)
  * (If #SCC_BRINGUP is defined, bring SCC to secure state if it is found to be
  * in health check state)
  *
- * @return Current value of #SMN_STATUS register.
+ * @return Current value of #SMN_STATUS_REG register.
  */
 static uint32_t scc_update_state(void)
 {
@@ -1113,9 +1071,9 @@ static uint32_t scc_update_state(void)
 		if (scc_availability == SCC_STATUS_CHECKING &&
 		    smn_state == SMN_STATE_HEALTH_CHECK) {
 			/* Code up a simple algorithm for the ASC */
-			SCC_WRITE_REGISTER(SMN_SEQUENCE_START, 0xaaaa);
-			SCC_WRITE_REGISTER(SMN_SEQUENCE_END, 0x5555);
-			SCC_WRITE_REGISTER(SMN_SEQUENCE_CHECK, 0x5555);
+			SCC_WRITE_REGISTER(SMN_SEQ_START_REG, 0xaaaa);
+			SCC_WRITE_REGISTER(SMN_SEQ_END_REG, 0x5555);
+			SCC_WRITE_REGISTER(SMN_SEQ_CHECK_REG, 0x5555);
 			/* State should be SECURE now */
 			smn_status_register = SCC_READ_REGISTER(SMN_STATUS);
 			smn_state = smn_status_register & SMN_STATUS_STATE_MASK;
@@ -1134,11 +1092,12 @@ static uint32_t scc_update_state(void)
 		} else if (smn_state == SMN_STATE_FAIL) {
 			scc_availability = SCC_STATUS_FAILED;	/* uh oh - unhealthy */
 			scc_perform_callbacks();
-			printk(KERN_ERR "SCC2: SCC went into FAILED mode\n");
+			os_printk(KERN_ERR "SCC2: SCC went into FAILED mode\n");
 		} else {
 			/* START, ZEROIZE RAM, HEALTH CHECK, or unknown */
 			scc_availability = SCC_STATUS_UNIMPLEMENTED;	/* unuseable */
-			printk(KERN_ERR "SCC2: SCC declared UNIMPLEMENTED\n");
+			os_printk(KERN_ERR
+				  "SCC2: SCC declared UNIMPLEMENTED\n");
 		}
 	}
 	/* if availability is initial or ok */
@@ -1148,7 +1107,7 @@ static uint32_t scc_update_state(void)
 /*****************************************************************************/
 /* fn scc_init_ccitt_crc()                                                   */
 /*****************************************************************************/
-/*!
+/**
  * Populate the partial CRC lookup table.
  *
  * @return   none
@@ -1194,7 +1153,7 @@ static void scc_init_ccitt_crc(void)
 /*****************************************************************************/
 /* fn grab_config_values()                                                   */
 /*****************************************************************************/
-/*!
+/**
  * grab_config_values() will read the SCM Configuration and SMN Status
  * registers and store away version and size information for later use.
  *
@@ -1238,7 +1197,7 @@ static uint32_t scc_grab_config_values(void)
 /*****************************************************************************/
 /* fn setup_interrupt_handling()                                             */
 /*****************************************************************************/
-/*!
+/**
  * Register the SCM and SMN interrupt handlers.
  *
  * Called from #scc_init()
@@ -1255,12 +1214,12 @@ static int setup_interrupt_handling(void)
 
 #ifdef USE_SMN_INTERRUPT
 	/* Install interrupt service routine for SMN. */
-	smn_error_code = request_irq(INT_SCC_SMN, scc_irq, 0,
-				     SCC_DRIVER_NAME, NULL);
+	smn_error_code = os_register_interrupt(SCC_DRIVER_NAME,
+					       INT_SCC_SMN, scc_irq);
 	if (smn_error_code != 0) {
-		printk
-		    ("SCC2 Driver: Error installing SMN Interrupt Handler: %d\n",
-		     smn_error_code);
+		os_printk(KERN_ERR
+			  "SCC2 Driver: Error installing SMN Interrupt Handler: %d\n",
+			  smn_error_code);
 	} else {
 		smn_irq_set = 1;	/* remember this for cleanup */
 		/* Enable SMN interrupts */
@@ -1275,17 +1234,17 @@ static int setup_interrupt_handling(void)
 	/*
 	 * Install interrupt service routine for SCM (or both together).
 	 */
-	scm_error_code = request_irq(INT_SCC_SCM, scc_irq, 0,
-				     SCC_DRIVER_NAME, NULL);
+	scm_error_code = os_register_interrupt(SCC_DRIVER_NAME,
+					       INT_SCC_SCM, scc_irq);
 	if (scm_error_code != 0) {
 #ifndef MXC
-		printk
-		    ("SCC2 Driver: Error installing SCM Interrupt Handler: %d\n",
-		     scm_error_code);
+		os_printk(KERN_ERR
+			  "SCC2 Driver: Error installing SCM Interrupt Handler: %d\n",
+			  scm_error_code);
 #else
-		printk
-		    ("SCC2 Driver: Error installing SCC Interrupt Handler: %d\n",
-		     scm_error_code);
+		os_printk(KERN_ERR
+			  "SCC2 Driver: Error installing SCC Interrupt Handler: %d\n",
+			  scm_error_code);
 #endif
 	} else {
 		scm_irq_set = 1;	/* remember this for cleanup */
@@ -1304,7 +1263,7 @@ static int setup_interrupt_handling(void)
 /*****************************************************************************/
 /* fn scc_do_crypto()                                                        */
 /*****************************************************************************/
-/*! Have the SCM perform the crypto function.
+/** Have the SCM perform the crypto function.
  *
  * Set up length register, and the store @c scm_control into control register
  * to kick off the operation.  Wait for completion, gather status, clear
@@ -1313,13 +1272,18 @@ static int setup_interrupt_handling(void)
  * @param byte_count  number of bytes to perform in this operation
  * @param scm_command Bit values to be set in @c SCM_CCMD_REG register
  *
- * @return 0 on success, value of #SCM_ERROR_STATUS on failure
+ * @return 0 on success, value of #SCM_ERR_STATUS_REG on failure
  */
 static uint32_t scc_do_crypto(int byte_count, uint32_t scm_command)
 {
 	int block_count = byte_count / SCC_BLOCK_SIZE_BYTES();
 	uint32_t crypto_status;
 	scc_return_t ret;
+
+	/* This seems to be necessary in order to allow subsequent cipher
+	 * operations to succeed when a partition is deallocated/reallocated!
+	 */
+	(void)SCC_READ_REGISTER(SCM_STATUS_REG);
 
 	/* In length register, 0 means 1, etc. */
 	scm_command |= (block_count - 1) << SCM_CCMD_LENGTH_SHIFT;
@@ -1346,791 +1310,223 @@ static uint32_t scc_do_crypto(int byte_count, uint32_t scm_command)
 	return crypto_status;
 }
 
-/*****************************************************************************/
-/* fn scc_encrypt()                                                          */
-/*****************************************************************************/
-/*!
- * Perform an encryption on the input.  If @c verify_crc is true, a CRC must be
- * calculated on the plaintext, and appended, with padding, before computing
- * the ciphertext.
+/**
+ * Encrypt a region of secure memory.
  *
- * @param[in]     count_in_bytes  Count of bytes of plaintext
- * @param[in]     data_in         Pointer to the plaintext
- * @param[in]     scm_control     Bit values for the SCM_CONTROL register
- * @param[in,out] data_out        Pointer for storing ciphertext
- * @param[in]     add_crc         Flag for computing CRC - 0 no, else yes
- * @param[in,out] count_out_bytes Number of bytes available at @c data_out
- */
-static scc_return_t
-scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
-	    uint8_t * data_out, int add_crc, unsigned long *count_out_bytes)
-{
-	scc_return_t return_code = SCC_RET_FAIL;	/* initialised for failure */
-	uint32_t input_bytes_left = count_in_bytes;	/* local copy */
-	uint32_t output_bytes_copied = 0;	/* running total */
-	uint32_t bytes_to_process;	/* multi-purpose byte counter */
-	uint16_t crc = CRC_CCITT_START;	/* running CRC value */
-	crc_t *crc_ptr = NULL;	/* Reset if CRC required */
-	/* byte address into SCM RAM */
-	uint32_t scm_location = (uint32_t) scm_red_part_virt;
-	uint32_t scm_bytes_remaining = scm_memory_size_bytes;	/* free RED RAM */
-	uint8_t padding_buffer[PADDING_BUFFER_MAX_BYTES];	/* CRC+padding holder */
-	unsigned padding_byte_count = 0;	/* Reset if padding required */
-	uint32_t scm_error_status = 0;	/* No known SCM error initially */
-
-	scm_control |= SCM_CCMD_ENC;
-	/* Set location of CRC and prepare padding bytes if required */
-	if (add_crc != 0) {
-		crc_ptr = &crc;
-		padding_byte_count = SCC_BLOCK_SIZE_BYTES()
-		    - (count_in_bytes +
-		       CRC_SIZE_BYTES) % SCC_BLOCK_SIZE_BYTES();
-		memcpy(padding_buffer + CRC_SIZE_BYTES, scc_block_padding,
-		       padding_byte_count);
-	}
-
-	/* Process remaining input or padding data */
-	while (input_bytes_left > 0) {
-		/* Determine how much work to do this pass */
-		bytes_to_process = (input_bytes_left > scm_bytes_remaining) ?
-		    scm_bytes_remaining : input_bytes_left;
-		/* Copy plaintext into SCM RAM, calculating CRC if required */
-		copy_to_scc(data_in, scm_location, bytes_to_process, crc_ptr);
-		/* Adjust pointers & counters */
-		input_bytes_left -= bytes_to_process;
-		data_in += bytes_to_process;
-		scm_location += bytes_to_process;
-		scm_bytes_remaining -= bytes_to_process;
-
-		/* Add CRC and padding after the last byte is copied if required */
-		if ((input_bytes_left == 0) && (crc_ptr != NULL)) {
-
-			/* Copy CRC into padding buffer MSB first */
-			padding_buffer[0] = (crc >> 8) & 0xFF;
-			padding_buffer[1] = crc & 0xFF;
-
-			/* Reset pointers and counter */
-			data_in = padding_buffer;
-			input_bytes_left = CRC_SIZE_BYTES + padding_byte_count;
-			crc_ptr = NULL;	/* CRC no longer required */
-
-			/* Go round loop again to copy CRC and padding to SCM */
-			continue;
-		}
-
-		/* if no input and crc_ptr */
-		/* Now have block-sized plaintext in SCM to encrypt */
-		/* Encrypt plaintext; exit loop on error */
-		bytes_to_process = scm_location - (uint32_t) scm_red_part_virt;
-
-		if (output_bytes_copied + bytes_to_process > *count_out_bytes) {
-			return_code = SCC_RET_INSUFFICIENT_SPACE;
-			scm_error_status = -1;	/* error signal */
-			pr_debug
-			    ("SCC2: too many ciphertext bytes for space available\n");
-			break;
-		}
-		pr_debug("SCC2: Starting encryption. %x for %d bytes (%p)\n",
-			 scm_control, bytes_to_process,
-			 (void *)SCC_READ_REGISTER(SCM_C_BLACK_ST_REG));
-		scm_error_status = scc_do_crypto(bytes_to_process, scm_control);
-		if (scm_error_status != 0) {
-			break;
-		}
-
-		/* Copy out ciphertext */
-		copy_from_scc((uint32_t) scm_black_part_virt, data_out,
-			      bytes_to_process, NULL);
-
-		/* Adjust pointers and counters for next loop */
-		output_bytes_copied += bytes_to_process;
-		data_out += bytes_to_process;
-		scm_location = (uint32_t) scm_red_part_virt;
-		scm_bytes_remaining = scm_memory_size_bytes;
-	}			/* input_bytes_left > 0 */
-
-	/* If no SCM error, set OK status and save ouput byte count */
-	if (scm_error_status == 0) {
-		return_code = SCC_RET_OK;
-		*count_out_bytes = output_bytes_copied;
-	}
-
-	return return_code;
-}				/* scc_encrypt */
-
-/*****************************************************************************/
-/* fn scc_decrypt()                                                          */
-/*****************************************************************************/
-/*!
- * Perform a decryption on the input.  If @c verify_crc is true, the last block
- * (maybe the two last blocks) is special - it should contain a CRC and
- * padding.  These must be stripped and verified.
+ * @param   part_base    Kernel virtual address of the partition.
+ * @param   offset_bytes Offset from the start of the partition to the plaintext
+ *                       data.
+ * @param   byte_count   Length of the region (octets).
+ * @param   black_data   Physical location to store the encrypted data.
+ * @param   IV           Value to use for the IV.
+ * @param   cypher_mode  Cyphering mode to use, specified by type
+ *                       #scc_cypher_mode_t
  *
- * @param[in]     count_in_bytes  Count of bytes of ciphertext
- * @param[in]     data_in         Pointer to the ciphertext
- * @param[in]     scm_control     Bit values for the SCM_CONTROL register
- * @param[in,out] data_out        Pointer for storing plaintext
- * @param[in]     verify_crc      Flag for running CRC - 0 no, else yes
- * @param[in,out] count_out_bytes Number of bytes available at @c data_out
-
- */
-static scc_return_t
-scc_decrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
-	    uint8_t * data_out, int verify_crc, unsigned long *count_out_bytes)
-{
-	scc_return_t return_code = SCC_RET_FAIL;
-	uint32_t bytes_left = count_in_bytes;	/* local copy */
-	uint32_t bytes_copied = 0;	/* running total of bytes going to user */
-	uint32_t bytes_to_copy = 0;	/* Number in this encryption 'chunk' */
-	uint16_t crc = CRC_CCITT_START;	/* running CRC value */
-	/* next target for  ctext */
-	uint32_t scm_location = (uint32_t) scm_black_part_virt;
-	unsigned padding_byte_count;	/* number of bytes of padding stripped */
-	uint8_t last_two_blocks[2 * SCC_BLOCK_SIZE_BYTES()];	/* temp */
-	uint32_t scm_error_status = 0;	/* register value */
-
-	scm_control |= SCM_CCMD_DEC;
-	if (verify_crc) {
-		/* Save last two blocks (if there are at least two) of ciphertext for
-		   special treatment. */
-		bytes_left -= SCC_BLOCK_SIZE_BYTES();
-		if (bytes_left >= SCC_BLOCK_SIZE_BYTES()) {
-			bytes_left -= SCC_BLOCK_SIZE_BYTES();
-		}
-	}
-
-	/* Copy ciphertext into SCM BLACK memory */
-	while (bytes_left && scm_error_status == 0) {
-
-		/* Determine how much work to do this pass */
-		if (bytes_left > (scm_memory_size_bytes)) {
-			bytes_to_copy = scm_memory_size_bytes;
-		} else {
-			bytes_to_copy = bytes_left;
-		}
-
-		if (bytes_copied + bytes_to_copy > *count_out_bytes) {
-			scm_error_status = -1;
-			break;
-		}
-		copy_to_scc(data_in, scm_location, bytes_to_copy, NULL);
-		data_in += bytes_to_copy;	/* move pointer */
-
-		pr_debug("SCC2: Starting decryption of %d bytes.\n",
-			 bytes_to_copy);
-
-		/*  Do the work, wait for completion */
-		scm_error_status = scc_do_crypto(bytes_to_copy, scm_control);
-
-		copy_from_scc((uint32_t) scm_red_part_virt, data_out,
-			      bytes_to_copy, &crc);
-		bytes_copied += bytes_to_copy;
-		data_out += bytes_to_copy;
-		scm_location = (uint32_t) scm_black_part_virt;
-
-		/* Do housekeeping */
-		bytes_left -= bytes_to_copy;
-
-	}			/* while bytes_left */
-
-	/* At this point, either the process is finished, or this is verify mode */
-
-	if (scm_error_status == 0) {
-		if (!verify_crc) {
-			*count_out_bytes = bytes_copied;
-			return_code = SCC_RET_OK;
-		} else {
-			/* Verify mode.  There are one or two blocks of unprocessed
-			 * ciphertext sitting at data_in.  They need to be moved to the
-			 * SCM, decrypted, searched to remove padding, then the plaintext
-			 * copied back to the user (while calculating CRC, of course).
-			 */
-
-			/* Calculate ciphertext still left */
-			bytes_to_copy = count_in_bytes - bytes_copied;
-
-			copy_to_scc(data_in, scm_location, bytes_to_copy, NULL);
-			data_in += bytes_to_copy;	/* move pointer */
-
-			pr_debug("SCC2: Finishing decryption (%d bytes).\n",
-				 bytes_to_copy);
-
-			/*  Do the work, wait for completion */
-			scm_error_status =
-			    scc_do_crypto(bytes_to_copy, scm_control);
-
-			if (scm_error_status == 0) {
-				/* Copy decrypted data back from SCM RED memory */
-				copy_from_scc((uint32_t) scm_red_part_virt,
-					      last_two_blocks, bytes_to_copy,
-					      NULL);
-
-				/* (Plaintext) + crc + padding should be in temp buffer */
-				if (scc_strip_padding
-				    (last_two_blocks + bytes_to_copy,
-				     &padding_byte_count) == SCC_RET_OK) {
-					bytes_to_copy -=
-					    padding_byte_count + CRC_SIZE_BYTES;
-
-					/* verify enough space in user buffer */
-					if (bytes_copied + bytes_to_copy <=
-					    *count_out_bytes) {
-						int i = 0;
-
-						/* Move out last plaintext and calc CRC */
-						while (i < bytes_to_copy) {
-							CALC_CRC(last_two_blocks
-								 [i], crc);
-							*data_out++ =
-							    last_two_blocks
-							    [i++];
-							bytes_copied++;
-						}
-
-						/* Verify the CRC by running over itself */
-						CALC_CRC(last_two_blocks
-							 [bytes_to_copy], crc);
-						CALC_CRC(last_two_blocks
-							 [bytes_to_copy + 1],
-							 crc);
-						if (crc == 0) {
-							/* Just fine ! */
-							*count_out_bytes =
-							    bytes_copied;
-							return_code =
-							    SCC_RET_OK;
-						} else {
-							return_code =
-							    SCC_RET_VERIFICATION_FAILED;
-							pr_debug
-							    ("SCC2:  CRC values are %04x, %02x%02x\n",
-							     crc,
-							     last_two_blocks
-							     [bytes_to_copy],
-							     last_two_blocks
-							     [bytes_to_copy +
-							      1]);
-						}
-					}	/* if space available */
-				} /* if scc_strip_padding... */
-				else {
-					/* bad padding means bad verification */
-					return_code =
-					    SCC_RET_VERIFICATION_FAILED;
-				}
-			}
-			/* scm_error_status == 0 */
-		}		/* verify_crc */
-	}
-
-	/* scm_error_status == 0 */
-	return return_code;
-}				/* scc_decrypt */
-
-/*****************************************************************************/
-/* fn scc_alloc_slot()                                                       */
-/*****************************************************************************/
-/*!
- * Allocate a key slot to fit the requested size.
- *
- * @param value_size_bytes   Size of the key or other secure data
- * @param owner_id           Value to tie owner to slot
- * @param[out] slot          Handle to access or deallocate slot
- *
- * @return SCC_RET_OK on success, SCC_RET_INSUFFICIENT_SPACE if not slots of
- *         requested size are available.
+ * @return  SCC_RET_OK if successful.
  */
 scc_return_t
-scc_alloc_slot(uint32_t value_size_bytes, uint64_t owner_id, uint32_t * slot)
+scc_encrypt_region(uint32_t part_base, uint32_t offset_bytes,
+		   uint32_t byte_count, uint8_t *black_data,
+		   uint32_t *IV, scc_cypher_mode_t cypher_mode)
 {
-	scc_return_t status = SCC_RET_FAIL;
-	unsigned long irq_flags;
-
-	if (scc_availability != SCC_STATUS_OK) {
-		goto out;
-	}
-	/* ACQUIRE LOCK to prevent others from using SCC crypto */
-	spin_lock_irqsave(&scc_crypto_lock, irq_flags);
-
-	pr_debug("SCC2: Allocating %d-byte slot\n", value_size_bytes);
-
-	if ((value_size_bytes != 0) && (value_size_bytes <= SCC_MAX_KEY_SIZE)) {
-		int i;
-
-		for (i = 0; i < SCC_KEY_SLOTS; i++) {
-			if (scc_key_info[i].status == 0) {
-				scc_key_info[i].owner_id = owner_id;
-				scc_key_info[i].length = value_size_bytes;
-				scc_key_info[i].status = 1;	/* assigned! */
-				*slot = i;
-				status = SCC_RET_OK;
-				break;	/* exit 'for' loop */
-			}
-		}
-		if (status != SCC_RET_OK) {
-			status = SCC_RET_INSUFFICIENT_SPACE;
-		} else {
-			pr_debug("SCC2: Allocated slot %d\n", i);
-		}
-	}
-
-	spin_unlock_irqrestore(&scc_crypto_lock, irq_flags);
-
-      out:
-	return status;
-}
-
-/*****************************************************************************/
-/* fn verify_slot_access()                                                   */
-/*****************************************************************************/
-inline static scc_return_t
-verify_slot_access(uint64_t owner_id, uint32_t slot, uint32_t access_len)
-{
-	scc_return_t status = SCC_RET_FAIL;
-
-	if (scc_availability != SCC_STATUS_OK) {
-		goto out;
-	}
-
-	if ((slot < SCC_KEY_SLOTS) && scc_key_info[slot].status
-	    && (scc_key_info[slot].owner_id == owner_id)
-	    && (access_len <= SCC_KEY_SLOT_SIZE)) {
-		status = SCC_RET_OK;
-		pr_debug("SCC2: Verify on slot %d succeeded\n", slot);
-	} else {
-		if (slot >= SCC_KEY_SLOTS) {
-			pr_debug("SCC2: Verify on bad slot (%d) failed\n",
-				 slot);
-		} else if (scc_key_info[slot].status) {
-			pr_debug("SCC2: Verify on slot %d failed (%Lx) \n",
-				 slot, owner_id);
-		} else {
-			pr_debug
-			    ("SC2C: Verify on slot %d failed: not allocated\n",
-			     slot);
-		}
-	}
-
-      out:
-	return status;
-}
-
-/*****************************************************************************/
-/* fn scc_dealloc_slot()                                                     */
-/*****************************************************************************/
-scc_return_t scc_dealloc_slot(uint64_t owner_id, uint32_t slot)
-{
-	scc_return_t status;
-	unsigned long irq_flags;
-	uint8_t *slot_loc = NULL;
-	int i;
-
-	/* ACQUIRE LOCK to prevent others from using SCC crypto */
-	spin_lock_irqsave(&scc_crypto_lock, irq_flags);
-
-	status = verify_slot_access(owner_id, slot, 0);
-	if (status != SCC_RET_OK) {
-		goto out;
-	}
-
-	scc_key_info[slot].owner_id = 0;
-	scc_key_info[slot].status = 0;	/* unassign */
-	slot_loc = sahara_partition_base + scc_key_info[slot].offset;
-
-	for (i = 0; i < SCC_KEY_SLOT_SIZE; i++) {
-		slot_loc[i] = 0;
-	}
-	pr_debug("SCC2: Deallocated slot %d\n", slot);
-
-      out:
-	spin_unlock_irqrestore(&scc_crypto_lock, irq_flags);
-
-	return status;
-}
-
-/*****************************************************************************/
-/* fn scc_load_slot()                                                        */
-/*****************************************************************************/
-/*!
- * Load a value into a slot.
- *
- * @param owner_id      Value of owner of slot
- * @param slot          Handle of slot
- * @param key_data      Data to load into the slot
- * @param key_length    Length, in bytes, of @c key_data to copy to SCC.
- *
- * @return SCC_RET_OK on success.  SCC_RET_FAIL will be returned if slot
- * specified cannot be accessed for any reason, or SCC_RET_INSUFFICIENT_SPACE
- * if @c key_length exceeds the size of the slot.
- */
-scc_return_t
-scc_load_slot(uint64_t owner_id, uint32_t slot, uint8_t * key_data,
-	      uint32_t key_length)
-{
-	scc_return_t status;
-	unsigned long irq_flags;
-
-	/* ACQUIRE LOCK to prevent others from using SCC crypto */
-	spin_lock_irqsave(&scc_crypto_lock, irq_flags);
-
-	status = verify_slot_access(owner_id, slot, key_length);
-	if ((status == SCC_RET_OK) && (key_data != NULL)) {
-		status = SCC_RET_FAIL;	/* reset expectations */
-
-		if (key_length > SCC_KEY_SLOT_SIZE) {
-			pr_debug
-			    ("SCC2: scc_load_slot() rejecting key of %d bytes.\n",
-			     key_length);
-			status = SCC_RET_INSUFFICIENT_SPACE;
-		} else {
-			if (copy_to_scc(key_data,
-					(uint32_t) sahara_partition_base +
-					scc_key_info[slot].offset, key_length,
-					NULL)) {
-				pr_debug("SCC2: RED copy_to_scc() failed for"
-					 " scc_load_slot()\n");
-			} else {
-				status = SCC_RET_OK;
-			}
-		}
-	}
-
-	spin_unlock_irqrestore(&scc_crypto_lock, irq_flags);
-
-	return status;
-}				/* scc_load_slot */
-
-/*****************************************************************************/
-/* fn scc_encrypt_slot()                                                     */
-/*****************************************************************************/
-/*!
- * Allocate a key slot to fit the requested size.
- *
- * @param owner_id      Value of owner of slot
- * @param slot          Handle of slot
- * @param length        Length, in bytes, of @c black_data
- * @param black_data    Location to store result of encrypting RED data in slot
- *
- * @return SCC_RET_OK on success, SCC_RET_FAIL if slot specified cannot be
- *         accessed for any reason.
- */
-scc_return_t scc_encrypt_slot(uint64_t owner_id, uint32_t slot,
-			      uint32_t length, uint8_t * black_data)
-{
-	unsigned long irq_flags;
-	scc_return_t status;
+	os_lock_context_t irq_flags;	/* for IRQ save/restore */
+	scc_return_t status = SCC_RET_OK;
 	uint32_t crypto_status;
-	uint32_t scm_command = scc_key_info[slot].part_ctl;
+	uint32_t scm_command;
+	int offset_blocks = offset_bytes / SCC_BLOCK_SIZE_BYTES();
+
+	scm_command = ((offset_blocks << SCM_CCMD_OFFSET_SHIFT) |
+		       (SCM_PART_NUMBER(part_base) << SCM_CCMD_PART_SHIFT));
+
+	switch (cypher_mode) {
+	case SCC_CYPHER_MODE_CBC:
+		scm_command |= SCM_CCMD_AES_ENC_CBC;
+		break;
+	case SCC_CYPHER_MODE_ECB:
+		scm_command |= SCM_CCMD_AES_ENC_ECB;
+		break;
+	default:
+		status = SCC_RET_FAIL;
+		break;
+	}
+
+	pr_debug("Received encrypt request.  SCM_C_BLACK_ST_REG: %p, "
+		 "scm_Command: %08x, length: %i (part_base: %08x, "
+		 "offset: %i)\n",
+		 black_data, scm_command, byte_count, part_base, offset_blocks);
+
+	if (status != SCC_RET_OK)
+		goto out;
 
 	/* ACQUIRE LOCK to prevent others from using crypto or releasing slot */
-	spin_lock_irqsave(&scc_crypto_lock, irq_flags);
+	os_lock_save_context(scc_crypto_lock, irq_flags);
 
-	status = verify_slot_access(owner_id, slot, length);
 	if (status == SCC_RET_OK) {
-		SCC_WRITE_REGISTER(SCM_C_BLACK_ST_REG, scm_black_part_phys);
+		SCC_WRITE_REGISTER(SCM_C_BLACK_ST_REG, (uint32_t) black_data);
 
-		/* Use OwnerID as CBC IV to tie Owner to data */
-		SCC_WRITE_REGISTER(SCM_AES_CBC_IV0_REG,
-				   *(uint32_t *) & owner_id);
-		SCC_WRITE_REGISTER(SCM_AES_CBC_IV1_REG,
-				   *(((uint32_t *) & owner_id) + 1));
-		SCC_WRITE_REGISTER(SCM_AES_CBC_IV2_REG, 0);
-		SCC_WRITE_REGISTER(SCM_AES_CBC_IV3_REG, 0);
+		/* Only write the IV if it will actually be used */
+		if (cypher_mode == SCC_CYPHER_MODE_CBC) {
+			/* Write the IV register */
+			SCC_WRITE_REGISTER(SCM_AES_CBC_IV0_REG, *(IV));
+			SCC_WRITE_REGISTER(SCM_AES_CBC_IV1_REG, *(IV + 1));
+			SCC_WRITE_REGISTER(SCM_AES_CBC_IV2_REG, *(IV + 2));
+			SCC_WRITE_REGISTER(SCM_AES_CBC_IV3_REG, *(IV + 3));
+		}
 
 		/* Set modes and kick off the encryption */
-		crypto_status =
-		    scc_do_crypto(length, scm_command | SCM_CCMD_AES_ENC_CBC);
+		crypto_status = scc_do_crypto(byte_count, scm_command);
 
 		if (crypto_status != 0) {
 			pr_debug("SCM encrypt red crypto failure: 0x%x\n",
 				 crypto_status);
 		} else {
-
-			/* Give blob back to caller */
-			if (!copy_from_scc
-			    ((uint32_t) scm_black_part_virt, black_data, length,
-			     NULL)) {
-				status = SCC_RET_OK;
-				pr_debug
-				    ("SCC2: Encrypted slot %d for %d bytes\n",
-				     slot, length);
-			}
+			status = SCC_RET_OK;
+			pr_debug("SCC2: Encrypted %d bytes\n", byte_count);
 		}
 	}
 
-	spin_unlock_irqrestore(&scc_crypto_lock, irq_flags);
-
+	os_unlock_restore_context(scc_crypto_lock, irq_flags);
+out:
 	return status;
 }
 
-/*****************************************************************************/
-/* fn scc_decrypt_slot()                                                     */
-/*****************************************************************************/
-/*!
- * Decrypt some black data and leave result in the slot.
+/* Decrypt a region into secure memory
  *
- * @param owner_id      Value of owner of slot
- * @param slot          Handle of slot
- * @param length        Length, in bytes, of @c black_data
- * @param black_data    Location of data to dencrypt and store in slot
+ * @param   part_base    Kernel virtual address of the partition.
+ * @param   offset_bytes Offset from the start of the partition to store the
+ *                       plaintext data.
+ * @param   byte_counts  Length of the region (octets).
+ * @param   black_data   Physical location of the encrypted data.
+ * @param   IV           Value to use for the IV.
+ * @param   cypher_mode  Cyphering mode to use, specified by type
+ *                       #scc_cypher_mode_t
  *
- * @return SCC_RET_OK on success, SCC_RET_FAIL if slot specified cannot be
- *         accessed for any reason.
+ * @return  SCC_RET_OK if successful.
  */
-scc_return_t scc_decrypt_slot(uint64_t owner_id, uint32_t slot,
-			      uint32_t length, const uint8_t * black_data)
+scc_return_t
+scc_decrypt_region(uint32_t part_base, uint32_t offset_bytes,
+		   uint32_t byte_count, uint8_t *black_data,
+		   uint32_t *IV, scc_cypher_mode_t cypher_mode)
 {
-	unsigned long irq_flags;
-	scc_return_t status;
+	os_lock_context_t irq_flags;	/* for IRQ save/restore */
+	scc_return_t status = SCC_RET_OK;
 	uint32_t crypto_status;
-	uint32_t scm_command = scc_key_info[slot].part_ctl;
+	uint32_t scm_command;
+	int offset_blocks = offset_bytes / SCC_BLOCK_SIZE_BYTES();
+
+	scm_command = ((offset_blocks << SCM_CCMD_OFFSET_SHIFT) |
+		       (SCM_PART_NUMBER(part_base) << SCM_CCMD_PART_SHIFT));
+
+	switch (cypher_mode) {
+	case SCC_CYPHER_MODE_CBC:
+		scm_command |= SCM_CCMD_AES_DEC_CBC;
+		break;
+	case SCC_CYPHER_MODE_ECB:
+		scm_command |= SCM_CCMD_AES_DEC_ECB;
+		break;
+	default:
+		status = SCC_RET_FAIL;
+		break;
+	}
+
+	pr_debug("Received decrypt request.  SCM_C_BLACK_ST_REG: %p, "
+		 "scm_Command: %08x, length: %i (part_base: %08x, "
+		 "offset: %i)\n",
+		 black_data, scm_command, byte_count, part_base, offset_blocks);
+
+	if (status != SCC_RET_OK)
+		goto out;
 
 	/* ACQUIRE LOCK to prevent others from using crypto or releasing slot */
-	spin_lock_irqsave(&scc_crypto_lock, irq_flags);
+	os_lock_save_context(scc_crypto_lock, irq_flags);
 
-	status = verify_slot_access(owner_id, slot, length);
 	if (status == SCC_RET_OK) {
 		status = SCC_RET_FAIL;	/* reset expectations */
+		SCC_WRITE_REGISTER(SCM_C_BLACK_ST_REG, (uint32_t) black_data);
 
-		/* Place black key in to BLACK RAM and set up the SCC */
-		copy_to_scc(black_data,
-			    (uint32_t) scm_black_part_virt, length, NULL);
-
-		SCC_WRITE_REGISTER(SCM_C_BLACK_ST_REG, scm_black_part_phys);
-
-		/* Use OwnerID as CBC IV to tie Owner to data */
-		SCC_WRITE_REGISTER(SCM_AES_CBC_IV0_REG,
-				   *(uint32_t *) & owner_id);
-		SCC_WRITE_REGISTER(SCM_AES_CBC_IV1_REG,
-				   *(((uint32_t *) & owner_id) + 1));
-		SCC_WRITE_REGISTER(SCM_AES_CBC_IV2_REG, 0);
-		SCC_WRITE_REGISTER(SCM_AES_CBC_IV3_REG, 0);
+		/* Write the IV register */
+		SCC_WRITE_REGISTER(SCM_AES_CBC_IV0_REG, *(IV));
+		SCC_WRITE_REGISTER(SCM_AES_CBC_IV1_REG, *(IV + 1));
+		SCC_WRITE_REGISTER(SCM_AES_CBC_IV2_REG, *(IV + 2));
+		SCC_WRITE_REGISTER(SCM_AES_CBC_IV3_REG, *(IV + 3));
 
 		/* Set modes and kick off the decryption */
-		crypto_status = scc_do_crypto(length,
-					      scm_command |
-					      SCM_CCMD_AES_DEC_CBC);
+		crypto_status = scc_do_crypto(byte_count, scm_command);
 
 		if (crypto_status != 0) {
 			pr_debug("SCM decrypt black crypto failure: 0x%x\n",
 				 crypto_status);
 		} else {
 			status = SCC_RET_OK;
-			pr_debug("SCC2: Decrypted slot %d for %d bytes\n", slot,
-				 length);
+			pr_debug("SCC2: Decrypted %d bytes\n", byte_count);
 		}
 	}
 
-	spin_unlock_irqrestore(&scc_crypto_lock, irq_flags);
-
+	os_unlock_restore_context(scc_crypto_lock, irq_flags);
+out:
 	return status;
 }
 
 /*****************************************************************************/
-/* fn scc_get_slot_info()                                                    */
+/* fn host_owns_partition()                                                  */
 /*****************************************************************************/
-/*!
- * Determine address and value length for a give slot.
+/**
+ * Determine if the host owns a given partition.
  *
- * @param owner_id      Value of owner of slot
- * @param slot          Handle of slot
- * @param address       Location to store kernel address of slot data
- * @param value_size_bytes Location to store allocated length of data in slot.
- *                         May be NULL if value is not needed by caller.
- * @param slot_size_bytes  Location to store max length data in slot
- *                         May be NULL if value is not needed by caller.
+ * @internal
  *
- * @return SCC_RET_OK or error indication
+ * @param part_no       Partition number to query
+ *
+ * @return TRUE if the host owns the partition, FALSE otherwise.
  */
-scc_return_t
-scc_get_slot_info(uint64_t owner_id, uint32_t slot, uint32_t * address,
-		  uint32_t * value_size_bytes, uint32_t * slot_size_bytes)
+
+static uint32_t host_owns_partition(uint32_t part_no)
 {
-	scc_return_t status = verify_slot_access(owner_id, slot, 0);
+	uint32_t value;
 
-	if (status == SCC_RET_OK) {
-		*address = sahara_partition_phys + scc_key_info[slot].offset;
-		if (value_size_bytes != NULL) {
-			*value_size_bytes = scc_key_info[slot].length;
-		}
-		if (slot_size_bytes != NULL) {
-			*slot_size_bytes = SCC_KEY_SLOT_SIZE;
-		}
+	if (part_no < scc_configuration.partition_count) {
+
+		/* Check the partition owners register */
+		value = SCC_READ_REGISTER(SCM_PART_OWNERS_REG);
+		if (((value >> (part_no * SCM_POWN_SHIFT)) & SCM_POWN_MASK)
+		    == SCM_POWN_PART_OWNED)
+			return TRUE;
 	}
-
-	return status;
+	return FALSE;
 }
 
-/*!
- * For now, this function will create a shared Sahara and SCC2 partition.  It
- * will be used as a key store for Sahara and, to mimic SCCv1 behavior, as the
- * temporary black and red memories for ephemeral cipher operations.
+/*****************************************************************************/
+/* fn partition_engaged()                                                    */
+/*****************************************************************************/
+/**
+ * Determine if the given partition is engaged.
  *
- * This means that it will not be secure against kernel access, and in fact
- * must be available for host read/write.
+ * @internal
  *
- * *========================================*
- * *     Key Slot 0                         *
- * *     Key Slot 1                         *
- * *     Key Slot ...                       *
- * *     Key Slot n                         *
- * * -------------------------------------- *
- * *                                        *
- * *    'BLACK RAM'                         *
- * *                                        *
- * * -------------------------------------- *
- * *                                        *
- * *    'RED RAM'                           *
- * *                                        *
- * *========================================*
+ * @param part_no       Partition number to query
  *
- * or -- the BLACK RAM gets put in a separate partition...
+ * @return TRUE if the partition is engaged, FALSE otherwise.
  */
-static
-scc_return_t make_sahara_partition()
+
+static uint32_t partition_engaged(uint32_t part_no)
 {
-	unsigned part_no = SAHARA_PART_NO;	/* better be free!! */
-	int retval = -EIO;
-	uint32_t *part_base =
-	    scm_ram_base + (part_no * scc_configuration.partition_size_bytes);
-	uint32_t reg_value;
+	uint32_t value;
 
-	reg_value = SCC_READ_REGISTER(SCM_PART_OWNERS_REG);
+	if (part_no < scc_configuration.partition_count) {
 
-	/* Store SMID to grab a partition */
-	SCC_WRITE_REGISTER(SCM_SMID0_REG + 8 * part_no, 0x00000000);
-	mdelay(2);
-
-	/* Now make sure it is ours... ? */
-	reg_value = SCC_READ_REGISTER(SCM_PART_OWNERS_REG);
-
-	if (((reg_value >> (2 * part_no)) & 0x3) != 3) {
-		printk(KERN_ERR "Could not acquire partition %u\n", part_no);
-		goto out;
+		/* Check the partition engaged register */
+		value = SCC_READ_REGISTER(SCM_PART_ENGAGED_REG);
+		if (((value >> (part_no * SCM_PENG_SHIFT)) & 0x1)
+		    == SCM_PENG_ENGAGED)
+			return TRUE;
 	}
-	sahara_partition_base = (uint8_t *) part_base;
-
-	pr_debug("SCC2 Writing UMID at %p\n", part_base);
-
-	/* Write in the UMID */
-	part_base[4] = 0x42;
-	part_base[5] = 0x43;
-	part_base[6] = 0x19;
-	part_base[7] = 0x59;
-
-	mdelay(2);
-
-	/* Give both host and Sahara access for read/write */
-	part_base[0] =
-	    SCM_PERM_HD_WRITE | SCM_PERM_HD_READ | SCM_PERM_TH_READ |
-	    SCM_PERM_TH_WRITE;
-	mdelay(2);
-
-	reg_value = SCC_READ_REGISTER(SCM_PART_ENGAGED_REG);
-
-	if (((reg_value >> part_no) & 1) != 1) {
-		printk(KERN_ERR "SCC2 Could not engage partition %u\n",
-		       part_no);
-		retval = SCC_RET_FAIL;
-		goto out;
-	}
-//    (void)SCC_READ_REGISTER(SCM_ACC4_REG);
-
-	sahara_partition_phys =
-	    (uint32_t) scm_ram_phys_base +
-	    (part_no * scc_configuration.partition_size_bytes);
-
-	scm_black_part_virt =
-	    sahara_partition_base + (SCC_KEY_SLOTS * SCC_KEY_SLOT_SIZE);
-	scm_black_part_phys =
-	    sahara_partition_phys + (scm_black_part_virt -
-				     sahara_partition_base);
-
-	scm_memory_size_bytes = 256;
-	scm_red_part_virt = scm_black_part_virt + scm_memory_size_bytes;
-	if ((uint32_t) (scm_red_part_virt - sahara_partition_phys) < 256) {
-		printk(KERN_ERR
-		       "SCC2: not enough space in Sahara partition: too many / too large keys\n");
-		retval = SCC_RET_INSUFFICIENT_SPACE;
-		goto out;
-	}
-
-	scm_red_part_cmd = (((part_no << SCM_CCMD_PART_SHIFT)
-			     | ((scm_red_part_virt - sahara_partition_base) /
-				SCC_BLOCK_SIZE_BYTES())
-			     << SCM_CCMD_OFFSET_SHIFT)
-			    | SCM_CCMD_AES);
-
-	pr_debug
-	    ("SCC2: Sahara partition %08x/%p; Black RAM: %08x/%p; Red RAM: %p\n",
-	     sahara_partition_phys, sahara_partition_base, scm_black_part_phys,
-	     scm_black_part_virt, scm_red_part_virt);
-
-	retval = SCC_RET_OK;
-
-      out:
-	return retval;
-}				/* make_sahara_partition() */
-
-uint8_t make_vpu_partition()
-{
-	unsigned part_no = VPU_PART_NO;	/* better be free!! */
-	uint32_t *part_base =
-	    scm_ram_base + (part_no * scc_configuration.partition_size_bytes);
-	uint32_t reg_value;
-
-	reg_value = SCC_READ_REGISTER(SCM_PART_OWNERS_REG);
-
-	/* Store SMID to grab a partition */
-	for (; part_no < 4; part_no++)
-		SCC_WRITE_REGISTER(SCM_SMID0_REG + 8 * part_no, 0x00000000);
-
-	mdelay(2);
-
-	/* Now make sure it is ours... ? */
-	reg_value = SCC_READ_REGISTER(SCM_PART_OWNERS_REG);
-	for (; part_no < 4; part_no++) {
-		if (((reg_value >> (2 * part_no)) & 0x3) != 3) {
-			printk(KERN_ERR "Could not acquire partition %u\n",
-			       part_no);
-			goto out;
-		}
-	}
-	vpu_partition_base = (uint8_t *) part_base;
-
-	mdelay(2);
-	for (; part_no < 4; part_no++) {
-		part_base =
-		    scm_ram_base +
-		    (part_no * scc_configuration.partition_size_bytes);
-		part_base[0] =
-		    SCM_PERM_HD_WRITE | SCM_PERM_HD_READ | SCM_PERM_TH_READ |
-		    SCM_PERM_TH_WRITE;
-	}
-	mdelay(2);
-
-	reg_value = SCC_READ_REGISTER(SCM_PART_ENGAGED_REG);
-
-	if (((reg_value >> part_no) & 1) != 1) {
-		printk(KERN_ERR "SCC2 Could not engage partition %u\n",
-		       part_no);
-		goto out;
-	}
-	part_no = VPU_PART_NO;
-	vpu_partition_phys =
-	    (uint32_t) scm_ram_phys_base +
-	    (part_no * scc_configuration.partition_size_bytes);
-
-	return vpu_partition_phys;
-
-      out:
-	return 0;
-}				/* make_vpu_partition */
+	return FALSE;
+}
 
 /*****************************************************************************/
 /* fn scc_wait_completion()                                                  */
 /*****************************************************************************/
-/*!
+/**
  * Poll looking for end-of-cipher indication. Only used
  * if @c SCC_SCM_SLEEP is not defined.
  *
@@ -2139,6 +1535,10 @@ uint8_t make_vpu_partition()
  * On a Tahiti, crypto under 230 or so bytes is done after the first loop, all
  * the way up to five sets of spins for 1024 bytes.  (8- and 16-byte functions
  * are done when we first look.  Zeroizing takes one pass around.
+ *
+ * @param   scm_status      Address of the SCM_STATUS register
+ *
+ * @return  A return code of type #scc_return_t
  */
 static scc_return_t scc_wait_completion(uint32_t * scm_status)
 {
@@ -2151,6 +1551,7 @@ static scc_return_t scc_wait_completion(uint32_t * scm_status)
 		done = is_cipher_done(scm_status);
 		if (done)
 			break;
+		/* TODO: shorten this delay */
 		udelay(1000);
 	} while (i++ < SCC_CIPHER_MAX_POLL_COUNT);
 
@@ -2165,10 +1566,14 @@ static scc_return_t scc_wait_completion(uint32_t * scm_status)
 /*****************************************************************************/
 /* fn is_cipher_done()                                                       */
 /*****************************************************************************/
-/*!
+/**
  * This function returns non-zero if SCM Status register indicates
  * that a cipher has terminated or some other interrupt-generating
  * condition has occurred.
+ *
+ * @param scm_status    Address of the SCM STATUS register
+ *
+ * @return  0 if cipher operations are finished
  */
 static int is_cipher_done(uint32_t * scm_status)
 {
@@ -2218,22 +1623,22 @@ static inline int offset_within_scm(uint32_t register_offset)
 {
 	return 1;		/* (register_offset >= SCM_RED_START)
 				   && (register_offset < scm_highest_memory_address); */
-	/* Although this would cause trouble for zeroize testing, this change would
-	 * close a security whole which currently allows any kernel program to access
-	 * any location in RED RAM.  Perhaps enforce in non-SCC_DEBUG compiles?
-	 && (register_offset <= SCM_INIT_VECTOR_1); */
+/* Although this would cause trouble for zeroize testing, this change would
+ * close a security hole which currently allows any kernel program to access
+ * any location in RED RAM.  Perhaps enforce in non-SCC_DEBUG compiles?
+ && (register_offset <= SCM_INIT_VECTOR_1); */
 }
 
 /*****************************************************************************/
 /* fn check_register_accessible()                                            */
 /*****************************************************************************/
-/*!
+/**
  *  Given the current SCM and SMN status, verify that access to the requested
  *  register should be OK.
  *
  *  @param[in]   register_offset  register offset within SCC
- *  @param[in]   smn_status  recent value from #SMN_STATUS
- *  @param[in]   scm_status  recent value from #SCM_STATUS
+ *  @param[in]   smn_status  recent value from #SMN_STATUS_REG
+ *  @param[in]   scm_status  recent value from #SCM_STATUS_REG
  *
  *  @return   #SCC_RET_OK if ok, #SCC_RET_FAIL if not
  */
@@ -2289,7 +1694,7 @@ check_register_accessible(uint32_t register_offset, uint32_t smn_status,
 /*****************************************************************************/
 /* fn check_register_offset()                                                */
 /*****************************************************************************/
-/*!
+/**
  *  Check that the offset is with the bounds of the SCC register set.
  *
  *  @param[in]  register_offset    register offset of SMN.
@@ -2317,7 +1722,7 @@ static scc_return_t check_register_offset(uint32_t register_offset)
 
 #ifdef SCC_REGISTER_DEBUG
 
-/*!
+/**
  * Names of the SCC Registers, indexed by register number
  */
 static char *scc_regnames[] = {
@@ -2403,7 +1808,7 @@ static char *scc_regnames[] = {
 	"SMN_HAC_REG"
 };
 
-/*!
+/**
  * Names of the Secure RAM States
  */
 static char *srs_names[] = {
@@ -2426,7 +1831,7 @@ static char *srs_names[] = {
 	"SRS_FAIL"
 };
 
-/*!
+/**
  * Create a text interpretation of the SCM Version Register
  *
  * @param      value        The value of the register
@@ -2449,7 +1854,7 @@ char *scm_print_version_reg(uint32_t value, char *print_buffer, int buf_size)
 	return print_buffer;
 }
 
-/*!
+/**
  * Create a text interpretation of the SCM Status Register
  *
  * @param      value        The value of the register
@@ -2482,7 +1887,7 @@ char *scm_print_status_reg(uint32_t value, char *print_buffer, int buf_size)
 	return print_buffer;
 }
 
-/*!
+/**
  * Names of the SCM Error Codes
  */
 static
@@ -2505,7 +1910,7 @@ char *scm_err_code[] = {
 	"Unknown_F",
 };
 
-/*!
+/**
  * Names of the SMN States
  */
 static char *smn_state_name[] = {
@@ -2543,7 +1948,7 @@ static char *smn_state_name[] = {
 	"Invalid_1F"
 };
 
-/*!
+/**
  * Create a text interpretation of the SCM Error Status Register
  *
  * @param      value        The value of the register
@@ -2569,7 +1974,7 @@ char *scm_print_err_status_reg(uint32_t value, char *print_buffer, int buf_size)
 	return print_buffer;
 }
 
-/*!
+/**
  * Create a text interpretation of the SCM Zeroize Command Register
  *
  * @param      value        The value of the register
@@ -2592,7 +1997,7 @@ char *scm_print_zcmd_reg(uint32_t value, char *print_buffer, int buf_size)
 	return print_buffer;
 }
 
-/*!
+/**
  * Create a text interpretation of the SCM Cipher Command Register
  *
  * @param      value        The value of the register
@@ -2625,7 +2030,7 @@ char *scm_print_ccmd_reg(uint32_t value, char *print_buffer, int buf_size)
 	return print_buffer;
 }
 
-/*!
+/**
  * Create a text interpretation of an SCM Access Permissions Register
  *
  * @param      value        The value of the register
@@ -2652,7 +2057,7 @@ char *scm_print_acc_reg(uint32_t value, char *print_buffer, int buf_size)
 	return print_buffer;
 }
 
-/*!
+/**
  * Create a text interpretation of the SCM Partitions Engaged Register
  *
  * @param      value        The value of the register
@@ -2684,7 +2089,7 @@ char *scm_print_part_eng_reg(uint32_t value, char *print_buffer, int buf_size)
 	return print_buffer;
 }
 
-/*!
+/**
  * Create a text interpretation of the SMN Status Register
  *
  * @param      value        The value of the register
@@ -2719,97 +2124,97 @@ char *smn_print_status_reg(uint32_t value, char *print_buffer, int buf_size)
 	return print_buffer;
 }
 
-/*!
+/**
  * The array, indexed by register number (byte-offset / 4), of print routines
  * for the SCC (SCM and SMN) registers.
  */
 static reg_print_routine_t reg_printers[] = {
 	scm_print_version_reg,
-	NULL,			//"0x04",
-	NULL,			//"SCM_INT_CTL_REG",
+	NULL,			/* 0x04 */
+	NULL,			/* SCM_INT_CTL_REG */
 	scm_print_status_reg,
 	scm_print_err_status_reg,
-	NULL,			//"SCM_FAULT_ADR_REG",
-	NULL,			//"SCM_PART_OWNERS_REG",
+	NULL,			/* SCM_FAULT_ADR_REG */
+	NULL,			/* SCM_PART_OWNERS_REG */
 	scm_print_part_eng_reg,
-	NULL,			//"SCM_UNIQUE_ID0_REG",
-	NULL,			//"SCM_UNIQUE_ID1_REG",
-	NULL,			//"SCM_UNIQUE_ID2_REG",
-	NULL,			//"SCM_UNIQUE_ID3_REG",
-	NULL,			//"0x30",
-	NULL,			//"0x34",
-	NULL,			//"0x38",
-	NULL,			//"0x3C",
-	NULL,			//"0x40",
-	NULL,			//"0x44",
-	NULL,			//"0x48",
-	NULL,			//"0x4C",
+	NULL,			/* SCM_UNIQUE_ID0_REG */
+	NULL,			/* SCM_UNIQUE_ID1_REG */
+	NULL,			/* SCM_UNIQUE_ID2_REG */
+	NULL,			/* SCM_UNIQUE_ID3_REG */
+	NULL,			/* 0x30 */
+	NULL,			/* 0x34 */
+	NULL,			/* 0x38 */
+	NULL,			/* 0x3C */
+	NULL,			/* 0x40 */
+	NULL,			/* 0x44 */
+	NULL,			/* 0x48 */
+	NULL,			/* 0x4C */
 	scm_print_zcmd_reg,
 	scm_print_ccmd_reg,
-	NULL,			//"SCM_C_BLACK_ST_REG",
-	NULL,			//"SCM_DBG_STATUS_REG",
-	NULL,			//"SCM_AES_CBC_IV0_REG",
-	NULL,			//"SCM_AES_CBC_IV1_REG",
-	NULL,			//"SCM_AES_CBC_IV2_REG",
-	NULL,			//"SCM_AES_CBC_IV3_REG",
-	NULL,			//"0x70",
-	NULL,			//"0x74",
-	NULL,			//"0x78",
-	NULL,			//"0x7C",
-	NULL,			//"SCM_SMID0_REG",
+	NULL,			/* SCM_C_BLACK_ST_REG */
+	NULL,			/* SCM_DBG_STATUS_REG */
+	NULL,			/* SCM_AES_CBC_IV0_REG */
+	NULL,			/* SCM_AES_CBC_IV1_REG */
+	NULL,			/* SCM_AES_CBC_IV2_REG */
+	NULL,			/* SCM_AES_CBC_IV3_REG */
+	NULL,			/* 0x70 */
+	NULL,			/* 0x74 */
+	NULL,			/* 0x78 */
+	NULL,			/* 0x7C */
+	NULL,			/* SCM_SMID0_REG */
 	scm_print_acc_reg,	/* ACC0 */
-	NULL,			//"SCM_SMID1_REG",
+	NULL,			/* SCM_SMID1_REG */
 	scm_print_acc_reg,	/* ACC1 */
-	NULL,			//"SCM_SMID2_REG",
+	NULL,			/* SCM_SMID2_REG */
 	scm_print_acc_reg,	/* ACC2 */
-	NULL,			//"SCM_SMID3_REG",
+	NULL,			/* SCM_SMID3_REG */
 	scm_print_acc_reg,	/* ACC3 */
-	NULL,			//"SCM_SMID4_REG",
+	NULL,			/* SCM_SMID4_REG */
 	scm_print_acc_reg,	/* ACC4 */
-	NULL,			//"SCM_SMID5_REG",
+	NULL,			/* SCM_SMID5_REG */
 	scm_print_acc_reg,	/* ACC5 */
-	NULL,			//"SCM_SMID6_REG",
+	NULL,			/* SCM_SMID6_REG */
 	scm_print_acc_reg,	/* ACC6 */
-	NULL,			//"SCM_SMID7_REG",
+	NULL,			/* SCM_SMID7_REG */
 	scm_print_acc_reg,	/* ACC7 */
-	NULL,			//"SCM_SMID8_REG",
+	NULL,			/* SCM_SMID8_REG */
 	scm_print_acc_reg,	/* ACC8 */
-	NULL,			//"SCM_SMID9_REG",
+	NULL,			/* SCM_SMID9_REG */
 	scm_print_acc_reg,	/* ACC9 */
-	NULL,			//"SCM_SMID10_REG",
+	NULL,			/* SCM_SMID10_REG */
 	scm_print_acc_reg,	/* ACC10 */
-	NULL,			//"SCM_SMID11_REG",
+	NULL,			/* SCM_SMID11_REG */
 	scm_print_acc_reg,	/* ACC11 */
-	NULL,			//"SCM_SMID12_REG",
+	NULL,			/* SCM_SMID12_REG */
 	scm_print_acc_reg,	/* ACC12 */
-	NULL,			//"SCM_SMID13_REG",
+	NULL,			/* SCM_SMID13_REG */
 	scm_print_acc_reg,	/* ACC13 */
-	NULL,			//"SCM_SMID14_REG",
+	NULL,			/* SCM_SMID14_REG */
 	scm_print_acc_reg,	/* ACC14 */
-	NULL,			//"SCM_SMID15_REG",
+	NULL,			/* SCM_SMID15_REG */
 	scm_print_acc_reg,	/* ACC15 */
 	smn_print_status_reg,
-	NULL,			//"SMN_COMMAND_REG",
-	NULL,			//"SMN_SEQ_START_REG",
-	NULL,			//"SMN_SEQ_END_REG",
-	NULL,			//"SMN_SEQ_CHECK_REG",
-	NULL,			//"SMN_BB_CNT_REG",
-	NULL,			//"SMN_BB_INC_REG",
-	NULL,			//"SMN_BB_DEC_REG",
-	NULL,			//"SMN_COMPARE_REG",
-	NULL,			//"SMN_PT_CHK_REG",
-	NULL,			//"SMN_CT_CHK_REG",
-	NULL,			//"SMN_TIMER_IV_REG",
-	NULL,			//"SMN_TIMER_CTL_REG",
-	NULL,			//"SMN_SEC_VIO_REG",
-	NULL,			//"SMN_TIMER_REG",
-	NULL,			//"SMN_HAC_REG"
+	NULL,			/* SMN_COMMAND_REG */
+	NULL,			/* SMN_SEQ_START_REG */
+	NULL,			/* SMN_SEQ_END_REG */
+	NULL,			/* SMN_SEQ_CHECK_REG */
+	NULL,			/* SMN_BB_CNT_REG */
+	NULL,			/* SMN_BB_INC_REG */
+	NULL,			/* SMN_BB_DEC_REG */
+	NULL,			/* SMN_COMPARE_REG */
+	NULL,			/* SMN_PT_CHK_REG */
+	NULL,			/* SMN_CT_CHK_REG */
+	NULL,			/* SMN_TIMER_IV_REG */
+	NULL,			/* SMN_TIMER_CTL_REG */
+	NULL,			/* SMN_SEC_VIO_REG */
+	NULL,			/* SMN_TIMER_REG */
+	NULL,			/* SMN_HAC_REG */
 };
 
 /*****************************************************************************/
 /* fn dbg_scc_read_register()                                                */
 /*****************************************************************************/
-/*!
+/**
  * Noisily read a 32-bit value to an SCC register.
  * @param offset        The address of the register to read.
  *

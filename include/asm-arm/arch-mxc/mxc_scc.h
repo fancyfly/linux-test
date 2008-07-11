@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -34,12 +34,12 @@
 /*!
  *  This must be the interrupt line number of the SCM interrupt.
  */
-#define INT_SCM         INT_SCC_SCM
+/*#define INT_SCC_SCM         INT_SCC_SCM*/
 
 /*!
  *  if #USE_SMN_INTERRUPT is defined, this must be the interrupt line number of
  *  the SMN interrupt.
  */
-#define INT_SMN         INT_SCC_SMN
+/*#define INT_SCC_SMN         INT_SCC_SMN*/
 
 #endif

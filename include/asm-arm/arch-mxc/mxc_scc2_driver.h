@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -97,15 +97,15 @@ extern "C" {
 
 /* Temporarily define compile-time flags to make Doxygen happy. */
 #ifdef DOXYGEN_HACK
-/*! @defgroup scccompileflags SCC Driver compile-time flags
+/** @defgroup scccompileflags SCC Driver compile-time flags
  *
  * These preprocessor flags should be set, if desired, in a makefile so
  * that they show up on the compiler command line.
  */
-/*! @addtogroup scccompileflags */
+/** @addtogroup scccompileflags */
 
-/*! @{ */
-/*!
+/** @{ */
+/**
  * Compile-time flag to change @ref smnregs and @ref scmregs
  * offset values for the SCC's implementation on the MX.21 board.
  *
@@ -114,108 +114,252 @@ extern "C" {
  * register offsets.
  */
 #define TAHITI
-/*! @} */
+/** @} */
 #undef TAHITI
 
 #endif				/* DOXYGEN_HACK */
 
-/*! Major Version of the driver.  Used for
+/** Major Version of the driver.  Used for
     scc_configuration->driver_major_version */
-#define SCC_DRIVER_MAJOR_VERSION_1 1
-/*! Old Minor Version of the driver. */
-#define SCC_DRIVER_MINOR_VERSION_0 0
-/*! Old Minor Version of the driver. */
-#define SCC_DRIVER_MINOR_VERSION_4 4
-/*! Old Minor Version of the driver. */
-#define SCC_DRIVER_MINOR_VERSION_5 5
-/*! Minor Version of the driver.  Used for
+#define SCC_DRIVER_MAJOR_VERSION    2
+/** Minor Version of the driver.  Used for
     scc_configuration->driver_minor_version */
-#define SCC_DRIVER_MINOR_VERSION_97 97
+#define SCC_DRIVER_MINOR_VERSION    0
 
 /*!
- * @typedef scc_return_t (enum scc_return)
+ *  Interrupt line number of SCM interrupt.
  */
-/*! Common status return values from SCC driver functions. */
-	typedef enum scc_return {
-		SCC_RET_OK = 0,	/*!< Function succeeded  */
-		SCC_RET_FAIL,	/*!< Non-specific failure */
-		SCC_RET_VERIFICATION_FAILED,	/*!< Decrypt validation failed */
-		SCC_RET_TOO_MANY_FUNCTIONS,	/*!< At maximum registered functions */
-		SCC_RET_BUSY,	/*!< SCC is busy and cannot handle request */
-		SCC_RET_INSUFFICIENT_SPACE,	/*!< Encryption or decryption failed because
-						   @c count_out_bytes says that @c data_out is
-						   too small to hold the value. */
+#define INT_SCC_SCM         MXC_INT_SCC_SCM
+
+/*!
+ *  Interrupt line number of the SMN interrupt.
+ */
+#define INT_SCC_SMN         MXC_INT_SCC_SMN
+
+/**
+ * @typedef scc_return_t
+ */
+/** Common status return values from SCC driver functions. */
+	typedef enum scc_return_t {
+		SCC_RET_OK = 0,	 /**< Function succeeded  */
+		SCC_RET_FAIL,	 /**< Non-specific failure */
+		SCC_RET_VERIFICATION_FAILED,
+				 /**< Decrypt validation failed */
+		SCC_RET_TOO_MANY_FUNCTIONS,
+				 /**< At maximum registered functions */
+		SCC_RET_BUSY,	 /**< SCC is busy and cannot handle request */
+		/**< Encryption or decryption failed because@c count_out_bytes
+			says that @c data_out is too small to hold the value. */
+		SCC_RET_INSUFFICIENT_SPACE,
 	} scc_return_t;
 
-/*!
- * @typedef scc_config_t (struct scc_config)
- **/
-/*!
- * @brief Configuration information about SCC and the driver.
+/**
+ * @typedef scc_partition_status_t
+ */
+/** Partition status information. */
+	typedef enum scc_partition_status_t {
+		SCC_PART_S_UNUSABLE,
+				  /**< Partition not implemented */
+		SCC_PART_S_UNAVAILABLE,
+				  /**< Partition owned by other host */
+		SCC_PART_S_AVAILABLE,
+				  /**< Partition available */
+		SCC_PART_S_ALLOCATED,
+				  /**< Partition owned by host but not engaged*/
+		SCC_PART_S_ENGAGED,
+				  /**< Partition owned by host and engaged */
+	} scc_partition_status_t;
+
+/**
+ * Configuration information about SCC and the driver.
  *
  * This struct/typedef contains information from the SCC and the driver to
  * allow the user of the driver to determine the size of the SCC's memories and
  * the version of the SCC and the driver.
  */
-	typedef struct scc_config {
-		int driver_major_version;	/*!< Major version of the SCC driver code  */
-		int driver_minor_version;	/*!< Minor version of the SCC driver code  */
-		int scm_version;	/*!< Version from SCM Configuration register */
-		int smn_version;	/*!< Version from SMN Status register */
-		int block_size_bytes;	/*!< Number of bytes per block of RAM; also
-					   block size of the crypto algorithm. */
+	typedef struct scc_config_t {
+		int driver_major_version;
+				/**< Major version of the SCC driver code  */
+		int driver_minor_version;
+				/**< Minor version of the SCC driver code  */
+		int scm_version; /**< Version from SCM Configuration register */
+		int smn_version; /**< Version from SMN Status register */
+		/**< Number of bytes per block of RAM; also
+			block size of the crypto algorithm. */
+		int block_size_bytes;
 		int partition_size_bytes;
+				/**< Number of bytes in each partition */
 		int partition_count;
+				/**< Number of partitions on this platform */
 	} scc_config_t;
 
-/*!
- * @typedef scc_enc_dec_t (enum scc_enc_dec)
+/**
+ * @typedef scc_enc_dec_t
  */
-/*!
+/**
  * Determine whether SCC will run its cryptographic
- * function as an encryption or decryption.  Used as an argument to
- * #scc_crypt().
+ * function as an encryption or decryption.
  */
-	typedef enum scc_enc_dec {
-		SCC_ENCRYPT,	/*!< Encrypt (from Red to Black) */
-		SCC_DECRYPT	/*!< Decrypt (from Black to Red) */
+	typedef enum scc_enc_dec_t {
+		SCC_ENCRYPT,	/**< Encrypt (from Red to Black) */
+		SCC_DECRYPT	/**< Decrypt (from Black to Red) */
 	} scc_enc_dec_t;
 
-/*
- * @typedef scc_crypto_mode_t (enum scc_crypto_mode)
+/**
+ * @typedef scc_verify_t
  */
-/*!
- * Determine whether SCC will run its cryptographic function in ECB (electronic
- * codebook) or CBC (cipher-block chaining) mode.  Used as an argument to
- * #scc_crypt().
- */
-	typedef enum scc_crypto_mode {
-		SCC_ECB_MODE,	/*!< Electronic Codebook Mode */
-		SCC_CBC_MODE	/*!< Cipher Block Chaining Mode  */
-	} scc_crypto_mode_t;
-
-/*!
- * @typedef scc_verify_t (enum scc_verify)
- */
-/*!
+/**
  * Tell the driver whether it is responsible for verifying the integrity of a
  * secret.  During an encryption, using other than #SCC_VERIFY_MODE_NONE will
  * cause a check value to be generated and appended to the plaintext before
  * encryption.  During decryption, the check value will be verified after
  * decryption, and then stripped from the message.
  */
-	typedef enum scc_verify {
-		/*! No verification value added or checked.  Input plaintext data must be
-		 *  be a multiple of the blocksize (#scc_get_configuration()).  */
+	typedef enum scc_verify_t {
+    /** No verification value added or checked.  Input plaintext data must be
+     *  be a multiple of the blocksize (#scc_get_configuration()).  */
 		SCC_VERIFY_MODE_NONE,
-		/*! Driver will generate/validate a 2-byte CCITT CRC.  Input plaintext will
-		   be padded to a multiple of the blocksize, adding 3-10 bytes to the
-		   resulting output ciphertext.  Upon decryption, this padding will be
-		   stripped, and the CRC will be verified. */
+    /** Driver will generate/validate a 2-byte CCITT CRC.  Input plaintext
+    		will be padded to a multiple of the blocksize, adding 3-10 bytes
+    		to the resulting output ciphertext.  Upon decryption, this padding
+    		will be stripped, and the CRC will be verified. */
 		SCC_VERIFY_MODE_CCITT_CRC
 	} scc_verify_t;
 
-/*!
+/**
+ * @typedef scc_cypher_mode_t
+ */
+/**
+ * Select the cypher mode to use for partition cover/uncover operations.
+ */
+
+	typedef enum scc_cypher_mode_t {
+		SCC_CYPHER_MODE_ECB = 1,
+				   /**< ECB mode */
+		SCC_CYPHER_MODE_CBC = 2,
+				   /**< CBC mode */
+	} scc_cypher_mode_t;
+
+/**
+ * Allocate a partition of secure memory
+ *
+ * @param       smid_value  Value to use for the SMID register.  Must be 0 for
+ *                          kernel mode ownership.
+ * @param[out]  part_no     (If successful) Assigned partition number.
+ * @param[out]  part_base   Kernel virtual address of the partition.
+ * @param[out]  part_phys   Physical address of the partition.
+ *
+ * @return      SCC_RET_OK if successful.
+ */
+	extern scc_return_t
+	    scc_allocate_partition(uint32_t smid_value,
+				   int *part_no,
+				   void **part_base, uint32_t *part_phys);
+
+/* Note: This function has to be run in the same context (userspace or kernel
+ * mode) as the process that will be using the partition.  Because the SCC2 API
+ * is not accessible in user mode, this function is also provided as a macro in
+ * in fsl_shw.h.  Kernel-mode users that include this file are able to use this
+ * version of the function without having to include the whole SHW API.  If the
+ * macro definition was defined before we got here, un-define it so this
+ * version will be used instead.
+ */
+
+#ifdef scc_engage_partition
+#undef scc_engage_partition
+#endif
+
+/**
+ * Engage partition of secure memory
+ *
+ * @param part_base (kernel) Virtual
+ * @param UMID NULL, or 16-byte UMID for partition security
+ * @param permissions ORed values of the type SCM_PERM_* which will be used as
+ *                    initial partition permissions.  SHW API users should use
+ *                    the FSL_PERM_* definitions instead.
+ *
+ * @return SCC_RET_OK if successful.
+ */
+	extern scc_return_t
+	    scc_engage_partition(void *part_base,
+				 const uint8_t *UMID, uint32_t permissions);
+
+/**
+ * Release a partition of secure memory
+ *
+ * @param   part_base   Kernel virtual address of the partition to be released.
+ *
+ * @return  SCC_RET_OK if successful.
+ */
+	extern scc_return_t scc_release_partition(void *part_base);
+
+/**
+ * Diminish the permissions on a partition of secure memory
+ *
+ * @param part_base   Kernel virtual address of the partition.
+ *
+ * @param permissions ORed values of the type SCM_PERM_* which will be used as
+ *                    initial partition permissions.  SHW API users should use
+ *                    the FSL_PERM_* definitions instead.
+ *
+ * @return  SCC_RET_OK if successful.
+ */
+	extern scc_return_t
+	    scc_diminish_permissions(void *part_base, uint32_t permissions);
+
+/**
+ * Query the status of a partition of secure memory
+ *
+ * @param part_base   Kernel virtual address of the partition.
+ *
+ * @return  SCC_RET_OK if successful.
+ */
+	extern scc_partition_status_t scc_partition_status(void *part_base);
+
+/**
+ * Calculate the physical address from the kernel virtual address.
+ */
+	extern uint32_t scc_virt_to_phys(void *address);
+
+/**
+ * Encrypt a region of secure memory.
+ *
+ * @param   part_base    Kernel virtual address of the partition.
+ * @param   offset_bytes Offset from the start of the partition to the plaintext
+ *                       data.
+ * @param   byte_count   Length of the region (octets).
+ * @param   black_data   Physical location to store the encrypted data.
+ * @param   IV           Value to use for the Initialization Vector.
+ * @param   cypher_mode  Cyphering mode to use, specified by type
+ *                       #scc_cypher_mode_t
+ *
+ * @return  SCC_RET_OK if successful.
+ */
+	extern scc_return_t
+	    scc_encrypt_region(uint32_t part_base, uint32_t offset_bytes,
+			       uint32_t byte_count, uint8_t *black_data,
+			       uint32_t *IV, scc_cypher_mode_t cypher_mode);
+
+/**
+ * Decrypt a region into secure memory
+ *
+ * @param   part_base    Kernel virtual address of the partition.
+ * @param   offset_bytes Offset from the start of the partition to store the
+ *                       plaintext data.
+ * @param   byte_count   Length of the region (octets).
+ * @param   black_data   Physical location of the encrypted data.
+ * @param   IV           Value to use for the Initialization Vector.
+ * @param   cypher_mode  Cyphering mode to use, specified by type
+ *                       #scc_cypher_mode_t
+ *
+ * @return  SCC_RET_OK if successful.
+ */
+	extern scc_return_t
+	    scc_decrypt_region(uint32_t part_base, uint32_t offset_bytes,
+			       uint32_t byte_count, uint8_t *black_data,
+			       uint32_t *IV, scc_cypher_mode_t cypher_mode);
+
+/**
  * Retrieve configuration information from the SCC.
  *
  * This function always succeeds.
@@ -226,7 +370,7 @@ extern "C" {
  */
 	extern scc_config_t *scc_get_configuration(void);
 
-/*!
+/**
  * Zeroize Red and Black memories of the SCC.  This will start the Zeroizing
  * process.  The routine will return when the memories have zeroized or failed
  * to do so.  The driver will poll waiting for this to occur, so this
@@ -237,192 +381,20 @@ extern "C" {
  */
 	extern scc_return_t scc_zeroize_memories(void);
 
-/*!
- * Perform a Triple DES encryption or decryption operation.
- *
- * This routine will cause the SCM to perform an encryption or decryption with
- * its internal key.  If the SCC's #SMN_STATUS register shows that the SCC is
- * in #SMN_STATE_SECURE, then the Secret Key will be used.  If it is
- * #SMN_STATE_NON_SECURE (or health check), then the Default Key will be used.
- *
- * This function will perform in a variety of ways, depending upon the values
- * of @c direction, @c crypto_mode, and @c check_mode.  If
- * #SCC_VERIFY_MODE_CCITT_CRC mode is requested, upon successful completion,
- * the @c count_in_bytes will be different from the returned value of @c
- * count_out_bytes.  This is because the two-byte CRC and some amount of
- * padding (at least one byte) will either be added or stripped.
- *
- * This function will not return until the SCC has performed the operation (or
- * reported failure to do so).  It must therefore not be called from interrupt
- * level.  In the current version, it will poll the SCC for completion.  In
- * future versions, it may sleep.
- *
- * @param[in]    count_in_bytes The number of bytes to move through the crypto
- *                            function.  Must be greater than zero.
- *
- * @param[in]    data_in      Pointer to the array of bytes to be used as input
- *                            to the crypto function.
- *
- * @param[in]    init_vector  Pointer to the block-sized (8 byte) array of
- *                            bytes which form the initialization vector for
- *                            this operation.  A non-null value is required
- *                            when @c crypto_mode has the value #SCC_CBC_MODE;
- *                            the value is ignored in #SCC_ECB_MODE.
- *
- * @param[in]    direction    Direct the driver to perform encryption or
- *                            decryption.
- *
- * @param[in]    crypto_mode  Run the crypto function in ECB or CBC mode.
- *
- * @param[in]    check_mode   During encryption, generate and append a check
- *                            value to the plaintext and pad the resulting
- *                            data.  During decryption, validate the plaintext
- *                            with that check value and remove the padding.
- *
- * @param[in,out] count_out_bytes On input, the number of bytes available for
- *                            copying to @c data_out.  On return, the number of
- *                            bytes copied to @c data_out.
- *
- * @param[out] data_out       Pointer to the array of bytes that are where the
- *                            output of the crypto function are to be placed.
- *                            For encryption, this must be able to hold a
- *                            longer ciphertext than the plaintext message at
- *                            @c data_in.  The driver will append a 'pad' of
- *                            1-8 bytes to the message, and if @c check_mode is
- *                            used, additional bytes may be added, the number
- *                            depending upon the type of check being requested.
- *
- * @return     0 on success, non-zero on failure.  See #scc_return_t.
- *
- * @internal
- * This function will verify SCC state and the functions parameters.  It will
- * acquire the crypto lock, and set up some SCC registers and variables common
- * to encryption and decryption.  A rough check will be made to verify that
- * enough space is available in @c count_out_bytes.  Upon success, either the
- * #scc_encrypt or #scc_decrypt routine will be called to do the actual work.
- * The crypto lock will then be released.
- */
-	extern scc_return_t scc_crypt(unsigned long count_in_bytes,
-				      uint8_t * data_in, uint8_t * init_vector,
-				      scc_enc_dec_t direction,
-				      scc_crypto_mode_t crypto_mode,
-				      scc_verify_t check_mode,
-				      uint8_t * data_out,
-				      unsigned long *count_out_bytes);
-
-/*!
- * Allocate a key slot for a stored key (or other stored value).
- *
- * This feature is to allow decrypted secret values to be kept in RED RAM.
- * This can all visibility of the data only by Sahara.
- *
- * @param   value_size_bytes  Size, in bytes, of RED key/value.  Currently only
- *                            a size up to 32 bytes is supported.
- *
- * @param      owner_id       A value which will control access to the slot.
- *                            It must be passed into to any subsequent calls to
- *                            use the assigned slot.
- *
- * @param[out] slot           The slot number for the key.
- *
- * @return     0 on success, non-zero on failure.  See #scc_return_t.
- */
-	extern scc_return_t scc_alloc_slot(uint32_t value_size_bytes,
-					   uint64_t owner_id, uint32_t * slot);
-
-/*!
- * Deallocate the key slot of a stored key or secret value.
- *
- * @param      owner_id       The id which owns the @c slot.
- *
- * @param      slot           The slot number for the key.
-
- * @return     0 on success, non-zero on failure.  See #scc_return_t.
- */
-	extern scc_return_t scc_dealloc_slot(uint64_t owner_id, uint32_t slot);
-
-/*!
- * Load a value into a slot.
- *
- * @param owner_id      Value of owner of slot
- * @param slot          Handle of slot
- * @param key_data      Data to load into the slot
- * @param key_length    Length, in bytes, of @c key_data to copy to SCC.
- *
- * @return SCC_RET_OK on success.  SCC_RET_FAIL will be returned if slot
- * specified cannot be accessed for any reason, or SCC_RET_INSUFFICIENT_SPACE
- * if @c key_length exceeds the size of the slot.
- */
-	extern scc_return_t scc_load_slot(uint64_t owner_id, uint32_t slot,
-					  uint8_t * key_data,
-					  uint32_t key_length);
-
-/*!
- * Allocate a key slot to fit the requested size.
- *
- * @param owner_id      Value of owner of slot
- * @param slot          Handle of slot
- * @param length        Length, in bytes, of @c black_data
- * @param black_data    Location to store result of encrypting RED data in slot
- *
- * @return SCC_RET_OK on success, SCC_RET_FAIL if slot specified cannot be
- *         accessed for any reason.
- */
-	extern scc_return_t scc_encrypt_slot(uint64_t owner_id, uint32_t slot,
-					     uint32_t length,
-					     uint8_t * black_data);
-
-/*!
- * Decrypt some black data and leave result in the slot.
- *
- * @param owner_id      Value of owner of slot
- * @param slot          Handle of slot
- * @param length        Length, in bytes, of @c black_data
- * @param black_data    Location of data to dencrypt and store in slot
- *
- * @return SCC_RET_OK on success, SCC_RET_FAIL if slot specified cannot be
- *         accessed for any reason.
- */
-	extern scc_return_t scc_decrypt_slot(uint64_t owner_id, uint32_t slot,
-					     uint32_t length,
-					     const uint8_t * black_data);
-
-/*!
- * Get attributes of data in RED slot.
- *
- * @param      owner_id         The id which owns the @c slot.
- *
- * @param      slot             The slot number for the key.
- *
- * @param[out] address          Physical address of RED value.
- *
- * @param[out] value_size_bytes Length, in bytes, of RED value,
- *                              or NULL if unneeded..
- *
- * @param[out] slot_size_bytes  Length, in bytes, of slot size,
- *                              or NULL if unneeded..
- *
- * @return     0 on success, non-zero on failure.  See #scc_return_t.
- */
-	extern scc_return_t scc_get_slot_info(uint64_t owner_id, uint32_t slot,
-					      uint32_t * address,
-					      uint32_t * value_size_bytes,
-					      uint32_t * slot_size_bytes);
-
-/*!
+/**
  * Signal a software alarm to the SCC.  This will take the SCC and other PISA
  * parts out of Secure mode and into Security Failure mode.  The SCC will stay
  * in failed mode until a reboot.
  *
  * @internal
  * If the SCC is not already in fail state, simply write the
- * #SMN_COMMAND_SET_SOFTWARE_ALARM bit in #SMN_COMMAND.  Since there is no
+ * #SMN_COMMAND_SET_SOFTWARE_ALARM bit in #SMN_COMMAND_REG.  Since there is no
  * reason to wait for the interrupt to bounce back, simply act as though
  * one did.
  */
 	extern void scc_set_sw_alarm(void);
 
-/*!
+/**
  * This routine will register a function to be called should a Security Failure
  * be signalled by the SCC (Security Monitor).
  *
@@ -445,7 +417,7 @@ extern "C" {
 	extern scc_return_t scc_monitor_security_failure(void
 							 callback_func(void));
 
-/*!
+/**
  * This routine will deregister a function previously registered with
  * #scc_monitor_security_failure().
  *
@@ -455,7 +427,7 @@ extern "C" {
 	extern void scc_stop_monitoring_security_failure(void
 							 callback_func(void));
 
-/*!
+/**
  * Read value from an SCC register.
  * The offset will be checked for validity (range) as well as whether it is
  * accessible (e.g. not busy, not in failed state) at the time of the call.
@@ -475,10 +447,7 @@ extern "C" {
 	extern scc_return_t scc_read_register(int register_offset,
 					      uint32_t * value);
 
-/* Make Partition for VPU in Secure RAM */
-	extern uint8_t make_vpu_partition(void);
-
-/*!
+/**
  * Write a new value into an SCC register.
  * The offset will be checked for validity (range) as well as whether it is
  * accessible (e.g. not busy, not in failed state) at the time of the call.
@@ -497,459 +466,510 @@ extern "C" {
 	extern scc_return_t scc_write_register(int register_offset,
 					       uint32_t value);
 
-/*!
- * @name SCM Registers
- * These are the names of the SCM Registers
+/**
+ * @defgroup scmregs SCM Registers
+ *
+ * These values are offsets into the SCC for the Secure Memory
+ * (SCM) registers.  They are used in the @c register_offset parameter of
+ * #scc_read_register() and #scc_write_register().
  */
-/*! @{ */
-/*! Offset of SCM Version ID Register */
+/** @addtogroup scmregs */
+/** @{ */
+/** Offset of SCM Version ID Register */
 #define SCM_VERSION_REG		0x000
-/*! Offset of SCM Interrupt Control Register */
+/** Offset of SCM Interrupt Control Register */
 #define SCM_INT_CTL_REG		0x008
-/*! Offset of SCM Status Register */
+/** Offset of SCM Status Register */
 #define SCM_STATUS_REG		0x00c
-/*! Offset of SCM Error Status Register */
+/** Offset of SCM Error Status Register */
 #define SCM_ERR_STATUS_REG	0x010
-/*! Offset of SCM Fault Address Register */
+/** Offset of SCM Fault Address Register */
 #define SCM_FAULT_ADR_REG	0x014
-/*! Offset of SCM Partition Owners Register */
+/** Offset of SCM Partition Owners Register */
 #define SCM_PART_OWNERS_REG	0x018
-/*! Offset of SCM Partitions Engaged Register */
+/** Offset of SCM Partitions Engaged Register */
 #define SCM_PART_ENGAGED_REG	0x01c
-/*! Offset of SCM Unique Number 0 Register */
+/** Offset of SCM Unique Number 0 Register */
 #define SCM_UNIQUE_ID0_REG	0x020
-/*! Offset of SCM Unique Number 1 Register */
+/** Offset of SCM Unique Number 1 Register */
 #define SCM_UNIQUE_ID1_REG	0x024
-/*! Offset of SCM Unique Number 2 Register */
+/** Offset of SCM Unique Number 2 Register */
 #define SCM_UNIQUE_ID2_REG	0x028
-/*! Offset of SCM Unique Number 3 Register */
+/** Offset of SCM Unique Number 3 Register */
 #define SCM_UNIQUE_ID3_REG	0x02c
-/*! Offset of SCM Zeroize Command Register */
+/** Offset of SCM Zeroize Command Register */
 #define SCM_ZCMD_REG		0x050
-/*! Offset of SCM Cipher Command Register */
+/** Offset of SCM Cipher Command Register */
 #define SCM_CCMD_REG		0x054
-/*! Offset of SCM Cipher Black RAM Start Address Register */
+/** Offset of SCM Cipher Black RAM Start Address Register */
 #define SCM_C_BLACK_ST_REG	0x058
-/*! Offset of SCM Internal Debug Register */
+/** Offset of SCM Internal Debug Register */
 #define SCM_DBG_STATUS_REG	0x05c
-/*! Offset of SCM Cipher IV 0 Register */
+/** Offset of SCM Cipher IV 0 Register */
 #define SCM_AES_CBC_IV0_REG	0x060
-/*! Offset of SCM Cipher IV 1 Register */
+/** Offset of SCM Cipher IV 1 Register */
 #define SCM_AES_CBC_IV1_REG	0x064
-/*! Offset of SCM Cipher IV 2 Register */
+/** Offset of SCM Cipher IV 2 Register */
 #define SCM_AES_CBC_IV2_REG	0x068
-/*! Offset of SCM Cipher IV 3 Register */
+/** Offset of SCM Cipher IV 3 Register */
 #define SCM_AES_CBC_IV3_REG	0x06c
-/*! Offset of SCM SMID Partition 0 Register */
+/** Offset of SCM SMID Partition 0 Register */
 #define SCM_SMID0_REG		0x080
-/*! Offset of SCM Partition 0 Access Permissions Register */
+/** Offset of SCM Partition 0 Access Permissions Register */
 #define SCM_ACC0_REG		0x084
-/*! Offset of SCM SMID Partition 1 Register */
+/** Offset of SCM SMID Partition 1 Register */
 #define SCM_SMID1_REG		0x088
-/*! Offset of SCM Partition 1 Access Permissions Register */
+/** Offset of SCM Partition 1 Access Permissions Register */
 #define SCM_ACC1_REG		0x08c
-/*! Offset of SCM SMID Partition 2 Register */
+/** Offset of SCM SMID Partition 2 Register */
 #define SCM_SMID2_REG		0x090
-/*! Offset of SCM Partition 2 Access Permissions Register */
+/** Offset of SCM Partition 2 Access Permissions Register */
 #define SCM_ACC2_REG		0x094
-/*! Offset of SCM SMID Partition 3 Register */
+/** Offset of SCM SMID Partition 3 Register */
 #define SCM_SMID3_REG		0x098
-/*! Offset of SCM Partition 3 Access Permissions Register */
+/** Offset of SCM Partition 3 Access Permissions Register */
 #define SCM_ACC3_REG		0x09c
-/*! Offset of SCM SMID Partition 4 Register */
+/** Offset of SCM SMID Partition 4 Register */
 #define SCM_SMID4_REG		0x0a0
-/*! Offset of SCM Partition 4 Access Permissions Register */
+/** Offset of SCM Partition 4 Access Permissions Register */
 #define SCM_ACC4_REG		0x0a4
-/*! Offset of SCM SMID Partition 5 Register */
+/** Offset of SCM SMID Partition 5 Register */
 #define SCM_SMID5_REG		0x0a8
-/*! Offset of SCM Partition 5 Access Permissions Register */
+/** Offset of SCM Partition 5 Access Permissions Register */
 #define SCM_ACC5_REG		0x0ac
-/*! Offset of SCM SMID Partition 6 Register */
+/** Offset of SCM SMID Partition 6 Register */
 #define SCM_SMID6_REG		0x0b0
-/*! Offset of SCM Partition 6 Access Permissions Register */
+/** Offset of SCM Partition 6 Access Permissions Register */
 #define SCM_ACC6_REG		0x0b4
-/*! Offset of SCM SMID Partition 7 Register */
+/** Offset of SCM SMID Partition 7 Register */
 #define SCM_SMID7_REG		0x0b8
-/*! Offset of SCM Partition 7 Access Permissions Register */
+/** Offset of SCM Partition 7 Access Permissions Register */
 #define SCM_ACC7_REG		0x0bc
-/*! Offset of SCM SMID Partition 8 Register */
+/** Offset of SCM SMID Partition 8 Register */
 #define SCM_SMID8_REG		0x0c0
-/*! Offset of SCM Partition 8 Access Permissions Register */
+/** Offset of SCM Partition 8 Access Permissions Register */
 #define SCM_ACC8_REG		0x0c4
-/*! Offset of SCM SMID Partition 9 Register */
+/** Offset of SCM SMID Partition 9 Register */
 #define SCM_SMID9_REG		0x0c8
-/*! Offset of SCM Partition 9 Access Permissions Register */
+/** Offset of SCM Partition 9 Access Permissions Register */
 #define SCM_ACC9_REG		0x0cc
-/*! Offset of SCM SMID Partition 10 Register */
+/** Offset of SCM SMID Partition 10 Register */
 #define SCM_SMID10_REG		0x0d0
-/*! Offset of SCM Partition 10 Access Permissions Register */
+/** Offset of SCM Partition 10 Access Permissions Register */
 #define SCM_ACC10_REG		0x0d4
-/*! Offset of SCM SMID Partition 11 Register */
+/** Offset of SCM SMID Partition 11 Register */
 #define SCM_SMID11_REG		0x0d8
-/*! Offset of SCM Partition 11 Access Permissions Register */
+/** Offset of SCM Partition 11 Access Permissions Register */
 #define SCM_ACC11_REG		0x0dc
-/*! Offset of SCM SMID Partition 12 Register */
+/** Offset of SCM SMID Partition 12 Register */
 #define SCM_SMID12_REG		0x0e0
-/*! Offset of SCM Partition 12 Access Permissions Register */
+/** Offset of SCM Partition 12 Access Permissions Register */
 #define SCM_ACC12_REG		0x0e4
-/*! Offset of SCM SMID Partition 13 Register */
+/** Offset of SCM SMID Partition 13 Register */
 #define SCM_SMID13_REG		0x0e8
-/*! Offset of SCM Partition 13 Access Permissions Register */
+/** Offset of SCM Partition 13 Access Permissions Register */
 #define SCM_ACC13_REG		0x0ec
-/*! Offset of SCM SMID Partition 14 Register */
+/** Offset of SCM SMID Partition 14 Register */
 #define SCM_SMID14_REG		0x0f0
-/*! Offset of SCM Partition 14 Access Permissions Register */
+/** Offset of SCM Partition 14 Access Permissions Register */
 #define SCM_ACC14_REG		0x0f4
-/*! Offset of SCM SMID Partition 15 Register */
+/** Offset of SCM SMID Partition 15 Register */
 #define SCM_SMID15_REG		0x0f8
-/*! Offset of SCM Partition 15 Access Permissions Register */
+/** Offset of SCM Partition 15 Access Permissions Register */
 #define SCM_ACC15_REG		0x0fc
-/*! @} */
+/** @} */
 
-/*! Number of bytes of register space for the SCM. */
+/** Number of bytes of register space for the SCM. */
 #define SCM_REG_BANK_SIZE	0x100
 
-/*! Number of bytes of register space for the SCM. */
+/** Number of bytes of register space for the SCM. */
 #define SCM_REG_BANK_SIZE	0x100
 
+/** Offset of the SMN registers */
 #define SMN_ADDR_OFFSET		0x100
 
-/*!
- * @name SMN Registers
- * These are the names of the SMN Registers
+/**
+ * @defgroup smnregs SMN Registers
+ *
+ * These values are offsets into the SCC for the Security Monitor
+ * (SMN) registers.  They are used in the @c register_offset parameter of the
+ * #scc_read_register() and #scc_write_register().
  */
-/*! @{ */
-/*! Offset of SMN Status Register */
+/** @addtogroup smnregs */
+/** @{ */
+/** Offset of SMN Status Register */
 #define SMN_STATUS_REG		(SMN_ADDR_OFFSET+0x00000000)
-/*! Offset of SMH Command Register */
+/** Offset of SMH Command Register */
 #define SMN_COMMAND_REG		(SMN_ADDR_OFFSET+0x00000004)
-/*! Offset of SMH Sequence Start Register */
+/** Offset of SMH Sequence Start Register */
 #define SMN_SEQ_START_REG	(SMN_ADDR_OFFSET+0x00000008)
-/*! Offset of SMH Sequence End Register */
+/** Offset of SMH Sequence End Register */
 #define SMN_SEQ_END_REG		(SMN_ADDR_OFFSET+0x0000000c)
-/*! Offset of SMH Sequence Check Register */
+/** Offset of SMH Sequence Check Register */
 #define SMN_SEQ_CHECK_REG	(SMN_ADDR_OFFSET+0x00000010)
-/*! Offset of SMH BitBank Count Register */
+/** Offset of SMH BitBank Count Register */
 #define SMN_BB_CNT_REG		(SMN_ADDR_OFFSET+0x00000014)
-/*! Offset of SMH BitBank Increment Register */
+/** Offset of SMH BitBank Increment Register */
 #define SMN_BB_INC_REG		(SMN_ADDR_OFFSET+0x00000018)
-/*! Offset of SMH BitBank Decrement Register */
+/** Offset of SMH BitBank Decrement Register */
 #define SMN_BB_DEC_REG		(SMN_ADDR_OFFSET+0x0000001c)
-/*! Offset of SMH Compare Register */
+/** Offset of SMH Compare Register */
 #define SMN_COMPARE_REG		(SMN_ADDR_OFFSET+0x00000020)
-/*! Offset of SMH Plaintext Check Register */
+/** Offset of SMH Plaintext Check Register */
 #define SMN_PT_CHK_REG		(SMN_ADDR_OFFSET+0x00000024)
-/*! Offset of SMH Ciphertext Check Register */
+/** Offset of SMH Ciphertext Check Register */
 #define SMN_CT_CHK_REG		(SMN_ADDR_OFFSET+0x00000028)
-/*! Offset of SMH Timer Initial Value Register */
+/** Offset of SMH Timer Initial Value Register */
 #define SMN_TIMER_IV_REG	(SMN_ADDR_OFFSET+0x0000002c)
-/*! Offset of SMH Timer Control Register */
+/** Offset of SMH Timer Control Register */
 #define SMN_TIMER_CTL_REG	(SMN_ADDR_OFFSET+0x00000030)
-/*! Offset of SMH Security Violation Register */
+/** Offset of SMH Security Violation Register */
 #define SMN_SEC_VIO_REG		(SMN_ADDR_OFFSET+0x00000034)
-/*! Offset of SMH Timer Register */
+/** Offset of SMH Timer Register */
 #define SMN_TIMER_REG		(SMN_ADDR_OFFSET+0x00000038)
-/*! Offset of SMH High-Assurance Control Register */
+/** Offset of SMH High-Assurance Control Register */
 #define SMN_HAC_REG		(SMN_ADDR_OFFSET+0x0000003c)
-/*! Number of bytes allocated to the SMN registers */
+/** Number of bytes allocated to the SMN registers */
 #define SMN_REG_BANK_SIZE	0x40
-/*! @} */
+/** @} */
 
-/*! Number of bytes of total register space for the SCC. */
+/** Number of bytes of total register space for the SCC. */
 #define SCC_ADDRESS_RANGE	(SMN_ADDR_OFFSET + SMN_REG_BANK_SIZE)
 
-/*!
+/**
  * @defgroup smnstatusregdefs SMN Status Register definitions (SMN_STATUS)
  */
-/*! @addtogroup smnstatusregdefs */
-/*! @{ */
-/*! SMN version id. */
+/** @addtogroup smnstatusregdefs */
+/** @{ */
+/** SMN version id. */
 #define SMN_STATUS_VERSION_ID_MASK        0xfc000000
-/*!  number of bits to shift #SMN_STATUS_VERSION_ID_MASK to get it to LSB */
+/**  number of bits to shift #SMN_STATUS_VERSION_ID_MASK to get it to LSB */
 #define SMN_STATUS_VERSION_ID_SHIFT       28
-/*! Illegal bus master access attempted. */
+/** Illegal bus master access attempted. */
 #define SMN_STATUS_ILLEGAL_MASTER         0x01000000
-/*! Scan mode entered/exited since last reset. */
+/** Scan mode entered/exited since last reset. */
 #define SMN_STATUS_SCAN_EXIT              0x00800000
-/*! Some security peripheral is initializing */
+/** Some security peripheral is initializing */
 #define SMN_STATUS_PERIP_INIT             0x00010000
-/*! Internal error detected in SMN. */
+/** Internal error detected in SMN. */
 #define SMN_STATUS_SMN_ERROR              0x00008000
-/*! SMN has an outstanding interrupt. */
+/** SMN has an outstanding interrupt. */
 #define SMN_STATUS_SMN_STATUS_IRQ         0x00004000
-/*! Software Alarm was triggered. */
+/** Software Alarm was triggered. */
 #define SMN_STATUS_SOFTWARE_ALARM         0x00002000
-/*! Timer has expired. */
+/** Timer has expired. */
 #define SMN_STATUS_TIMER_ERROR            0x00001000
-/*! Plaintext/Ciphertext compare failed. */
+/** Plaintext/Ciphertext compare failed. */
 #define SMN_STATUS_PC_ERROR               0x00000800
-/*! Bit Bank detected overflow or underflow */
+/** Bit Bank detected overflow or underflow */
 #define SMN_STATUS_BITBANK_ERROR          0x00000400
-/*! Algorithm Sequence Check failed. */
+/** Algorithm Sequence Check failed. */
 #define SMN_STATUS_ASC_ERROR              0x00000200
-/*! Security Policy Block detected error. */
+/** Security Policy Block detected error. */
 #define SMN_STATUS_SECURITY_POLICY_ERROR  0x00000100
-/*! Security Violation Active error. */
+/** Security Violation Active error. */
 #define SMN_STATUS_SEC_VIO_ACTIVE_ERROR   0x00000080
-/*! Processor booted from internal ROM. */
+/** Processor booted from internal ROM. */
 #define SMN_STATUS_INTERNAL_BOOT          0x00000020
-/*! SMN's internal state. */
+/** SMN's internal state. */
 #define SMN_STATUS_STATE_MASK             0x0000001F
-/*! Number of bits to shift #SMN_STATUS_STATE_MASK to get it to LSB. */
+/** Number of bits to shift #SMN_STATUS_STATE_MASK to get it to LSB. */
 #define SMN_STATUS_STATE_SHIFT            0
-/*! @} */
+/** @} */
 
-/*!
+/**
  * @defgroup sccscmstates SMN Model Secure State Controller States (SMN_STATE_MASK)
  */
-/*! @addtogroup sccscmstates */
-/*! @{ */
-/*! This is the first state of the SMN after power-on reset  */
+/** @addtogroup sccscmstates */
+/** @{ */
+/** This is the first state of the SMN after power-on reset  */
 #define SMN_STATE_START         0x0
-/*! The SMN is zeroizing its RAM during reset */
+/** The SMN is zeroizing its RAM during reset */
 #define SMN_STATE_ZEROIZE_RAM   0x5
-/*! SMN has passed internal checks, and is waiting for Software check-in */
+/** SMN has passed internal checks, and is waiting for Software check-in */
 #define SMN_STATE_HEALTH_CHECK  0x6
-/*! Fatal Security Violation.  SMN is locked, SCM is inoperative. */
+/** Fatal Security Violation.  SMN is locked, SCM is inoperative. */
 #define SMN_STATE_FAIL          0x9
-/*! SCC is in secure state.  SCM is using secret key. */
+/** SCC is in secure state.  SCM is using secret key. */
 #define SMN_STATE_SECURE        0xA
-/*! Due to non-fatal error, device is not secure.  SCM is using default key. */
+/** Due to non-fatal error, device is not secure.  SCM is using default key. */
 #define SMN_STATE_NON_SECURE    0xC
-/*! @} */
+/** @} */
 
-/*! @{ */
-/*! SCM Status bit: Key Status is Default Key in Use */
+/** @{ */
+/** SCM Status bit: Key Status is Default Key in Use */
 #define SCM_STATUS_KST_DEFAULT_KEY	0x80000000
-/*! SCM Status bit: Key Status is (reserved) */
+/** SCM Status bit: Key Status is (reserved) */
 #define SCM_STATUS_KST_RESERVED1	0x40000000
-/*! SCM Status bit: Key status is Wrong Key */
+/** SCM Status bit: Key status is Wrong Key */
 #define SCM_STATUS_KST_WRONG_KEY	0x20000000
-/*! SCM Status bit: Bad Key detected */
+/** SCM Status bit: Bad Key detected */
 #define SCM_STATUS_KST_BAD_KEY	0x10000000
-/*! SCM Status bit: Error has occurred */
+/** SCM Status bit: Error has occurred */
 #define SCM_STATUS_ERR		0x00008000
-/*! SCM Status bit: Monitor State is Failed */
+/** SCM Status bit: Monitor State is Failed */
 #define SCM_STATUS_MSS_FAIL	0x00004000
-/*! SCM Status bit: Monitor State is Secure */
+/** SCM Status bit: Monitor State is Secure */
 #define SCM_STATUS_MSS_SEC	0x00002000
-/*! SCM Status bit: Secure Storage is Failed */
+/** SCM Status bit: Secure Storage is Failed */
 #define SCM_STATUS_RSS_FAIL	0x00000400
-/*! SCM Status bit: Secure Storage is Secure */
+/** SCM Status bit: Secure Storage is Secure */
 #define SCM_STATUS_RSS_SEC	0x00000200
-/*! SCM Status bit: Secure Storage is Initializing */
+/** SCM Status bit: Secure Storage is Initializing */
 #define SCM_STATUS_RSS_INIT	0x00000100
-/*! SCM Status bit: Unique Number Valid */
+/** SCM Status bit: Unique Number Valid */
 #define SCM_STATUS_UNV		0x00000080
-/*! SCM Status bit: ?? */
+/** SCM Status bit: Big Endian mode */
 #define SCM_STATUS_BIG		0x00000040
-/*! SCM Status bit: Using Secret Key */
+/** SCM Status bit: Using Secret Key */
 #define SCM_STATUS_USK		0x00000020
-/*!  */
+/** SCM Status bit: Ram is being blocked */
 #define SCM_STATUS_BAR		0x00000010
-/*! Bit mask of SRS */
+/** Bit mask of SRS */
 #define SCM_STATUS_SRS_MASK	0x0000000F
-/*! Number of bits to shift SRS to/from MSb */
+/** Number of bits to shift SRS to/from MSb */
 #define SCM_STATUS_SRS_SHIFT	0
-/*! @} */
+/** @} */
 
-#define SCM_STATUS_SRS_RESET	0x0
-#define SCM_STATUS_SRS_READY	0x1
-#define SCM_STATUS_SRS_ZBUSY	0x2
-#define SCM_STATUS_SRS_CBUSY	0x3
-#define SCM_STATUS_SRS_ABUSY	0x4
-#define SCM_STATUS_SRS_ZDONE	0x5
-#define SCM_STATUS_SRS_CDONE	0x6
-#define SCM_STATUS_SRS_ZDONE2	0x7
-#define SCM_STATUS_SRS_CDONE2	0x8
-#define SCM_STATUS_SRS_ADONE	0xD
+#define SCM_STATUS_SRS_RESET	0x0	/**< Reset, Zeroise All */
+#define SCM_STATUS_SRS_READY	0x1	/**< All Ready */
+#define SCM_STATUS_SRS_ZBUSY	0x2	/**< Zeroize Busy (Partition Only) */
+#define SCM_STATUS_SRS_CBUSY	0x3	/**< Cipher Busy */
+#define SCM_STATUS_SRS_ABUSY	0x4	/**< All Busy */
+#define SCM_STATUS_SRS_ZDONE	0x5	/**< Zeroize Done, Cipher Ready */
+#define SCM_STATUS_SRS_CDONE	0x6	/**< Cipher Done, Zeroize Ready */
+#define SCM_STATUS_SRS_ZDONE2	0x7	/**< Zeroize Done, Cipher Busy */
+#define SCM_STATUS_SRS_CDONE2	0x8	/**< Cipher Done, Zeroize Busy */
+#define SCM_STATUS_SRS_ADONE	0xD	/**< All Done */
 
-// Format of the SCM VERSION ID REGISTER
-#define SCM_VER_BPP_MASK	0xFF000000
-#define SCM_VER_BPP_SHIFT 24
-#define SCM_VER_BPCB_MASK	0x001F0000
-#define SCM_VER_BPCB_SHIFT 16
-#define SCM_VER_NP_MASK		0x0000F000
-#define SCM_VER_NP_SHIFT 12
-#define SCM_VER_MAJ_MASK	0x00000F00
-#define SCM_VER_MAJ_SHIFT 8
-#define SCM_VER_MIN_MASK	0x000000FF
-#define SCM_VER_MIN_SHIFT	0
+/* Format of the SCM VERSION ID REGISTER */
+#define SCM_VER_BPP_MASK    0xFF000000	/**< Bytes Per Partition Mask */
+#define SCM_VER_BPP_SHIFT   24		/**< Bytes Per Partition Shift */
+#define SCM_VER_BPCB_MASK   0x001F0000	/**< Bytes Per Cipher Block Mask */
+#define SCM_VER_BPCB_SHIFT  16		/**< Bytes Per Cipher Block Shift */
+#define SCM_VER_NP_MASK     0x0000F000	/**< Number of Partitions Mask */
+#define SCM_VER_NP_SHIFT    12		/**< Number of Partitions Shift */
+#define SCM_VER_MAJ_MASK    0x00000F00	/**< Major Version Mask */
+#define SCM_VER_MAJ_SHIFT   8		/**< Major Version Shift */
+#define SCM_VER_MIN_MASK    0x000000FF	/**< Minor Version Mask */
+#define SCM_VER_MIN_SHIFT   0		/**< Minor Version Shift */
 
+/**< SCC Hardware version supported by this driver */
 #define SCM_MAJOR_VERSION_2 2
 
-// Format of the SCM ERROR STATUS REGISTER
-#define SCM_ERRSTAT_MID_MASK	0x00F00000
-#define SCM_ERRSTAT_MID_SHIFT	20
-#define SCM_ERRSTAT_ILM		0x00080000
-#define SCM_ERRSTAT_SUP		0x00008000
-#define SCM_ERRSTAT_ERC_MASK	0x00000F00
-#define SCM_ERRSTAT_ERC_SHIFT	8
-#define SCM_ERRSTAT_SMS_MASK	0x000000F0
-#define SCM_ERRSTAT_SMS_SHIFT	4
-#define SCM_ERRSTAT_SRS_MASK	0x0000000F
-#define SCM_ERRSTAT_SRS_SHIFT	0
+/* Format of the SCM ERROR STATUS REGISTER */
+#define SCM_ERRSTAT_MID_MASK    0x00F00000  /**< Master ID Mask */
+#define SCM_ERRSTAT_MID_SHIFT   20	    /**< Master ID Shift */
+#define SCM_ERRSTAT_ILM         0x00080000  /**< Illegal Master */
+#define SCM_ERRSTAT_SUP         0x00008000  /**< Supervisor Access */
+#define SCM_ERRSTAT_ERC_MASK    0x00000F00  /**< Error Code Mask */
+#define SCM_ERRSTAT_ERC_SHIFT   8	    /**< Error Code Shift */
+#define SCM_ERRSTAT_SMS_MASK    0x000000F0  /**< Secure Monitor State Mask */
+#define SCM_ERRSTAT_SMS_SHIFT   4	    /**< Secure Monitor State Shift */
+#define SCM_ERRSTAT_SRS_MASK    0x0000000F  /**< Secure Ram State Mask */
+#define SCM_ERRSTAT_SRS_SHIFT   0	    /**< Secure Ram State Shift */
 
-#define SCM_ERCD_UNK_ADDR       0x1
-#define SCM_ERCD_UNK_CMD        0x2
-#define SCM_ERCD_READ_PERM      0x3
-#define SCM_ERCD_WRITE_PERM     0x4
-#define SCM_ERCD_DMA_ERROR      0x5
-#define SCM_ERCD_BLK_OVFL       0x6
-#define SCM_ERCD_NO_KEY         0x7
-#define SCM_ERCD_ZRZ_OVFL       0x8
-#define SCM_ERCD_CPHR_OVFL      0x9
-#define SCM_ERCD_PROC_INTR      0xA
-#define SCM_ERCD_WRNG_KEY       0xB
-#define SCM_ERCD_DEVICE_BUSY    0xC
-#define SCM_ERCD_UNALGN_ADDR    0xD
+/* SCM ERROR STATUS REGISTER ERROR CODES */
+#define SCM_ERCD_UNK_ADDR       0x1 /**< Unknown Address */
+#define SCM_ERCD_UNK_CMD        0x2 /**< Unknown Command */
+#define SCM_ERCD_READ_PERM      0x3 /**< Read Permission Error */
+#define SCM_ERCD_WRITE_PERM     0x4 /**< Write Permission Error */
+#define SCM_ERCD_DMA_ERROR      0x5 /**< DMA Error */
+#define SCM_ERCD_BLK_OVFL       0x6 /**< Encryption Block Length Overflow */
+#define SCM_ERCD_NO_KEY         0x7 /**< Key Not Engaged */
+#define SCM_ERCD_ZRZ_OVFL       0x8 /**< Zeroize Command Queue Overflow */
+#define SCM_ERCD_CPHR_OVFL      0x9 /**< Cipher Command Queue Overflow */
+#define SCM_ERCD_PROC_INTR      0xA /**< Process Interrupted */
+#define SCM_ERCD_WRNG_KEY       0xB /**< Wrong Key */
+#define SCM_ERCD_DEVICE_BUSY    0xC /**< Device Busy */
+#define SCM_ERCD_UNALGN_ADDR    0xD /**< DMA Unaligned Address */
 
-// Format of the CIPHER COMMAND REGISTER
-#define SCM_CCMD_LENGTH_MASK	0xFFF00000
-#define SCM_CCMD_LENGTH_SHIFT	20
-#define SCM_CCMD_OFFSET_MASK	0x000FFF00
-#define SCM_CCMD_OFFSET_SHIFT	8
-#define SCM_CCMD_PART_MASK	0x000000F0
-#define SCM_CCMD_PART_SHIFT	4
-#define SCM_CCMD_CCMD_MASK	0x0000000F
-#define SCM_CCMD_CCMD_SHIFT	0
+/* Format of the CIPHER COMMAND REGISTER */
+#define SCM_CCMD_LENGTH_MASK	0xFFF00000 /**< Cipher Length Mask */
+#define SCM_CCMD_LENGTH_SHIFT	20	   /**< Cipher Length Shift */
+#define SCM_CCMD_OFFSET_MASK	0x000FFF00 /**< Block Offset Mask */
+#define SCM_CCMD_OFFSET_SHIFT	8	   /**< Block Offset Shift */
+#define SCM_CCMD_PART_MASK	0x000000F0     /**< Partition Number Mask */
+#define SCM_CCMD_PART_SHIFT	4	       /**< Partition Number Shift */
+#define SCM_CCMD_CCMD_MASK	0x0000000F     /**< Cipher Command Mask */
+#define SCM_CCMD_CCMD_SHIFT	0	       /**< Cipher Command Shift */
 
-// Values for SCM_CCMD_CCMD field
-#define SCM_CCMD_AES_DEC_ECB 1
-#define SCM_CCMD_AES_ENC_ECB 3
-#define SCM_CCMD_AES_DEC_CBC 5
-#define SCM_CCMD_AES_ENC_CBC 7
+/* Values for SCM_CCMD_CCMD field */
+#define SCM_CCMD_AES_DEC_ECB 1 /**< Decrypt without Chaining (ECB) */
+#define SCM_CCMD_AES_ENC_ECB 3 /**< Encrypt without Chaining (ECB) */
+#define SCM_CCMD_AES_DEC_CBC 5 /**< Decrypt with Chaining (CBC) */
+#define SCM_CCMD_AES_ENC_CBC 7 /**< Encrypt with Chaining (CBC) */
 
-#define SCM_CCMD_AES     1
-#define SCM_CCMD_DEC     0
-#define SCM_CCMD_ENC     2
-#define SCM_CCMD_ECB     0
-#define SCM_CCMD_CBC     4
+#define SCM_CCMD_AES     1     /**< Use AES Mode */
+#define SCM_CCMD_DEC     0     /**< Decrypt */
+#define SCM_CCMD_ENC     2     /**< Encrypt */
+#define SCM_CCMD_ECB     0     /**< Perform operation without chaining (ECB) */
+#define SCM_CCMD_CBC     4     /**< Perform operation with chaining (CBC) */
 
-// Format of the ZEROIZE COMMAND REGISTER
-#define SCM_ZCMD_PART_MASK	0x000000F0
-#define SCM_ZCMD_PART_SHIFT	4
-#define SCM_ZCMD_CCMD_MASK	0x0000000F
-#define SCM_ZCMD_CCMD_SHIFT	0
+/* Format of the ZEROIZE COMMAND REGISTER */
+#define SCM_ZCMD_PART_MASK	0x000000F0  /**< Target Partition Mask */
+#define SCM_ZCMD_PART_SHIFT	4	    /**< Target Partition Shift */
+#define SCM_ZCMD_CCMD_MASK	0x0000000F  /**< Zeroize Command Mask */
+#define SCM_ZCMD_CCMD_SHIFT	0	    /**< Zeroize Command Shift */
 
 /* MASTER ACCESS PERMISSIONS REGISTER */
-/*! SCM Access Permission: Do not zeroize/deallocate partition on SMN Fail state */
+/* Note that API users should use the FSL_PERM_ defines instead of these */
+/** SCM Access Permission: Do not zeroize/deallocate partition
+	on SMN Fail state */
 #define SCM_PERM_NO_ZEROIZE	0x10000000
-/*! SCM Access Permission: Ignore Supervisor/User mode in permission determination */
+/** SCM Access Permission: Ignore Supervisor/User mode
+	in permission determination */
 #define SCM_PERM_HD_SUP_DISABLE	0x00000800
-/*! SCM Access Permission: Allow Read Access to  Host Domain */
+/** SCM Access Permission: Allow Read Access to  Host Domain */
 #define SCM_PERM_HD_READ	0x00000400
-/*! SCM Access Permission: Allow Write Access to  Host Domain */
+/** SCM Access Permission: Allow Write Access to  Host Domain */
 #define SCM_PERM_HD_WRITE	0x00000200
-/*! SCM Access Permission: Allow Execute Access to  Host Domain */
+/** SCM Access Permission: Allow Execute Access to  Host Domain */
 #define SCM_PERM_HD_EXECUTE	0x00000100
-/*! SCM Access Permission: Allow Read Access to Trusted Host Domain */
+/** SCM Access Permission: Allow Read Access to Trusted Host Domain */
 #define SCM_PERM_TH_READ	0x00000040
-/*! SCM Access Permission: Allow Write Access to Trusted Host Domain */
+/** SCM Access Permission: Allow Write Access to Trusted Host Domain */
 #define SCM_PERM_TH_WRITE	0x00000020
-/*! SCM Access Permission: Allow Read Access to Other/World Domain */
+/** SCM Access Permission: Allow Read Access to Other/World Domain */
 #define SCM_PERM_OT_READ	0x00000004
-/*! SCM Access Permission: Allow Write Access to Other/World Domain */
+/** SCM Access Permission: Allow Write Access to Other/World Domain */
 #define SCM_PERM_OT_WRITE	0x00000002
-/*! SCM Access Permission: Allow Execute Access to Other/World Domain */
+/** SCM Access Permission: Allow Execute Access to Other/World Domain */
 #define SCM_PERM_OT_EXECUTE	0x00000001
+/**< Valid bits that can be set in the Permissions register */
+#define SCM_PERM_MASK 0xC0000F67
 
-// Zeroize
-#define ZCMD_DEALLOC_PART 3	///< Deallocate Partition
+/* Zeroize Command register definitions */
+#define ZCMD_DEALLOC_PART 3	 /**< Deallocate Partition */
+#define Z_INT_EN	0x00000002   /**< Zero Interrupt Enable */
 
-#define Z_INT_EN	0x00000002	///< Zero Interrupt Enable
-
-/*!
- * @defgroup smncommandregdefs SMN Command Register Definitions (SMN_COMMAND)
+/**
+ * @defgroup scmpartitionownersregdefs SCM Partition Owners Register
  */
-/*! @addtogroup smncommandregdefs */
-/*! @{ */
-#define SMN_COMMAND_ZEROS_MASK   0xfffffff0	/*!< These bits are unimplemented
-						   or reserved */
-#define SMN_COMMAND_CLEAR_INTERRUPT     0x8	/*!< Clear SMN Interrupt */
-#define SMN_COMMAND_CLEAR_BIT_BANK      0x4	/*!< Clear SMN Bit Bank */
-#define SMN_COMMAND_ENABLE_INTERRUPT    0x2	/*!< Enable SMN Interrupts */
-#define SMN_COMMAND_SET_SOFTWARE_ALARM  0x1	/*!< Set Software Alarm */
-/*! @} */
+/** @addtogroup scmpartitionownersregdefs */
+/** @{ */
+/** Number of bits to shift partition number to get to its field. */
+#define SCM_POWN_SHIFT   2
+/** Mask for a field once the register has been shifted. */
+#define SCM_POWN_MASK    3
+/** Partition is free */
+#define SCM_POWN_PART_FREE       0
+/** Partition is unable to be allocated */
+#define SCM_POWN_PART_UNUSABLE   1
+/** Partition is owned by another master */
+#define SCM_POWN_PART_OTHER      2
+/** Partition is owned by this master */
+#define SCM_POWN_PART_OWNED      3
+/** @} */
 
-/*!
+/**
+ * @defgroup smnpartitionsengagedregdefs SCM Partitions Engaged Register
+ */
+/** @addtogroup smnpartitionsengagedregdefs */
+/** @{ */
+/** Number of bits to shift partition number to get to its field. */
+#define SCM_PENG_SHIFT   1
+/** Engaged value for a field once the register has been shifted. */
+#define SCM_PENG_ENGAGED    1
+/** @} */
+
+/** Number of bytes between each subsequent SMID register */
+#define SCM_SMID_WIDTH      8
+
+/**
+ * @defgroup smncommandregdefs SMN Command Register Definitions (SMN_COMMAND_REG)
+ */
+/** @addtogroup smncommandregdefs */
+/** @{ */
+
+/** These bits are unimplemented or reserved */
+#define SMN_COMMAND_ZEROS_MASK   0xfffffff0
+#define SMN_COMMAND_CLEAR_INTERRUPT     0x8 /**< Clear SMN Interrupt */
+#define SMN_COMMAND_CLEAR_BIT_BANK      0x4 /**< Clear SMN Bit Bank */
+#define SMN_COMMAND_ENABLE_INTERRUPT    0x2 /**< Enable SMN Interrupts */
+#define SMN_COMMAND_SET_SOFTWARE_ALARM  0x1 /**< Set Software Alarm */
+/** @} */
+
+/**
  * @defgroup smntimercontroldefs SMN Timer Control Register definitions (SMN_TIMER_CONTROL)
  */
-/*! @addtogroup smntimercontroldefs */
-/*! @{ */
-/*! These bits are reserved or zero */
+/** @addtogroup smntimercontroldefs */
+/** @{ */
+/** These bits are reserved or zero */
 #define SMN_TIMER_CTRL_ZEROS_MASK 0xfffffffc
-/*! Load the timer from #SMN_TIMER_IV */
+/** Load the timer from #SMN_TIMER_IV_REG */
 #define SMN_TIMER_LOAD_TIMER             0x2
-/*! Setting to zero stops the Timer */
+/** Setting to zero stops the Timer */
 #define SMN_TIMER_STOP_MASK              0x1
-/*! Setting this value starts the timer */
+/** Setting this value starts the timer */
 #define SMN_TIMER_START_TIMER            0x1
-/*! @} */
+/** @} */
 
-/*!
+/**
  * @defgroup scmchainmodedefs SCM_CHAINING_MODE_MASK - Bit definitions
  */
-/*! @addtogroup scmchainmodedefs */
-/*! @{ */
-#define SCM_CBC_MODE            0x2	/*!< Cipher block chaining */
-#define SCM_ECB_MODE            0x0	/*!< Electronic codebook. */
-/*! @} */
+/** @addtogroup scmchainmodedefs */
+/** @{ */
+#define SCM_CBC_MODE            0x2 /**< Cipher block chaining */
+#define SCM_ECB_MODE            0x0 /**< Electronic codebook. */
+/** @} */
 
 /* Bit definitions in the SCM_CIPHER_MODE_MASK */
-/*!
+/**
  * @defgroup scmciphermodedefs SCM_CIPHER_MODE_MASK - Bit definitions
  */
-/*! @{ */
-#define SCM_DECRYPT_MODE        0x1	/*!< decrypt from black to red memory */
-#define SCM_ENCRYPT_MODE        0x0	/*!< encrypt from red to black memory */
-/*! @} */
-/*!
+/** @addtogroup scmciphermodedefs */
+/** @{ */
+#define SCM_DECRYPT_MODE        0x1 /**< decrypt from black to red memory */
+#define SCM_ENCRYPT_MODE        0x0 /**< encrypt from red to black memory */
+/** @} */
+
+/**
  * @defgroup smndbgdetdefs SMN Debug Detector Status Register (SCM_DEBUG_DETECT_STAT)
  */
-/*! @addtogroup smndbgdetdefs */
-/*! @{ */
-#define SMN_DBG_ZEROS_MASK  0xfffff000	/*!< These bits are zero or reserved */
-#define SMN_DBG_D12             0x0800	/*!< Error detected on Debug Port D12 */
-#define SMN_DBG_D11             0x0400	/*!< Error detected on Debug Port D11 */
-#define SMN_DBG_D10             0x0200	/*!< Error detected on Debug Port D10 */
-#define SMN_DBG_D9              0x0100	/*!< Error detected on Debug Port D9 */
-#define SMN_DBG_D8              0x0080	/*!< Error detected on Debug Port D8 */
-#define SMN_DBG_D7              0x0040	/*!< Error detected on Debug Port D7 */
-#define SMN_DBG_D6              0x0020	/*!< Error detected on Debug Port D6 */
-#define SMN_DBG_D5              0x0010	/*!< Error detected on Debug Port D5 */
-#define SMN_DBG_D4              0x0008	/*!< Error detected on Debug Port D4 */
-#define SMN_DBG_D3              0x0004	/*!< Error detected on Debug Port D3 */
-#define SMN_DBG_D2              0x0002	/*!< Error detected on Debug Port D2 */
-#define SMN_DBG_D1              0x0001	/*!< Error detected on Debug Port D1 */
-/*! @} */
+/** @addtogroup smndbgdetdefs */
+/** @{ */
+#define SMN_DBG_ZEROS_MASK  0xfffff000 /**< These bits are zero or reserved */
+#define SMN_DBG_D12             0x0800 /**< Error detected on Debug Port D12 */
+#define SMN_DBG_D11             0x0400 /**< Error detected on Debug Port D11 */
+#define SMN_DBG_D10             0x0200 /**< Error detected on Debug Port D10 */
+#define SMN_DBG_D9              0x0100 /**< Error detected on Debug Port D9 */
+#define SMN_DBG_D8              0x0080 /**< Error detected on Debug Port D8 */
+#define SMN_DBG_D7              0x0040 /**< Error detected on Debug Port D7 */
+#define SMN_DBG_D6              0x0020 /**< Error detected on Debug Port D6 */
+#define SMN_DBG_D5              0x0010 /**< Error detected on Debug Port D5 */
+#define SMN_DBG_D4              0x0008 /**< Error detected on Debug Port D4 */
+#define SMN_DBG_D3              0x0004 /**< Error detected on Debug Port D3 */
+#define SMN_DBG_D2              0x0002 /**< Error detected on Debug Port D2 */
+#define SMN_DBG_D1              0x0001 /**< Error detected on Debug Port D1 */
+/** @} */
 
-/*! Mask for the usable bits of the Sequence Start Register
-    (#SMN_SEQUENCE_START) */
+/** Mask for the usable bits of the Sequence Start Register
+    (#SMN_SEQ_START_REG) */
 #define SMN_SEQUENCE_START_MASK    0x0000ffff
 
-/*! Mask for the usable bits of the Sequence End Register
-    (#SMN_SEQUENCE_END) */
+/** Mask for the usable bits of the Sequence End Register
+    (#SMN_SEQ_END_REG) */
 #define SMN_SEQUENCE_END_MASK      0x0000ffff
 
-/*! Mask for the usable bits of the Sequence Check Register
-    (#SMN_SEQUENCE_CHECK) */
+/** Mask for the usable bits of the Sequence Check Register
+    (#SMN_SEQ_CHECK_REG) */
 #define SMN_SEQUENCE_CHECK_MASK    0x0000ffff
 
-/*! Mask for the usable bits of the Bit Counter Register
-    (#SMN_BIT_COUNT) */
+/** Mask for the usable bits of the Bit Counter Register
+    (#SMN_BB_CNT_REG) */
 #define SMN_BIT_COUNT_MASK         0x000007ff
 
-/*! Mask for the usable bits of the Bit Bank Increment Size Register
-    (#SMN_BITBANK_INC_SIZE) */
+/** Mask for the usable bits of the Bit Bank Increment Size Register
+    (#SMN_BB_INC_REG) */
 #define SMN_BITBANK_INC_SIZE_MASK  0x000007ff
 
-/*! Mask for the usable bits of the Bit Bank Decrement Register
-    (#SMN_BITBANK_DECREMENT) */
+/** Mask for the usable bits of the Bit Bank Decrement Register
+    (#SMN_BB_DEC_REG) */
 #define SMN_BITBANK_DECREMENT_MASK 0x000007ff
 
-/*! Mask for the usable bits of the Compare Size Register
-    (#SMN_COMPARE_SIZE) */
+/** Mask for the usable bits of the Compare Size Register
+    (#SMN_COMPARE_REG) */
 #define SMN_COMPARE_SIZE_MASK      0x0000003f
 
 /* Close out marker for C++ compilers */

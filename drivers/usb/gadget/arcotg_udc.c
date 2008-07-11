@@ -1837,7 +1837,7 @@ static void setup_received_irq(struct arcotg_udc *udc,
 
 	if (ptc) {
 		if (ep0_prime_status(udc, EP_DIR_IN))
-			Ep0Stall(udc);
+			ep0stall(udc);
 
 		usb_slave_regs->portsc1 |= ptc << 16;
 		pr_debug("udc: switch to test mode.\n");

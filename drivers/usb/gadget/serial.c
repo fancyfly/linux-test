@@ -1735,7 +1735,7 @@ static int gs_setup_class(struct usb_gadget *gadget,
 		 * call management, so we should be able to get by without
 		 * handling those "required" commands (except by stalling).
 		 */
-		pr_err("gs_setup: unknown class request, "
+		printk(KERN_ERR "gs_setup: unknown class request, "
 				"type=%02x, request=%02x, value=%04x, "
 				"index=%04x, length=%d\n",
 			ctrl->bRequestType, ctrl->bRequest,

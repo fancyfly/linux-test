@@ -557,6 +557,13 @@ static void __init mxc_init_pata(void)
 }
 #endif				/* CONFIG_PATA_FSL */
 
+static void pmic_power_off(void)
+{
+#ifdef CONFIG_MXC_PMIC_MC9SDZ60
+	pmic_write_reg(REG_MCU_POWER_CTL, 0x10, 0x10);
+#endif
+}
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -609,6 +616,8 @@ static void __init mxc_board_init(void)
 				ARRAY_SIZE(mxc_spi_board_info));
 	mxc_init_mmc();
 	mxc_init_pata();
+
+	pm_power_off = pmic_power_off;
 }
 
 #define PLL_PCTL_REG(brmo, pd, mfd, mfi, mfn)		\

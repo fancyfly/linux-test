@@ -219,6 +219,20 @@ static inline void mxc_init_fb(void)
 }
 #endif
 
+#ifdef CONFIG_I2C_MXC
+
+#ifdef CONFIG_I2C_MXC_SELECT1
+static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
+};
+#endif
+
+#ifdef CONFIG_I2C_MXC_SELECT2
+static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
+};
+#endif
+
+#endif
+
 static u32 cpld_base_addr;
 
 /*lan9217 device*/
@@ -436,6 +450,21 @@ static void __init mxc_board_init(void)
 	mxc_init_fb();
 	mxc_init_keypad();
 	mxc_init_nand_mtd();
+
+#ifdef CONFIG_I2C_MXC
+
+#ifdef CONFIG_I2C_MXC_SELECT1
+	i2c_register_board_info(0, mxc_i2c0_board_info,
+				ARRAY_SIZE(mxc_i2c0_board_info));
+#endif
+
+#ifdef CONFIG_I2C_MXC_SELECT2
+	i2c_register_board_info(1, mxc_i2c1_board_info,
+				ARRAY_SIZE(mxc_i2c1_board_info));
+#endif
+
+#endif
+
 }
 
 /*

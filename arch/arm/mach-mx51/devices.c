@@ -322,13 +322,13 @@ void __init mxc_init_spi(void)
  */
 static struct resource mxci2c1_resources[] = {
 	[0] = {
-	       .start = I2C_BASE_ADDR,
-	       .end = I2C_BASE_ADDR + SZ_4K - 1,
+	       .start = I2C1_BASE_ADDR,
+	       .end = I2C1_BASE_ADDR + SZ_4K - 1,
 	       .flags = IORESOURCE_MEM,
 	       },
 	[1] = {
-	       .start = MXC_INT_I2C,
-	       .end = MXC_INT_I2C,
+	       .start = MXC_INT_I2C1,
+	       .end = MXC_INT_I2C1,
 	       .flags = IORESOURCE_IRQ,
 	       },
 };

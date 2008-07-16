@@ -786,7 +786,7 @@ static struct clk i2c_clk[] = {
 	{
 	 .name = "i2c_clk",
 	 .id = 0,
-	 .parent = &ipg_clk,
+	 .parent = &ipg_perclk,
 	 .enable_reg = MXC_CCM_CCGR1,
 	 .enable_shift = MXC_CCM_CCGR1_CG9_OFFSET,
 	 .enable = _clk_enable,
@@ -795,7 +795,7 @@ static struct clk i2c_clk[] = {
 	{
 	 .name = "i2c_clk",
 	 .id = 1,
-	 .parent = &ipg_clk,
+	 .parent = &ipg_perclk,
 	 .enable_reg = MXC_CCM_CCGR1,
 	 .enable_shift = MXC_CCM_CCGR1_CG10_OFFSET,
 	 .enable = _clk_enable,

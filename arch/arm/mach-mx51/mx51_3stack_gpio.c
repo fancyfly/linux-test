@@ -341,7 +341,68 @@ EXPORT_SYMBOL(gpio_owire_inactive);
  */
 void gpio_i2c_active(int i2c_num)
 {
+	switch (i2c_num) {
+	case 0:
+		/*i2c1 sda */
+		mxc_request_iomux(MX51_PIN_CSPI1_MOSI,
+				  IOMUX_CONFIG_ALT1 | IOMUX_CONFIG_SION);
+		mxc_iomux_set_input(MUX_IN_I2C1_IPP_SDA_IN_SELECT_INPUT,
+				    INPUT_CTL_PATH1);
+		mxc_iomux_set_pad(MX51_PIN_CSPI1_MOSI,
+				  PAD_CTL_SRE_FAST |
+				  PAD_CTL_ODE_OPENDRAIN_ENABLE |
+				  PAD_CTL_DRV_HIGH |
+				  PAD_CTL_100K_PU |
+				  PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_DRV_VOT_LOW | PAD_CTL_DDR_INPUT_CMOS);
+
+		/*i2c1 scl */
+		mxc_request_iomux(MX51_PIN_CSPI1_SCLK,
+				  IOMUX_CONFIG_ALT1 | IOMUX_CONFIG_SION);
+		mxc_iomux_set_input(MUX_IN_I2C1_IPP_SCL_IN_SELECT_INPUT,
+				    INPUT_CTL_PATH1);
+		mxc_iomux_set_pad(MX51_PIN_CSPI1_SCLK,
+				  PAD_CTL_SRE_FAST |
+				  PAD_CTL_ODE_OPENDRAIN_ENABLE |
+				  PAD_CTL_DRV_HIGH |
+				  PAD_CTL_100K_PU |
+				  PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_DRV_VOT_LOW | PAD_CTL_DDR_INPUT_CMOS);
+		break;
+	case 1:
+		mxc_request_iomux(MX51_PIN_GPIO1_2,
+				  IOMUX_CONFIG_ALT2 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX51_PIN_GPIO1_3,
+				  IOMUX_CONFIG_ALT2 | IOMUX_CONFIG_SION);
+
+		mxc_iomux_set_input(MUX_IN_I2C2_IPP_SDA_IN_SELECT_INPUT,
+				    INPUT_CTL_PATH3);
+		mxc_iomux_set_input(MUX_IN_I2C2_IPP_SCL_IN_SELECT_INPUT,
+				    INPUT_CTL_PATH3);
+
+		mxc_iomux_set_pad(MX51_PIN_GPIO1_2,
+				  PAD_CTL_SRE_FAST |
+				  PAD_CTL_ODE_OPENDRAIN_ENABLE |
+				  PAD_CTL_DRV_HIGH |
+				  PAD_CTL_100K_PU |
+				  PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_DRV_VOT_LOW | PAD_CTL_DDR_INPUT_CMOS);
+		mxc_iomux_set_pad(MX51_PIN_GPIO1_3,
+				  PAD_CTL_SRE_FAST |
+				  PAD_CTL_ODE_OPENDRAIN_ENABLE |
+				  PAD_CTL_DRV_HIGH |
+				  PAD_CTL_100K_PU |
+				  PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_DRV_VOT_LOW | PAD_CTL_DDR_INPUT_CMOS);
+
+		break;
+	case 2:
+		break;
+	default:
+		break;
+	}
 }
+EXPORT_SYMBOL(gpio_i2c_active);
 
 /*!
  * Setup GPIO for an I2C device to be inactive
@@ -350,7 +411,42 @@ void gpio_i2c_active(int i2c_num)
  */
 void gpio_i2c_inactive(int i2c_num)
 {
+	switch (i2c_num) {
+	case 0:
+		/*i2c1 sda */
+		mxc_request_iomux(MX51_PIN_CSPI1_MOSI, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_input(MUX_IN_I2C1_IPP_SDA_IN_SELECT_INPUT,
+				    INPUT_CTL_PATH0);
+		mxc_iomux_set_pad(MX51_PIN_CSPI1_MOSI,
+				  PAD_CTL_PUE_KEEPER | PAD_CTL_PKE_ENABLE);
+		/*i2c1 scl */
+		mxc_request_iomux(MX51_PIN_CSPI1_SCLK, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_input(MUX_IN_I2C1_IPP_SCL_IN_SELECT_INPUT,
+				    INPUT_CTL_PATH0);
+		mxc_iomux_set_pad(MX51_PIN_CSPI1_SCLK,
+				  PAD_CTL_PUE_KEEPER | PAD_CTL_PKE_ENABLE);
+		break;
+	case 1:
+		mxc_request_iomux(MX51_PIN_GPIO1_2, IOMUX_CONFIG_ALT0);
+		mxc_request_iomux(MX51_PIN_GPIO1_3, IOMUX_CONFIG_ALT0);
+
+		mxc_iomux_set_input(MUX_IN_I2C2_IPP_SDA_IN_SELECT_INPUT,
+				    INPUT_CTL_PATH0);
+		mxc_iomux_set_input(MUX_IN_I2C2_IPP_SCL_IN_SELECT_INPUT,
+				    INPUT_CTL_PATH0);
+
+		mxc_iomux_set_pad(MX51_PIN_GPIO1_2,
+				  PAD_CTL_PUE_KEEPER | PAD_CTL_PKE_ENABLE);
+		mxc_iomux_set_pad(MX51_PIN_GPIO1_3,
+				  PAD_CTL_PUE_KEEPER | PAD_CTL_PKE_ENABLE);
+		break;
+	case 2:
+		break;
+	default:
+		break;
+	}
 }
+EXPORT_SYMBOL(gpio_i2c_inactive);
 
 /*!
  * This function activates DAM ports 4 & 5 to enable

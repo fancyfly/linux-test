@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -20,6 +20,7 @@
 #include <linux/list.h>
 #include <linux/usb.h>
 #include <linux/platform_device.h>
+#include <linux/usb/ch9.h>
 #include <linux/usb_gadget.h>
 #include <linux/time.h>
 
@@ -627,10 +628,8 @@ static int fsl_otg_set_power(struct otg_transceiver *otg_p, unsigned mA)
  */
 static void fsl_otg_event(struct work_struct *work)
 {
-	struct delayed_work *dwork =
-	    container_of(work, struct delayed_work, work);
-	struct fsl_otg *otg = container_of(dwork, struct fsl_otg, otg_event);
-	struct otg_fsm *fsm = &otg->fsm;
+	struct fsl_otg *og = container_of(work, struct fsl_otg, otg_event.work);
+	struct otg_fsm *fsm = &og->fsm;
 
 	if (fsm->id) {		/* switch to gadget */
 		fsl_otg_start_host(fsm, 0);
@@ -672,13 +671,12 @@ irqreturn_t fsl_otg_isr(int irq, void *dev_id)
 			VDBG("IRQ=ID now=%d", fsm->id);
 
 			if (fsm->id) {	/* switch to gadget */
-				schedule_delayed_work((struct delayed_work *)
-						      &((struct fsl_otg *)
+				schedule_delayed_work(&((struct fsl_otg *)
 							dev_id)->otg_event, 25);
 			} else {	/* switch to host */
-				cancel_delayed_work((struct delayed_work *)
-						    &((struct fsl_otg *)
-						      dev_id)->otg_event);
+				cancel_delayed_work(&
+						    ((struct fsl_otg *)dev_id)->
+						    otg_event);
 				fsl_otg_start_gadget(fsm, 0);
 				otg_drv_vbus(fsm, 1);
 				fsl_otg_start_host(fsm, 1);
@@ -799,8 +797,8 @@ int usb_otg_start(struct platform_device *pdev)
 	}
 	p_otg->irq = res->start;
 	DBG("requesting irq %d", p_otg->irq);
-	status =
-	    request_irq(p_otg->irq, fsl_otg_isr, IRQF_SHARED, "fsl_arc", p_otg);
+	status = request_irq(p_otg->irq, fsl_otg_isr, IRQF_SHARED, "fsl_arc",
+			     p_otg);
 	if (status) {
 		dev_dbg(p_otg->otg.dev, "can't get IRQ %d, error %d\n",
 			p_otg->irq, status);

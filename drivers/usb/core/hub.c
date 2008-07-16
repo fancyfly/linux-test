@@ -894,14 +894,6 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	desc = intf->cur_altsetting;
 	hdev = interface_to_usbdev(intf);
 
-	/* With OTG enabled, suspending root hub results in gadget not
-	 * working because gadget uses the same root hub. We disable
-	 * this feature when OTG is selected.
-	 */
-#ifdef CONFIG_USB_EHCI_ARC_OTG
-	hdev->autosuspend_disabled = 1;
-#endif
-
 #ifdef	CONFIG_USB_OTG_BLACKLIST_HUB
 	if (hdev->parent) {
 		dev_warn(&intf->dev, "ignoring external hub\n");
@@ -1396,6 +1388,10 @@ int usb_new_device(struct usb_device *udev)
 	udev->dev.devt = MKDEV(USB_DEVICE_MAJOR,
 			(((udev->bus->busnum-1) * 128) + (udev->devnum-1)));
 
+	/* Increment the parent's count of unsuspended children */
+	if (udev->parent)
+		usb_autoresume_device(udev->parent);
+
 	/* Register the device.  The device driver is responsible
 	 * for adding the device files to sysfs and for configuring
 	 * the device.
@@ -1403,12 +1399,10 @@ int usb_new_device(struct usb_device *udev)
 	err = device_add(&udev->dev);
 	if (err) {
 		dev_err(&udev->dev, "can't device_add, error %d\n", err);
+		if (udev->parent)
+			usb_autosuspend_device(udev->parent);
 		goto fail;
 	}
-
-	/* Increment the parent's count of unsuspended children */
-	if (udev->parent)
-		usb_autoresume_device(udev->parent);
 
 exit:
 	return err;

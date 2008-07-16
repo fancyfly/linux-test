@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -273,6 +273,7 @@ static struct fsl_usb2_platform_data fsl_otg_config = {
 	.usbmode = (u32) & UOG_USBMODE,
 	.power_budget = 150,	/* 150 mA max power */
 #if defined(CONFIG_MC13783_MXC)
+	.operating_mode = FSL_USB2_DR_DEVICE,
 	.gpio_usb_active = gpio_usbotg_fs_active,
 	.gpio_usb_inactive = gpio_usbotg_fs_inactive,
 	.transceiver = "mc13783",
@@ -299,6 +300,8 @@ static struct platform_device fsl_device = {
 
 static int __init mx31_usb_init(void)
 {
+	struct fsl_usb2_platform_data __attribute__((unused))*pdata;
+
 	pr_debug("%s: \n", __FUNCTION__);
 
 #ifdef CONFIG_USB_EHCI_ARC_H1
@@ -323,19 +326,19 @@ static int __init mx31_usb_init(void)
 
 #if defined(CONFIG_USB_GADGET_ARC) || defined(CONFIG_OTG_BTC_ARC)
 	if (platform_device_register(&otg_udc_device)) {
-		printk(KERN_ERR "can't register OTG Gadget\n");
+		printk(KERN_ERR "usb: can't register OTG gadget\n");
 	} else {
-		pr_debug("usb: OTG Gadget registered\n");
+		pdata = otg_udc_device.dev.platform_data;
+		printk(KERN_INFO "usb: OTG gadget (%s) registered\n",
+		       pdata->transceiver);
 	}
 #endif
 
 #ifdef CONFIG_USB_OTG
-	if (platform_device_register(&fsl_device)) {
-		printk(KERN_ERR "can't register otg device\n");
-	} else {
-		pr_debug("usb: otg registered device=0x%p resources=0x%p.",
-			 &fsl_device, fsl_device.resource);
-	}
+	if (platform_device_register(&fsl_device))
+		printk(KERN_ERR "usb: can't register otg device\n");
+	else
+		printk(KERN_INFO "usb: OTG OTG registered\n");
 #endif
 
 	return 0;

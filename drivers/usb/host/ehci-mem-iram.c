@@ -29,14 +29,11 @@
  *	  need to use dma_pool or dma_alloc_coherent
  *	- driver buffers, read/written by HC ... single shot DMA mapped
  *
- * There's also "register" data (e.g. PCI or SOC), which is memory mapped.
+ * There's also PCI "register" data, which is memory mapped.
  * No memory seen by this driver is pageable.
  */
 
 /*-------------------------------------------------------------------------*/
-
-/* Allocate the key transfer structures from the previously allocated pool */
-#include <linux/smp_lock.h>
 
 struct memDesc {
 	u32 start;
@@ -250,15 +247,15 @@ void free_iram_buf(u32 buf)
 
 	g_alloc_map &= ~(1 << i);
 }
+/* Allocate the key transfer structures from the previously allocated pool */
 
-static inline void ehci_qtd_init(struct ehci_hcd *ehci, struct ehci_qtd *qtd,
-				 dma_addr_t dma)
+static inline void ehci_qtd_init (struct ehci_qtd *qtd, dma_addr_t dma)
 {
 	memset(qtd, 0, sizeof *qtd);
 	qtd->qtd_dma = dma;
 	qtd->hw_token = cpu_to_le32(QTD_STS_HALT);
-	qtd->hw_next = EHCI_LIST_END(ehci);
-	qtd->hw_alt_next = EHCI_LIST_END(ehci);
+	qtd->hw_next = EHCI_LIST_END;
+	qtd->hw_alt_next = EHCI_LIST_END;
 	INIT_LIST_HEAD(&qtd->qtd_list);
 }
 
@@ -272,9 +269,8 @@ static struct ehci_qtd *ehci_qtd_alloc(struct ehci_hcd *ehci, gfp_t flags)
 		qtd = (struct ehci_qtd *)IO_ADDRESS(dma);
 	else
 		qtd = dma_pool_alloc(ehci->qtd_pool, flags, &dma);
-
 	if (qtd != NULL) {
-		ehci_qtd_init(ehci, qtd, dma);
+		ehci_qtd_init(qtd, dma);
 		++g_debug_qtd_allocated;
 	} else {
 		panic
@@ -295,9 +291,12 @@ static inline void ehci_qtd_free(struct ehci_hcd *ehci, struct ehci_qtd *qtd)
 	--g_debug_qtd_allocated;
 }
 
-static void qh_destroy(struct ehci_qh *qh)
+
+static void qh_destroy (struct kref *kref)
 {
+	struct ehci_qh *qh = container_of(kref, struct ehci_qh, kref);
 	struct ehci_hcd *ehci = qh->ehci;
+	int i;
 
 	/* clean qtds first, and know this is not linked */
 	if (!list_empty(&qh->qtd_list) || qh->qh_next.ptr) {
@@ -306,7 +305,6 @@ static void qh_destroy(struct ehci_qh *qh)
 	}
 	if (qh->dummy)
 		ehci_qtd_free(ehci, qh->dummy);
-	int i;
 	for (i = 0; i < 2; i++) {
 		if (ehci->usb_address[i] == (qh->hw_info1 & 0x7F))
 			ehci->usb_address[i] = 0;
@@ -332,13 +330,13 @@ static struct ehci_qh *ehci_qh_alloc(struct ehci_hcd *ehci, gfp_t flags)
 		qh = (struct ehci_qh *)
 		    dma_pool_alloc(ehci->qh_pool, flags, &dma);
 	++g_debug_qH_allocated;
-	if (qh == NULL) {
+	if (!qh) {
 		panic("run out of i-ram for qH allocation\n");
 		return qh;
 	}
 
 	memset(qh, 0, sizeof *qh);
-	qh->refcount = 1;
+	kref_init(&qh->kref);
 	qh->ehci = ehci;
 	qh->qh_dma = dma;
 	INIT_LIST_HEAD(&qh->qtd_list);
@@ -356,15 +354,13 @@ static struct ehci_qh *ehci_qh_alloc(struct ehci_hcd *ehci, gfp_t flags)
 /* to share a qh (cpu threads, or hc) */
 static inline struct ehci_qh *qh_get(struct ehci_qh *qh)
 {
-	WARN_ON(!qh->refcount);
-	qh->refcount++;
+	kref_get(&qh->kref);
 	return qh;
 }
 
 static inline void qh_put(struct ehci_qh *qh)
 {
-	if (!--qh->refcount)
-		qh_destroy(qh);
+	kref_put(&qh->kref, qh_destroy);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -437,10 +433,11 @@ static int ehci_mem_init(struct ehci_hcd *ehci, gfp_t flags)
 	ehci->qtd_pool = dma_pool_create("ehci_qtd",
 					ehci_to_hcd(ehci)->self.controller,
 					sizeof(struct ehci_qtd),
-					32/* byte alignment (for hw parts) */
-					 , 4096 /* can't cross 4K */);
-	if (!ehci->qtd_pool)
+			32 /* byte alignment (for hw parts) */,
+			4096 /* can't cross 4K */);
+	if (!ehci->qtd_pool) {
 		goto fail;
+	}
 
 	/* QHs for control/bulk/intr transfers */
 	ehci->qh_pool = dma_pool_create("ehci_qh",
@@ -448,41 +445,44 @@ static int ehci_mem_init(struct ehci_hcd *ehci, gfp_t flags)
 					sizeof(struct ehci_qh),
 					32 /* byte alignment (for hw parts) */ ,
 					4096 /* can't cross 4K */);
-	if (!ehci->qh_pool)
+	if (!ehci->qh_pool) {
 		goto fail;
-
+	}
 	ehci->async = ehci_qh_alloc(ehci, flags);
-	if (!ehci->async)
+	if (!ehci->async) {
 		goto fail;
+	}
 
 	/* ITD for high speed ISO transfers */
 	ehci->itd_pool = dma_pool_create("ehci_itd",
 					ehci_to_hcd(ehci)->self.controller,
 					sizeof(struct ehci_itd),
-					32/* byte alignment (for hw parts) */
-					 , 4096 /* can't cross 4K */);
-	if (!ehci->itd_pool)
+			32 /* byte alignment (for hw parts) */,
+			4096 /* can't cross 4K */);
+	if (!ehci->itd_pool) {
 		goto fail;
+	}
 
 	/* SITD for full/low speed split ISO transfers */
 	ehci->sitd_pool = dma_pool_create("ehci_sitd",
 					ehci_to_hcd(ehci)->self.controller,
 					sizeof(struct ehci_sitd),
-					32/* byte alignment (for hw parts) */
-					  , 4096 /* can't cross 4K */);
-	if (!ehci->sitd_pool)
+			32 /* byte alignment (for hw parts) */,
+			4096 /* can't cross 4K */);
+	if (!ehci->sitd_pool) {
 		goto fail;
+	}
 
-	ehci->periodic = (__hc32 *)
+	/* Hardware periodic table */
+	ehci->periodic = (__le32 *)
 	    dma_alloc_coherent(ehci_to_hcd(ehci)->self.controller,
-			       ehci->periodic_size * sizeof(__hc32),
+			ehci->periodic_size * sizeof(__le32),
 			       &ehci->periodic_dma, 0);
-
-	if (ehci->periodic == NULL)
+	if (ehci->periodic == NULL) {
 		goto fail;
-
+	}
 	for (i = 0; i < ehci->periodic_size; i++)
-		ehci->periodic[i] = EHCI_LIST_END(ehci);
+		ehci->periodic [i] = EHCI_LIST_END;
 
 	/* software shadow of hardware table */
 	ehci->pshadow = kcalloc(ehci->periodic_size, sizeof(void *), flags);

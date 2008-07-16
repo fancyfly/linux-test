@@ -296,7 +296,7 @@ static void si4702_gpio_put(void)
 
 static struct mxc_fm_platform_data si4702_data = {
 	.reg_vio = "SW1",
-	.reg_vdd = "SW2",
+	.reg_vdd = "SW1",
 	.gpio_get = si4702_gpio_get,
 	.gpio_put = si4702_gpio_put,
 	.reset = si4702_reset,

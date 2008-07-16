@@ -821,6 +821,33 @@ static void __init mxc_init_pata(void)
 }
 #endif				/* CONFIG_PATA_FSL */
 
+static void bt_reset(void)
+{
+	mxc_set_gpio_dataout(MX31_PIN_DCD_DCE1, 1);
+}
+
+static struct mxc_bt_platform_data mxc_bt_data = {
+	.bt_vdd = "VMMC2",
+	.bt_vdd_parent = "GPO1",
+	.bt_vusb = NULL,
+	.bt_vusb_parent = "GPO3",
+	.bt_reset = bt_reset,
+};
+
+static struct platform_device mxc_bt_device = {
+	.name = "mxc_bt",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_bt_data,
+		},
+};
+
+static void mxc_init_bluetooth(void)
+{
+	(void)platform_device_register(&mxc_bt_device);
+}
+
 /*!
  * Board specific initialization.
  */
@@ -864,6 +891,7 @@ static void __init mxc_board_init(void)
 	mxc_init_mmc();
 	mxc_init_ide();
 	mxc_init_pata();
+	mxc_init_bluetooth();
 
 	/* set power off hook to mc13783 power off */
 	pm_power_off = pmic_power_off;

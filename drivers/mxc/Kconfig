@@ -26,6 +26,7 @@ source "drivers/mxc/hmp4e/Kconfig"
 source "drivers/mxc/hw_event/Kconfig"
 source "drivers/mxc/vpu/Kconfig"
 source "drivers/mxc/asrc/Kconfig"
+source "drivers/mxc/bt/Kconfig"
 
 endmenu
 

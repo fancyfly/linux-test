@@ -103,6 +103,14 @@ struct mxc_asrc_platform_data {
 	struct clk *asrc_audio_clk;
 };
 
+struct mxc_bt_platform_data {
+	char *bt_vdd;
+	char *bt_vdd_parent;
+	char *bt_vusb;
+	char *bt_vusb_parent;
+	void (*bt_reset) (void);
+};
+
 struct mxc_lcd_platform_data {
 	char *io_reg;
 	char *core_reg;

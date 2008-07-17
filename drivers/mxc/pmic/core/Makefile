@@ -5,11 +5,15 @@ obj-$(CONFIG_MXC_SPI_PMIC_CORE) += pmic_core_spi_mod.o
 
 obj-$(CONFIG_MXC_I2C_MCU_PMIC_CORE) += pmic_core_i2c_mod.o
 
+obj-$(CONFIG_MXC_I2C_PMIC_CORE) += pmic_core_mc13892_mod.o
+
+pmic_core_mc13892_mod-objs := pmic_external.o pmic_event.o pmic_core_i2c.o mc13892.o
+
 pmic_core_i2c_mod-objs := pmic_external.o pmic_event.o mcu_pmic_core.o
 
-obj-$(CONFIG_MXC_PMIC_CHARDEV)	+= pmic-dev.o
-
 pmic_core_spi_mod-objs := pmic_external.o pmic_event.o pmic_core_spi.o
+
+obj-$(CONFIG_MXC_PMIC_CHARDEV)	+= pmic-dev.o
 
 ifeq ($(CONFIG_MXC_PMIC_MC13783),y)
 pmic_core_spi_mod-objs += mc13783.o

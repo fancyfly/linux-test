@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -41,7 +41,8 @@
  */
 typedef enum {
 	PMIC_MC13783 = 1,	/*!< MC13783 */
-	PMIC_SC55112 = 2	/*!< SC55112 */
+	PMIC_SC55112 = 2,	/*!< SC55112 */
+	PMIC_MC13892 = 3
 } pmic_id_t;
 
 /*!
@@ -800,6 +801,99 @@ typedef struct {
 
 #endif				/*CONFIG_MXC_PMIC_MC13783 */
 
+#if defined(CONFIG_MXC_PMIC_MC13892_MODULE) || defined(CONFIG_MXC_PMIC_MC13892)
+enum {
+	REG_INT_STATUS0 = 0,
+	REG_INT_MASK0,
+	REG_INT_SENSE0,
+	REG_INT_STATUS1,
+	REG_INT_MASK1,
+	REG_INT_SENSE1,
+	REG_PU_MODE_S,
+	REG_IDENTIFICATION,
+	REG_UNUSED0,
+	REG_ACC0,
+	REG_ACC1,		/*10 */
+	REG_UNUSED1,
+	REG_UNUSED2,
+	REG_POWER_CTL0,
+	REG_POWER_CTL1,
+	REG_POWER_CTL2,
+	REG_REGEN_ASSIGN,
+	REG_UNUSED3,
+	REG_MEM_A,
+	REG_MEM_B,
+	REG_RTC_TIME,		/*20 */
+	REG_RTC_ALARM,
+	REG_RTC_DAY,
+	REG_RTC_DAY_ALARM,
+	REG_SW_0,
+	REG_SW_1,
+	REG_SW_2,
+	REG_SW_3,
+	REG_SW_4,
+	REG_SW_5,
+	REG_SETTING_0,		/*30 */
+	REG_SETTING_1,
+	REG_MODE_0,
+	REG_MODE_1,
+	REG_POWER_MISC,
+	REG_UNUSED4,
+	REG_UNUSED5,
+	REG_UNUSED6,
+	REG_UNUSED7,
+	REG_UNUSED8,
+	REG_UNUSED9,		/*40 */
+	REG_UNUSED10,
+	REG_UNUSED11,
+	REG_ADC0,
+	REG_ADC1,
+	REG_ADC2,
+	REG_ADC3,
+	REG_ADC4,
+	REG_CHARGE,
+	REG_USB0,
+	REG_USB1,		/*50 */
+	REG_LED_CTL0,
+	REG_LED_CTL1,
+	REG_LED_CTL2,
+	REG_LED_CTL3,
+	REG_UNUSED12,
+	REG_UNUSED13,
+	REG_TRIM0,
+	REG_TRIM1,
+	REG_TEST0,
+	REG_TEST1,		/*60 */
+	REG_TEST2,
+	REG_TEST3,
+	REG_TEST4,
+	REG_ARBITRATION_SWITCHERS,	/*for compile */
+	REG_INTERRUPT_MASK_1,
+	REG_SWITCHERS_4,
+	REG_POWER_MISCELLANEOUS,
+};
+
+typedef enum {
+	place_holder1,
+} type_event;
+
+typedef enum {
+	place_holder2,
+} t_sensor;
+
+typedef enum {
+	place_holder3,
+} t_sensor_bits;
+
+extern struct i2c_client *mc13892_client;
+int pmic_i2c_24bit_read(struct i2c_client *client, unsigned int reg_num);
+int pmic_read(int reg_num, unsigned int *reg_val);
+int pmic_write(int reg_num, const unsigned int reg_val);
+void gpio_pmic_active(void);
+void pmic_event_list_init(void);
+
+#endif
+
 #ifdef CONFIG_MXC_PMIC_MC9SDZ60
 
 typedef enum {
@@ -892,7 +986,6 @@ typedef enum {
 #endif				/* MXC_PMIC_MC9SDZ60 */
 
 /* EXPORTED FUNCTIONS */
-#if defined(CONFIG_MXC_PMIC_MC13783) || defined(CONFIG_MXC_PMIC_MC9SDZ60)
 #ifdef __KERNEL__
 
 /*!
@@ -944,6 +1037,8 @@ PMIC_STATUS pmic_event_subscribe(type_event event,
 */
 PMIC_STATUS pmic_event_unsubscribe(type_event event,
 				   pmic_event_callback_t callback);
+PMIC_STATUS pmic_event_unsubscribe(type_event event,
+				   pmic_event_callback_t callback);
 /*!
 * This function is called to read all sensor bits of PMIC.
 *
@@ -963,6 +1058,9 @@ bool pmic_check_sensor(t_sensor sensor);
 */
 PMIC_STATUS pmic_get_sensors(t_sensor_bits * sensor_bits);
 
+void pmic_event_callback(type_event event);
+void pmic_event_list_init(void);
+
 #ifdef CONFIG_MXC_PMIC_MC9SDZ60
 PMIC_STATUS pmic_gpio_set_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
 				  unsigned int val);
@@ -971,7 +1069,7 @@ PMIC_STATUS pmic_gpio_get_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
 				  unsigned int *val);
 
 PMIC_STATUS pmic_gpio_get_designation_bit_val(unsigned int bit,
-						unsigned int *val);
+					      unsigned int *val);
 
 #endif
 
@@ -988,8 +1086,16 @@ static inline int reg_mc13783_probe(void)
 	return 0;
 };
 #endif
-#endif				/* __KERNEL__ */
+
+#ifdef CONFIG_REGULATOR_MC13892
+int reg_mc13892_probe(void);
+#else
+static inline int reg_mc13892_probe(void)
+{
+	return 0;
+};
 #endif
+#endif				/* __KERNEL__ */
 /* CONFIG_MXC_PMIC_MC13783 || CONFIG_MXC_PMIC_MC9SDZ60 */
 
 #endif				/* __ASM_ARCH_MXC_PMIC_EXTERNAL_H__ */

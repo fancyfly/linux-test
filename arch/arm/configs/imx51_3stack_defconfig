@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Mon Jul 14 10:13:21 2008
+# Wed Jul 16 16:41:37 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -473,7 +473,11 @@ CONFIG_MTD_NAND_MXC_V3=y
 #
 # Voltage and Current regulators
 #
-# CONFIG_REGULATOR is not set
+CONFIG_REGULATOR_API=y
+CONFIG_REGULATOR=y
+# CONFIG_REGULATOR_DEBUG is not set
+CONFIG_REGULATOR_MC13892=y
+# CONFIG_REGULATOR_WM8350 is not set
 # CONFIG_PARPORT is not set
 # CONFIG_PNP is not set
 CONFIG_BLK_DEV=y
@@ -840,7 +844,14 @@ CONFIG_RTC_LIB=y
 #
 # CONFIG_MXC_SPI_PMIC_CORE is not set
 # CONFIG_MXC_I2C_MCU_PMIC_CORE is not set
-# CONFIG_MXC_PMIC is not set
+CONFIG_MXC_I2C_PMIC_CORE=y
+CONFIG_MXC_PMIC=y
+# CONFIG_MXC_PMIC_CHARDEV is not set
+
+#
+# MXC PMIC Client Drivers
+#
+CONFIG_MXC_PMIC_MC13892=y
 
 #
 # Advanced Power Management devices

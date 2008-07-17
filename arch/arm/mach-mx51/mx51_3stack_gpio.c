@@ -122,6 +122,7 @@ void gpio_uart_active(int port, int no_irda)
 		break;
 	}
 }
+
 EXPORT_SYMBOL(gpio_uart_active);
 
 /*!
@@ -171,6 +172,7 @@ void gpio_uart_inactive(int port, int no_irda)
 		break;
 	}
 }
+
 EXPORT_SYMBOL(gpio_uart_inactive);
 
 /*!
@@ -182,6 +184,7 @@ void config_uartdma_event(int port)
 {
 
 }
+
 EXPORT_SYMBOL(config_uartdma_event);
 
 /*!
@@ -274,6 +277,7 @@ void gpio_spi_active(int cspi_mod)
 		break;
 	}
 }
+
 EXPORT_SYMBOL(gpio_spi_active);
 
 /*!
@@ -314,6 +318,7 @@ void gpio_spi_inactive(int cspi_mod)
 	}
 
 }
+
 EXPORT_SYMBOL(gpio_spi_inactive);
 
 /*!
@@ -323,6 +328,7 @@ void gpio_owire_active(void)
 {
 
 }
+
 EXPORT_SYMBOL(gpio_owire_active);
 
 /*!
@@ -332,6 +338,7 @@ void gpio_owire_inactive(void)
 {
 
 }
+
 EXPORT_SYMBOL(gpio_owire_inactive);
 
 /*!
@@ -402,6 +409,7 @@ void gpio_i2c_active(int i2c_num)
 		break;
 	}
 }
+
 EXPORT_SYMBOL(gpio_i2c_active);
 
 /*!
@@ -446,7 +454,16 @@ void gpio_i2c_inactive(int i2c_num)
 		break;
 	}
 }
+
 EXPORT_SYMBOL(gpio_i2c_inactive);
+
+void gpio_pmic_active(void)
+{
+	mxc_request_iomux(MX51_PIN_GPIO1_5, IOMUX_CONFIG_GPIO);
+	mxc_set_gpio_direction(MX51_PIN_GPIO1_5, 1);
+}
+
+EXPORT_SYMBOL(gpio_pmic_active);
 
 /*!
  * This function activates DAM ports 4 & 5 to enable
@@ -455,6 +472,7 @@ EXPORT_SYMBOL(gpio_i2c_inactive);
 void gpio_activate_audio_ports(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_activate_audio_ports);
 
 /*!
@@ -465,6 +483,7 @@ EXPORT_SYMBOL(gpio_activate_audio_ports);
 void gpio_sdhc_active(int module)
 {
 }
+
 EXPORT_SYMBOL(gpio_sdhc_active);
 
 /*!
@@ -475,6 +494,7 @@ EXPORT_SYMBOL(gpio_sdhc_active);
 void gpio_sdhc_inactive(int module)
 {
 }
+
 EXPORT_SYMBOL(gpio_sdhc_inactive);
 
 /*
@@ -484,6 +504,7 @@ int sdhc_get_card_det_status(struct device *dev)
 {
 	return 0;
 }
+
 EXPORT_SYMBOL(sdhc_get_card_det_status);
 
 /*
@@ -493,6 +514,7 @@ int sdhc_init_card_det(int id)
 {
 	return 0;
 }
+
 EXPORT_SYMBOL(sdhc_init_card_det);
 
 /*!
@@ -534,6 +556,7 @@ void gpio_sensor_select(int sensor)
 void gpio_sensor_active(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_sensor_active);
 
 /*!
@@ -543,6 +566,7 @@ EXPORT_SYMBOL(gpio_sensor_active);
 void gpio_sensor_inactive(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_sensor_inactive);
 
 /*!
@@ -552,6 +576,7 @@ EXPORT_SYMBOL(gpio_sensor_inactive);
 void gpio_ata_active(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_ata_active);
 
 /*!
@@ -561,6 +586,7 @@ EXPORT_SYMBOL(gpio_ata_active);
 void gpio_ata_inactive(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_ata_inactive);
 
 /*!
@@ -583,6 +609,7 @@ void gpio_keypad_active(void)
 	mxc_request_iomux(MX51_PIN_KEY_ROW2, IOMUX_CONFIG_ALT0);
 	mxc_request_iomux(MX51_PIN_KEY_ROW3, IOMUX_CONFIG_ALT0);
 }
+
 EXPORT_SYMBOL(gpio_keypad_active);
 
 /*!
@@ -613,6 +640,7 @@ void gpio_keypad_inactive(void)
 	mxc_free_iomux(MX51_PIN_KEY_ROW2, IOMUX_CONFIG_GPIO);
 	mxc_free_iomux(MX51_PIN_KEY_ROW3, IOMUX_CONFIG_GPIO);
 }
+
 EXPORT_SYMBOL(gpio_keypad_inactive);
 
 /*
@@ -622,11 +650,13 @@ int gpio_usbotg_hs_active(void)
 {
 	return 0;
 }
+
 EXPORT_SYMBOL(gpio_usbotg_hs_active);
 
 void gpio_usbotg_hs_inactive(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_usbotg_hs_inactive);
 
 /*!
@@ -636,6 +666,7 @@ EXPORT_SYMBOL(gpio_usbotg_hs_inactive);
 void gpio_pcmcia_active(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_pcmcia_active);
 
 /*!
@@ -644,6 +675,7 @@ EXPORT_SYMBOL(gpio_pcmcia_active);
 void gpio_pcmcia_inactive(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_pcmcia_inactive);
 
 /*!
@@ -652,6 +684,7 @@ EXPORT_SYMBOL(gpio_pcmcia_inactive);
 void gpio_fec_active(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_fec_active);
 
 /*!
@@ -660,15 +693,18 @@ EXPORT_SYMBOL(gpio_fec_active);
 void gpio_fec_inactive(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_fec_inactive);
 
 void gpio_spdif_active(void)
 {
 }
+
 EXPORT_SYMBOL(gpio_spdif_active);
 
 void gpio_spdif_inactive(void)
 {
 
 }
+
 EXPORT_SYMBOL(gpio_spdif_inactive);

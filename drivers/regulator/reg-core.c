@@ -67,7 +67,7 @@ static int constraint_check_voltage(struct regulator *regulator, int uV)
 	if (!regulator->constraints->valid_ops_mask & REGULATOR_CHANGE_VOLTAGE)
 		return -EPERM;
 	if (uV > regulator->constraints->max_uV ||
-		uV < regulator->constraints->min_uV)
+	    uV < regulator->constraints->min_uV)
 		return -EINVAL;
 	return 0;
 }
@@ -79,7 +79,7 @@ static int constraint_check_current(struct regulator *regulator, int uA)
 	if (!regulator->constraints->valid_ops_mask & REGULATOR_CHANGE_CURRENT)
 		return -EPERM;
 	if (uA > regulator->constraints->max_uA ||
-		uA < regulator->constraints->min_uA)
+	    uA < regulator->constraints->min_uA)
 		return -EINVAL;
 	return 0;
 }
@@ -105,7 +105,7 @@ static int constraint_check_drms(struct regulator *regulator)
 }
 
 static ssize_t dev_load_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
+			     struct device_attribute *attr, char *buf)
 {
 	struct regulator_load *load;
 
@@ -121,6 +121,23 @@ static ssize_t regulator_uV_show(struct class_device *cdev, char *buf)
 	struct regulator *regulator = to_regulator(cdev);
 
 	return sprintf(buf, "%d\n", regulator_get_voltage(regulator));
+}
+
+static ssize_t regulator_uV_store(struct class_device *cdev,
+				  const char *buf, size_t count)
+{
+	struct regulator *regulator = to_regulator(cdev);
+	int mV, ret;
+
+	mV = simple_strtoul(buf, NULL, 10);
+
+	ret = regulator_set_voltage(regulator, mV * 1000);
+	if (ret == 0)
+		printk(KERN_INFO "set voltage %d mV\n", mV);
+	else
+		printk(KERN_INFO "set voltage failed\n");
+
+	return count;
 }
 
 static ssize_t regulator_uA_show(struct class_device *cdev, char *buf)
@@ -170,7 +187,7 @@ regulator_constraint_uA_show(struct class_device *cdev, char *buf)
 		return sprintf(buf, "no constraints\n");
 
 	return sprintf(buf, "%d %d\n", regulator->constraints->min_uA,
-		regulator->constraints->max_uA);
+		       regulator->constraints->max_uA);
 }
 
 static ssize_t
@@ -182,7 +199,7 @@ regulator_constraint_uV_show(struct class_device *cdev, char *buf)
 		return sprintf(buf, "no constraints\n");
 
 	return sprintf(buf, "%d %d\n", regulator->constraints->min_uV,
-		regulator->constraints->max_uV);
+		       regulator->constraints->max_uV);
 }
 
 static ssize_t
@@ -225,23 +242,23 @@ static ssize_t regulator_enabled_use_count(struct class_device *cdev, char *buf)
 }
 
 static ssize_t regulator_ctl(struct class_device *cdev,
-	const char *buf, size_t count)
+			     const char *buf, size_t count)
 {
 	struct regulator *regulator = to_regulator(cdev);
 	if (buf[0] == '0') {
-		printk(KERN_WARNING"disable regulator.\n");
+		printk(KERN_WARNING "disable regulator.\n");
 		if (regulator_disable(regulator))
-			printk(KERN_ERR"disable regulator failed.\n");
+			printk(KERN_ERR "disable regulator failed.\n");
 	} else {
-		printk(KERN_WARNING"enable regulator.\n");
+		printk(KERN_WARNING "enable regulator.\n");
 		if (regulator_enable(regulator))
-			printk(KERN_ERR"enable regulator failed.\n");
+			printk(KERN_ERR "enable regulator failed.\n");
 	}
 	return count;
 }
 
 static struct class_device_attribute regulator_dev_attrs[] = {
-	__ATTR(uV, 0444, regulator_uV_show, NULL),
+	__ATTR(uV, 0666, regulator_uV_show, regulator_uV_store),
 	__ATTR(uA, 0444, regulator_uA_show, NULL),
 	__ATTR(mode, 0444, regulator_mode_show, NULL),
 	__ATTR(state, 0444, regulator_state_show, NULL),
@@ -254,16 +271,18 @@ static struct class_device_attribute regulator_dev_attrs[] = {
 	__ATTR_NULL,
 };
 
-static void regulator_dev_release(struct class_device *class_dev) {}
+static void regulator_dev_release(struct class_device *class_dev)
+{
+}
 
 struct class regulator_class = {
-	.name			= "regulator",
-	.release		= regulator_dev_release,
-	.class_dev_attrs	= regulator_dev_attrs,
+	.name = "regulator",
+	.release = regulator_dev_release,
+	.class_dev_attrs = regulator_dev_attrs,
 };
 
 static struct regulator_load *create_load_dev(struct regulator *regulator,
-	struct device *dev)
+					      struct device *dev)
 {
 	struct regulator_load *load;
 	char buf[32];
@@ -283,19 +302,19 @@ static struct regulator_load *create_load_dev(struct regulator *regulator,
 	err = device_create_file(dev, &load->dev_attr);
 	if (err < 0) {
 		printk(KERN_WARNING "%s: could not add regulator load"
-		" sysfs\n", __func__);
+		       " sysfs\n", __func__);
 		goto err_out;
 	}
 	err = sysfs_create_link(&regulator->cdev.kobj, &dev->kobj,
-		kobject_name(&dev->kobj));
+				kobject_name(&dev->kobj));
 	if (err) {
 		printk
-		(KERN_WARNING "%s : could not add device link %s err %d\n",
-			__func__, kobject_name(&dev->kobj), err);
+		    (KERN_WARNING "%s : could not add device link %s err %d\n",
+		     __func__, kobject_name(&dev->kobj), err);
 		goto err_out;
 	}
 	return load;
-err_out:
+      err_out:
 	kfree(load->dev_attr.attr.name);
 	kfree(load);
 	return NULL;
@@ -312,18 +331,17 @@ struct regulator *regulator_get(struct device *dev, const char *id)
 	mutex_lock(&list_mutex);
 
 	list_for_each_entry(r, &regulators, list) {
-		if (strcmp(id, r->name) == 0 &&
-			try_module_get(r->owner)) {
+		if (strcmp(id, r->name) == 0 && try_module_get(r->owner)) {
 			regulator = r;
 			goto found;
 		}
 	}
 	printk
-	(KERN_WARNING "regulator: Unable to get requested regulator: %s\n",
-	id);
+	    (KERN_WARNING "regulator: Unable to get requested regulator: %s\n",
+	     id);
 	mutex_unlock(&list_mutex);
 	return regulator;
-found:
+      found:
 	if (dev) {
 		load = create_load_dev(regulator, dev);
 		if (load == NULL) {
@@ -335,6 +353,7 @@ found:
 	mutex_unlock(&list_mutex);
 	return regulator;
 }
+
 EXPORT_SYMBOL_GPL(regulator_get);
 
 void regulator_put(struct regulator *regulator, struct device *dev)
@@ -355,10 +374,11 @@ void regulator_put(struct regulator *regulator, struct device *dev)
 		kfree(load);
 		goto put;
 	}
-put:
+      put:
 	module_put(regulator->owner);
 	mutex_unlock(&list_mutex);
 }
+
 EXPORT_SYMBOL_GPL(regulator_put);
 
 static int __regulator_disable(struct regulator *regulator);
@@ -387,7 +407,7 @@ static int __regulator_enable(struct regulator *regulator)
 		}
 	}
 	regulator->use_count++;
-out:
+      out:
 	return ret;
 }
 
@@ -400,6 +420,7 @@ int regulator_enable(struct regulator *regulator)
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_enable);
 
 static int __regulator_disable(struct regulator *regulator)
@@ -415,7 +436,7 @@ static int __regulator_disable(struct regulator *regulator)
 		if (regulator->parent)
 			__regulator_disable(regulator->parent);
 	}
-out:
+      out:
 	return ret;
 }
 
@@ -428,6 +449,7 @@ int regulator_disable(struct regulator *regulator)
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_disable);
 
 int regulator_is_enabled(struct regulator *regulator)
@@ -443,10 +465,11 @@ int regulator_is_enabled(struct regulator *regulator)
 	}
 
 	ret = regulator->ops->is_enabled(regulator);
-out:
+      out:
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_is_enabled);
 
 int regulator_set_voltage(struct regulator *regulator, int uV)
@@ -467,10 +490,11 @@ int regulator_set_voltage(struct regulator *regulator, int uV)
 		goto out;
 
 	ret = regulator->ops->set_voltage(regulator, uV);
-out:
+      out:
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_set_voltage);
 
 int regulator_get_voltage(struct regulator *regulator)
@@ -486,10 +510,11 @@ int regulator_get_voltage(struct regulator *regulator)
 	}
 
 	ret = regulator->ops->get_voltage(regulator);
-out:
+      out:
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_get_voltage);
 
 int regulator_set_current(struct regulator *regulator, int uA)
@@ -510,10 +535,11 @@ int regulator_set_current(struct regulator *regulator, int uA)
 		goto out;
 
 	ret = regulator->ops->set_current(regulator, uA);
-out:
+      out:
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_set_current);
 
 int regulator_get_current(struct regulator *regulator)
@@ -529,10 +555,11 @@ int regulator_get_current(struct regulator *regulator)
 	}
 
 	ret = regulator->ops->get_current(regulator);
-out:
+      out:
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_get_current);
 
 int regulator_set_mode(struct regulator *regulator, unsigned int mode)
@@ -553,10 +580,11 @@ int regulator_set_mode(struct regulator *regulator, unsigned int mode)
 		goto out;
 
 	ret = regulator->ops->set_mode(regulator, mode);
-out:
+      out:
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_set_mode);
 
 unsigned int regulator_get_mode(struct regulator *regulator)
@@ -572,14 +600,16 @@ unsigned int regulator_get_mode(struct regulator *regulator)
 	}
 
 	ret = regulator->ops->get_mode(regulator);
-out:
+      out:
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_get_mode);
 
 unsigned int regulator_get_optimum_mode(struct regulator *regulator,
-	int input_uV, int output_uV, int load_uA)
+					int input_uV, int output_uV,
+					int load_uA)
 {
 	int ret;
 
@@ -592,32 +622,36 @@ unsigned int regulator_get_optimum_mode(struct regulator *regulator,
 	}
 
 	ret = regulator->ops->get_optimum_mode(regulator,
-		input_uV, output_uV, load_uA);
-out:
+					       input_uV, output_uV, load_uA);
+      out:
 	mutex_unlock(&regulator->mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_get_optimum_mode);
 
 int regulator_register_client(struct regulator *regulator,
-	struct notifier_block *nb)
+			      struct notifier_block *nb)
 {
 	return blocking_notifier_chain_register(&regulator->notifier, nb);
 }
+
 EXPORT_SYMBOL_GPL(regulator_register_client);
 
 int regulator_unregister_client(struct regulator *regulator,
-	struct notifier_block *nb)
+				struct notifier_block *nb)
 {
 	return blocking_notifier_chain_unregister(&regulator->notifier, nb);
 }
+
 EXPORT_SYMBOL_GPL(regulator_unregister_client);
 
 int regulator_notifier_call_chain(struct regulator *regulator,
-	unsigned long event, void *data)
+				  unsigned long event, void *data)
 {
 	return blocking_notifier_call_chain(&regulator->notifier, event, data);
 }
+
 EXPORT_SYMBOL_GPL(regulator_notifier_call_chain);
 
 int regulator_register(struct regulator *regulator)
@@ -641,9 +675,9 @@ int regulator_register(struct regulator *regulator)
 	regulator->cdev.class = &regulator_class;
 	class_device_initialize(&regulator->cdev);
 	snprintf(regulator->cdev.class_id, sizeof(regulator->cdev.class_id),
-		"regulator-%ld-%s",
-		(unsigned long) atomic_inc_return(&regulator_no) - 1,
-		regulator->name);
+		 "regulator-%ld-%s",
+		 (unsigned long)atomic_inc_return(&regulator_no) - 1,
+		 regulator->name);
 
 	ret = class_device_add(&regulator->cdev);
 	if (ret == 0)
@@ -651,6 +685,7 @@ int regulator_register(struct regulator *regulator)
 	mutex_unlock(&list_mutex);
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(regulator_register);
 
 void regulator_unregister(struct regulator *regulator)
@@ -665,10 +700,11 @@ void regulator_unregister(struct regulator *regulator)
 	class_device_unregister(&regulator->cdev);
 	mutex_unlock(&list_mutex);
 }
+
 EXPORT_SYMBOL_GPL(regulator_unregister);
 
 int regulator_set_platform_source(struct regulator *regulator,
-	struct regulator *parent)
+				  struct regulator *parent)
 {
 	int err;
 
@@ -681,14 +717,16 @@ int regulator_set_platform_source(struct regulator *regulator,
 	mutex_lock(&list_mutex);
 	regulator->parent = parent;
 	err = sysfs_create_link(&regulator->cdev.kobj, &parent->cdev.kobj,
-		"source");
+				"source");
 	if (err)
-	printk(KERN_WARNING "%s : could not add device link %s err %d\n",
-			__func__, kobject_name(&parent->cdev.kobj), err);
+		printk(KERN_WARNING
+		       "%s : could not add device link %s err %d\n", __func__,
+		       kobject_name(&parent->cdev.kobj), err);
 	mutex_unlock(&list_mutex);
 
 	return 0;
 }
+
 EXPORT_SYMBOL_GPL(regulator_set_platform_source);
 
 struct regulator *regulator_get_platform_source(struct regulator *regulator)
@@ -697,10 +735,12 @@ struct regulator *regulator_get_platform_source(struct regulator *regulator)
 		return ERR_PTR(-EINVAL);
 	return regulator->parent;
 }
+
 EXPORT_SYMBOL_GPL(regulator_get_platform_source);
 
 int regulator_set_platform_constraints(const char *regulator_name,
-	struct regulation_constraints *constraints)
+				       struct regulation_constraints
+				       *constraints)
 {
 	struct regulator *regulator;
 
@@ -720,10 +760,11 @@ int regulator_set_platform_constraints(const char *regulator_name,
 	mutex_unlock(&list_mutex);
 	return -ENODEV;
 }
+
 EXPORT_SYMBOL_GPL(regulator_set_platform_constraints);
 
 static void load_change(struct regulator *regulator,
-	struct regulator_load *load, int uA)
+			struct regulator_load *load, int uA)
 {
 	struct regulator_load *l;
 	int current_uA = 0, output_uV, input_uV, err;
@@ -732,7 +773,7 @@ static void load_change(struct regulator *regulator,
 	load->uA_load = uA;
 	err = constraint_check_drms(regulator);
 	if (err < 0 || !regulator->ops->get_optimum_mode ||
-		!regulator->ops->get_voltage || !regulator->ops->set_mode)
+	    !regulator->ops->get_voltage || !regulator->ops->set_mode)
 		return;
 
 	/* get output voltage */
@@ -741,16 +782,16 @@ static void load_change(struct regulator *regulator,
 	/* get input voltage */
 	if (regulator->parent && regulator->parent->ops->get_voltage)
 		input_uV =
-		regulator->parent->ops->get_voltage(regulator->parent);
+		    regulator->parent->ops->get_voltage(regulator->parent);
 	else
 		input_uV = regulator->constraints->input_uV;
 
 	/* calc total requested load */
 	list_for_each_entry(l, &regulator->user_list, list)
-		current_uA += l->uA_load;
+	    current_uA += l->uA_load;
 
 	mode = regulator->ops->get_optimum_mode(regulator, input_uV,
-		output_uV, current_uA);
+						output_uV, current_uA);
 	err = constraint_check_mode(regulator, mode);
 	if (err < 0)
 		return;
@@ -759,7 +800,7 @@ static void load_change(struct regulator *regulator,
 }
 
 void regulator_drms_notify_load(struct regulator *regulator,
-	struct device *dev, int uA)
+				struct device *dev, int uA)
 {
 	struct regulator_load *load;
 
@@ -772,18 +813,21 @@ void regulator_drms_notify_load(struct regulator *regulator,
 	}
 	mutex_unlock(&regulator->mutex);
 }
+
 EXPORT_SYMBOL_GPL(regulator_drms_notify_load);
 
 void *regulator_get_drvdata(struct regulator *regulator)
 {
 	return regulator->reg_data;
 }
+
 EXPORT_SYMBOL_GPL(regulator_get_drvdata);
 
 void regulator_set_drvdata(struct regulator *regulator, void *data)
 {
 	regulator->reg_data = data;
 }
+
 EXPORT_SYMBOL_GPL(regulator_set_drvdata);
 
 static int __init regulator_init(void)

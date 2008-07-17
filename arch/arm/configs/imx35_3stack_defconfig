@@ -1306,6 +1306,11 @@ CONFIG_MXC_MC9SDZ60_POWER=y
 CONFIG_MXC_ASRC=y
 
 #
+# MXC Bluetooth support
+#
+CONFIG_MXC_BLUETOOTH=m
+
+#
 # File systems
 #
 CONFIG_EXT2_FS=y

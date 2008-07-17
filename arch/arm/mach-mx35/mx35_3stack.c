@@ -590,6 +590,35 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 #endif
 }
 
+static void bt_reset(void)
+{
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 2, 0);
+	msleep(5);
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 2, 1);
+}
+
+static struct mxc_bt_platform_data mxc_bt_data = {
+	.bt_vdd = "SW1",
+	.bt_vdd_parent = NULL,
+	.bt_vusb = NULL,
+	.bt_vusb_parent = NULL,
+	.bt_reset = bt_reset,
+};
+
+static struct platform_device mxc_bt_device = {
+	.name = "mxc_bt",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_bt_data,
+		},
+};
+
+static void mxc_init_bluetooth(void)
+{
+	(void)platform_device_register(&mxc_bt_device);
+}
+
 /*!
  * Board specific initialization.
  */
@@ -616,6 +645,7 @@ static void __init mxc_board_init(void)
 				ARRAY_SIZE(mxc_spi_board_info));
 	mxc_init_mmc();
 	mxc_init_pata();
+	mxc_init_bluetooth();
 
 	pm_power_off = pmic_power_off;
 }

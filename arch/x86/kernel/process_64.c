@@ -218,7 +218,7 @@ void cpu_idle (void)
 			if (__get_cpu_var(cpu_idle_state))
 				__get_cpu_var(cpu_idle_state) = 0;
 
-			tick_nohz_stop_sched_tick();
+			tick_nohz_stop_sched_tick(1);
 
 			rmb();
 			idle = pm_idle;

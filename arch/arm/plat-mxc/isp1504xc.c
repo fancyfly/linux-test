@@ -148,9 +148,10 @@ static void isp1508_fix(u32 *view)
  * @param       view  viewport register
  * @param       on    power on or off
  */
-static void isp1504_set_vbus_power(struct fsl_xcvr_ops *this, int on)
+static void isp1504_set_vbus_power(struct fsl_xcvr_ops *this,
+				   struct fsl_usb2_platform_data *pdata, int on)
 {
-	u32 *view = this->pdata->regs + ULPIVW_OFF;
+	u32 *view = pdata->regs + ULPIVW_OFF;
 
 	pr_debug("real %s(on=%d) view=0x%p\n", __FUNCTION__, on, view);
 

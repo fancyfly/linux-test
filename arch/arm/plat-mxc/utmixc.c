@@ -40,12 +40,13 @@ static void usb_utmi_uninit(struct fsl_xcvr_ops *this)
  * @param       view  viewport register
  * @param       on    power on or off
  */
-static void set_power(struct fsl_xcvr_ops *this, int on)
+static void set_power(struct fsl_xcvr_ops *this,
+		      struct fsl_usb2_platform_data *pdata, int on)
 {
-	struct device *dev = &this->pdata->pdev->dev;
+	struct device *dev = &pdata->pdev->dev;
 	struct regulator *usbotg_regux;
 
-	pr_debug("real %s(on=%d) pdata=0x%p\n", __func__, on, this->pdata);
+	pr_debug("real %s(on=%d) pdata=0x%p\n", __func__, on, pdata);
 	if (machine_is_mx37_3ds()) {
 		usbotg_regux = regulator_get(dev, "DCDC2");
 		if (on) {

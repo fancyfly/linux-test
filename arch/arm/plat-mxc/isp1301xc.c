@@ -219,7 +219,8 @@ static inline void isp1301_set_serial_dev(void)
 			  (DP_PULLDOWN | DM_PULLDOWN | DP_PULLUP));
 }
 
-static void isp1301_set_vbus_power(struct fsl_xcvr_ops *this, int on)
+static void isp1301_set_vbus_power(struct fsl_xcvr_ops *this,
+				   struct fsl_usb2_platform_data *pdata, int on)
 {
 	pr_debug("%s(on=%d)\n", __FUNCTION__, on);
 	if (on) {

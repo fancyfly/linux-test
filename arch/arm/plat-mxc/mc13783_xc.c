@@ -168,7 +168,8 @@ static inline void mc13783_set_peripheral(void)
 		printk(KERN_ERR "mc13783_set_peripheral failed\n");
 }
 
-void mc13783_set_vbus_power(struct fsl_xcvr_ops *this, int on)
+void mc13783_set_vbus_power(struct fsl_xcvr_ops *this,
+			    struct fsl_usb2_platform_data *pdata, int on)
 {
 	if (on) {
 		p_event = MC13783_USB_VBUS_ON;

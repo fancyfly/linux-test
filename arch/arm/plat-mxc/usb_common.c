@@ -194,7 +194,7 @@ struct platform_device *host_pdev_register(struct resource *res, int n_res,
 void fsl_platform_set_vbus_power(struct fsl_usb2_platform_data *pdata, int on)
 {
 	if (pdata->xcvr_ops && pdata->xcvr_ops->set_vbus_power)
-		pdata->xcvr_ops->set_vbus_power(pdata->xcvr_ops, on);
+		pdata->xcvr_ops->set_vbus_power(pdata->xcvr_ops, pdata, on);
 }
 EXPORT_SYMBOL(fsl_platform_set_vbus_power);
 
@@ -338,7 +338,6 @@ int fsl_usb_host_init(struct platform_device *pdev)
 	pdata->xcvr_ops = xops;
 	pdata->xcvr_type = xops->xcvr_type;
 	pdata->pdev = pdev;
-	xops->pdata = pdata;
 
 	if (fsl_check_usbclk() != 0)
 		return -EINVAL;
@@ -575,7 +574,6 @@ int usbotg_init(struct platform_device *pdev)
 	pdata->xcvr_ops = xops;
 	pdata->xcvr_type = xops->xcvr_type;
 	pdata->pdev = pdev;
-	xops->pdata = pdata;
 
 	if (!otg_used) {
 		if (fsl_check_usbclk() != 0)

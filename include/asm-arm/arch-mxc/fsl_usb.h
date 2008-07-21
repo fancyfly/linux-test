@@ -53,5 +53,5 @@ static inline void
 fsl_platform_set_vbus_power(struct fsl_usb2_platform_data *pdata, int on)
 {
 	if (pdata->xcvr_ops && pdata->xcvr_ops->set_vbus_power)
-		pdata->xcvr_ops->set_vbus_power(pdata->xcvr_ops, on);
+		pdata->xcvr_ops->set_vbus_power(pdata->xcvr_ops, pdata, on);
 }

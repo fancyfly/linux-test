@@ -99,7 +99,7 @@ config USB_EHCI_FSL_1301
 
 config USB_EHCI_FSL_1504
 	bool "Philips ISP1504"
-	depends on MACH_MX27ADS || MACH_MX31ADS || MACH_MX32ADS
+	depends on MACH_MX27ADS || MACH_MX31ADS || MACH_MX32ADS ||MACH_MX31_3DS
 	---help---
 	  Enable support for the High Speed Philips ISP1504 transceiver.
 

@@ -2,6 +2,9 @@
 #define __LINUX_USB_FSL_XCVR_H
 #include <linux/platform_device.h>
 #include <linux/regulator/regulator.h>
+
+struct fsl_usb2_platform_data;
+
 /**
  * @name: transceiver name
  * @xcvr_type: one of PORTSC_PTS_{UTMI,SERIAL,ULPI}
@@ -15,14 +18,14 @@
 struct fsl_xcvr_ops {
 	char *name;
 	u32 xcvr_type;
-	struct fsl_usb2_platform_data *pdata;
 
 	void (*init)(struct fsl_xcvr_ops *ops);
 	void (*uninit)(struct fsl_xcvr_ops *ops);
 	void (*suspend)(struct fsl_xcvr_ops *ops);
 	void (*set_host)(void);
 	void (*set_device)(void);
-	void (*set_vbus_power)(struct fsl_xcvr_ops *ops, int on);
+	void (*set_vbus_power)(struct fsl_xcvr_ops *ops,
+			       struct fsl_usb2_platform_data *pdata, int on);
 	void (*set_remote_wakeup)(u32 *view);
 	void (*pullup)(int on);
 };

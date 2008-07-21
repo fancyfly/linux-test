@@ -1,9 +1,16 @@
 config VIDEO_MXC_IPU_OUTPUT
-	bool
+	bool "IPU v4l2 support"
 	depends on VIDEO_MXC_OUTPUT && MXC_IPU
 	default y
 	---help---
 	  This is the video4linux2 driver for IPU post processing video output.
+
+config VIDEO_MXC_IPUV1_WVGA_OUTPUT
+	bool "IPUv1 WVGA v4l2 display support"
+	depends on VIDEO_MXC_OUTPUT && MXC_IPU
+	default n
+	---help---
+	  This is the video4linux2 driver for IPUv1 WVGA post processing video output.
 
 config VIDEO_MXC_EMMA_OUTPUT
 	bool

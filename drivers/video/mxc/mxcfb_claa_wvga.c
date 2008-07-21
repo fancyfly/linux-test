@@ -42,6 +42,7 @@ static void lcd_poweroff(void);
 
 static struct platform_device *plcd_dev;
 static struct regulator *io_reg;
+static struct regulator *core_reg;
 static int lcd_on;
 
 static struct fb_videomode video_modes[] = {
@@ -120,6 +121,9 @@ static int __devinit lcd_probe(struct platform_device *pdev)
 			plat->reset();
 
 		io_reg = regulator_get(&pdev->dev, plat->io_reg);
+		core_reg = regulator_get(&pdev->dev, plat->core_reg);
+		if (core_reg != NULL)
+			regulator_set_voltage(io_reg, 1800000);
 	}
 
 	for (i = 0; i < num_registered_fb; i++) {
@@ -144,6 +148,7 @@ static int __devexit lcd_remove(struct platform_device *pdev)
 	fb_unregister_client(&nb);
 	lcd_poweroff();
 	regulator_put(io_reg, &pdev->dev);
+	regulator_put(core_reg, &pdev->dev);
 
 	return 0;
 }
@@ -185,6 +190,7 @@ static void lcd_poweron(void)
 		return;
 
 	dev_dbg(&plcd_dev->dev, "turning on LCD\n");
+	regulator_enable(core_reg);
 	regulator_enable(io_reg);
 	lcd_on = 1;
 }
@@ -198,6 +204,7 @@ static void lcd_poweroff(void)
 	lcd_on = 0;
 	dev_dbg(&plcd_dev->dev, "turning off LCD\n");
 	regulator_disable(io_reg);
+	regulator_disable(core_reg);
 }
 
 static int __init claa_lcd_init(void)

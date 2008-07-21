@@ -211,11 +211,18 @@ static void lcd_reset(void)
 	msleep(10);		/* tRES >= 100us */
 	mxc_set_gpio_dataout(MX31_PIN_LCS1, 1);
 	msleep(60);
+#ifdef CONFIG_FB_MXC_CLAA_WVGA_SYNC_PANEL
+	mxc_set_gpio_dataout(MX31_PIN_LCS1, 0);
+#endif
 }
 
 static struct mxc_lcd_platform_data lcd_data = {
 	.io_reg = "VGEN",
+#ifdef CONFIG_FB_MXC_CLAA_WVGA_SYNC_PANEL
+	.core_reg = "GPO1",
+#else
 	.core_reg = "VMMC1",
+#endif
 	.reset = lcd_reset,
 };
 
@@ -384,9 +391,19 @@ static struct platform_device mxc_fb_device = {
 		},
 };
 
+static struct platform_device mxc_fb_wvga_device = {
+	.name = "lcd_claa",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &lcd_data,
+		},
+};
+
 static void mxc_init_fb(void)
 {
 	(void)platform_device_register(&mxc_fb_device);
+	(void)platform_device_register(&mxc_fb_wvga_device);
 }
 #else
 static inline void mxc_init_fb(void)

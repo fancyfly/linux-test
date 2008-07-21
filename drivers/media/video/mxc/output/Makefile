@@ -6,3 +6,6 @@ endif
 ifeq ($(CONFIG_VIDEO_MXC_IPU_OUTPUT),y)
 	obj-$(CONFIG_VIDEO_MXC_OUTPUT)	+= mxc_v4l2_output.o
 endif
+ifeq ($(CONFIG_VIDEO_MXC_IPUV1_WVGA_OUTPUT),y)
+	obj-$(CONFIG_VIDEO_MXC_OUTPUT)	+= mx31_v4l2_wvga_output.o
+endif

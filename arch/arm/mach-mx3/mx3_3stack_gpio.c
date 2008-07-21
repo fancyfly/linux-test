@@ -637,6 +637,16 @@ void gpio_lcd_active(void)
 	mxc_request_iomux(MX31_PIN_FPSHIFT, OUTPUTCONFIG_FUNC, INPUTCONFIG_FUNC);	// CLK
 	mxc_request_iomux(MX31_PIN_CONTRAST, OUTPUTCONFIG_FUNC, INPUTCONFIG_FUNC);	// CONTR
 
+#ifdef CONFIG_FB_MXC_CLAA_WVGA_SYNC_PANEL
+	mxc_request_iomux(MX31_PIN_DRDY0,
+			OUTPUTCONFIG_FUNC, INPUTCONFIG_FUNC);	/* DRDY */
+	mxc_request_iomux(MX31_PIN_D3_REV,
+			OUTPUTCONFIG_FUNC, INPUTCONFIG_FUNC);	/* REV */
+	mxc_request_iomux(MX31_PIN_D3_SPL,
+			OUTPUTCONFIG_FUNC, INPUTCONFIG_FUNC);	/* SPL */
+	mxc_request_iomux(MX31_PIN_D3_CLS,
+			OUTPUTCONFIG_FUNC, INPUTCONFIG_FUNC);	/* CLS */
+#else
 	/* ensure that LCDIO(1.8V) has been turn on */
 	/* active reset line GPIO */
 	mxc_request_iomux(MX31_PIN_LCS1, OUTPUTCONFIG_GPIO, INPUTCONFIG_NONE);
@@ -649,6 +659,7 @@ void gpio_lcd_active(void)
 	mxc_request_iomux(MX31_PIN_SER_RS, OUTPUTCONFIG_GPIO, INPUTCONFIG_NONE);
 	mxc_set_gpio_direction(MX31_PIN_SER_RS, 0);
 	mxc_set_gpio_dataout(MX31_PIN_SER_RS, 1);
+#endif
 }
 
 /*!

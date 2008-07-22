@@ -258,6 +258,47 @@ static inline void mxc_init_bl(void)
 }
 #endif
 
+#if defined(CONFIG_MXC_MLB) || defined(CONFIG_MXC_MLB_MODULE)
+static struct resource mlb_resource[] = {
+	[0] = {
+	       .start = MLB_BASE_ADDR,
+	       .end = MLB_BASE_ADDR + 0x300,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_MLB,
+	       .end = MXC_INT_MLB,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+static struct mxc_mlb_platform_data mlb_data = {
+	.buf_address = IRAM_BASE_ADDR_VIRT,
+	.phy_address = IRAM_BASE_ADDR,
+	.reg_nvcc = "LDO6",
+	.mlb_clk = "mlb_clk",
+};
+
+static struct platform_device mlb_dev = {
+	.name = "mxc_mlb",
+	.id = 0,
+	.dev = {
+		.platform_data = &mlb_data,
+		},
+	.num_resources = ARRAY_SIZE(mlb_resource),
+	.resource = mlb_resource,
+};
+
+static inline void mxc_init_mlb(void)
+{
+	platform_device_register(&mlb_dev);
+}
+#else
+static inline void mxc_init_mlb(void)
+{
+}
+#endif
+
 static struct mxc_tsc_platform_data tsc2007_data = {
 	.vdd_reg = "SW1",
 	.penup_threshold = 30,
@@ -646,6 +687,7 @@ static void __init mxc_board_init(void)
 	mxc_init_mmc();
 	mxc_init_pata();
 	mxc_init_bluetooth();
+	mxc_init_mlb();
 
 	pm_power_off = pmic_power_off;
 }

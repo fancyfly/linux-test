@@ -28,6 +28,7 @@ source "drivers/mxc/vpu/Kconfig"
 source "drivers/mxc/asrc/Kconfig"
 source "drivers/mxc/bt/Kconfig"
 source "drivers/mxc/gps_ioctrl/Kconfig"
+source "drivers/mxc/mlb/Kconfig"
 
 endmenu
 

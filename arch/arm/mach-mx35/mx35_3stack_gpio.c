@@ -997,3 +997,24 @@ void gpio_deactivate_esai_ports(void)
 }
 
 EXPORT_SYMBOL(gpio_deactivate_esai_ports);
+
+/*!
+ * The MLB gpio configuration routine
+ */
+void gpio_mlb_active(void)
+{
+	mxc_request_iomux(MX35_PIN_MLB_CLK, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_MLB_SIG, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_MLB_DAT, MUX_CONFIG_FUNC);
+}
+
+EXPORT_SYMBOL(gpio_mlb_active);
+
+void gpio_mlb_inactive(void)
+{
+	mxc_free_iomux(MX35_PIN_MLB_CLK, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_MLB_SIG, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_MLB_DAT, MUX_CONFIG_FUNC);
+}
+
+EXPORT_SYMBOL(gpio_mlb_inactive);

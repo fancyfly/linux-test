@@ -178,6 +178,13 @@ struct mxc_gps_platform_data {
 	char *analog_reg;
 };
 
+struct mxc_mlb_platform_data {
+	u32 buf_address;
+	u32 phy_address;
+	char *reg_nvcc;
+	char *mlb_clk;
+};
+
 extern void mxc_wd_reset(void);
 extern void mxc_kick_wd(void);
 unsigned long board_get_ckih_rate(void);

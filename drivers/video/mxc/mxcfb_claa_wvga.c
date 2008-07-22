@@ -122,8 +122,11 @@ static int __devinit lcd_probe(struct platform_device *pdev)
 
 		io_reg = regulator_get(&pdev->dev, plat->io_reg);
 		core_reg = regulator_get(&pdev->dev, plat->core_reg);
-		if (core_reg != NULL)
+		if (!IS_ERR(core_reg)) {
 			regulator_set_voltage(io_reg, 1800000);
+		} else {
+			core_reg = NULL;
+		}
 	}
 
 	for (i = 0; i < num_registered_fb; i++) {
@@ -148,7 +151,8 @@ static int __devexit lcd_remove(struct platform_device *pdev)
 	fb_unregister_client(&nb);
 	lcd_poweroff();
 	regulator_put(io_reg, &pdev->dev);
-	regulator_put(core_reg, &pdev->dev);
+	if (core_reg)
+		regulator_put(core_reg, &pdev->dev);
 
 	return 0;
 }
@@ -190,7 +194,8 @@ static void lcd_poweron(void)
 		return;
 
 	dev_dbg(&plcd_dev->dev, "turning on LCD\n");
-	regulator_enable(core_reg);
+	if (core_reg)
+		regulator_enable(core_reg);
 	regulator_enable(io_reg);
 	lcd_on = 1;
 }
@@ -204,7 +209,8 @@ static void lcd_poweroff(void)
 	lcd_on = 0;
 	dev_dbg(&plcd_dev->dev, "turning off LCD\n");
 	regulator_disable(io_reg);
-	regulator_disable(core_reg);
+	if (core_reg)
+		regulator_disable(core_reg);
 }
 
 static int __init claa_lcd_init(void)

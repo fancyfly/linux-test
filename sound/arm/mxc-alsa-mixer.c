@@ -260,6 +260,43 @@ static int pmic_pb_balance_put(struct snd_kcontrol *kcontrol,
 
 /* Balance control end */
 
+/* loopback control start */
+static int pmic_loopback_info(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_info *uinfo)
+{
+
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
+	uinfo->count = 1;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = 1;
+	return 0;
+}
+
+static int pmic_loopback_get(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *uvalue)
+{
+	uvalue->value.integer.value[0] = kcontrol->private_value;
+	return 0;
+
+}
+static int pmic_loopback_put(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *uvalue)
+{
+	int changed;
+	long flag = uvalue->value.integer.value[0];
+	changed =
+	    (uvalue->value.integer.value[0] == kcontrol->private_value) ? 0 : 1;
+	kcontrol->private_value = uvalue->value.integer.value[0];
+	if (flag)
+		pmic_audio_fm_output_enable(true);
+	else
+		pmic_audio_fm_output_enable(false);
+
+	return changed;
+}
+
+/* Loopback control end */
+
 /* Kcontrol structure definitions */
 struct snd_kcontrol_new pmic_control_pb_vol __devinitdata = {
 	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -318,6 +355,16 @@ struct snd_kcontrol_new pmic_control_ip_sw __devinitdata = {
 	.private_value = 0xffab5,
 };
 
+struct snd_kcontrol_new pmic_control_loop_out __devinitdata = {
+	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+	.name = "Loopback Line-in",
+	.index = 0x00,
+	.info = pmic_loopback_info,
+	.get = pmic_loopback_get,
+	.put = pmic_loopback_put,
+	.private_value = 0,
+};
+
 /*!
   * This function registers the control components of ALSA Mixer
   * It is called by ALSA PCM init.
@@ -353,6 +400,9 @@ int mxc_alsa_create_ctl(struct snd_card *card, void *p_value)
 		return err;
 	if ((err =
 	     snd_ctl_add(card, snd_ctl_new1(&pmic_control_ip_sw, p_value))) < 0)
+		return err;
+	err = snd_ctl_add(card, snd_ctl_new1(&pmic_control_loop_out, p_value));
+	if (err < 0)
 		return err;
 
 	return 0;

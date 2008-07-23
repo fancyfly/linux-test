@@ -132,7 +132,6 @@ EXPORT_SYMBOL(pmic_audio_output_get_config);
 EXPORT_SYMBOL(pmic_audio_output_enable_phantom_ground);
 EXPORT_SYMBOL(pmic_audio_output_disable_phantom_ground);
 EXPORT_SYMBOL(pmic_audio_set_autodetect);
-EXPORT_SYMBOL(pmic_audio_fm_output_enable);
 #ifdef DEBUG_AUDIO
 EXPORT_SYMBOL(pmic_audio_dump_registers);
 #endif				/* DEBUG_AUDIO */

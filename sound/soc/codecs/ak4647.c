@@ -133,6 +133,11 @@ static void dump_all_regs(void)
 }
 #endif
 
+static int loopback_xhandle_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol);
+static int loopback_xhandle_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol);
+
 static const char *ak4647_hp_out[] = { "Stereo", "Mono" };
 
 static const char *ak4647_left_in[] = { "LIN1", "LIN2" };
@@ -148,6 +153,8 @@ static const struct soc_enum ak4647_enum[] = {
 	SOC_ENUM_SINGLE(AK4647_PM3, 2, 2, ak4647_right_in),
 };
 
+#undef snd_soc_info_bool_ext
+#define snd_soc_info_bool_ext		snd_ctl_boolean_mono_info
 static const struct snd_kcontrol_new ak4647_snd_controls[] = {
 	SOC_ENUM("Headphone Output", ak4647_enum[0]),
 	SOC_ENUM("Playback Deemphasis", ak4647_enum[1]),
@@ -165,6 +172,8 @@ static const struct snd_kcontrol_new ak4647_snd_controls[] = {
 		   AK4647_RIGHT_INPUT_VOLUME, 0, 242, 0),
 	SOC_SINGLE("Left Playback Volume", AK4647_LEFT_DGT_VOLUME, 0, 255, 1),
 	SOC_SINGLE("Right Playback Volume", AK4647_RIGHT_DGT_VOLUME, 0, 255, 1),
+	SOC_SINGLE_BOOL_EXT("Loopback Line-in", 0,
+			    loopback_xhandle_get, loopback_xhandle_put),
 };
 
 /* add non dapm controls */
@@ -754,7 +763,30 @@ int pmic_audio_fm_output_enable(bool enable)
 	}
 	return 0;
 }
-EXPORT_SYMBOL(pmic_audio_fm_output_enable);
+
+static int loopback_xhandle_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = kcontrol->private_value;
+	return 0;
+}
+
+static int loopback_xhandle_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	int changed;
+	long flag = ucontrol->value.integer.value[0];
+	changed =
+	    (ucontrol->value.integer.value[0] ==
+	     kcontrol->private_value) ? 0 : 1;
+	kcontrol->private_value = flag;
+	if (flag)
+		pmic_audio_fm_output_enable(true);
+	else
+		pmic_audio_fm_output_enable(false);
+
+	return changed;
+}
 
 subsys_initcall(ak4647_init);
 module_exit(ak4647_exit);

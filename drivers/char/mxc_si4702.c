@@ -25,7 +25,6 @@
 #include <linux/err.h>
 #include <linux/mxc_si4702.h>
 #include <asm-arm/arch-mxc/mxc.h>
-#include <asm-arm/arch-mxc/pmic_audio.h>
 
 #define SI4702_DEV_NAME		"si4702"
 #define DEV_MAJOR		0
@@ -636,12 +635,10 @@ static int cmd(unsigned int index)
 	case FM_SHUTDOWN:
 		dev_err(&si4702_client->dev, "FM_SHUTDOWN\n");
 		si4702_shutdown();
-		pmic_audio_fm_output_enable(0);
 		break;
 	case FM_STARTUP:
 		dev_err(&si4702_client->dev, "FM_STARTUP\n");
 		plat_data->reset();
-		pmic_audio_fm_output_enable(1);
 		si4702_startup();
 		break;
 	case FM_RESET:
@@ -853,8 +850,6 @@ static int open_si4702(struct inode *inode, struct file *file)
 		return -ENODEV;
 	}
 
-	pmic_audio_fm_output_enable(1);
-
 	return 0;
 }
 
@@ -866,7 +861,6 @@ static int release_si4702(struct inode *inode, struct file *file)
 	/* inactive, free GPIO, cut power */
 	plat_data->gpio_put();
 
-	pmic_audio_fm_output_enable(0);
 	spin_lock(&count_lock);
 	count--;
 	spin_unlock(&count_lock);

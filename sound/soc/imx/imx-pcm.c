@@ -326,7 +326,7 @@ static int imx_pcm_prepare(struct snd_pcm_substream *substream)
 
 		channel = mxc_dma_request(prtd->dma_ch, "ALSA TX SDMA");
 		if (channel < 0) {
-			pr_err("imx-pcm: error requesting
+			pr_err("imx-pcm: error requesting \
 					a write dma channel\n");
 			return channel;
 		}
@@ -336,7 +336,7 @@ static int imx_pcm_prepare(struct snd_pcm_substream *substream)
 	} else {
 		channel = mxc_dma_request(prtd->dma_ch, "ALSA RX SDMA");
 		if (channel < 0) {
-			pr_err("imx-pcm: error requesting
+			pr_err("imx-pcm: error requesting \
 				a read dma channel\n");
 			return channel;
 		}

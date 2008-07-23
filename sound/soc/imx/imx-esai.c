@@ -653,7 +653,6 @@ static int imx_esai_hw_tx_params(struct snd_pcm_substream
 	channels = params_channels(params);
 	tfcr &= ESAI_TFCR_TE_MASK;
 	tfcr |= ESAI_TFCR_TE(channels);
-	tfcr |= ESAI_TFCR_TFEN;
 
 	tfcr |= ESAI_TFCR_TFWM(64);
 
@@ -734,42 +733,51 @@ static int imx_esai_hw_params(struct snd_pcm_substream
 
 static int imx_esai_trigger(struct snd_pcm_substream *substream, int cmd)
 {
-	u32 reg;
+	u32 reg, tfcr;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		tfcr = __raw_readl(ESAI_TFCR);
 		reg = __raw_readl(ESAI_TCR);
-		reg &= ~ESAI_TCR_TPR;
-		__raw_writel(reg, ESAI_TCR);
 	} else {
 		reg = __raw_readl(ESAI_RCR);
-		reg &= ~ESAI_RCR_RPR;
-		__raw_writel(reg, ESAI_RCR);
 	}
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+			tfcr |= ESAI_TFCR_TFEN;
+			__raw_writel(tfcr, ESAI_TFCR);
+			reg &= ~ESAI_TCR_TPR;
 			reg |= ESAI_TCR_TE(substream->runtime->channels);
-		else
+			__raw_writel(reg, ESAI_TCR);
+		} else {
+			reg &= ~ESAI_RCR_RPR;
 			reg |= ESAI_RCR_RE(substream->runtime->channels);
+			__raw_writel(reg, ESAI_RCR);
+		}
 		break;
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			reg &= ~ESAI_TCR_TE(substream->runtime->channels);
-		else
+			__raw_writel(reg, ESAI_TCR);
+			reg |= ESAI_TCR_TPR;
+			__raw_writel(reg, ESAI_TCR);
+			tfcr |= ESAI_TFCR_TFR;
+			tfcr &= ~ESAI_TFCR_TFEN;
+			__raw_writel(tfcr, ESAI_TFCR);
+			tfcr &= ~ESAI_TFCR_TFR;
+			__raw_writel(tfcr, ESAI_TFCR);
+		} else {
 			reg &= ~ESAI_RCR_RE(substream->runtime->channels);
+			__raw_writel(reg, ESAI_RCR);
+		}
 		break;
 	default:
 		return -EINVAL;
 	}
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		__raw_writel(reg, ESAI_TCR);
-	else
-		__raw_writel(reg, ESAI_RCR);
 
 	ESAI_DUMP();
 	return 0;

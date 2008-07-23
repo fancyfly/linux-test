@@ -60,8 +60,8 @@ static const struct snd_pcm_hardware imx_pcm_hardware = {
 	.buffer_bytes_max = SND_RAM_SIZE,
 	.period_bytes_max = SND_RAM_SIZE / 4,
 #else
-	.buffer_bytes_max = 32 * 1024,
-	.period_bytes_max = 8 * 1024,
+	.buffer_bytes_max = 64 * 1024,
+	.period_bytes_max = 16 * 1024,
 #endif
 	.period_bytes_min = 64,
 	.periods_min = 2,
@@ -314,6 +314,37 @@ static int imx_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct mxc_runtime_data *prtd = runtime->private_data;
+	int ret = 0, channel = 0;
+
+	if (prtd->dma_alloc) {
+		mxc_dma_free(prtd->dma_wchannel);
+		prtd->dma_alloc = 0;
+	}
+
+	/* only allocate the DMA chn once */
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+
+		channel = mxc_dma_request(prtd->dma_ch, "ALSA TX SDMA");
+		if (channel < 0) {
+			pr_err("imx-pcm: error requesting
+					a write dma channel\n");
+			return channel;
+		}
+		ret = mxc_dma_callback_set(channel, (mxc_dma_callback_t)
+					   audio_dma_irq, (void *)substream);
+
+	} else {
+		channel = mxc_dma_request(prtd->dma_ch, "ALSA RX SDMA");
+		if (channel < 0) {
+			pr_err("imx-pcm: error requesting
+				a read dma channel\n");
+			return channel;
+		}
+		ret = mxc_dma_callback_set(channel, (mxc_dma_callback_t)
+					   audio_dma_irq, (void *)substream);
+	}
+	prtd->dma_wchannel = channel;
+	prtd->dma_alloc = 1;
 
 	prtd->period = 0;
 	prtd->periods = 0;
@@ -326,59 +357,19 @@ static int imx_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct mxc_runtime_data *prtd = runtime->private_data;
 	struct snd_soc_pcm_link *pcm_link = substream->private_data;
-	int ret = 0, channel = 0;
-	int transfer = 0;
 
-	transfer = imx_get_sdma_transfer(params_format(params),
-					 pcm_link->cpu_dai->id,
-					 substream->stream);
+	prtd->dma_ch = imx_get_sdma_transfer(params_format(params),
+					     pcm_link->cpu_dai->id,
+					     substream->stream);
 
-	if (transfer < 0) {
+	if (prtd->dma_ch < 0) {
 		printk(KERN_ERR "imx-pcm: invaild sdma transfer type");
 		return -1;
 	}
 
-	/* only allocate the DMA chn once */
-	if (!prtd->dma_alloc) {
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-
-			channel = mxc_dma_request(transfer, "ALSA TX SDMA");
-			if (channel < 0) {
-				printk(KERN_ERR
-				       "imx-pcm: error requesting a write dma channel\n");
-				return channel;
-			}
-			ret = mxc_dma_callback_set(channel, (mxc_dma_callback_t)
-						   audio_dma_irq,
-						   (void *)substream);
-
-		} else {
-			channel = mxc_dma_request(transfer, "ALSA RX SDMA");
-			if (channel < 0) {
-				printk(KERN_ERR
-				       "imx-pcm: error requesting a read dma channel\n");
-				return channel;
-			}
-			ret = mxc_dma_callback_set(channel, (mxc_dma_callback_t)
-						   audio_dma_irq,
-						   (void *)substream);
-		}
-		prtd->dma_wchannel = channel;
-		prtd->dma_alloc = 1;
-
-		/* set up chn with params */
-		//      dma->params.callback = audio_dma_irq;
-
-	}
-
 	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
 
-	dbg("-imx_pcm_hw_params:"
-	    "UseIram=%d buf->addr=%x buf->area=%p buf->bytes=%d\n",
-	    UseIram, (unsigned int)runtime->dma_addr,
-	    runtime->dma_area, runtime->dma_bytes);
-
-	return ret;
+	return 0;
 }
 
 static int imx_pcm_hw_free(struct snd_pcm_substream *substream)

@@ -173,6 +173,11 @@ struct mxc_keyp_platform_data {
 	void (*inactive) (void);
 };
 
+struct mxc_gps_platform_data {
+	char *core_reg;
+	char *analog_reg;
+};
+
 extern void mxc_wd_reset(void);
 extern void mxc_kick_wd(void);
 unsigned long board_get_ckih_rate(void);

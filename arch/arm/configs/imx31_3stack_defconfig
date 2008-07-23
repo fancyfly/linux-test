@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Wed Jul 16 09:49:45 2008
+# Tue Jul 22 17:35:54 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -926,6 +926,7 @@ CONFIG_MXC_IPU_PRP_VF_SDC=m
 CONFIG_MXC_IPU_PRP_ENC=m
 CONFIG_VIDEO_MXC_OUTPUT=y
 CONFIG_VIDEO_MXC_IPU_OUTPUT=y
+# CONFIG_VIDEO_MXC_IPUV1_WVGA_OUTPUT is not set
 # CONFIG_VIDEO_MXC_OPL is not set
 # CONFIG_VIDEO_CPIA is not set
 # CONFIG_VIDEO_CPIA2 is not set
@@ -1369,6 +1370,7 @@ CONFIG_MXC_DAM=y
 #
 CONFIG_MXC_SPI_PMIC_CORE=y
 # CONFIG_MXC_I2C_MCU_PMIC_CORE is not set
+# CONFIG_MXC_I2C_PMIC_CORE is not set
 CONFIG_MXC_PMIC=y
 CONFIG_MXC_PMIC_CHARDEV=y
 
@@ -1426,6 +1428,11 @@ CONFIG_MXC_HWEVENT=y
 # MXC Bluetooth support
 #
 CONFIG_MXC_BLUETOOTH=m
+
+#
+# Broadcom GPS ioctrl support
+#
+CONFIG_GPS_IOCTRL=m
 
 #
 # File systems

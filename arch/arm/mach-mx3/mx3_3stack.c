@@ -865,6 +865,30 @@ static void mxc_init_bluetooth(void)
 	(void)platform_device_register(&mxc_bt_device);
 }
 
+#if defined(CONFIG_GPS_IOCTRL) || defined(CONFIG_GPS_IOCTRL_MODULE)
+static struct mxc_gps_platform_data gps_data = {
+	.core_reg = "GPO3",
+	.analog_reg = "GPO1",
+};
+
+static struct platform_device mxc_gps_device = {
+	.name = "gps_ioctrl",
+	.id = -1,
+	.dev = {
+		.platform_data = &gps_data,
+		},
+};
+
+static void __init mxc_init_gps(void)
+{
+	(void)platform_device_register(&mxc_gps_device);
+}
+#else
+static void __init mxc_init_gps(void)
+{
+}
+#endif
+
 /*!
  * Board specific initialization.
  */
@@ -909,6 +933,7 @@ static void __init mxc_board_init(void)
 	mxc_init_ide();
 	mxc_init_pata();
 	mxc_init_bluetooth();
+	mxc_init_gps();
 
 	/* set power off hook to mc13783 power off */
 	pm_power_off = pmic_power_off;

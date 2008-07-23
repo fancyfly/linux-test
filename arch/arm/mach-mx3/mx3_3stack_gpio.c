@@ -1236,3 +1236,52 @@ void gpio_usbotg_fs_inactive(void)
 
 EXPORT_SYMBOL(gpio_usbotg_fs_inactive);
 
+/*!
+ * GPS GPIO
+ */
+void gpio_gps_active(void)
+{
+	/* POWER_EN */
+	mxc_request_iomux(MX31_PIN_SCLK0,
+			OUTPUTCONFIG_GPIO, INPUTCONFIG_GPIO);
+	mxc_set_gpio_direction(MX31_PIN_SCLK0, 0);
+	/* Reset Pin */
+	mxc_request_iomux(MX31_PIN_DCD_DTE1,
+			OUTPUTCONFIG_GPIO, INPUTCONFIG_GPIO);
+	mxc_set_gpio_direction(MX31_PIN_DCD_DTE1, 0);
+
+	mxc_set_gpio_dataout(MX31_PIN_SCLK0, 0);
+	mxc_set_gpio_dataout(MX31_PIN_DCD_DTE1, 0);
+
+	msleep(5);
+	mxc_set_gpio_dataout(MX31_PIN_DCD_DTE1, 1);
+	msleep(5);
+}
+
+EXPORT_SYMBOL(gpio_gps_active);
+
+int gpio_gps_access(int para)
+{
+	iomux_pin_name_t pin;
+	pin = (para & 0x1) ? MX31_PIN_SCLK0 : MX31_PIN_DCD_DTE1;
+
+	if (para & 0x4) /* Read GPIO */
+		return mxc_get_gpio_datain(pin);
+	else if (para & 0x2) /* Write GPIO */
+		mxc_set_gpio_dataout(pin, 1);
+	else
+		mxc_set_gpio_dataout(pin, 0);
+	return 0;
+}
+
+EXPORT_SYMBOL(gpio_gps_access);
+
+void gpio_gps_inactive(void)
+{
+	mxc_free_iomux(MX31_PIN_DCD_DTE1,
+			OUTPUTCONFIG_GPIO, INPUTCONFIG_GPIO);
+	mxc_free_iomux(MX31_PIN_SCLK0,
+			OUTPUTCONFIG_GPIO, INPUTCONFIG_GPIO);
+}
+
+EXPORT_SYMBOL(gpio_gps_inactive);

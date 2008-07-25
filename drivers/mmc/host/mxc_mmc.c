@@ -632,8 +632,15 @@ static int mxcmci_cmd_done(struct mxcmci_host *host, unsigned int stat)
 			while (!(__raw_readl(host->base + MMC_STATUS) &
 				 (STATUS_BUF_READ_RDY | STATUS_READ_OP_DONE))) ;
 
+			pr_debug("status is 0x%x\n",
+				 __raw_readl(host->base + MMC_STATUS));
 			/* read 32 bit data */
 			temp_data = __raw_readl(host->base + MMC_BUFFER_ACCESS);
+			if (SD_APP_SEND_SCR == cmd->opcode) {
+				pr_debug("CMD51 read out 0x%x\n", temp_data);
+				if (temp_data == 0xFFFFFFFF)
+					temp_data = 0;
+			}
 			if (no_of_bytes >= 4) {
 				*buf++ = temp_data;
 				no_of_bytes -= 4;
@@ -658,7 +665,8 @@ static int mxcmci_cmd_done(struct mxcmci_host *host, unsigned int stat)
 				     host->base + MMC_STATUS);
 		} else if (status & STATUS_READ_CRC_ERR) {
 			pr_debug("%s: Read CRC error occurred\n", DRIVER_NAME);
-			data->error = -EILSEQ;
+			if (SD_APP_SEND_SCR != cmd->opcode)
+				data->error = -EILSEQ;
 			__raw_writel(STATUS_READ_CRC_ERR,
 				     host->base + MMC_STATUS);
 		}
@@ -1001,7 +1009,6 @@ static void mxcmci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 			prescaler = 0;
 
 		/* clk_dev =1, CLK_DIV = ipg_perclk/2 */
-
 		while (prescaler <= 0x800) {
 			for (clk_dev = 1; clk_dev <= 0xF; clk_dev++) {
 				int x;

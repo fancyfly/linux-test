@@ -225,6 +225,7 @@ static void lcd_poweron(void)
 		return;
 
 	dev_dbg(&lcd_spi->dev, "turning on LCD\n");
+	msleep(60);
 	spi_write(lcd_spi, (const u8 *)&slpout, 1);
 	msleep(60);
 	spi_write(lcd_spi, (const u8 *)&dison, 1);
@@ -244,6 +245,7 @@ static void lcd_poweroff(void)
 		return;
 
 	dev_dbg(&lcd_spi->dev, "turning off LCD\n");
+	msleep(60);
 	spi_write(lcd_spi, (const u8 *)&disoff, 1);
 	msleep(60);
 	spi_write(lcd_spi, (const u8 *)&slpin, 1);

@@ -1030,10 +1030,6 @@ int32_t ipu_enable_channel(ipu_channel_t channel)
 	out_dma = channel_2_dma(channel, IPU_OUTPUT_BUFFER);
 	in_dma = channel_2_dma(channel, IPU_VIDEO_IN_BUFFER);
 
-	if ((channel == MEM_DC_SYNC) || (channel == MEM_BG_SYNC) ||
-	    (channel == MEM_FG_SYNC))
-		_ipu_dp_dc_enable(channel);
-
 	spin_lock_irqsave(&ipu_lock, lock_flags);
 
 	if (idma_is_valid(in_dma)) {
@@ -1044,6 +1040,10 @@ int32_t ipu_enable_channel(ipu_channel_t channel)
 		reg = __raw_readl(IDMAC_CHA_EN(out_dma));
 		__raw_writel(reg | idma_mask(out_dma), IDMAC_CHA_EN(out_dma));
 	}
+
+	if ((channel == MEM_DC_SYNC) || (channel == MEM_BG_SYNC) ||
+	    (channel == MEM_FG_SYNC))
+		_ipu_dp_dc_enable(channel);
 
 	if (IPU_CHAN_ID(channel) <= IPU_CHAN_ID(MEM_PP_MEM))
 		_ipu_ic_enable_task(channel);

@@ -48,6 +48,12 @@
 #define FSL_HAVE_SCC
 #define USE_OLD_PTRS
 
+#elif defined(CONFIG_ARCH_MX35)
+
+#define FSL_HAVE_SCC
+#define FSL_HAVE_RNGC
+#define FSL_HAVE_RTIC
+
 #elif defined(CONFIG_ARCH_MX37)
 
 #define FSL_HAVE_SCC2

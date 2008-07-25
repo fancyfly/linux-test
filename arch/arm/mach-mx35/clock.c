@@ -1265,6 +1265,7 @@ static struct clk rtic_clk = {
 static struct clk scc_clk = {
 	.name = "scc_clk",
 	.parent = &ipg_clk,
+	.enable = _clk_enable,
 	.enable_reg = MXC_CCM_CGR2,
 	.enable_shift = MXC_CCM_CGR2_SCC_OFFSET,
 	.disable = _clk_disable,

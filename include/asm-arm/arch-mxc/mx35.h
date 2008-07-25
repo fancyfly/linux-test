@@ -190,7 +190,7 @@
 #define EPIT2_BASE_ADDR		(AIPS2_BASE_ADDR + 0x00098000)
 #define GPIO3_BASE_ADDR		(AIPS2_BASE_ADDR + 0x000A4000)
 #define SCC_BASE_ADDR		(AIPS2_BASE_ADDR + 0x000AC000)
-#define RNGA_BASE_ADDR		(AIPS2_BASE_ADDR + 0x000B0000)
+#define RNGC_BASE_ADDR		(AIPS2_BASE_ADDR + 0x000B0000)
 #define MMC_SDHC1_BASE_ADDR 	(AIPS2_BASE_ADDR + 0x000B4000)
 #define MMC_SDHC2_BASE_ADDR 	(AIPS2_BASE_ADDR + 0x000B8000)
 #define MMC_SDHC3_BASE_ADDR 	(AIPS2_BASE_ADDR + 0x000BC000)
@@ -374,7 +374,7 @@
 #define MXC_INT_IIM                 	19
 #define MXC_INT_RESV20              	20
 #define MXC_INT_RESV21              	21
-#define MXC_INT_RNGC                	22
+#define MXC_INT_RNG                	22
 #define MXC_INT_EVTMON              	23
 #define MXC_INT_KPP                 	24
 #define MXC_INT_RTC                 	25

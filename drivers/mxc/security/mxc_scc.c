@@ -46,8 +46,7 @@
  * All other functions are internal to the driver.
  *
  * @ingroup MXCSCC
- */
-
+*/
 #include "sahara2/include/portable_os.h"
 #include "mxc_scc_internals.h"
 
@@ -60,14 +59,13 @@
 #include <linux/device.h>
 
 #else
-
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 
 #endif
 
-/*!
+/**
  * This is the set of errors which signal that access to the SCM RAM has
  * failed or will fail.
  */
@@ -77,7 +75,6 @@
         SCM_ERR_UNALIGNED_ACCESS | SCM_ERR_BYTE_ACCESS |                   \
         SCM_ERR_INTERNAL_ERROR | SCM_ERR_SMN_BLOCKING_ACCESS |             \
         SCM_ERR_CIPHERING | SCM_ERR_ZEROIZING | SCM_ERR_BUSY)
-
 /******************************************************************************
  *
  *  Global / Static Variables
@@ -158,10 +155,9 @@ static uint32_t scc_memory_size_bytes;
 static uint32_t scm_highest_memory_address;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18))
-/*! Pointer to SCC's clock information.  Initialized during scc_init(). */
+/** Pointer to SCC's clock information.  Initialized during scc_init(). */
 static struct clk *scc_clk = NULL;
 #endif
-
 /*! The lookup table for an 8-bit value.  Calculated once
  * by #scc_init_ccitt_crc().
  */
@@ -201,7 +197,6 @@ static int scc_init(void)
 	uint32_t smn_status;
 	int i;
 	int return_value = -EIO;	/* assume error */
-
 	if (scc_availability == SCC_STATUS_INITIAL) {
 
 		/* Set this until we get an initial reading */
@@ -214,6 +209,7 @@ static int scc_init(void)
 		for (i = 0; i < SCC_CALLBACK_SIZE; i++) {
 			scc_callbacks[i] = 0;
 		}
+
 		/* Initialize key slots */
 		for (i = 0; i < SCC_KEY_SLOTS; i++) {
 			scc_key_info[i].offset = i * SCC_KEY_SLOT_SIZE;
@@ -233,11 +229,7 @@ static int scc_init(void)
 		}
 #endif				/* LINUX_VERSION_CODE */
 
-#else
-#warning SCC clock initialization skipped, not gated on this archetecture.
-
 #endif				/* SCC_CLOCK_NOT_GATED */
-
 		/* See whether there is an SCC available */
 		if (0 && !SCC_ENABLED()) {
 			os_printk(KERN_ERR
@@ -272,20 +264,19 @@ static int scc_init(void)
 				if (scc_availability == SCC_STATUS_OK) {
 					if (setup_interrupt_handling() != 0) {
 						unsigned condition;
-
-						/*!
-						 * The error could be only that the SCM interrupt was
-						 * not set up.  This interrupt is always masked, so
-						 * that is not an issue.
-						 *
-						 * The SMN's interrupt may be shared on that line, it
-						 * may be separate, or it may not be wired.  Do what
-						 * is necessary to check its status.
-						 *
-						 * Although the driver is coded for possibility of not
-						 * having SMN interrupt, the fact that there is one
-						 * means it should be available and used.
-						 */
+			/**
+			 * The error could be only that the SCM interrupt was
+			 * not set up.  This interrupt is always masked, so
+			 * that is not an issue.
+			 *
+			 * The SMN's interrupt may be shared on that line, it
+			 * may be separate, or it may not be wired.  Do what
+			 * is necessary to check its status.
+			 *
+			 * Although the driver is coded for possibility of not
+			 * having SMN interrupt, the fact that there is one
+			 * means it should be available and used.
+			 */
 #ifdef USE_SMN_INTERRUPT
 						condition = !smn_irq_set;	/* Separate. Check SMN binding */
 #elif !defined(NO_SMN_INTERRUPT)
@@ -388,19 +379,23 @@ static void scc_cleanup(void)
 
 	/* Deregister SCM interrupt handler */
 	if (scm_irq_set) {
-		free_irq(INT_SCC_SCM, NULL);
+		os_deregister_interrupt(INT_SCC_SCM);
 	}
 
 	/* Deregister SMN interrupt handler */
 	if (smn_irq_set) {
 #ifdef USE_SMN_INTERRUPT
-		free_irq(INT_SCC_SMN, NULL);
+		os_deregister_interrupt(INT_SCC_SMN);
 #endif
 	}
-
 	pr_debug("SCC driver cleaned up.\n");
 
 }				/* scc_cleanup */
+
+/*static void scc_cleanup(void)
+{
+	 platform_driver_unregister(&mxc_scc_driver);
+}*/
 
 /*****************************************************************************/
 /* fn scc_get_configuration()                                                */
@@ -415,10 +410,10 @@ scc_config_t *scc_get_configuration(void)
 		scc_init();
 	}
 
-	/*!
-	 * If there is no SCC, yet the driver exists, the value -1 will be in
-	 * the #scc_config_t fields for other than the driver versions.
-	 */
+    /**
+     * If there is no SCC, yet the driver exists, the value -1 will be in
+     * the #scc_config_t fields for other than the driver versions.
+     */
 	return &scc_configuration;
 }				/* scc_get_configuration */
 
@@ -820,12 +815,8 @@ scc_return_t scc_write_register(int register_offset, uint32_t value)
  * when the SCM has completed a crypto or zeroing operation.  Therefore, if the
  * interrupt is active, the driver will just clear the interrupt and (re)mask.
  *
- * @param irq Channel number for the IRQ. (@c SCC_INT_SMN or @c SCC_INT_SCM).
- * @param dev_id Pointer to the identification of the device.  Ignored.
- * @param regs Holds the snapshot of the processor's context before the
- *        processor entered the interrupt.  Ignored.
  */
-static irqreturn_t scc_irq(int irq, void *dev_id, struct pt_regs *regs)
+OS_DEV_ISR(scc_irq)
 {
 	uint32_t smn_status;
 	uint32_t scm_status;
@@ -843,7 +834,8 @@ static irqreturn_t scc_irq(int irq, void *dev_id, struct pt_regs *regs)
 
 	/* SMN is on its own interrupt line.  Verify the IRQ was triggered
 	 * before clearing the interrupt and marking it handled.  */
-	if (irq == smn_irq && smn_status & SMN_STATUS_SMN_STATUS_IRQ) {
+	if ((os_dev_get_irq() == smn_irq) &&
+	    (smn_status & SMN_STATUS_SMN_STATUS_IRQ)) {
 		SCC_WRITE_REGISTER(SMN_COMMAND, SMN_COMMAND_CLEAR_INTERRUPT);
 		handled++;	/* tell kernel that interrupt was handled */
 	}
@@ -852,7 +844,7 @@ static irqreturn_t scc_irq(int irq, void *dev_id, struct pt_regs *regs)
 	scm_status = SCC_READ_REGISTER(SCM_STATUS);
 
 	/* The driver masks interrupts, so this should never happen. */
-	if (irq == INT_SCC_SCM && scm_status & SCM_STATUS_INTERRUPT_STATUS) {
+	if (os_dev_get_irq() == INT_SCC_SCM) {
 		/* but if it does, try to prevent it in the future */
 		SCC_WRITE_REGISTER(SCM_INTERRUPT_CTRL,
 				   SCM_INTERRUPT_CTRL_CLEAR_INTERRUPT
@@ -1027,9 +1019,7 @@ copy_from_scc(const uint32_t from, uint8_t * to, unsigned long count_bytes,
 	uint32_t scm_word;
 	uint16_t current_crc = 0;	/* local copy for fast access */
 	uint32_t status;
-
 	pr_debug("SCC: copying %ld bytes from 0x%x.\n", count_bytes, from);
-
 	status = SCC_READ_REGISTER(SCM_ERROR_STATUS) & SCM_ACCESS_ERRORS;
 	if (status != 0) {
 		pr_debug
@@ -1331,8 +1321,8 @@ static int setup_interrupt_handling(void)
 
 #ifdef USE_SMN_INTERRUPT
 	/* Install interrupt service routine for SMN. */
-	smn_error_code = request_irq(INT_SCC_SMN, scc_irq, 0,
-				     SCC_DRIVER_NAME, NULL);
+	smn_error_code = os_register_interrupt(SCC_DRIVER_NAME,
+					       INT_SCC_SMN, scc_irq);
 	if (smn_error_code != 0) {
 		os_printk
 		    ("SCC Driver: Error installing SMN Interrupt Handler: %d\n",
@@ -1351,8 +1341,8 @@ static int setup_interrupt_handling(void)
 	/*
 	 * Install interrupt service routine for SCM (or both together).
 	 */
-	scm_error_code = request_irq(INT_SCC_SCM, scc_irq, 0,
-				     SCC_DRIVER_NAME, NULL);
+	scm_error_code = os_register_interrupt(SCC_DRIVER_NAME,
+					       INT_SCC_SCM, scc_irq);
 	if (scm_error_code != 0) {
 #ifndef MXC
 		os_printk
@@ -1465,8 +1455,7 @@ scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
 	uint32_t bytes_to_process;	/* multi-purpose byte counter */
 	uint16_t crc = CRC_CCITT_START;	/* running CRC value */
 	crc_t *crc_ptr = NULL;	/* Reset if CRC required */
-	/* byte address into SCM RAM */
-	uint32_t scm_location = SCM_RED_MEMORY + SCM_NON_RESERVED_OFFSET;
+	uint32_t scm_location = SCM_RED_MEMORY + SCM_NON_RESERVED_OFFSET;	/* byte address  into SCM RAM */
 	uint32_t scm_bytes_remaining = scc_memory_size_bytes;	/* free RED RAM */
 	uint8_t padding_buffer[PADDING_BUFFER_MAX_BYTES];	/* CRC+padding holder */
 	unsigned padding_byte_count = 0;	/* Reset if padding required */
@@ -1527,7 +1516,6 @@ scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
 			    ("SCC: too many ciphertext bytes for space available\n");
 			break;
 		}
-
 		pr_debug("SCC: Starting encryption. %x for %d bytes (%p/%p)\n",
 			 scm_control, bytes_to_process,
 			 (void *)SCC_READ_REGISTER(SCM_RED_START),
@@ -1583,8 +1571,7 @@ scc_decrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
 	uint32_t bytes_copied = 0;	/* running total of bytes going to user */
 	uint32_t bytes_to_copy = 0;	/* Number in this encryption 'chunk' */
 	uint16_t crc = CRC_CCITT_START;	/* running CRC value */
-	/* next target for  ctext */
-	uint32_t scm_location = SCM_BLACK_MEMORY + SCM_NON_RESERVED_OFFSET;
+	uint32_t scm_location = SCM_BLACK_MEMORY + SCM_NON_RESERVED_OFFSET;	/* next target for  ctext */
 	unsigned padding_byte_count;	/* number of bytes of padding stripped */
 	uint8_t last_two_blocks[2 * SCC_BLOCK_SIZE_BYTES()];	/* temp */
 	uint32_t scm_error_status = 0;	/* register value */
@@ -1751,12 +1738,11 @@ scc_alloc_slot(uint32_t value_size_bytes, uint64_t owner_id, uint32_t * slot)
 	if (scc_availability != SCC_STATUS_OK) {
 		goto out;
 	}
-
 	/* ACQUIRE LOCK to prevent others from using SCC crypto */
 	spin_lock_irqsave(&scc_crypto_lock, irq_flags);
 
-	pr_debug("SCC: Allocating %d-byte slot for 0x%Lx\n",
-		 value_size_bytes, owner_id);
+	pr_debug("SCC: Allocating %d-byte slot for 0x%Lx\n", value_size_bytes,
+		 owner_id);
 
 	if ((value_size_bytes != 0) && (value_size_bytes <= SCC_MAX_KEY_SIZE)) {
 		int i;
@@ -1789,11 +1775,10 @@ scc_alloc_slot(uint32_t value_size_bytes, uint64_t owner_id, uint32_t * slot)
 /*****************************************************************************/
 /* fn verify_slot_access()                                                   */
 /*****************************************************************************/
-inline static scc_return_t
-verify_slot_access(uint64_t owner_id, uint32_t slot, uint32_t access_len)
+static inline scc_return_t verify_slot_access(uint64_t owner_id, uint32_t slot,
+					      uint32_t access_len)
 {
 	scc_return_t status = SCC_RET_FAIL;
-
 	if (scc_availability != SCC_STATUS_OK) {
 		goto out;
 	}
@@ -2079,7 +2064,7 @@ scc_get_slot_info(uint64_t owner_id, uint32_t slot, uint32_t * address,
  *
  * @internal
  *
- * On a Tahiti, crypto under 230 or so bytes is done after the first loop, all
+ * Crypto under 230 or so bytes is done after the first loop, all
  * the way up to five sets of spins for 1024 bytes.  (8- and 16-byte functions
  * are done when we first look.  Zeroizing takes one pass around.
  */
@@ -2089,6 +2074,7 @@ static void scc_wait_completion(void)
 
 	/* check for completion by polling */
 	while (!is_cipher_done() && (i++ < SCC_CIPHER_MAX_POLL_COUNT)) {
+		/* kill time if loop not optimized away */
 		udelay(10);
 	}
 	pr_debug("SCC: Polled DONE %d times\n", i);
@@ -2296,4 +2282,3 @@ static void dbg_scc_write_register(uint32_t offset, uint32_t value)
 }
 
 #endif				/* SCC_REGISTER_DEBUG */
-

@@ -337,8 +337,10 @@ void pmic_voltage_init(void)
 	volt.sw1a = SW1A_1_25V;
 	pmic_power_switcher_set_dvs(SW_SW1A, volt);
 
-	volt.sw1a = SW1A_0_975V;
-	pmic_power_switcher_set_stby(SW_SW1A, volt);
+	if (cpu_is_mx32()) {
+		volt.sw1a = SW1A_0_975V;
+		pmic_power_switcher_set_stby(SW_SW1A, volt);
+	}
 
 	volt.sw1b = SW1A_1_25V;
 	pmic_power_switcher_set_dvs(SW_SW1B, volt);

@@ -688,6 +688,41 @@ static void mxc_init_bluetooth(void)
 	(void)platform_device_register(&mxc_bt_device);
 }
 
+#if defined(CONFIG_CAN_FLEXCAN) || defined(CONFIG_CAN_FLEXCAN_MODULE)
+static void flexcan_xcvr_enable(int id, int en)
+{
+	static int pwdn;
+
+	if (id < 0 || id > 1)
+		return;
+
+	if (en) {
+		if (!(pwdn++))
+			pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2,
+					      1, 0);
+	} else {
+		if (!(--pwdn))
+			pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2,
+					      1, 1);
+	}
+}
+
+struct flexcan_platform_data flexcan_data[] = {
+	{
+	 .core_reg = "SW1",
+	 .io_reg = NULL,
+	 .xcvr_enable = flexcan_xcvr_enable,
+	 .active = gpio_can_active,
+	 .inactive = gpio_can_inactive,},
+	{
+	 .core_reg = "SW1",
+	 .io_reg = NULL,
+	 .xcvr_enable = flexcan_xcvr_enable,
+	 .active = gpio_can_active,
+	 .inactive = gpio_can_inactive,},
+};
+#endif
+
 /*!
  * Board specific initialization.
  */

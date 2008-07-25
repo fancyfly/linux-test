@@ -1077,3 +1077,48 @@ void gpio_mlb_inactive(void)
 }
 
 EXPORT_SYMBOL(gpio_mlb_inactive);
+
+void gpio_can_active(int id)
+{
+	int pad;
+
+	switch (id) {
+	case 0:
+		pad = PAD_CTL_HYS_SCHMITZ | PAD_CTL_PKE_ENABLE | \
+		    PAD_CTL_PUE_PUD | PAD_CTL_100K_PU | PAD_CTL_ODE_OpenDrain;
+		mxc_request_iomux(MX35_PIN_I2C2_CLK, MUX_CONFIG_ALT1);
+		mxc_request_iomux(MX35_PIN_I2C2_DAT, MUX_CONFIG_ALT1);
+		mxc_iomux_set_pad(MX35_PIN_I2C2_CLK, pad);
+		mxc_iomux_set_pad(MX35_PIN_I2C2_DAT, pad);
+		mxc_iomux_set_input(MUX_IN_CAN1_CANRX, INPUT_CTL_PATH0);
+		break;
+	case 1:
+		pad = PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PUD | PAD_CTL_100K_PU;
+		mxc_request_iomux(MX35_PIN_FEC_MDC, MUX_CONFIG_ALT1);
+		mxc_request_iomux(MX35_PIN_FEC_MDIO, MUX_CONFIG_ALT1);
+		mxc_iomux_set_pad(MX35_PIN_FEC_MDC, pad);
+		mxc_iomux_set_pad(MX35_PIN_FEC_MDIO, pad);
+		mxc_iomux_set_input(MUX_IN_CAN2_CANRX, INPUT_CTL_PATH2);
+		break;
+	default:
+		printk(KERN_ERR "NO such device\n");
+	}
+}
+
+void gpio_can_inactive(int id)
+{
+	switch (id) {
+	case 0:
+		mxc_free_iomux(MX35_PIN_I2C2_CLK, MUX_CONFIG_ALT1);
+		mxc_free_iomux(MX35_PIN_I2C2_DAT, MUX_CONFIG_ALT1);
+		mxc_iomux_set_input(MUX_IN_CAN1_CANRX, INPUT_CTL_PATH0);
+		break;
+	case 1:
+		mxc_free_iomux(MX35_PIN_FEC_MDC, MUX_CONFIG_ALT1);
+		mxc_free_iomux(MX35_PIN_FEC_MDIO, MUX_CONFIG_ALT1);
+		mxc_iomux_set_input(MUX_IN_CAN2_CANRX, INPUT_CTL_PATH0);
+		break;
+	default:
+		printk(KERN_ERR "NO such device\n");
+	}
+}

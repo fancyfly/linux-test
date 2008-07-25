@@ -200,6 +200,14 @@ struct mxc_mlb_platform_data {
 	char *mlb_clk;
 };
 
+struct flexcan_platform_data {
+	char *core_reg;
+	char *io_reg;
+	void (*xcvr_enable) (int id, int en);
+	void (*active) (int id);
+	void (*inactive) (int id);
+};
+
 extern void mxc_wd_reset(void);
 extern void mxc_kick_wd(void);
 unsigned long board_get_ckih_rate(void);

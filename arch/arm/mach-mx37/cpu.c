@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2001 Deep Blue Solutions Ltd.
- *  Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -46,13 +46,9 @@ static int __init post_cpu_init(void)
 	/* Initialize L2 cache */
 	l2_base = ioremap(L2CC_BASE_ADDR, SZ_4K);
 	if (l2_base) {
-		l2x0_init(l2_base, 0x00030024, 0x00000000);
+		l2x0_init(l2_base, 0x0003001B, 0x00000000);
 	}
 
-	/*
-	 * S/W workaround: Clear the off platform peripheral modules
-	 * Supervisor Protect bit for SDMA to access them.
-	 */
 	__raw_writel(0x0, IO_ADDRESS(AIPS1_BASE_ADDR + 0x40));
 	__raw_writel(0x0, IO_ADDRESS(AIPS1_BASE_ADDR + 0x44));
 	__raw_writel(0x0, IO_ADDRESS(AIPS1_BASE_ADDR + 0x48));

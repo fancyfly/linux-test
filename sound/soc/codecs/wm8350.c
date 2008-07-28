@@ -1283,7 +1283,7 @@ static int wm8350_dapm_event(struct snd_soc_codec *codec, int event)
 
 static const struct snd_soc_pcm_stream wm8350_hifi_dai_playback = {
 	.stream_name	= "Playback",
-	.channels_min	= 1,
+	.channels_min	= 2,
 	.channels_max	= 2,
 	.rates		= WM8350_RATES,
 	.formats	= WM8350_FORMATS,

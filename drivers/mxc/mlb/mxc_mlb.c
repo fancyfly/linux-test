@@ -678,6 +678,7 @@ static ssize_t mxc_mlb_write(struct file *filp, const char __user *buf,
 {
 	int minor;
 	unsigned long flags;
+	DEFINE_WAIT(__wait);
 	int ret;
 
 	minor = MINOR(filp->f_dentry->d_inode->i_rdev);
@@ -700,7 +701,6 @@ static ssize_t mxc_mlb_write(struct file *filp, const char __user *buf,
 			return -EAGAIN;
 
 		/* if !O_NONBLOCK, we wait for transmit finish */
-		DEFINE_WAIT(__wait);
 		for (;;) {
 			prepare_to_wait(&mlb_devinfo[minor].wt_wq,
 					&__wait, TASK_INTERRUPTIBLE);

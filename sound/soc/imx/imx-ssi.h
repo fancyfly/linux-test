@@ -66,6 +66,7 @@
 #define SSI_SCR_RE             (1 << 2)
 #define SSI_SCR_TE             (1 << 1)
 #define SSI_SCR_SSIEN          (1 << 0)
+#define SSI_SCR_I2S_MODE_MASK  (3 << 5)
 
 #define SSI_SISR_CMDAU         (1 << 18)
 #define SSI_SISR_CMDDU         (1 << 17)

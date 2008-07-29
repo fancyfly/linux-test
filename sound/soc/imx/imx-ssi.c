@@ -276,6 +276,10 @@ static int imx_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_CBS_CFS:
 		stcr |= SSI_STCR_TFDIR | SSI_STCR_TXDIR;
 		srcr |= SSI_SRCR_RFDIR | SSI_SRCR_RXDIR;
+		if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_I2S) {
+			scr &= ~SSI_SCR_I2S_MODE_MASK;
+			scr |= SSI_SCR_I2S_MODE_MSTR;
+		}
 		break;
 	case SND_SOC_DAIFMT_CBM_CFS:
 		stcr |= SSI_STCR_TFDIR;
@@ -284,6 +288,12 @@ static int imx_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_CBS_CFM:
 		stcr |= SSI_STCR_TXDIR;
 		srcr |= SSI_SRCR_RXDIR;
+		break;
+	case SND_SOC_DAIFMT_CBM_CFM:
+		if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_I2S) {
+			scr &= ~SSI_SCR_I2S_MODE_MASK;
+			scr |= SSI_SCR_I2S_MODE_SLAVE;
+		}
 		break;
 	}
 

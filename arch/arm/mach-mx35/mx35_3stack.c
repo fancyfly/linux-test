@@ -602,6 +602,30 @@ static void __init mxc_init_pata(void)
 }
 #endif				/* CONFIG_PATA_FSL */
 
+#if defined(CONFIG_GPS_IOCTRL) || defined(CONFIG_GPS_IOCTRL_MODULE)
+static struct mxc_gps_platform_data gps_data = {
+	.core_reg = "SW1",
+	.analog_reg = "SW2",
+};
+
+static struct platform_device mxc_gps_device = {
+	.name = "gps_ioctrl",
+	.id = 0,
+	.dev = {
+		.platform_data = &gps_data,
+		},
+};
+
+static void __init mxc_init_gps(void)
+{
+	(void)platform_device_register(&mxc_gps_device);
+}
+#else
+static void __init mxc_init_gps(void)
+{
+}
+#endif
+
 static void pmic_power_off(void)
 {
 #ifdef CONFIG_MXC_PMIC_MC9SDZ60
@@ -691,6 +715,7 @@ static void __init mxc_board_init(void)
 	mxc_init_mmc();
 	mxc_init_pata();
 	mxc_init_bluetooth();
+	mxc_init_gps();
 	mxc_init_mlb();
 
 	pm_power_off = pmic_power_off;

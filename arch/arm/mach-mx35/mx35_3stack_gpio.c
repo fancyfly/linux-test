@@ -999,6 +999,65 @@ void gpio_deactivate_esai_ports(void)
 EXPORT_SYMBOL(gpio_deactivate_esai_ports);
 
 /*!
+ * This function enable and reset GPS GPIO
+ */
+void gpio_gps_active(void)
+{
+	/* PWR_EN_GPS is set to be 0, will be toggled on in app by ioctl */
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 0, 0);
+
+	/* GPS 32KHz clock enbale */
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 7, 1);
+
+	/* GPS reset */
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 5, 0);
+	msleep(5);
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 5, 1);
+	msleep(5);
+}
+
+EXPORT_SYMBOL(gpio_gps_active);
+
+/*!
+ * This function get GPS GPIO status.
+ */
+int gpio_gps_access(int para)
+{
+	unsigned int gps_val;
+
+	if (para & 0x4) {	/* Read GPIO */
+		if (para & 0x1) /* Read PWR_EN */
+			pmic_gpio_get_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 0,
+						&gps_val);
+		else		/* Read nReset */
+			pmic_gpio_get_bit_val(MCU_GPIO_REG_RESET_1, 5,
+						&gps_val);
+		return gps_val;
+	} else {		/* Write GPIO */
+		gps_val = (para & 0x2) ? 1 : 0;
+		if (para & 0x1)
+			pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 0,
+						gps_val);
+		else
+			pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 5, gps_val);
+	}
+	return 0;
+}
+
+EXPORT_SYMBOL(gpio_gps_access);
+
+/*!
+ * This function disable GPS GPIO
+ */
+void gpio_gps_inactive(void)
+{
+	/* GPS disable */
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 0, 0);
+}
+
+EXPORT_SYMBOL(gpio_gps_inactive);
+
+/*!
  * The MLB gpio configuration routine
  */
 void gpio_mlb_active(void)

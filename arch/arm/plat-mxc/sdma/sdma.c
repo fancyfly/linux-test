@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -359,6 +359,8 @@ static unsigned short sdma_get_pc(sdma_periphT peripheral_type,
 		default:
 			res = -EINVAL;
 		}
+	} else if (peripheral_type == FIFO_MEMORY) {
+		res = sdma_script_addrs.mxc_sdma_ap_2_ap_fixed_addr;
 	}
 
 	if (res < 0) {

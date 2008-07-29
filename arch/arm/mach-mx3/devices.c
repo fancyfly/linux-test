@@ -9,7 +9,7 @@
  * licensed "as is" without any warranty of any kind, whether express
  * or implied.
  *
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -110,42 +110,40 @@ void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
 		sdma_script_addr->mxc_sdma_uart_2_per_addr = -1;
 		sdma_script_addr->mxc_sdma_app_2_per_addr = -1;
 	} else {
-		sdma_script_addr->mxc_sdma_app_2_mcu_addr =
-		    app_2_mcu_patched_ADDR_2;
+		sdma_script_addr->mxc_sdma_app_2_mcu_addr = app_2_mcu_ADDR_2;
 		sdma_script_addr->mxc_sdma_ap_2_ap_addr = ap_2_ap_ADDR_2;
 		sdma_script_addr->mxc_sdma_ap_2_bp_addr = ap_2_bp_ADDR_2;
+		sdma_script_addr->mxc_sdma_ap_2_ap_fixed_addr =
+		    ap_2_ap_fixed_addr_ADDR_2;
 		sdma_script_addr->mxc_sdma_bp_2_ap_addr = bp_2_ap_ADDR_2;
 		sdma_script_addr->mxc_sdma_loopback_on_dsp_side_addr = -1;
 		sdma_script_addr->mxc_sdma_mcu_2_app_addr = mcu_2_app_ADDR_2;
-		sdma_script_addr->mxc_sdma_mcu_2_shp_addr =
-		    mcu_2_shp_patched_ADDR_2;
+		sdma_script_addr->mxc_sdma_mcu_2_shp_addr = mcu_2_shp_ADDR_2;
 		sdma_script_addr->mxc_sdma_mcu_interrupt_only_addr = -1;
-		sdma_script_addr->mxc_sdma_shp_2_mcu_addr =
-		    shp_2_mcu_patched_ADDR_2;
+		sdma_script_addr->mxc_sdma_shp_2_mcu_addr = shp_2_mcu_ADDR_2;
 		sdma_script_addr->mxc_sdma_start_addr =
 		    (unsigned short *)sdma_code_2;
 		sdma_script_addr->mxc_sdma_uartsh_2_mcu_addr =
-		    uartsh_2_mcu_patched_ADDR_2;
-		sdma_script_addr->mxc_sdma_uart_2_mcu_addr =
-		    uart_2_mcu_patched_ADDR_2;
+		    uartsh_2_mcu_ADDR_2;
+		sdma_script_addr->mxc_sdma_uart_2_mcu_addr = uart_2_mcu_ADDR_2;
 		sdma_script_addr->mxc_sdma_ram_code_size = RAM_CODE_SIZE_2;
 		sdma_script_addr->mxc_sdma_ram_code_start_addr =
 		    RAM_CODE_START_ADDR_2;
 		sdma_script_addr->mxc_sdma_dptc_dvfs_addr = -1;
 		sdma_script_addr->mxc_sdma_firi_2_mcu_addr = firi_2_mcu_ADDR_2;
 		sdma_script_addr->mxc_sdma_firi_2_per_addr = -1;
-		sdma_script_addr->mxc_sdma_mshc_2_mcu_addr = -1;
-		sdma_script_addr->mxc_sdma_per_2_app_addr = -1;
+		sdma_script_addr->mxc_sdma_mshc_2_mcu_addr = mshc_2_mcu_ADDR_2;
+		sdma_script_addr->mxc_sdma_per_2_app_addr = per_2_app_ADDR_2;
 		sdma_script_addr->mxc_sdma_per_2_firi_addr = -1;
 		sdma_script_addr->mxc_sdma_per_2_shp_addr = per_2_shp_ADDR_2;
 		sdma_script_addr->mxc_sdma_mcu_2_ata_addr = mcu_2_ata_ADDR_2;
 		sdma_script_addr->mxc_sdma_mcu_2_firi_addr = mcu_2_firi_ADDR_2;
-		sdma_script_addr->mxc_sdma_mcu_2_mshc_addr = -1;
+		sdma_script_addr->mxc_sdma_mcu_2_mshc_addr = mcu_2_mshc_ADDR_2;
 		sdma_script_addr->mxc_sdma_ata_2_mcu_addr = ata_2_mcu_ADDR_2;
 		sdma_script_addr->mxc_sdma_uartsh_2_per_addr = -1;
 		sdma_script_addr->mxc_sdma_shp_2_per_addr = shp_2_per_ADDR_2;
 		sdma_script_addr->mxc_sdma_uart_2_per_addr = -1;
-		sdma_script_addr->mxc_sdma_app_2_per_addr = -1;
+		sdma_script_addr->mxc_sdma_app_2_per_addr = app_2_per_ADDR_2;
 	}
 }
 
@@ -949,47 +947,47 @@ static int ata_get_clk_rate(void)
 }
 
 static struct fsl_ata_platform_data ata_data = {
-	.udma_mask        = 0x0F, /* board can handle up to UDMA3 */
-	.fifo_alarm       = MXC_IDE_DMA_WATERMARK / 2,
-	.max_sg           = MXC_IDE_DMA_BD_NR,
-	.init             = ata_init,
-	.exit             = ata_exit,
-	.get_clk_rate     = ata_get_clk_rate,
+	.udma_mask = 0x0F,	/* board can handle up to UDMA3 */
+	.fifo_alarm = MXC_IDE_DMA_WATERMARK / 2,
+	.max_sg = MXC_IDE_DMA_BD_NR,
+	.init = ata_init,
+	.exit = ata_exit,
+	.get_clk_rate = ata_get_clk_rate,
 };
 
 static struct resource pata_fsl_resources[] = {
-	[0] = {		/* I/O */
-		.start		= IO_ADDRESS(ATA_BASE_ADDR + 0x00),
-		.end		= IO_ADDRESS(ATA_BASE_ADDR + 0xD8),
-		.flags		= IORESOURCE_MEM,
-	},
-	[2] = {		/* IRQ */
-		.start		= INT_ATA,
-		.end		= INT_ATA,
-		.flags		= IORESOURCE_IRQ,
-	},
+	[0] = {			/* I/O */
+	       .start = IO_ADDRESS(ATA_BASE_ADDR + 0x00),
+	       .end = IO_ADDRESS(ATA_BASE_ADDR + 0xD8),
+	       .flags = IORESOURCE_MEM,
+	       },
+	[2] = {			/* IRQ */
+	       .start = INT_ATA,
+	       .end = INT_ATA,
+	       .flags = IORESOURCE_IRQ,
+	       },
 };
 
 static struct platform_device pata_fsl_device = {
-	.name			= "pata_fsl",
-	.id			= -1,
-	.num_resources		= ARRAY_SIZE(pata_fsl_resources),
-	.resource		= pata_fsl_resources,
-	.dev			= {
-		.platform_data	= &ata_data,
+	.name = "pata_fsl",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(pata_fsl_resources),
+	.resource = pata_fsl_resources,
+	.dev = {
+		.platform_data = &ata_data,
 		.coherent_dma_mask = ~0,	/* $$$ REVISIT */
-	},
+		},
 };
 
 static inline void mxc_init_pata(void)
 {
 	(void)platform_device_register(&pata_fsl_device);
 }
-#else /* CONFIG_PATA_FSL */
+#else				/* CONFIG_PATA_FSL */
 static inline void mxc_init_pata(void)
 {
 }
-#endif /* CONFIG_PATA_FSL */
+#endif				/* CONFIG_PATA_FSL */
 
 static int __init mxc_init_devices(void)
 {

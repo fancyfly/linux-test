@@ -295,12 +295,11 @@ int mxc_dma_config(int channel_num, mxc_dma_requestbuf_t * dma_buf,
 				chnl_param.transfer_type = emi_2_dsp;
 			}
 		} else if (chnl_param.peripheral_type == FIFO_MEMORY) {
-			if (mode == MXC_DMA_MODE_READ) {
+			if (mode == MXC_DMA_MODE_READ)
 				chnl_param.per_address = MXC_FIFO_MEM_SRC_FIXED;
-			} else {
+			else
 				chnl_param.per_address =
 				    MXC_FIFO_MEM_DEST_FIXED;
-			}
 		} else {
 			if (mode == MXC_DMA_MODE_READ) {
 				chnl_param.transfer_type = per_2_emi;

@@ -498,7 +498,7 @@ static inline void mxc_init_spdif(void)
 static struct mxc_audio_platform_data mxc_audio_data;
 
 static struct platform_device mxc_alsa_device = {
-	.name = "ak4647-imx-3stack-audio",
+	.name = "imx-3stack-ak4647",
 	.id = 0,
 	.dev = {
 		.release = mxc_nop_release,

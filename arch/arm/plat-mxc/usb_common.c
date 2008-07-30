@@ -303,6 +303,7 @@ static void usbh2_set_serial_xcvr(void)
 	USBCTRL &= ~(UCTRL_H2PM);	/* Power Mask */
 	USBCTRL &= ~UCTRL_OCPOL;	/* OverCurrent Polarity is Low Active */
 	USBCTRL |= UCTRL_H2WIE |	/* Wakeup intr enable */
+		UCTRL_H2LOCKD |		/* Host2 Lock Disable */
 	    UCTRL_IP_PUE_DOWN |	/* ipp_pue_pulldwn_dpdm */
 	    UCTRL_USBTE |	/* USBT is enabled */
 	    UCTRL_H2DT;		/* Disable H2 TLL */
@@ -529,6 +530,7 @@ static void otg_set_utmi_xcvr(void)
 	USBCTRL &= ~UCTRL_OCPOL;	/* OverCurrent Polarity is Low Active */
 	USBCTRL &= ~UCTRL_OPM;	/* OTG Power Mask */
 	USBCTRL |= UCTRL_OWIE;	/* OTG Wakeup Intr Enable */
+	USBCTRL |= UCTRL_OLOCKD;	/* OTG Lock Disable */
 
 	/* set UTMI xcvr */
 	tmp = UOG_PORTSC1 & ~PORTSC_PTS_MASK;

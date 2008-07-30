@@ -249,6 +249,8 @@
 #define UCTRL_H1SIC_DB4		(1 << 13)	/* Differential/bidirectional  4 wire */
 #define UCTRL_H1SIC_SU6		(2 << 13)	/* single-ended/unidirectional 6 wire */
 #define UCTRL_H1SIC_SB3		(3 << 13)	/* single-ended/bidirectional  3 wire */
+#define UCTRL_OLOCKD		(1 << 13)	/* otg lock disable */
+#define UCTRL_H2LOCKD		(1 << 12)	/* HOST2 lock disable */
 
 #define UCTRL_PP                (1 << 11)       /* power polarity bit */
 #define UCTRL_H1WIE		(1 << 11)	/* HOST1 wakeup intr enable */

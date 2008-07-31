@@ -231,7 +231,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 	 .driver_name = "mc13892",
 	 .addr = 0x08,
-	 .platform_data = (void *)MXC_INT_GPIO1_INT5,
+	 .platform_data = (void *)MX51_PIN_GPIO1_5,
 	 },
 
 };

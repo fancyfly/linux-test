@@ -23,8 +23,6 @@
  * Includes
  */
 
-#define DEBUG
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
@@ -56,6 +54,53 @@
 static pmic_version_t mxc_pmic_version;
 unsigned int active_events[MAX_ACTIVE_EVENTS];
 struct i2c_client *mc13892_client;
+
+/*
+ * Platform device structure for PMIC client drivers
+ */
+static struct platform_device adc_ldm = {
+	.name = "pmic_adc",
+	.id = 1,
+};
+static struct platform_device battery_ldm = {
+	.name = "pmic_battery",
+	.id = 1,
+};
+static struct platform_device power_ldm = {
+	.name = "pmic_power",
+	.id = 1,
+};
+static struct platform_device rtc_ldm = {
+	.name = "pmic_rtc",
+	.id = 1,
+};
+static struct platform_device light_ldm = {
+	.name = "pmic_light",
+	.id = 1,
+};
+
+static void pmic_pdev_register(void)
+{
+	platform_device_register(&adc_ldm);
+	platform_device_register(&battery_ldm);
+	platform_device_register(&rtc_ldm);
+	platform_device_register(&power_ldm);
+	platform_device_register(&light_ldm);
+	reg_mc13783_probe();
+}
+
+/*!
+ * This function unregisters platform device structures for
+ * PMIC client drivers.
+ */
+static void pmic_pdev_unregister(void)
+{
+	platform_device_unregister(&adc_ldm);
+	platform_device_unregister(&battery_ldm);
+	platform_device_unregister(&rtc_ldm);
+	platform_device_unregister(&power_ldm);
+	platform_device_unregister(&light_ldm);
+}
 
 void pmic_bh_handler(struct work_struct *work);
 
@@ -92,6 +137,7 @@ void pmic_bh_handler(struct work_struct *work)
 	unsigned int count = 0;
 
 	count = pmic_get_active_events(active_events);
+	pr_debug("active events number %d\n", count);
 
 	for (loop = 0; loop < count; loop++)
 		pmic_event_callback(active_events[loop]);
@@ -135,13 +181,13 @@ static ssize_t mc13892_show(struct device *dev,
 
 	for (i = 0; i < offset; i++) {
 		pmic_read(i, &value);
-		printk(KERN_INFO "reg%02d: %06x\t\t", i, value);
+		pr_info("reg%02d: %06x\t\t", i, value);
 		pmic_read(i + offset, &value);
-		printk(KERN_INFO "reg%02d: %06x\t\t", i + offset, value);
+		pr_info("reg%02d: %06x\t\t", i + offset, value);
 		pmic_read(i + offset * 2, &value);
-		printk(KERN_INFO "reg%02d: %06x\t\t", i + offset * 2, value);
+		pr_info("reg%02d: %06x\t\t", i + offset * 2, value);
 		pmic_read(i + offset * 3, &value);
-		printk(KERN_INFO "reg%02d: %06x\n", i + offset * 3, value);
+		pr_info("reg%02d: %06x\n", i + offset * 3, value);
 	}
 
 	return 0;
@@ -161,7 +207,7 @@ static ssize_t mc13892_store(struct device *dev,
 
 	if (p == NULL) {
 		pmic_read(reg, &value);
-		printk(KERN_INFO "reg%02d: %06x\n", reg, value);
+		pr_debug("reg%02d: %06x\n", reg, value);
 		return count;
 	}
 
@@ -171,9 +217,9 @@ static ssize_t mc13892_store(struct device *dev,
 
 	ret = pmic_write(reg, value);
 	if (ret == 0)
-		printk(KERN_INFO "write reg%02d: %06x\n", reg, value);
+		pr_debug("write reg%02d: %06x\n", reg, value);
 	else
-		printk(KERN_INFO "register update failed\n");
+		pr_debug("register update failed\n");
 
 	return count;
 }
@@ -192,7 +238,7 @@ static int __devinit pmic_probe(struct i2c_client *client)
 	int ret = 0;
 	int pmic_irq;
 
-	printk(KERN_INFO "start probe pmic 13892\n");
+	pr_debug("start probe pmic 13892\n");
 
 	ret = is_chip_onboard(client);
 
@@ -219,8 +265,11 @@ static int __devinit pmic_probe(struct i2c_client *client)
 	if (pmic_irq == 0)
 		return PMIC_ERROR;
 
-	set_irq_type(pmic_irq, IRQF_TRIGGER_RISING);
-	ret = request_irq(pmic_irq, pmic_irq_handler, 0, "PMIC_IRQ", 0);
+	set_irq_type(IOMUX_TO_IRQ(pmic_irq), IRQF_TRIGGER_RISING);
+	ret =
+	    request_irq(IOMUX_TO_IRQ(pmic_irq), pmic_irq_handler, 0, "PMIC_IRQ",
+			0);
+
 	if (ret) {
 		dev_err(&client->dev, "request irq %d error!\n", pmic_irq);
 		return ret;
@@ -232,13 +281,19 @@ static int __devinit pmic_probe(struct i2c_client *client)
 	if (ret)
 		dev_err(&client->dev, "create device file failed!\n");
 
-	printk(KERN_INFO "Device %s probed\n", client->dev.bus_id);
+	pmic_pdev_register();
+
+	pr_debug("Device %s probed\n", client->dev.bus_id);
 
 	return PMIC_SUCCESS;
 }
 
 static int pmic_remove(struct i2c_client *client)
 {
+	int pmic_irq = (int)(client->dev.platform_data);
+
+	free_irq(pmic_irq, 0);
+	pmic_pdev_unregister();
 	return 0;
 }
 
@@ -265,13 +320,13 @@ static struct i2c_driver pmic_driver = {
 
 static int __init pmic_init(void)
 {
-	printk(KERN_INFO "Registering the PMIC Protocol Driver\n");
+	pr_debug("Registering the PMIC Protocol Driver\n");
 	return i2c_add_driver(&pmic_driver);
 }
 
 static void __exit pmic_exit(void)
 {
-	printk(KERN_INFO "Unregistering the PMIC Protocol Driver\n");
+	pr_debug("Unregistering the PMIC Protocol Driver\n");
 	return i2c_del_driver(&pmic_driver);
 }
 
@@ -279,7 +334,7 @@ static void __exit pmic_exit(void)
  * Module entry points
  */
 /* subsys_initcall_sync(pmic_init); */
-module_init(pmic_init);
+subsys_initcall_sync(pmic_init);
 module_exit(pmic_exit);
 
 MODULE_DESCRIPTION("Core/Protocol driver for PMIC");

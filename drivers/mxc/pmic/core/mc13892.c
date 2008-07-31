@@ -93,20 +93,109 @@ int pmic_write(int reg_num, const unsigned int reg_val)
 
 int pmic_init_registers(void)
 {
+	CHECK_ERROR(pmic_write(REG_INT_MASK0, 0xFFFFFF));
+	CHECK_ERROR(pmic_write(REG_INT_MASK0, 0xFFFFFF));
+	CHECK_ERROR(pmic_write(REG_INT_STATUS0, 0xFFFFFF));
+	CHECK_ERROR(pmic_write(REG_INT_STATUS1, 0xFFFFFF));
+
 	return PMIC_SUCCESS;
 }
 
+static unsigned int events_enabled0;
+static unsigned int events_enabled1;
+
 unsigned int pmic_get_active_events(unsigned int *active_events)
 {
-	return 0;
+	unsigned int count = 0;
+	unsigned int status0, status1;
+	int bit_set;
+
+	pmic_read(REG_INT_STATUS0, &status0);
+	pmic_read(REG_INT_STATUS1, &status1);
+	pmic_write(REG_INT_STATUS0, status0);
+	pmic_write(REG_INT_STATUS1, status1);
+	status0 &= events_enabled0;
+	status1 &= events_enabled1;
+
+	while (status0) {
+		bit_set = ffs(status0) - 1;
+		*(active_events + count) = bit_set;
+		count++;
+		status0 ^= (1 << bit_set);
+	}
+	while (status1) {
+		bit_set = ffs(status1) - 1;
+		*(active_events + count) = bit_set + 24;
+		count++;
+		status1 ^= (1 << bit_set);
+	}
+
+	return count;
 }
+
+#define EVENT_MASK_0			0x387fff
+#define EVENT_MASK_1			0x1177eb
 
 int pmic_event_unmask(type_event event)
 {
-	return 0;
+	unsigned int event_mask = 0;
+	unsigned int mask_reg = 0;
+	unsigned int event_bit = 0;
+	int ret;
+
+	if (event < EVENT_1HZI) {
+		mask_reg = REG_INT_MASK0;
+		event_mask = EVENT_MASK_0;
+		event_bit = (1 << event);
+		events_enabled0 |= event_bit;
+	} else {
+		event -= 24;
+		mask_reg = REG_INT_MASK1;
+		event_mask = EVENT_MASK_1;
+		event_bit = (1 << event);
+		events_enabled1 |= event_bit;
+	}
+
+	if ((event_bit & event_mask) == 0) {
+		pr_debug("Error: unmasking a reserved/unused event\n");
+		return PMIC_ERROR;
+	}
+
+	ret = pmic_write_reg(mask_reg, 0, event_bit);
+
+	pr_debug("Enable Event : %d\n", event);
+
+	return ret;
 }
 
 int pmic_event_mask(type_event event)
 {
-	return 0;
+	unsigned int event_mask = 0;
+	unsigned int mask_reg = 0;
+	unsigned int event_bit = 0;
+	int ret;
+
+	if (event < EVENT_1HZI) {
+		mask_reg = REG_INT_MASK0;
+		event_mask = EVENT_MASK_0;
+		event_bit = (1 << event);
+		events_enabled0 &= ~event_bit;
+	} else {
+		event -= 24;
+		mask_reg = REG_INT_MASK1;
+		event_mask = EVENT_MASK_1;
+		event_bit = (1 << event);
+		events_enabled1 &= ~event_bit;
+	}
+
+	if ((event_bit & event_mask) == 0) {
+		pr_debug("Error: masking a reserved/unused event\n");
+		return PMIC_ERROR;
+	}
+
+	ret = pmic_write_reg(mask_reg, event_bit, event_bit);
+
+	pr_debug("Disable Event : %d\n", event);
+
+	return ret;
 }

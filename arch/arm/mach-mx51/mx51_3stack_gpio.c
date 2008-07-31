@@ -459,7 +459,14 @@ EXPORT_SYMBOL(gpio_i2c_inactive);
 
 void gpio_pmic_active(void)
 {
-	mxc_request_iomux(MX51_PIN_GPIO1_5, IOMUX_CONFIG_GPIO);
+	mxc_request_iomux(MX51_PIN_GPIO1_5, IOMUX_CONFIG_GPIO
+			  | IOMUX_CONFIG_SION);
+	mxc_iomux_set_pad(MX51_PIN_GPIO1_5, PAD_CTL_SRE_SLOW |
+			  PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_DRV_MEDIUM |
+			  PAD_CTL_100K_PU |
+			  PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH | PAD_CTL_DDR_INPUT_CMOS);
 	mxc_set_gpio_direction(MX51_PIN_GPIO1_5, 1);
 }
 

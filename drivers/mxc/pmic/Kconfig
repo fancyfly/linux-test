@@ -51,6 +51,8 @@ config MXC_PMIC_MC13783
 	This is the MXC MC13783(PMIC) client drivers support. It include
 	ADC, Audio, Battery, Connectivity, Light, Power and RTC.
 
+source "drivers/mxc/pmic/mc13783/Kconfig"
+
 config MXC_PMIC_MC13892
 	tristate "MC13892 Client Drivers"
 	depends on MXC_I2C_PMIC_CORE
@@ -59,7 +61,7 @@ config MXC_PMIC_MC13892
 	This is the MXC MC13892(PMIC) client drivers support. It include
 	ADC, Battery, Connectivity, Light, Power and RTC.
 
-source "drivers/mxc/pmic/mc13783/Kconfig"
+source "drivers/mxc/pmic/mc13892/Kconfig"
 
 config MXC_PMIC_SC55112
 	tristate "SC55112 Client Drivers"

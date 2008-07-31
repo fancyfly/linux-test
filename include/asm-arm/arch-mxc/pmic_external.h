@@ -867,22 +867,88 @@ enum {
 	REG_TEST2,
 	REG_TEST3,
 	REG_TEST4,
-	REG_ARBITRATION_SWITCHERS,	/*for compile */
-	REG_INTERRUPT_MASK_1,
-	REG_SWITCHERS_4,
-	REG_POWER_MISCELLANEOUS,
 };
 
 typedef enum {
-	place_holder1,
+	EVENT_ADCDONEI = 0,
+	EVENT_ADCBISDONEI = 1,
+	EVENT_TSI = 2,
+	EVENT_VBUSVI = 3,
+	EVENT_IDFACI = 4,
+	EVENT_USBOVI = 5,
+	EVENT_CHGDETI = 6,
+	EVENT_CHGFAULTI = 7,
+	EVENT_CHGREVI = 8,
+	EVENT_CHGRSHORTI = 9,
+	EVENT_CCCVI = 10,
+	EVENT_CHGCURRI = 11,
+	EVENT_BPONI = 12,
+	EVENT_LOBATLI = 13,
+	EVENT_LOBATHI = 14,
+	EVENT_IDFLOATI = 19,
+	EVENT_IDGNDI = 20,
+	EVENT_SE1I = 21,
+	EVENT_CKDETI = 22,
+	EVENT_1HZI = 24,
+	EVENT_TODAI = 25,
+	EVENT_PWRONI = 27,
+	EVENT_WDIRESETI = 29,
+	EVENT_SYSRSTI = 30,
+	EVENT_RTCRSTI = 31,
+	EVENT_PCI = 32,
+	EVENT_WARMI = 33,
+	EVENT_MEMHLDI = 34,
+	EVENT_THWARNLI = 36,
+	EVENT_THWARNHI = 37,
+	EVENT_CLKI = 38,
+	EVENT_SCPI = 40,
+	EVENT_LBPI = 44,
+	EVENT_NB,
 } type_event;
 
 typedef enum {
-	place_holder2,
+	SENSE_VBUSVS = 3,
+	SENSE_IDFACS = 4,
+	SENSE_USBOVS = 5,
+	SENSE_CHGDETS = 6,
+	SENSE_CHGREVS = 8,
+	SENSE_CHGRSHORTS = 9,
+	SENSE_CCCVS = 10,
+	SENSE_CHGCURRS = 11,
+	SENSE_BPONS = 12,
+	SENSE_LOBATLS = 13,
+	SENSE_LOBATHS = 14,
+	SENSE_IDFLOATS = 19,
+	SENSE_IDGNDS = 20,
+	SENSE_SE1S = 21,
+	SENSE_PWRONS = 27,
+	SENSE_THWARNLS = 36,
+	SENSE_THWARNHS = 37,
+	SENSE_CLKS = 38,
+	SENSE_LBPS = 44,
+	SENSE_NB,
 } t_sensor;
 
-typedef enum {
-	place_holder3,
+typedef struct {
+	bool sense_vbusvs;
+	bool sense_idfacs;
+	bool sense_usbovs;
+	bool sense_chgdets;
+	bool sense_chgrevs;
+	bool sense_chgrshorts;
+	bool sense_cccvs;
+	bool sense_chgcurrs;
+	bool sense_bpons;
+	bool sense_lobatls;
+	bool sense_lobaths;
+	bool sense_idfloats;
+	bool sense_idgnds;
+	bool sense_se1s;
+	bool sense_pwrons;
+	bool sense_thwarnls;
+	bool sense_thwarnhs;
+	bool sense_clks;
+	bool sense_lbps;
 } t_sensor_bits;
 
 extern struct i2c_client *mc13892_client;

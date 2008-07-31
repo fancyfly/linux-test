@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -47,7 +47,6 @@ struct mxc_pf_data {
 	volatile int done_mask;
 	volatile int wait_mask;
 	volatile int busy_flag;
-	bool buffer_dirty;
 	struct semaphore busy_lock;
 };
 
@@ -789,7 +788,6 @@ static int mxc_pf_ioctl(struct inode *inode, struct file *filp,
 				break;
 			}
 			pf_data.busy_flag = 0;
-			pf_data.buffer_dirty = true;
 			pf_data.wait_mask = 0;
 
 			pr_debug("PF_IOCTL_WAIT - finished\n");
@@ -888,12 +886,8 @@ static int mxc_pf_mmap(struct file *file, struct vm_area_struct *vma)
  */
 int mxc_pf_fsync(struct file *filp, struct dentry *dentry, int datasync)
 {
-	if (pf_data.buffer_dirty) {
-		flush_cache_all();
-		outer_flush_all();
-	}
-	pf_data.buffer_dirty = false;
-
+	flush_cache_all();
+	outer_flush_all();
 	return 0;
 }
 

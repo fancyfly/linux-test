@@ -324,6 +324,9 @@ void pmic_voltage_init(void)
 {
 	t_regulator_voltage volt;
 
+	/* Enable 4 mc13783 output voltages */
+	pmic_write_reg(REG_ARBITRATION_SWITCHERS, (1 << 5), (1 << 5));
+
 	/* Set mc13783 DVS speed 25mV each 4us */
 	pmic_write_reg(REG_SWITCHERS_4, (0 << 6), (3 << 6));
 

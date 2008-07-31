@@ -1262,6 +1262,8 @@ static int cpu_clk_set_wp(int wp)
 	u32 pdr0;
 	u32 vscnt = MXC_CCM_PMCR0_VSCNT_2;
 	u32 udsc = MXC_CCM_PMCR0_UDSC_DOWN;
+	u32 ipu_base = IO_ADDRESS(IPU_CTRL_BASE_ADDR);
+	u32 ipu_conf;
 
 	if (wp >= cpu_wp_nr || wp < 0) {
 		printk(KERN_ERR "Wrong wp: %d for cpu_clk_set_wp\n", wp);
@@ -1306,6 +1308,13 @@ static int cpu_clk_set_wp(int wp)
 
 	__raw_writel(pmcr0, MXC_CCM_PMCR0);
 
+	/* IPU and DI submodule must be on for PDR0 update to take effect */
+	if (!clk_get_usecount(&ipu_clk))
+		ipu_clk.enable(&ipu_clk);
+	ipu_conf = __raw_readl(ipu_base);
+	if (!(ipu_conf & 0x40))
+		__raw_writel(ipu_conf | 0x40, ipu_base);
+
 	__raw_writel((pdr0 & ~MXC_PDR0_MAX_MCU_MASK) | p->pdr0_reg,
 		     MXC_CCM_PDR0);
 
@@ -1326,6 +1335,11 @@ static int cpu_clk_set_wp(int wp)
 	cpu_clk.rate = p->cpu_rate;
 
 	cpu_curr_wp = wp;
+
+	/* Restore IPU_CONF setting */
+	__raw_writel(ipu_conf, ipu_base);
+	if (!clk_get_usecount(&ipu_clk))
+		ipu_clk.disable(&ipu_clk);
 
 	if (wp == cpu_wp_nr - 1) {
 		init_timer(&dptcen_timer);

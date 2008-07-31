@@ -430,11 +430,19 @@ static int mxc_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	/*
 	 * Check bus state
 	 */
-	if (sr & MXC_I2SR_IBB) {
+
+	int retry = 5;
+	if (sr & MXC_I2SR_IBB && retry--) {
+		udelay(5);
+		sr = readw(dev->membase + MXC_I2SR);
+	}
+
+	if (sr & MXC_I2SR_IBB && retry < 0) {
 		mxc_i2c_module_dis(dev);
 		printk(KERN_DEBUG "Bus busy\n");
 		return -EREMOTEIO;
 	}
+
 	//gpio_i2c_active(dev->adap.id);
 	dev->transfer_done = false;
 	dev->tx_success = false;

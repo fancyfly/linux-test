@@ -1,29 +1,14 @@
 #
 # Makefile for the PMIC core drivers.
 #
-obj-$(CONFIG_MXC_SPI_PMIC_CORE) += pmic_core_spi_mod.o
+obj-$(CONFIG_MXC_PMIC_MC13783) += pmic_mc13783_mod.o
+pmic_mc13783_mod-objs := pmic_external.o pmic_event.o pmic_core_spi.o mc13783.o
 
-obj-$(CONFIG_MXC_I2C_MCU_PMIC_CORE) += pmic_core_i2c_mod.o
+obj-$(CONFIG_MXC_PMIC_MC9SDZ60) += pmic_mc9sdz60_mod.o
+pmic_mc9sdz60_mod-objs := pmic_external.o pmic_event.o mcu_pmic_core.o max8660.o mc9sdz60.o
 
-obj-$(CONFIG_MXC_I2C_PMIC_CORE) += pmic_core_mc13892_mod.o
-
-pmic_core_mc13892_mod-objs := pmic_external.o pmic_event.o pmic_core_i2c.o mc13892.o
-
-pmic_core_i2c_mod-objs := pmic_external.o pmic_event.o mcu_pmic_core.o
-
-pmic_core_spi_mod-objs := pmic_external.o pmic_event.o pmic_core_spi.o
+obj-$(CONFIG_MXC_PMIC_MC13892) += pmic_mc13892_mod.o
+pmic_mc13892_mod-objs := pmic_external.o pmic_event.o pmic_core_i2c.o mc13892.o
 
 obj-$(CONFIG_MXC_PMIC_CHARDEV)	+= pmic-dev.o
 
-ifeq ($(CONFIG_MXC_PMIC_MC13783),y)
-pmic_core_spi_mod-objs += mc13783.o
-endif
-
-ifeq ($(CONFIG_MXC_PMIC_SC55112),y)
-pmic_core_spi_mod-objs += sc55112.o
-endif
-
-ifeq ($(CONFIG_MXC_PMIC_MC9SDZ60), y)
-pmic_core_i2c_mod-objs += mc9sdz60.o
-pmic_core_i2c_mod-objs += max8660.o
-endif

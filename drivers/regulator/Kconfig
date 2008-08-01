@@ -18,19 +18,26 @@ config REGULATOR_DEBUG
 	  Say yes here to enable debugging support.
 
 config REGULATOR_MC13783
-    tristate "MC13783 Regulator Support"
-        depends on REGULATOR
-        depends on MXC_PMIC_MC13783
+	tristate "MC13783 Regulator Support"
+	depends on REGULATOR
+	depends on MXC_PMIC_MC13783
+	default y
 
 config REGULATOR_MC13892
-    tristate "MC13892 Regulator Support"
-        depends on REGULATOR
-        depends on MXC_PMIC_MC13892
-	
+	tristate "MC13892 Regulator Support"
+	depends on REGULATOR
+	depends on MXC_PMIC_MC13892
+	default y
+
+config REGULATOR_MAX8660
+	tristate "MAX8660 Regulator Support"
+	depends on REGULATOR
+	depends on MXC_PMIC_MC9SDZ60
+	default y
+
 config REGULATOR_WM8350
-    tristate "WM8350 Regulator Support"
-        depends on REGULATOR
-        depends on !MXC_PMIC_MC13783
+	tristate "WM8350 Regulator Support"
+	depends on REGULATOR
 
 menu "WM8350 Config Mode"
 depends on REGULATOR_WM8350
@@ -54,10 +61,5 @@ config PMIC_WM8350_MODE_3
 endchoice
 
 endmenu
-
-config REGULATOR_MAX8660
-    tristate "MAX8660 Regulator Support"
-       depends on REGULATOR
-       depends on MXC_PMIC_MC9SDZ60
 
 endmenu

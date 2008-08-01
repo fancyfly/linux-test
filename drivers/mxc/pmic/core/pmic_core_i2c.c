@@ -158,7 +158,6 @@ static int __devinit is_chip_onboard(struct i2c_client *client)
 
 	/*bind the right device to the driver */
 	ret = pmic_i2c_24bit_read(client, REG_IDENTIFICATION);
-	dev_err(&client->dev, "identification %x\n", ret);
 
 	if (MC13892_GEN_ID_VALUE != BITFEXT(ret, MC13892_GENERATION_ID)) {
 		/*compare the address value */
@@ -168,7 +167,6 @@ static int __devinit is_chip_onboard(struct i2c_client *client)
 			MC13892_GEN_ID_VALUE);
 		return -1;
 	}
-	dev_err(&client->dev, "chip on board!\n");
 
 	return 0;
 }
@@ -238,8 +236,6 @@ static int __devinit pmic_probe(struct i2c_client *client)
 	int ret = 0;
 	int pmic_irq;
 
-	pr_debug("start probe pmic 13892\n");
-
 	ret = is_chip_onboard(client);
 
 	if (ret == -1)
@@ -283,7 +279,7 @@ static int __devinit pmic_probe(struct i2c_client *client)
 
 	pmic_pdev_register();
 
-	pr_debug("Device %s probed\n", client->dev.bus_id);
+	dev_info(&client->dev, "Loaded\n");
 
 	return PMIC_SUCCESS;
 }
@@ -320,20 +316,17 @@ static struct i2c_driver pmic_driver = {
 
 static int __init pmic_init(void)
 {
-	pr_debug("Registering the PMIC Protocol Driver\n");
 	return i2c_add_driver(&pmic_driver);
 }
 
 static void __exit pmic_exit(void)
 {
-	pr_debug("Unregistering the PMIC Protocol Driver\n");
-	return i2c_del_driver(&pmic_driver);
+	i2c_del_driver(&pmic_driver);
 }
 
 /*
  * Module entry points
  */
-/* subsys_initcall_sync(pmic_init); */
 subsys_initcall_sync(pmic_init);
 module_exit(pmic_exit);
 

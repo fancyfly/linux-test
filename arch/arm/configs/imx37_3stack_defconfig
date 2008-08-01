@@ -1281,9 +1281,9 @@ CONFIG_MXC_IPU_V3=y
 #
 # MXC PMIC support
 #
-# CONFIG_MXC_SPI_PMIC_CORE is not set
-# CONFIG_MXC_I2C_MCU_PMIC_CORE is not set
-# CONFIG_MXC_PMIC is not set
+# CONFIG_MXC_PMIC_MC13783 is not set
+# CONFIG_MXC_PMIC_MC13892 is not set
+# CONFIG_MXC_PMIC_MC9SDZ60 is not set
 
 #
 # Advanced Power Management devices

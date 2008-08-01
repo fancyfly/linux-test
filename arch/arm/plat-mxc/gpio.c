@@ -27,6 +27,7 @@
 #include <asm/mach/irq.h>
 #include <asm/io.h>
 #include <asm/arch/gpio.h>
+#include <asm/mach-types.h>
 
 /*!
  * @file plat-mxc/gpio.c
@@ -190,7 +191,16 @@ int mxc_get_gpio_datain(iomux_pin_name_t pin)
 
 	port = get_gpio_port(gpio);
 
-	return (__raw_readl(port->base + GPIO_DR) >> GPIO_TO_INDEX(gpio)) & 1;
+	/*
+	 * SW workaround for the eSDHC1 Write Protected feature
+	 * The PSR of CSPI1_SS0 (GPIO3_2) should be read.
+	 */
+	if (machine_is_mx37_3ds() && (gpio == ((32 * 2) + 2)))
+		return (__raw_readl(port->base + GPIO_PSR) >>
+			GPIO_TO_INDEX(gpio)) & 1;
+	else
+		return (__raw_readl(port->base + GPIO_DR) >>
+			GPIO_TO_INDEX(gpio)) & 1;
 }
 
 /*

@@ -613,10 +613,23 @@ unsigned int sdhc_get_card_det_status(struct device *dev)
 	} else {		/* config the det pin for SDHC2 */
 		return 0;
 	}
-	return 0;
 }
 
 EXPORT_SYMBOL(sdhc_get_card_det_status);
+
+/*!
+ * Get pin value to detect write protection
+ */
+int sdhc_write_protect(void)
+{
+	unsigned int rc = 0;
+
+	if (0 != pmic_gpio_get_designation_bit_val(3, &rc))
+		printk(KERN_ERR "Get wp status error.");
+	return rc;
+}
+
+EXPORT_SYMBOL(sdhc_write_protect);
 
 /*
  *  USB Host2

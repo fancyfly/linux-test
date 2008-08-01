@@ -441,6 +441,7 @@ static struct mxc_mmc_platform_data mmc_data = {
 	.max_clk = 52000000,
 	.card_inserted_state = 1,
 	.status = sdhc_get_card_det_status,
+	.wp_status = sdhc_write_protect,
 	.clock_mmc = "sdhc_clk",
 };
 

@@ -197,6 +197,7 @@ extern void __init early_console_setup(char *);
 extern void gpio_tsc_active(void);
 extern void gpio_tsc_inactive(void);
 extern unsigned int sdhc_get_card_det_status(struct device *dev);
+extern int sdhc_write_protect(void);
 extern void gpio_can_active(int id);
 extern void gpio_can_inactive(int id);
 extern struct flexcan_platform_data flexcan_data[];

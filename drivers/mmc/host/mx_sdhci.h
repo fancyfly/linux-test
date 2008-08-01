@@ -66,6 +66,11 @@
 #define  SDHCI_CTRL_LED		0x00000001
 #define  SDHCI_CTRL_4BITBUS	0x00000002
 #define  SDHCI_CTRL_HISPD	0x00000004
+#define  SDHCI_CTRL_DMA_MASK	0x18
+#define   SDHCI_CTRL_SDMA	0x00
+#define   SDHCI_CTRL_ADMA1	0x08
+#define   SDHCI_CTRL_ADMA32	0x10
+#define   SDHCI_CTRL_ADMA64	0x18
 #define  SDHCI_CTRL_D3CD 	0x00000008
 #define  SDHCI_CTRL_ADMA 	0x00000100
 /* wake up control */
@@ -116,7 +121,7 @@
 #define  SDHCI_INT_DATA_END_BIT	0x00400000
 #define  SDHCI_INT_BUS_POWER	0x00800000
 #define  SDHCI_INT_ACMD12ERR	0x01000000
-#define  SDHCI_INT_DMAERR	0x10000000
+#define  SDHCI_INT_ADMA_ERROR	0x10000000
 
 #define  SDHCI_INT_NORMAL_MASK	0x00007FFF
 #define  SDHCI_INT_ERROR_MASK	0xFFFF8000
@@ -126,7 +131,7 @@
 #define  SDHCI_INT_DATA_MASK	(SDHCI_INT_DATA_END | SDHCI_INT_DMA_END | \
 		SDHCI_INT_DATA_AVAIL | SDHCI_INT_SPACE_AVAIL | \
 		SDHCI_INT_DATA_TIMEOUT | SDHCI_INT_DATA_CRC | \
-		SDHCI_INT_DATA_END_BIT | SDHCI_INT_DMAERR)
+		SDHCI_INT_DATA_END_BIT | SDHCI_INT_ADMA_ERROR)
 #define  SDHCI_INT_DATA_RE_MASK	(SDHCI_INT_DMA_END | \
 		SDHCI_INT_DATA_AVAIL | SDHCI_INT_SPACE_AVAIL)
 
@@ -142,11 +147,14 @@
 #define  SDHCI_CLOCK_BASE_SHIFT	8
 #define  SDHCI_MAX_BLOCK_MASK	0x00030000
 #define  SDHCI_MAX_BLOCK_SHIFT  16
+#define  SDHCI_CAN_DO_ADMA2	0x00080000
+#define  SDHCI_CAN_DO_ADMA1	0x00100000
 #define  SDHCI_CAN_DO_HISPD	0x00200000
 #define  SDHCI_CAN_DO_DMA	0x00400000
 #define  SDHCI_CAN_VDD_330	0x01000000
 #define  SDHCI_CAN_VDD_300	0x02000000
 #define  SDHCI_CAN_VDD_180	0x04000000
+#define  SDHCI_CAN_64BIT	0x10000000
 
 /* 44-47 reserved for more caps */
 #define SDHCI_WML 		0x44
@@ -159,19 +167,44 @@
 
 /* 4C-4F reserved for more max current */
 
-/* 50-FB reserved */
+#define SDHCI_SET_ACMD12_ERROR	0x50
+#define SDHCI_SET_INT_ERROR	0x52
+
+#define SDHCI_ADMA_ERROR	0x54
+
+/* 55-57 reserved */
+
+#define SDHCI_ADMA_ADDRESS	0x58
+
+/* 60-FB reserved */
+
+/* ADMA Addr Descriptor Attribute Filed */
+enum {
+	FSL_ADMA_DES_ATTR_VALID = 0x01,
+	FSL_ADMA_DES_ATTR_END = 0x02,
+	FSL_ADMA_DES_ATTR_INT = 0x04,
+	FSL_ADMA_DES_ATTR_SET = 0x10,
+	FSL_ADMA_DES_ATTR_TRAN = 0x20,
+	FSL_ADMA_DES_ATTR_LINK = 0x30,
+};
 
 #define SDHCI_HOST_VERSION	0xFC
 #define  SDHCI_VENDOR_VER_MASK	0xFF00
 #define  SDHCI_VENDOR_VER_SHIFT	8
 #define  SDHCI_SPEC_VER_MASK	0x00FF
 #define  SDHCI_SPEC_VER_SHIFT	0
+#define   SDHCI_SPEC_100	0
+#define   SDHCI_SPEC_200	1
 
 struct sdhci_chip;
 
 struct sdhci_host {
 	struct sdhci_chip *chip;
 	struct mmc_host *mmc;	/* MMC structure */
+
+#ifdef CONFIG_LEDS_CLASS
+	struct led_classdev led;	/* LED control */
+#endif
 
 	spinlock_t lock;	/* Mutex */
 
@@ -193,7 +226,7 @@ struct sdhci_host {
 	struct mmc_request *mrq;	/* Current request */
 	struct mmc_command *cmd;	/* Current command */
 	struct mmc_data *data;	/* Current data request */
-	int data_early:1;	/* Data finished before cmd */
+	unsigned int data_early:1;	/* Data finished before cmd */
 
 	unsigned int id;	/* Id for SD/MMC block */
 	int mode;		/* SD/MMC mode */
@@ -207,21 +240,21 @@ struct sdhci_host {
 	int offset;		/* Offset into current sg */
 	int remain;		/* Bytes left in current */
 
-	char slot_descr[20];	/* Name for reservations */
-	struct resource *res;	/* Base address for storing resources */
-
+	struct resource *res;	/* IO map memory */
 	int irq;		/* Device IRQ */
 	int detect_irq;		/* Card Detect IRQ number. */
-	struct clk *clk;	/* Clock id to hold ipg_perclk. */
+	struct clk *clk;	/* Clock id */
+	int bar;		/* PCI BAR index */
+	unsigned long addr;	/* Bus address */
 	void __iomem *ioaddr;	/* Mapped address */
 
 	struct tasklet_struct card_tasklet;	/* Tasklet structures */
 	struct tasklet_struct finish_tasklet;
-	struct work_struct cd_wq;
-
-	struct timer_list timer;	/* Timer for timeouts */
+	struct work_struct cd_wq;	/* card detection work queue */
 	/* Platform specific data */
 	struct mxc_mmc_platform_data *plat_data;
+
+	struct timer_list timer;	/* Timer for timeouts */
 };
 
 struct sdhci_chip {

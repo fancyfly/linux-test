@@ -403,6 +403,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 #if defined(CONFIG_MMC_IMX_ESDHCI) || defined(CONFIG_MMC_IMX_ESDHCI_MODULE)
 extern unsigned int sdhc_get_card_det_status(struct device *dev);
 extern int sdhc_init_card_det(int id);
+extern int sdhc_write_protect(void);
 
 static struct mxc_mmc_platform_data mmc_data = {
 	.ocr_mask = MMC_VDD_32_33,
@@ -410,6 +411,7 @@ static struct mxc_mmc_platform_data mmc_data = {
 	.max_clk = 52000000,
 	.card_inserted_state = 1,
 	.status = sdhc_get_card_det_status,
+	.wp_status = sdhc_write_protect,
 	.clock_mmc = "esdhc_clk",
 };
 

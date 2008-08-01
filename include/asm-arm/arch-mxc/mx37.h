@@ -26,7 +26,8 @@
 /*!
  * defines the hardware clock tick rate
  */
-#define CLOCK_TICK_RATE         12000000
+
+#define CLOCK_TICK_RATE         8000000
 
 /*!
  * Register an interrupt handler for the SMN as well as the SCC.  In some

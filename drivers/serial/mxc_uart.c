@@ -1848,7 +1848,6 @@ static int mxcuart_probe(struct platform_device *pdev)
 		}
 
 		mxc_ports[id]->clk = clk_get(&pdev->dev, "uart_clk");
-		clk_enable(mxc_ports[id]->clk);
 		if (mxc_ports[id]->clk == NULL)
 			return -1;
 

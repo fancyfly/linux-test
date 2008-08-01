@@ -212,17 +212,23 @@ struct regulation_constraints led_regulation_constraints = {
 	.max_uA = 230000,
 	.valid_ops_mask = REGULATOR_CHANGE_CURRENT,
 };
-
-struct regulation_constraints dvfs_regulation_constraints = {
-	.min_uV = mV_to_uV(1300),
-	.max_uV = mV_to_uV(1600),
+struct regulation_constraints dcdc1_regulation_constraints = {
+	.min_uV = mV_to_uV(850),
+	.max_uV = mV_to_uV(1000),
+	.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+};
+struct regulation_constraints dcdc4_regulation_constraints = {
+	.min_uV = mV_to_uV(1000),
+	.max_uV = mV_to_uV(1200),
 	.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
 };
 
 static void set_regulator_constraints(struct wm8350 *wm8350)
 {
 	regulator_set_platform_constraints("DCDC1",
-					   &dvfs_regulation_constraints);
+					   &dcdc1_regulation_constraints);
+	regulator_set_platform_constraints("DCDC4",
+					   &dcdc4_regulation_constraints);
 	regulator_set_platform_constraints("ISINKA",
 					   &led_regulation_constraints);
 }
@@ -351,6 +357,7 @@ int wm8350_init(struct wm8350 *wm8350)
 	/* not much use without a battery atm */
 	wm8350_init_battery(wm8350);
 #endif
+
 	printk("Exiting normally from wm8350_init()");
 	return ret;
       snd_err:

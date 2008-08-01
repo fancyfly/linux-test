@@ -62,6 +62,33 @@ extern void mxc_cpu_common_init(void);
 extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
 
+
+/* working point(wp): 0 - 532MHz; 1 - 200MHz; */
+static struct cpu_wp cpu_wp_auto[] = {
+	{
+	 .pll_rate = 532000000,
+	 .cpu_rate = 532000000,
+	 .pdf = 0,
+	 .mfi = 5,
+	 .mfd = 23,
+	 .mfn = 13,},
+	{
+	 .pll_rate = 200000000,
+	 .cpu_rate = 200000000,
+	 .pdf = 3,
+	 .mfi = 8,
+	 .mfd = 2,
+	 .mfn = 1,},
+};
+
+struct cpu_wp *get_cpu_wp(int *wp)
+{
+	*wp = 2;
+	return cpu_wp_auto;
+}
+
+
+
 static void mxc_nop_release(struct device *dev)
 {
 	/* Nothing */
@@ -175,13 +202,11 @@ static u16 keymap[] = {
 	KEY_TAB, KEY_ESC,
 };
 #endif
-
 static struct mxc_keyp_platform_data keypad_data = {
 	.matrix = keymap,
 	.active = gpio_keypad_active,
 	.inactive = gpio_keypad_inactive,
 };
-
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 	 .driver_name = "TSC2007",
@@ -195,7 +220,6 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	 .irq = IOMUX_TO_IRQ(MX37_PIN_GPIO1_3),
 	 },
 };
-
 static struct spi_board_info mxc_spi_board_info[] __initdata = {
 	{
 	 .modalias = "cpld_spi",

@@ -676,6 +676,19 @@ static inline void mxc_init_spdif(void)
 	platform_device_register(&mxc_alsa_spdif_device);
 }
 
+static struct platform_device mx37_lpmode_device = {
+	.name = "mx37_lpmode",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		},
+};
+
+static inline void mx37_init_lpmode(void)
+{
+	(void)platform_device_register(&mx37_lpmode_device);
+}
+
 static int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
@@ -689,7 +702,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_vpu();
 	mxc_init_spdif();
 	mxc_init_tve();
-
+	mx37_init_lpmode();
 	/* SPBA configuration for SSI2 - SDMA and MCU are set */
 	spba_take_ownership(SPBA_SSI2, SPBA_MASTER_C | SPBA_MASTER_A);
 	return 0;

@@ -301,6 +301,10 @@ struct cpu_wp {
 	u32 pll_rate;
 	u32 cpu_rate;
 	u32 pdr0_reg;
+	u32 pdf;
+	u32 mfi;
+	u32 mfd;
+	u32 mfn;
 };
 
 struct cpu_wp *get_cpu_wp(int *wp);

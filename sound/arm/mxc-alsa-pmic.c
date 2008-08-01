@@ -102,22 +102,6 @@
 
 #endif				/* CONFIG_SND_MXC_PMIC_IRAM */
 
-#ifdef CONFIG_SND_MXC_PMIC_IRAM
-#define MAX_IRAM_SIZE   (IRAM_SIZE - CONFIG_SDMA_IRAM_SIZE)
-#define DMA_IRAM_SIZE   (4*1024)
-#define ADMA_BASE_PADDR (IRAM_BASE_ADDR + CONFIG_SDMA_IRAM_SIZE)
-#define ADMA_BASE_VADDR (IRAM_BASE_ADDR_VIRT + CONFIG_SDMA_IRAM_SIZE)
-
-#if (MAX_IRAM_SIZE + CONFIG_SDMA_IRAM_SIZE) > IRAM_SIZE
-#error  "The IRAM size required has beyond the limitation of IC spec"
-#endif
-
-#if (MAX_IRAM_SIZE&(DMA_IRAM_SIZE-1))
-#error "The IRAM size for DMA ring buffer should be multiples of dma buffer size"
-#endif
-
-#endif				/* CONFIG_SND_MXC_PMIC_IRAM */
-
 /*!
  * These defines enable DMA chaining for playback
  * and capture respectively.
@@ -2100,8 +2084,8 @@ static void audio_playback_dma(audio_stream_t * s)
 			snd_assert(dma_size_mix <= DMA_BUF_SIZE,);
 			dma_request_mix.src_addr =
 			    (dma_addr_t) (dma_map_single
-					  (NULL, runtime->dma_area + offset1,
-					   dma_size1, DMA_TO_DEVICE));
+					  (NULL, runtime->dma_area + offset_mix,
+					   dma_size_mix, DMA_TO_DEVICE));
 			dma_request_mix.dst_addr =
 			    (dma_addr_t) get_ssi_fifo_addr(s->ssi, 1);
 			dma_request_mix.num_of_bytes = dma_size_mix;

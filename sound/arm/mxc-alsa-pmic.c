@@ -1375,10 +1375,16 @@ int set_mixer_output_device(PMIC_AUDIO_HANDLE handle, OUTPUT_SOURCE src,
 		if (audio_mixer_control.output_device & SOUND_MASK_PHONEOUT) {
 			audio_mixer_control.output_active[OP_EARPIECE] = 1;
 			pmic_audio_output_set_port(handle, MONO_SPEAKER);
+		} else {
+			audio_mixer_control.output_active[OP_EARPIECE] = 0;
+			pmic_audio_output_clear_port(handle, MONO_SPEAKER);
 		}
 		if (audio_mixer_control.output_device & SOUND_MASK_SPEAKER) {
 			audio_mixer_control.output_active[OP_HANDSFREE] = 1;
 			pmic_audio_output_set_port(handle, MONO_LOUDSPEAKER);
+		} else {
+			audio_mixer_control.output_active[OP_HANDSFREE] = 0;
+			pmic_audio_output_clear_port(handle, MONO_LOUDSPEAKER);
 		}
 		if (audio_mixer_control.output_device & SOUND_MASK_VOLUME) {
 			audio_mixer_control.output_active[OP_HEADSET] = 1;
@@ -1392,12 +1398,22 @@ int set_mixer_output_device(PMIC_AUDIO_HANDLE handle, OUTPUT_SOURCE src,
 				/*This is a temporary workaround which should be removed later */
 			}
 
+		} else {
+			audio_mixer_control.output_active[OP_HEADSET] = 0;
+			pmic_audio_output_clear_port(handle,
+						     STEREO_HEADSET_LEFT |
+						     STEREO_HEADSET_RIGHT);
 		}
 		if (audio_mixer_control.output_device & SOUND_MASK_PCM) {
 			audio_mixer_control.output_active[OP_LINEOUT] = 1;
 			pmic_audio_output_set_port(handle,
 						   STEREO_OUT_LEFT |
 						   STEREO_OUT_RIGHT);
+		} else {
+			audio_mixer_control.output_active[OP_LINEOUT] = 0;
+			pmic_audio_output_clear_port(handle,
+						     STEREO_OUT_LEFT |
+						     STEREO_OUT_RIGHT);
 		}
 	} else {
 		switch (dev) {

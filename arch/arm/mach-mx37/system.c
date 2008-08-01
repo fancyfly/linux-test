@@ -18,6 +18,7 @@
 #include <asm/hardware.h>
 #include <asm/proc-fns.h>
 #include <asm/system.h>
+#include <asm/cacheflush.h>
 #include <asm/arch/clock.h>
 #include "crm_regs.h"
 
@@ -84,6 +85,8 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 	__raw_writel(arm_srpgcr, MXC_SRPGC_ARM_SRPGCR);
 	/* __raw_writel(empgcr0, MXC_EMPGC0_ARM_EMPGCR); TODO: system crash */
 	__raw_writel(empgcr1, MXC_EMPGC1_ARM_EMPGCR);
+
+	flush_cache_all();
 }
 
 void mxc_pg_enable(struct platform_device *pdev)

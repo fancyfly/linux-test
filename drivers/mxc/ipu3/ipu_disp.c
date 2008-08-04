@@ -30,6 +30,7 @@
 #include "ipu_param_mem.h"
 
 #define SYNC_WAVE 0
+#define ASYNC_SER_WAVE 6
 
 /* all value below is determined by fix reg setting in _ipu_dmfc_init*/
 #define DMFC_FIFO_SIZE_28	(128*4)
@@ -357,15 +358,19 @@ void _ipu_dc_init(int dc_chan, int di, bool interlaced)
 			reg |= di ? 0 : DC_WR_CH_CONF_PROG_DI_ID;
 			__raw_writel(reg, DC_WR_CH_CONF(6 - dc_chan));
 		}
-	} else {
+
+		reg = 0x1A;
+		reg |= di << 2;
+		if (interlaced)
+			reg |= DC_WR_CH_CONF_FIELD_MODE;
+		__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
+	} else if ((dc_chan == 8) || (dc_chan == 9)) {
 		/* async channels */
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA_W_0, 0x64, 1);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA_W_1, 0x64, 1);
+		__raw_writel(0xB, DC_WR_CH_CONF(dc_chan));
 	}
 
-	reg = 0x1A;
-	reg |= di << 2;
-	if (interlaced)
-		reg |= DC_WR_CH_CONF_FIELD_MODE;
-	__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
 	__raw_writel(0x00000000, DC_WR_CH_ADDR(dc_chan));
 
 	__raw_writel(0x00000084, DC_GEN);
@@ -383,8 +388,19 @@ void _ipu_dc_uninit(int dc_chan)
 		_ipu_dc_link_event(dc_chan, DC_EVT_EOFIELD, 0, 0);
 		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_CHAN, 0, 0);
 		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_ADDR, 0, 0);
-	} else {
-		/* async channels */
+	} else if ((dc_chan == 8) || (dc_chan == 9)) {
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_ADDR_W_0, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_ADDR_W_1, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_CHAN_W_0, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_CHAN_W_1, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA_W_0, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA_W_1, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_ADDR_R_0, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_ADDR_R_1, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_CHAN_R_0, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_CHAN_R_1, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA_R_0, 0, 0);
+		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA_R_1, 0, 0);
 	}
 }
 
@@ -402,15 +418,15 @@ int _ipu_chan_is_interlaced(ipu_channel_t channel)
 void _ipu_dp_dc_enable(ipu_channel_t channel)
 {
 	uint32_t reg;
-	uint32_t *dc_ch_conf;
+	uint32_t dc_chan;
 	int irq = 0;
 
 	if (channel == MEM_FG_SYNC)
 		irq = IPU_IRQ_DP_SF_END;
 	else if (channel == MEM_DC_SYNC)
-		dc_ch_conf = DC_WR_CH_CONF_1;
+		dc_chan = 1;
 	else if (channel == MEM_BG_SYNC)
-		dc_ch_conf = DC_WR_CH_CONF_5;
+		dc_chan = 5;
 	else
 		return;
 
@@ -424,45 +440,45 @@ void _ipu_dp_dc_enable(ipu_channel_t channel)
 		return;
 	}
 
-	reg = __raw_readl(dc_ch_conf);
+	reg = __raw_readl(DC_WR_CH_CONF(dc_chan));
 	reg |= 4 << DC_WR_CH_CONF_PROG_TYPE_OFFSET;
-	__raw_writel(reg, dc_ch_conf);
+	__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
 
 	reg = __raw_readl(IPU_DISP_GEN);
-	if (g_ipu_di_channel[0] == channel)
-		reg |= DI0_COUNTER_RELEASE;
-	else if (g_ipu_di_channel[1] == channel)
+	if (g_dc_di_assignment[dc_chan])
 		reg |= DI1_COUNTER_RELEASE;
+	else
+		reg |= DI0_COUNTER_RELEASE;
 	__raw_writel(reg, IPU_DISP_GEN);
 }
 
 static irqreturn_t dc_irq_handler(int irq, void *dev_id)
 {
 	u32 reg;
-	uint32_t *dc_ch_conf;
+	uint32_t dc_chan;
 	ipu_channel_t channel;
 	struct completion *comp = dev_id;
 
 	if (irq == IPU_IRQ_DP_SF_END) {
 		channel = MEM_BG_SYNC;
-		dc_ch_conf = DC_WR_CH_CONF_5;
+		dc_chan = 5;
 	} else if (irq == IPU_IRQ_DC_FC_1) {
 		channel = MEM_DC_SYNC;
-		dc_ch_conf = DC_WR_CH_CONF_1;
+		dc_chan = 1;
 	} else {
 		return IRQ_HANDLED;
 	}
 
 	reg = __raw_readl(IPU_DISP_GEN);
-	if (g_ipu_di_channel[0] == channel)
-		reg &= ~DI0_COUNTER_RELEASE;
-	else if (g_ipu_di_channel[1] == channel)
+	if (g_dc_di_assignment[dc_chan])
 		reg &= ~DI1_COUNTER_RELEASE;
+	else
+		reg &= ~DI0_COUNTER_RELEASE;
 	__raw_writel(reg, IPU_DISP_GEN);
 
-	reg = __raw_readl(dc_ch_conf);
+	reg = __raw_readl(DC_WR_CH_CONF(dc_chan));
 	reg &= ~DC_WR_CH_CONF_PROG_TYPE_MASK;
-	__raw_writel(reg, dc_ch_conf);
+	__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
 
 	complete(comp);
 	return IRQ_HANDLED;
@@ -474,16 +490,16 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 	uint32_t lock_flags;
 	uint32_t reg;
 	uint32_t csc;
-	uint32_t *dc_ch_conf;
+	uint32_t dc_chan;
 	int irq = 0;
 	int timeout = 50;
 	DECLARE_COMPLETION_ONSTACK(dc_comp);
 
 	if (channel == MEM_DC_SYNC) {
-		dc_ch_conf = DC_WR_CH_CONF_1;
+		dc_chan = 1;
 		irq = IPU_IRQ_DC_FC_1;
 	} else if (channel == MEM_BG_SYNC) {
-		dc_ch_conf = DC_WR_CH_CONF_5;
+		dc_chan = 5;
 		irq = IPU_IRQ_DP_SF_END;
 	} else if (channel == MEM_FG_SYNC) {
 		/* Disable FG channel */
@@ -553,6 +569,7 @@ void _ipu_init_dc_mappings(void)
 int _ipu_pixfmt_to_map(uint32_t fmt)
 {
 	switch (fmt) {
+	case IPU_PIX_FMT_GENERIC:
 	case IPU_PIX_FMT_RGB24:
 		return 0;
 	case IPU_PIX_FMT_RGB666:
@@ -807,6 +824,58 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 }
 EXPORT_SYMBOL(ipu_init_sync_panel);
 
+
+int ipu_init_async_panel(int disp, int type, uint32_t cycle_time,
+			 uint32_t pixel_fmt, ipu_adc_sig_cfg_t sig)
+{
+	unsigned long lock_flags;
+	int map;
+	u32 ser_conf = 0;
+	u32 div;
+	u32 di_clk = clk_get_rate(g_di_clk[disp]);
+
+	/* round up cycle_time, then calcalate the divider using scaled math */
+	cycle_time += (1000000000UL / di_clk) - 1;
+	div = (cycle_time * (di_clk / 256UL)) / (1000000000UL / 256UL);
+
+	map = _ipu_pixfmt_to_map(pixel_fmt);
+	if (map < 0)
+		return -EINVAL;
+
+	spin_lock_irqsave(&ipu_lock, lock_flags);
+
+	if (type == IPU_PANEL_SERIAL) {
+		__raw_writel((div << 24) | ((sig.ifc_width - 1) << 4),
+			     DI_DW_GEN(disp, ASYNC_SER_WAVE));
+
+		_ipu_di_data_pin_config(disp, ASYNC_SER_WAVE, DI_PIN_CS,
+					0, 0, (div * 2) + 1);
+		_ipu_di_data_pin_config(disp, ASYNC_SER_WAVE, DI_PIN_SER_CLK,
+					1, div, div * 2);
+		_ipu_di_data_pin_config(disp, ASYNC_SER_WAVE, DI_PIN_SER_RS,
+					2, 0, 0);
+
+		_ipu_dc_write_tmpl(0x64, WROD(0), 0, map, ASYNC_SER_WAVE, 0, 0);
+
+		/* Configure DC for serial panel */
+		__raw_writel(0x14, DC_DISP_CONF1(1));
+
+		if (sig.clk_pol)
+			ser_conf |= DI_SER_CONF_SERIAL_CLK_POL;
+		if (sig.data_pol)
+			ser_conf |= DI_SER_CONF_SERIAL_DATA_POL;
+		if (sig.rs_pol)
+			ser_conf |= DI_SER_CONF_SERIAL_RS_POL;
+		if (sig.cs_pol)
+			ser_conf |= DI_SER_CONF_SERIAL_CS_POL;
+		__raw_writel(ser_conf, DI_SER_CONF(disp));
+	}
+
+	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+	return 0;
+}
+EXPORT_SYMBOL(ipu_init_async_panel);
+
 /*!
  * This function sets the foreground and background plane global alpha blending
  * modes.
@@ -976,3 +1045,12 @@ int32_t ipu_disp_set_window_pos(ipu_channel_t channel, int16_t x_pos,
 	return 0;
 }
 EXPORT_SYMBOL(ipu_disp_set_window_pos);
+
+void ipu_disp_direct_write(ipu_channel_t channel, u32 value, u32 offset)
+{
+	if (channel == DIRECT_ASYNC0)
+		__raw_writel(value, ipu_disp_base[0] + offset);
+	else if (channel == DIRECT_ASYNC1)
+		__raw_writel(value, ipu_disp_base[1] + offset);
+}
+EXPORT_SYMBOL(ipu_disp_direct_write);

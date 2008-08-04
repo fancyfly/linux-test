@@ -21,6 +21,9 @@
 #ifndef __IPU_REGS_INCLUDED__
 #define __IPU_REGS_INCLUDED__
 
+#define IPU_DISP0_BASE		0x00000000
+#define IPU_MCU_T_DEFAULT	8
+#define IPU_DISP1_BASE		(IPU_MCU_T_DEFAULT << 25)
 #define IPU_CM_REG_BASE		0x1E000000
 #define IPU_IDMAC_REG_BASE	0x1E008000
 #define IPU_ISP_REG_BASE	0x1E010000
@@ -50,6 +53,7 @@ extern u32 *ipu_dc_tmpl_reg;
 extern u32 *ipu_dmfc_reg;
 extern u32 *ipu_di_reg[];
 extern u32 *ipu_tpmem_base;
+extern u32 *ipu_disp_base[];
 
 /* Register addresses */
 /* IPU Common registers */
@@ -171,9 +175,22 @@ extern u32 *ipu_tpmem_base;
 #define DC_EVT_NEW_CHAN		7
 #define DC_EVT_NEW_DATA		8
 
+#define DC_EVT_NEW_ADDR_W_0	0
+#define DC_EVT_NEW_ADDR_W_1	1
+#define DC_EVT_NEW_CHAN_W_0	2
+#define DC_EVT_NEW_CHAN_W_1	3
+#define DC_EVT_NEW_DATA_W_0	4
+#define DC_EVT_NEW_DATA_W_1	5
+#define DC_EVT_NEW_ADDR_R_0	6
+#define DC_EVT_NEW_ADDR_R_1	7
+#define DC_EVT_NEW_CHAN_R_0	8
+#define DC_EVT_NEW_CHAN_R_1	9
+#define DC_EVT_NEW_DATA_R_0	10
+#define DC_EVT_NEW_DATA_R_1	11
+
 #define dc_ch_offset(ch) \
 ({ \
-	const char _offset[] = { \
+	const u8 _offset[] = { \
 		0, 0x1C, 0x38, 0x54, 0x58, 0x5C, 0x78, 0, 0x94, 0xB4}; \
 	_offset[ch]; \
 })
@@ -281,30 +298,6 @@ enum {
 	TASK_STAT_IDLE = 0,
 	TASK_STAT_ACTIVE = 1,
 	TASK_STAT_WAIT4READY = 2,
-
-	/* Register bits */
-	SDC_COM_TFT_COLOR = 0x00000001UL,
-	SDC_COM_FG_EN = 0x00000010UL,
-	SDC_COM_GWSEL = 0x00000020UL,
-	SDC_COM_GLB_A = 0x00000040UL,
-	SDC_COM_KEY_COLOR_G = 0x00000080UL,
-	SDC_COM_BG_EN = 0x00000200UL,
-	SDC_COM_SHARP = 0x00001000UL,
-
-	SDC_V_SYNC_WIDTH_L = 0x00000001UL,
-
-	ADC_CONF_PRP_EN = 0x00000001L,
-	ADC_CONF_PP_EN = 0x00000002L,
-	ADC_CONF_MCU_EN = 0x00000004L,
-
-	ADC_DISP_CONF_SL_MASK = 0x00000FFFL,
-	ADC_DISP_CONF_TYPE_MASK = 0x00003000L,
-	ADC_DISP_CONF_TYPE_XY = 0x00002000L,
-
-	ADC_DISP_VSYNC_D0_MODE_MASK = 0x00000003L,
-	ADC_DISP_VSYNC_D0_WIDTH_MASK = 0x003F0000L,
-	ADC_DISP_VSYNC_D12_MODE_MASK = 0x0000000CL,
-	ADC_DISP_VSYNC_D12_WIDTH_MASK = 0x3F000000L,
 
 	/* Image Converter Register bits */
 	IC_CONF_PRPENC_EN = 0x00000001,
@@ -417,6 +410,13 @@ enum {
 	DP_COM_CONF_CSC_DEF_FG = 0x00000300,
 	DP_COM_CONF_CSC_DEF_BG = 0x00000200,
 	DP_COM_CONF_CSC_DEF_BOTH = 0x00000100,
+
+	DI_SER_CONF_LLA_SER_ACCESS = 0x00000020,
+	DI_SER_CONF_SERIAL_CLK_POL = 0x00000010,
+	DI_SER_CONF_SERIAL_DATA_POL = 0x00000008,
+	DI_SER_CONF_SERIAL_RS_POL = 0x00000004,
+	DI_SER_CONF_SERIAL_CS_POL = 0x00000002,
+	DI_SER_CONF_WAIT4SERIAL = 0x00000001,
 };
 
 enum di_pins {
@@ -428,6 +428,9 @@ enum di_pins {
 	DI_PIN16 = 5,
 	DI_PIN17 = 6,
 	DI_PIN_CS = 7,
+
+	DI_PIN_SER_CLK = 0,
+	DI_PIN_SER_RS = 1,
 };
 
 enum di_sync_wave {

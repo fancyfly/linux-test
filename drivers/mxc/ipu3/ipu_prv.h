@@ -26,7 +26,7 @@ extern bool g_ipu_clk_enabled;
 extern struct clk *g_ipu_clk;
 extern struct clk *g_di_clk[2];
 extern struct clk *g_ipu_csi_clk;
-extern ipu_channel_t g_ipu_di_channel[2];
+extern unsigned char g_dc_di_assignment[];
 
 #define IDMA_CHAN_INVALID	0xFF
 

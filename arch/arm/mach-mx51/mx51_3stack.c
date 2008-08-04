@@ -207,8 +207,45 @@ static struct platform_device mxc_fb_device[] = {
 	 },
 };
 
+static void lcd_reset(void)
+{
+	static int first;
+
+	/* ensure that LCDIO(1.8V) has been turn on */
+	/* active reset line GPIO */
+	if (!first) {
+		mxc_request_iomux(MX51_PIN_DISPB2_SER_RS, IOMUX_CONFIG_GPIO);
+		first = 1;
+	}
+	mxc_set_gpio_dataout(MX51_PIN_DISPB2_SER_RS, 0);
+	mxc_set_gpio_direction(MX51_PIN_DISPB2_SER_RS, 0);
+	/* do reset */
+	msleep(10);		/* tRES >= 100us */
+	mxc_set_gpio_dataout(MX51_PIN_DISPB2_SER_RS, 1);
+	msleep(60);
+}
+
+static struct mxc_lcd_platform_data lcd_data = {
+	.core_reg = "VIOHI",
+	.io_reg = "SW4",
+	.reset = lcd_reset,
+};
+
+static struct platform_device mxc_lcd_device = {
+	.name = "lcd_spi",
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &lcd_data,
+		},
+};
+
+extern void gpio_lcd_active(void);
+
 static void mxc_init_fb(void)
 {
+	gpio_lcd_active();
+	(void)platform_device_register(&mxc_lcd_device);
+
 	(void)platform_device_register(&mxc_fb_device[0]);
 	(void)platform_device_register(&mxc_fb_device[1]);
 	(void)platform_device_register(&mxc_fb_device[2]);

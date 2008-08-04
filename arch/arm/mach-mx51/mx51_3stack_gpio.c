@@ -530,6 +530,9 @@ EXPORT_SYMBOL(sdhc_init_card_det);
  */
 void gpio_lcd_active(void)
 {
+	mxc_request_iomux(MX51_PIN_DISP2_DAT15, IOMUX_CONFIG_ALT5);
+	mxc_request_iomux(MX51_PIN_DI_GP2, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_DI_GP3, IOMUX_CONFIG_ALT0);
 }
 
 /*!

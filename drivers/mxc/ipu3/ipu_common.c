@@ -45,7 +45,7 @@ struct clk *g_ipu_clk;
 bool g_ipu_clk_enabled;
 struct clk *g_di_clk[2];
 struct clk *g_ipu_csi_clk;
-ipu_channel_t g_ipu_di_channel[2];
+unsigned char g_dc_di_assignment[10];
 int g_ipu_irq[2];
 int g_ipu_hw_rev;
 bool g_sec_chan_en[21];
@@ -73,6 +73,7 @@ u32 *ipu_dmfc_reg;
 u32 *ipu_di_reg[2];
 u32 *ipu_cpmem_base;
 u32 *ipu_tpmem_base;
+u32 *ipu_disp_base[2];
 
 /* Static functions */
 static irqreturn_t ipu_irq_handler(int irq, void *desc);
@@ -159,6 +160,7 @@ static int ipu_probe(struct platform_device *pdev)
 	ipu_cpmem_base = ioremap(ipu_base + IPU_CPMEM_REG_BASE, PAGE_SIZE);
 	ipu_tpmem_base = ioremap(ipu_base + IPU_TPM_REG_BASE, SZ_64K);
 	ipu_dc_tmpl_reg = ioremap(ipu_base + IPU_DC_TMPL_REG_BASE, SZ_128K);
+	ipu_disp_base[1] = ioremap(ipu_base + IPU_DISP1_BASE, SZ_4K);
 
 	dev_dbg(g_ipu_dev, "IPU CM Regs = %p\n", ipu_cm_reg);
 	dev_dbg(g_ipu_dev, "IPU IC Regs = %p\n", ipu_ic_reg);
@@ -171,6 +173,7 @@ static int ipu_probe(struct platform_device *pdev)
 	dev_dbg(g_ipu_dev, "IPU CPMem = %p\n", ipu_cpmem_base);
 	dev_dbg(g_ipu_dev, "IPU TPMem = %p\n", ipu_tpmem_base);
 	dev_dbg(g_ipu_dev, "IPU DC Template Mem = %p\n", ipu_dc_tmpl_reg);
+	dev_dbg(g_ipu_dev, "IPU Display Region 1 Mem = %p\n", ipu_disp_base[1]);
 
 	/* Enable IPU and CSI clocks */
 	/* Get IPU clock freq */
@@ -203,6 +206,9 @@ static int ipu_probe(struct platform_device *pdev)
 	/* Set sync refresh channels as high priority */
 	__raw_writel(0x18800000L, IDMAC_CHA_PRI(0));
 
+	/* Set MCU_T to divide MCU access window into 2 */
+	__raw_writel(0x00400000L | (IPU_MCU_T_DEFAULT << 18), IPU_DISP_GEN);
+
 	clk_disable(g_ipu_clk);
 
 	return 0;
@@ -228,6 +234,7 @@ int ipu_remove(struct platform_device *pdev)
 	iounmap(ipu_cpmem_base);
 	iounmap(ipu_tpmem_base);
 	iounmap(ipu_dc_tmpl_reg);
+	iounmap(ipu_disp_base[1]);
 
 	return 0;
 }
@@ -353,7 +360,7 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 			goto err;
 		}
 
-		g_ipu_di_channel[params->mem_dc_sync.di] = MEM_DC_SYNC;
+		g_dc_di_assignment[1] = params->mem_dc_sync.di;
 		_ipu_dc_init(1, params->mem_dc_sync.di,
 			     params->mem_dc_sync.interlaced);
 		ipu_di_use_count[params->mem_dc_sync.di]++;
@@ -361,12 +368,12 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 		ipu_dmfc_use_count++;
 		break;
 	case MEM_BG_SYNC:
-		if (params->mem_dc_sync.di > 1) {
+		if (params->mem_dp_bg_sync.di > 1) {
 			ret = -EINVAL;
 			goto err;
 		}
 
-		g_ipu_di_channel[params->mem_dp_bg_sync.di] = MEM_BG_SYNC;
+		g_dc_di_assignment[5] = params->mem_dp_bg_sync.di;
 		_ipu_dp_init(channel, params->mem_dp_bg_sync.in_pixel_fmt,
 			     params->mem_dp_bg_sync.out_pixel_fmt);
 		_ipu_dc_init(5, params->mem_dp_bg_sync.di,
@@ -382,6 +389,28 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 		ipu_dc_use_count++;
 		ipu_dp_use_count++;
 		ipu_dmfc_use_count++;
+		break;
+	case DIRECT_ASYNC0:
+		if (params->direct_async.di > 1) {
+			ret = -EINVAL;
+			goto err;
+		}
+
+		g_dc_di_assignment[8] = params->direct_async.di;
+		_ipu_dc_init(8, params->direct_async.di, false);
+		ipu_di_use_count[params->direct_async.di]++;
+		ipu_dc_use_count++;
+		break;
+	case DIRECT_ASYNC1:
+		if (params->direct_async.di > 1) {
+			ret = -EINVAL;
+			goto err;
+		}
+
+		g_dc_di_assignment[9] = params->direct_async.di;
+		_ipu_dc_init(9, params->direct_async.di, false);
+		ipu_di_use_count[params->direct_async.di]++;
+		ipu_dc_use_count++;
 		break;
 	default:
 		dev_err(g_ipu_dev, "Missing channel initialization\n");
@@ -488,26 +517,14 @@ void ipu_uninit_channel(ipu_channel_t channel)
 		break;
 	case MEM_DC_SYNC:
 		_ipu_dc_uninit(1);
-		if (g_ipu_di_channel[0] == MEM_DC_SYNC) {
-			g_ipu_di_channel[0] = CHAN_NONE;
-			ipu_di_use_count[0]--;
-		} else if (g_ipu_di_channel[1] == MEM_DC_SYNC) {
-			g_ipu_di_channel[1] = CHAN_NONE;
-			ipu_di_use_count[1]--;
-		}
+		ipu_di_use_count[g_dc_di_assignment[1]]--;
 		ipu_dc_use_count--;
 		ipu_dmfc_use_count--;
 		break;
 	case MEM_BG_SYNC:
 		_ipu_dp_uninit(channel);
 		_ipu_dc_uninit(5);
-		if (g_ipu_di_channel[0] == MEM_BG_SYNC) {
-			g_ipu_di_channel[0] = CHAN_NONE;
-			ipu_di_use_count[0]--;
-		} else if (g_ipu_di_channel[1] == MEM_BG_SYNC) {
-			g_ipu_di_channel[1] = CHAN_NONE;
-			ipu_di_use_count[1]--;
-		}
+		ipu_di_use_count[g_dc_di_assignment[5]]--;
 		ipu_dc_use_count--;
 		ipu_dp_use_count--;
 		ipu_dmfc_use_count--;
@@ -517,6 +534,16 @@ void ipu_uninit_channel(ipu_channel_t channel)
 		ipu_dc_use_count--;
 		ipu_dp_use_count--;
 		ipu_dmfc_use_count--;
+		break;
+	case DIRECT_ASYNC0:
+		_ipu_dc_uninit(8);
+		ipu_di_use_count[g_dc_di_assignment[8]]--;
+		ipu_dc_use_count--;
+		break;
+	case DIRECT_ASYNC1:
+		_ipu_dc_uninit(9);
+		ipu_di_use_count[g_dc_di_assignment[9]]--;
+		ipu_dc_use_count--;
 		break;
 	default:
 		break;

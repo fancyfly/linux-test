@@ -33,12 +33,15 @@
 #include <linux/errno.h>
 #include <linux/fb.h>
 #include <linux/init.h>
+#include <linux/platform_device.h>
 #include <linux/regulator/regulator.h>
 #include <linux/spi/spi.h>
 #include <asm/arch/mxcfb.h>
+#include <asm/arch/ipu.h>
 #include <asm/mach-types.h>
 
 static struct spi_device *lcd_spi;
+static struct device *lcd_dev;
 
 static void lcd_init(void);
 static void lcd_poweron(void);
@@ -119,20 +122,20 @@ static struct notifier_block nb = {
  *
  * @return 	Returns 0 on SUCCESS and error on FAILURE.
  */
-static int __devinit lcd_spi_probe(struct spi_device *spi)
+static int __devinit lcd_probe(struct device *dev)
 {
 	int i;
-	struct mxc_lcd_platform_data *plat = spi->dev.platform_data;
+	struct mxc_lcd_platform_data *plat = dev->platform_data;
 
-	lcd_spi = spi;
+	lcd_dev = dev;
 
 	if (plat) {
-		io_reg = regulator_get(&spi->dev, plat->io_reg);
+		io_reg = regulator_get(dev, plat->io_reg);
 		if (!IS_ERR(io_reg)) {
 			regulator_set_voltage(io_reg, 1800000);
 			regulator_enable(io_reg);
 		}
-		core_reg = regulator_get(&spi->dev, plat->core_reg);
+		core_reg = regulator_get(dev, plat->core_reg);
 		if (!IS_ERR(core_reg)) {
 			regulator_set_voltage(core_reg, 2800000);
 			regulator_enable(core_reg);
@@ -141,11 +144,7 @@ static int __devinit lcd_spi_probe(struct spi_device *spi)
 		lcd_reset = plat->reset;
 		if (lcd_reset)
 			lcd_reset();
-
 	}
-
-	spi->bits_per_word = 9;
-	spi_setup(spi);
 
 	lcd_init();
 
@@ -162,14 +161,52 @@ static int __devinit lcd_spi_probe(struct spi_device *spi)
 	return 0;
 }
 
-static int __devexit lcd_spi_remove(struct spi_device *spi)
+static int __devinit lcd_plat_probe(struct platform_device *pdev)
+{
+	ipu_adc_sig_cfg_t sig;
+	ipu_channel_params_t param;
+
+	memset(&sig, 0, sizeof(sig));
+	sig.ifc_width = 9;
+	sig.clk_pol = 1;
+	ipu_init_async_panel(0, IPU_PANEL_SERIAL, 90, IPU_PIX_FMT_GENERIC, sig);
+
+	memset(&param, 0, sizeof(param));
+	ipu_init_channel(DIRECT_ASYNC1, &param);
+
+	return lcd_probe(&pdev->dev);
+}
+
+static int __devinit lcd_spi_probe(struct spi_device *spi)
+{
+	lcd_spi = spi;
+
+	spi->bits_per_word = 9;
+	spi_setup(spi);
+
+	return lcd_probe(&spi->dev);
+}
+
+static int __devexit lcd_remove(struct device *dev)
 {
 	fb_unregister_client(&nb);
 	lcd_poweroff();
-	regulator_put(io_reg, &spi->dev);
-	regulator_put(core_reg, &spi->dev);
+	regulator_put(io_reg, dev);
+	regulator_put(core_reg, dev);
 
 	return 0;
+}
+
+static int __devexit lcd_spi_remove(struct spi_device *spi)
+{
+	int ret = lcd_remove(&spi->dev);
+	lcd_spi = NULL;
+	return ret;
+}
+
+static int __devexit lcd_plat_remove(struct platform_device *pdev)
+{
+	return lcd_remove(&pdev->dev);
 }
 
 static int lcd_suspend(struct spi_device *spi, pm_message_t message)
@@ -197,6 +234,15 @@ static struct spi_driver lcd_spi_dev_driver = {
 	.resume = lcd_resume,
 };
 
+static struct platform_driver lcd_plat_driver = {
+	.driver = {
+		   .name = "lcd_spi",
+		   .owner = THIS_MODULE,
+		   },
+	.probe = lcd_plat_probe,
+	.remove = __devexit_p(lcd_plat_remove),
+};
+
 #define param(x) ((x) | 0x100)
 
 /*
@@ -207,8 +253,16 @@ static void lcd_init(void)
 {
 	const u16 cmd[] = { 0x36, param(0), 0x3A, param(0x60) };
 
-	dev_dbg(&lcd_spi->dev, "initializing LCD\n");
-	spi_write(lcd_spi, (const u8 *)cmd, ARRAY_SIZE(cmd));
+	dev_dbg(lcd_dev, "initializing LCD\n");
+
+	if (lcd_spi) {
+		spi_write(lcd_spi, (const u8 *)cmd, ARRAY_SIZE(cmd));
+	} else {
+		ipu_disp_direct_write(DIRECT_ASYNC1, 0x36, 0);
+		ipu_disp_direct_write(DIRECT_ASYNC1, 0x100, 0);
+		ipu_disp_direct_write(DIRECT_ASYNC1, 0x3A, 0);
+		ipu_disp_direct_write(DIRECT_ASYNC1, 0x160, 0);
+	}
 }
 
 static int lcd_on;
@@ -224,11 +278,18 @@ static void lcd_poweron(void)
 	if (lcd_on)
 		return;
 
-	dev_dbg(&lcd_spi->dev, "turning on LCD\n");
-	msleep(60);
-	spi_write(lcd_spi, (const u8 *)&slpout, 1);
-	msleep(60);
-	spi_write(lcd_spi, (const u8 *)&dison, 1);
+	dev_dbg(lcd_dev, "turning on LCD\n");
+
+	if (lcd_spi) {
+		msleep(60);
+		spi_write(lcd_spi, (const u8 *)&slpout, 1);
+		msleep(60);
+		spi_write(lcd_spi, (const u8 *)&dison, 1);
+	} else {
+		ipu_disp_direct_write(DIRECT_ASYNC1, slpout, 0);
+		msleep(60);
+		ipu_disp_direct_write(DIRECT_ASYNC1, dison, 0);
+	}
 	lcd_on = 1;
 }
 
@@ -244,17 +305,31 @@ static void lcd_poweroff(void)
 	if (!lcd_on)
 		return;
 
-	dev_dbg(&lcd_spi->dev, "turning off LCD\n");
-	msleep(60);
-	spi_write(lcd_spi, (const u8 *)&disoff, 1);
-	msleep(60);
-	spi_write(lcd_spi, (const u8 *)&slpin, 1);
+	dev_dbg(lcd_dev, "turning off LCD\n");
+
+	if (lcd_spi) {
+		msleep(60);
+		spi_write(lcd_spi, (const u8 *)&disoff, 1);
+		msleep(60);
+		spi_write(lcd_spi, (const u8 *)&slpin, 1);
+	} else {
+		ipu_disp_direct_write(DIRECT_ASYNC1, disoff, 0);
+		msleep(60);
+		ipu_disp_direct_write(DIRECT_ASYNC1, slpin, 0);
+	}
 	lcd_on = 0;
 }
 
 static int __init epson_lcd_init(void)
 {
+	int ret;
+
+	ret = platform_driver_register(&lcd_plat_driver);
+	if (ret)
+		return ret;
+
 	return spi_register_driver(&lcd_spi_dev_driver);
+
 }
 
 static void __exit epson_lcd_exit(void)

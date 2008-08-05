@@ -10,9 +10,6 @@
  * http://www.opensource.org/licenses/gpl-license.html
  * http://www.gnu.org/copyleft/gpl.html
  */
-
-#define DEBUG
-
 #include <linux/platform_device.h>
 #include <linux/poll.h>
 #include <linux/sched.h>

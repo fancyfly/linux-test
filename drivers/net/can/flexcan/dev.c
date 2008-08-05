@@ -29,7 +29,6 @@
 #include <linux/device.h>
 
 #include <linux/module.h>
-#include <linux/version.h>
 #include "flexcan.h"
 
 enum {
@@ -351,24 +350,32 @@ static ssize_t flexcan_set_attr(struct device *dev,
 		flexcan_set_bitrate(flexcan, tmp);
 		break;
 	case FLEXCAN_ATTR_BR_PRESDIV:
-		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_PRESDIV))
+		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_PRESDIV)) {
 			flexcan->br_presdiv = tmp - 1;
+			flexcan_update_bitrate(flexcan);
+		}
 		break;
 	case FLEXCAN_ATTR_BR_RJW:
 		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_RJW))
 			flexcan->br_rjw = tmp - 1;
 		break;
 	case FLEXCAN_ATTR_BR_PROPSEG:
-		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_PROPSEG))
+		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_PROPSEG)) {
 			flexcan->br_propseg = tmp - 1;
+			flexcan_update_bitrate(flexcan);
+		}
 		break;
 	case FLEXCAN_ATTR_BR_PSEG1:
-		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_PSEG1))
+		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_PSEG1)) {
 			flexcan->br_pseg1 = tmp - 1;
+			flexcan_update_bitrate(flexcan);
+		}
 		break;
 	case FLEXCAN_ATTR_BR_PSEG2:
-		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_PSEG2))
+		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_PSEG2)) {
 			flexcan->br_pseg2 = tmp - 1;
+			flexcan_update_bitrate(flexcan);
+		}
 		break;
 	case FLEXCAN_ATTR_MAXMB:
 		if ((tmp > 0) && (tmp <= FLEXCAN_MAX_MB)) {

@@ -22,8 +22,6 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
-#include <linux/module.h>
-#include <linux/init.h>
 #include <linux/netdevice.h>
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
@@ -620,3 +618,5 @@ static __exit void flexcan_exit(void)
 
 module_init(flexcan_init);
 module_exit(flexcan_exit);
+
+MODULE_LICENSE("GPL");

@@ -1451,9 +1451,6 @@ static int sdhci_suspend(struct platform_device *pdev, pm_message_t state)
 	struct sdhci_chip *chip;
 	int i, ret;
 
-	struct mmc_host *mmc = platform_get_drvdata(pdev);
-	struct sdhci_host *host = mmc_priv(mmc);
-
 	chip = dev_get_drvdata(&pdev->dev);
 	if (!chip)
 		return 0;
@@ -1475,9 +1472,9 @@ static int sdhci_suspend(struct platform_device *pdev, pm_message_t state)
 		if (!chip->hosts[i])
 			continue;
 		free_irq(chip->hosts[i]->irq, chip->hosts[i]);
+		clk_disable(chip->hosts[i]->clk);
 	}
 
-	clk_disable(host->clk);
 	gpio_sdhc_inactive(pdev->id);
 
 	return 0;
@@ -1488,9 +1485,6 @@ static int sdhci_resume(struct platform_device *pdev)
 	struct sdhci_chip *chip;
 	int i, ret;
 
-	struct mmc_host *mmc = platform_get_drvdata(pdev);
-	struct sdhci_host *host = mmc_priv(mmc);
-
 	chip = dev_get_drvdata(&pdev->dev);
 	if (!chip)
 		return 0;
@@ -1498,9 +1492,9 @@ static int sdhci_resume(struct platform_device *pdev)
 	DBG("Resuming...\n");
 
 	gpio_sdhc_active(pdev->id);
-	clk_enable(host->clk);
 
 	for (i = 0; i < chip->num_slots; i++) {
+		clk_enable(chip->hosts[i]->clk);
 		if (!chip->hosts[i])
 			continue;
 		ret = request_irq(chip->hosts[i]->irq, sdhci_irq,
@@ -1825,7 +1819,6 @@ out1:
 	gpio_sdhc_inactive(pdev->id);
 out0:
 	mmc_free_host(mmc);
-	platform_set_drvdata(pdev, NULL);
 	return ret;
 }
 

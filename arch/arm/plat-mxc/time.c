@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -97,18 +97,15 @@ extern unsigned long clk_early_get_timer_rate(void);
 static int mxc_gpt_set_next_event(unsigned long cycles,
 				  struct clock_event_device *evt)
 {
-	unsigned long now, expires;
-	u32 reg;
+	unsigned long flags, expires, now;
+
+	raw_local_irq_save(flags);
 
 	now = __raw_readl(MXC_GPT_GPTCNT);
 	expires = now + cycles;
 	__raw_writel(expires, MXC_GPT_GPTOCR1);
-	__raw_writel(GPTSR_OF1, MXC_GPT_GPTSR);
 
-	/* enable interrupt */
-	reg = __raw_readl(MXC_GPT_GPTIR);
-	reg |= GPTIR_OF1IE;
-	__raw_writel(reg, MXC_GPT_GPTIR);
+	raw_local_irq_restore(flags);
 
 	return 0;
 }
@@ -123,6 +120,10 @@ static void mxc_gpt_set_mode(enum clock_event_mode mode,
 		panic("MXC GPT: CLOCK_EVT_MODE_PERIODIC not supported\n");
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
+		/* enable interrupt */
+		reg = __raw_readl(MXC_GPT_GPTIR);
+		reg |= GPTIR_OF1IE;
+		__raw_writel(reg, MXC_GPT_GPTIR);
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
@@ -160,14 +161,9 @@ static struct clock_event_device gpt_clockevent = {
 static irqreturn_t mxc_timer_interrupt(int irq, void *dev_id)
 {
 	unsigned int gptsr;
-	u32 reg;
 
 	gptsr = __raw_readl(MXC_GPT_GPTSR);
 	if (gptsr & GPTSR_OF1) {
-		/* Disable interrupt */
-		reg = __raw_readl(MXC_GPT_GPTIR);
-		reg &= ~GPTIR_OF1IE;
-		__raw_writel(reg, MXC_GPT_GPTIR);
 		/* Clear interrupt */
 		__raw_writel(GPTSR_OF1, MXC_GPT_GPTSR);
 

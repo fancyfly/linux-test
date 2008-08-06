@@ -68,6 +68,16 @@ static void _clk_disable(struct clk *clk)
 	__raw_writel(reg, clk->enable_reg);
 }
 
+static void _clk_disable_inwait(struct clk *clk)
+{
+	u32 reg;
+
+	reg = __raw_readl(clk->enable_reg);
+	reg &= ~(MXC_CCM_CCGR_CG_MASK << clk->enable_shift);
+	reg |= 1 << clk->enable_shift;
+	__raw_writel(reg, clk->enable_reg);
+}
+
 /*
  * For the 4-to-1 muxed input clock
  */
@@ -256,6 +266,8 @@ static int _clk_pll1_sw_set_parent(struct clk *clk, struct clk *parent)
 			       &pll3_sw_clk);
 		reg = (reg & ~MXC_CCM_CCSR_STEP_SEL_MASK) |
 		    (mux << MXC_CCM_CCSR_STEP_SEL_OFFSET);
+__raw_writel(reg, MXC_CCM_CCSR);
+		reg = __raw_readl(MXC_CCM_CCSR);
 		reg |= MXC_CCM_CCSR_PLL1_SW_CLK_SEL;
 	}
 	__raw_writel(reg, MXC_CCM_CCSR);
@@ -673,6 +685,10 @@ static struct clk ahb_clk = {
 	.recalc = _clk_ahb_recalc,
 	.set_rate = _clk_ahb_set_rate,
 	.round_rate = _clk_ahb_round_rate,
+	.enable_reg = MXC_CCM_CCGR0,
+	.enable_shift = MXC_CCM_CCGR0_CG12_OFFSET,
+	.enable = _clk_enable,
+	.disable = _clk_disable_inwait,
 	.flags = RATE_PROPAGATES,
 };
 
@@ -2374,11 +2390,8 @@ int __init mxc_clocks_init(void)
 	propagate_rate(&ckih_clk);
 	propagate_rate(&ckil_clk);
 
-
 	clk_enable(&gpt_clk[1]);
 	clk_enable(&spba_clk);
-
-
 	clk_enable(&iim_clk);
 	clk_enable(&gpc_dvfs_clk);
 	clk_enable(&ahbmux_clk[0]);

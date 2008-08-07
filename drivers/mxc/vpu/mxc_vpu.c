@@ -107,10 +107,11 @@ static int vpu_free_buffers(void)
  */
 static irqreturn_t vpu_irq_handler(int irq, void *dev_id)
 {
-	struct vpu_t *dev;
-	dev = (struct vpu_t *)dev_id;
+	struct vpu_t *dev = dev_id;
+
 	__raw_readl(IO_ADDRESS(VPU_BASE_ADDR + BIT_INT_STATUS));
 	__raw_writel(0x1, IO_ADDRESS(VPU_BASE_ADDR + BIT_INT_CLEAR));
+
 	if (dev->async_queue)
 		kill_fasync(&dev->async_queue, SIGIO, POLL_IN);
 
@@ -118,35 +119,6 @@ static irqreturn_t vpu_irq_handler(int irq, void *dev_id)
 	wake_up_interruptible(&vpu_queue);
 
 	return IRQ_HANDLED;
-}
-
-/*!
- * @brief vpu hardware enable function
- *
- * @return  0 on success or negative error code on error
- */
-static int vpu_hardware_enable(void)
-{
-	if (cpu_is_mx32()) {
-		vl2cc_enable();
-	}
-	clk_enable(vpu_clk);
-	return 0;
-}
-
-/*!
- * @brief vpu hardware disable function
- *
- * @return  0 on success or negative error code on error
- */
-static int vpu_hardware_disable(void)
-{
-	if (cpu_is_mx32()) {
-		vl2cc_disable();
-	}
-	clk_disable(vpu_clk);
-	return 0;
-
 }
 
 /*!
@@ -158,7 +130,9 @@ static int vpu_open(struct inode *inode, struct file *filp)
 {
 	if (open_count++ == 0) {
 		filp->private_data = (void *)(&vpu_data);
-		vpu_hardware_enable();
+
+		if (cpu_is_mx32())
+			vl2cc_enable();
 	} else {
 		printk(KERN_ERR "VPU has already been opened.\n");
 		return -EACCES;
@@ -283,10 +257,21 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 		{
 			ret = copy_to_user((void __user *)arg, &iram,
 					   sizeof(struct iram_setting));
-			if (ret) {
+			if (ret)
 				ret = -EFAULT;
-				break;
-			}
+
+			break;
+		}
+	case VPU_IOC_CLKGATE_SETTING:
+		{
+			u32 clkgate_en;
+			if (get_user(clkgate_en, (u32 __user *) arg))
+				return -EFAULT;
+
+			if (clkgate_en)
+				clk_enable(vpu_clk);
+			else
+				clk_disable(vpu_clk);
 
 			break;
 		}
@@ -309,9 +294,11 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
  */
 static int vpu_release(struct inode *inode, struct file *filp)
 {
-	if (--open_count == 0) {
+	if (open_count > 0 && !(--open_count)) {
 		vpu_free_buffers();
-		vpu_hardware_disable();
+
+		if (cpu_is_mx32())
+			vl2cc_disable();
 	}
 
 	return 0;

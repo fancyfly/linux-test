@@ -44,6 +44,7 @@ typedef struct vpu_mem_desc {
 #define VPU_IOC_REG_DUMP	_IO(VPU_IOC_MAGIC, 4)
 #define VPU_IOC_VL2CC_FLUSH	_IO(VPU_IOC_MAGIC, 5)
 #define VPU_IOC_IRAM_SETTING	_IO(VPU_IOC_MAGIC, 6)
+#define VPU_IOC_CLKGATE_SETTING	_IO(VPU_IOC_MAGIC, 7)
 
 int vl2cc_init(u32 vl2cc_hw_base);
 void vl2cc_enable(void);

@@ -30,6 +30,20 @@
 #include <asm/irq.h>
 #include "flexcan.h"
 
+#define flexcan_swab32(x)	\
+	(((x) << 24) | ((x) >> 24) |\
+		(((x) & (__u32)0x0000ff00UL) << 8) |\
+		(((x) & (__u32)0x00ff0000UL) >> 8))
+
+static inline void flexcan_memcpy(void *dst, void *src, int len)
+{
+	int i;
+	unsigned int *d = (unsigned int *)dst, *s = (unsigned int *)src;
+	len = (len + 3) >> 2;
+	for (i = 0; i < len; i++, s++, d++)
+		*d = flexcan_swab32(*s);
+}
+
 static void flexcan_mb_bottom(struct net_device *dev, int index)
 {
 	struct flexcan_device *flexcan = netdev_priv(dev);
@@ -66,7 +80,8 @@ static void flexcan_mb_bottom(struct net_device *dev, int index)
 		frame->can_dlc = hwmb->mb_cs.cs.length;
 
 		if (frame->can_dlc && frame->can_dlc)
-			memcpy(frame->data, hwmb->mb_data, frame->can_dlc);
+			flexcan_memcpy(frame->data, hwmb->mb_data,
+				       frame->can_dlc);
 
 		if (flexcan->fifo
 		    || (index >= (flexcan->maxmb - flexcan->xmit_maxmb))) {
@@ -129,8 +144,8 @@ static void flexcan_fifo_isr(struct net_device *dev, unsigned int iflag1)
 			frame->can_dlc = hwmb->mb_cs.cs.length;
 
 			if (frame->can_dlc && (frame->can_dlc <= 8))
-				memcpy(frame->data, hwmb->mb_data,
-				       frame->can_dlc);
+				flexcan_memcpy(frame->data, hwmb->mb_data,
+					       frame->can_dlc);
 			tmp = __raw_readl(flexcan->io_base + CAN_HW_REG_TIMER);
 
 			dev->last_rx = jiffies;
@@ -272,7 +287,7 @@ int flexcan_mbm_xmit(struct flexcan_device *flexcan, struct can_frame *frame)
 	}
 
 	hwmb[i].mb_cs.cs.length = frame->can_dlc;
-	memcpy(hwmb[i].mb_data, frame->data, frame->can_dlc);
+	flexcan_memcpy(hwmb[i].mb_data, frame->data, frame->can_dlc);
 	hwmb[i].mb_cs.cs.code = CAN_MB_TX_ONCE;
 	return 0;
 }

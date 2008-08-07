@@ -26,6 +26,7 @@
  */
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
@@ -124,9 +125,7 @@ static void mxc_i2c_stop(mxc_i2c_device * dev)
 {
 	unsigned int cr, sr;
 	int retry = 16;
-	spinlock_t lock;
 
-	spin_lock(&lock);
 	cr = readw(dev->membase + MXC_I2CR);
 	cr &= ~(MXC_I2CR_MSTA | MXC_I2CR_MTX);
 	writew(cr, dev->membase + MXC_I2CR);
@@ -137,10 +136,9 @@ static void mxc_i2c_stop(mxc_i2c_device * dev)
 		udelay(3);
 		sr = readw(dev->membase + MXC_I2SR);
 	}
-	spin_unlock(&lock);
 	if (retry <= 0)
-		printk(KERN_DEBUG "Could not set I2C Bus Busy bit to zero.\n");
-
+		dev_err(&dev->adap.dev, "Could not set I2C Bus Busy bit"
+			" to zero.\n");
 }
 
 /*!
@@ -168,13 +166,13 @@ static int mxc_i2c_wait_for_tc(mxc_i2c_device * dev, int trans_flag)
 
 	if (retry <= 0) {
 		/* Unable to send data */
-		printk(KERN_DEBUG "Data not transmitted\n");
+		dev_err(&dev->adap.dev, "Data not transmitted\n");
 		return -1;
 	}
 
 	if (!dev->tx_success) {
 		/* An ACK was not received for transmitted byte */
-		printk(KERN_DEBUG "ACK not received \n");
+		dev_err(&dev->adap.dev, "ACK not received \n");
 		return -1;
 	}
 
@@ -217,7 +215,7 @@ static int mxc_i2c_start(mxc_i2c_device *dev, struct i2c_msg *msg)
 		sr = readw(dev->membase + MXC_I2SR);
 	}
 	if (retry <= 0) {
-		printk(KERN_DEBUG "Could not grab Bus ownership\n");
+		dev_err(&dev->adap.dev, "Could not grab Bus ownership\n");
 		return -EBUSY;
 	}
 
@@ -415,9 +413,10 @@ static int mxc_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	mxc_i2c_device *dev = (mxc_i2c_device *) (i2c_get_adapdata(adap));
 	int i, ret = 0, addr_comp = 0;
 	volatile unsigned int sr;
+	int retry = 5;
 
 	if (dev->low_power) {
-		printk(KERN_ERR "I2C Device in low power mode\n");
+		dev_err(&dev->adap.dev, "I2C Device in low power mode\n");
 		return -EREMOTEIO;
 	}
 
@@ -431,15 +430,14 @@ static int mxc_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	 * Check bus state
 	 */
 
-	int retry = 5;
-	if (sr & MXC_I2SR_IBB && retry--) {
+	while ((sr & MXC_I2SR_IBB) && retry--) {
 		udelay(5);
 		sr = readw(dev->membase + MXC_I2SR);
 	}
 
-	if (sr & MXC_I2SR_IBB && retry < 0) {
+	if ((sr & MXC_I2SR_IBB) && retry < 0) {
 		mxc_i2c_module_dis(dev);
-		printk(KERN_DEBUG "Bus busy\n");
+		dev_err(&dev->adap.dev, "Bus busy\n");
 		return -EREMOTEIO;
 	}
 
@@ -492,14 +490,16 @@ static int mxc_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 			ret = mxc_i2c_readbytes(dev, &msgs[i], (i + 1 == num),
 						addr_comp);
 			if (ret < 0) {
-				printk(KERN_ERR "mxc_i2c_readbytes: fail.\n");
+				dev_err(&dev->adap.dev, "mxc_i2c_readbytes:"
+					" fail.\n");
 				break;
 			}
 		} else {
 			/* Write the data */
 			ret = mxc_i2c_writebytes(dev, &msgs[i], (i + 1 == num));
 			if (ret < 0) {
-				printk(KERN_ERR "mxc_i2c_writebytes: fail.\n");
+				dev_err(&dev->adap.dev, "mxc_i2c_writebytes:"
+					" fail.\n");
 				break;
 			}
 		}
@@ -557,7 +557,7 @@ static irqreturn_t mxc_i2c_handler(int irq, void *dev_id)
 	writew(0x0, dev->membase + MXC_I2SR);
 
 	if (sr & MXC_I2SR_IAL) {
-		printk(KERN_DEBUG "Bus Arbitration lost\n");
+		dev_err(&dev->adap.dev, "Bus Arbitration lost\n");
 	} else {
 		/* Interrupt due byte transfer completion */
 		dev->tx_success = true;

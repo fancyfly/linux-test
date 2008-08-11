@@ -175,6 +175,11 @@ static void done(struct fsl_ep *ep, struct fsl_req *req, int status)
 		dma_pool_free(udc->td_pool, curr_td, curr_td->td_dma);
 	}
 
+	if (USE_MSC_WR(req->req.length)) {
+		req->req.dma -= 1;
+		memmove(req->req.buf, req->req.buf + 1, MSC_BULK_CB_WRAP_LEN);
+	}
+
 	if (req->mapped) {
 		dma_unmap_single(ep->udc->gadget.dev.parent,
 			req->req.dma, req->req.length,
@@ -822,6 +827,9 @@ static int fsl_req_to_dtd(struct fsl_req *req)
 	int		is_first = 1;
 	struct ep_td_struct	*last_dtd = NULL, *dtd;
 	dma_addr_t dma;
+
+	if (USE_MSC_WR(req->req.length))
+		req->req.dma += 1;
 
 	do {
 		dtd = fsl_build_dtd(req, &count, &dma, &is_last);

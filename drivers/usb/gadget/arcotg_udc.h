@@ -23,6 +23,10 @@
 #define TRUE 1
 #define FALSE 0
 
+#define MSC_BULK_CB_WRAP_LEN 31
+#define USE_MSC_WR(len) ((cpu_is_mx37_rev(CHIP_REV_1_0) == 1) && \
+	((len) == MSC_BULK_CB_WRAP_LEN))
+
 /* ### define USB registers here
  */
 #define USB_MAX_ENDPOINTS		8

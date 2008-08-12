@@ -624,6 +624,7 @@ static struct max8660_regulator reg_max8660[NUM_MAX8660_REGULATORS] = {
 		       .name = "SW1",
 		       .id = MCU_SW1,
 		       .ops = &max8660_sw1_ops,
+		       .use_count = 1,
 		       },
 	 },
 	{
@@ -631,6 +632,7 @@ static struct max8660_regulator reg_max8660[NUM_MAX8660_REGULATORS] = {
 		       .name = "SW2",
 		       .id = MCU_SW2,
 		       .ops = &max8660_sw2_ops,
+		       .use_count = 1,
 		       },
 	 },
 	{
@@ -639,6 +641,7 @@ static struct max8660_regulator reg_max8660[NUM_MAX8660_REGULATORS] = {
 		       .id = MCU_SW3,
 		       .ops = &max8660_sw3_ops,
 		       .constraints = &max8660_sw3_regulation_constraints,
+		       .use_count = 1,
 		       },
 	 },
 	{
@@ -647,6 +650,7 @@ static struct max8660_regulator reg_max8660[NUM_MAX8660_REGULATORS] = {
 		       .id = MCU_SW4,
 		       .ops = &max8660_sw4_ops,
 		       .constraints = &max8660_sw4_regulation_constraints,
+		       .use_count = 1,
 		       },
 	 },
 	{

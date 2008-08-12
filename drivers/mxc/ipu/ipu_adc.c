@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -668,6 +668,17 @@ static void _ipu_set_cmd_data_mappings(display_port_t disp,
 	default:
 		break;
 	}
+}
+
+void ipu_disp_direct_write(ipu_channel_t channel, u32 value, u32 offset)
+{
+	/*TODO*/
+}
+
+int ipu_init_async_panel(int disp, int type, uint32_t cycle_time,
+			 uint32_t pixel_fmt, ipu_adc_sig_cfg_t sig)
+{
+	/*TODO:uniform interface for ipu async panel init*/
 }
 
 EXPORT_SYMBOL(ipu_adc_write_template);

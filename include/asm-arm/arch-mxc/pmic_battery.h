@@ -180,20 +180,6 @@ typedef enum {
 	BAT_IT_BELOW_THRESHOLD,
 } t_batt_event;
 
-/*START: for 3ds hw event*/
-/*!
- * Battery event type enum
- */
-enum {
-	BAT_EVENT_CHARGER_PLUG = 0x01,
-	BAT_EVENT_CHARGER_UNPLUG = 0x02,
-	BAT_EVENT_CHARGER_OVERVOLTAGE = 0x04,
-	BAT_EVENT_BATTERY_LOW = 0x08,
-	BAT_EVENT_POWER_FAILED = 0x10,
-	BAT_EVENT_CHARGER_FULL = 0x20,
-} t_bat_event;
-/*END: for 3ds hw event*/
-
 /*!
  * This structure is used for the following battery changer control
  * IOCTLs:
@@ -239,7 +225,22 @@ typedef struct {
 } t_eol_setting;
 
 /* EXPORTED FUNCTIONS */
+
 #ifdef __KERNEL__
+
+/*START: for 3ds hw event*/
+/*!
+ * Battery event type enum
+ */
+enum {
+	BAT_EVENT_CHARGER_PLUG = 0x01,
+	BAT_EVENT_CHARGER_UNPLUG = 0x02,
+	BAT_EVENT_CHARGER_OVERVOLTAGE = 0x04,
+	BAT_EVENT_BATTERY_LOW = 0x08,
+	BAT_EVENT_POWER_FAILED = 0x10,
+	BAT_EVENT_CHARGER_FULL = 0x20,
+} t_bat_event;
+/*END: for 3ds hw event*/
 
 /*!
  * This function is used to start charging a battery. For different charger,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -427,6 +427,39 @@ typedef struct {
 	bool rampdown;		/*! < tcled rampdown */
 	bool half_current;	/*! < tcled half current */
 } t_tcled_ind_param;
+
+#if defined(CONFIG_MXC_PMIC_MC13892)
+
+enum curr_level {
+	LIT_CURR_0 = 0,
+	LIT_CURR_3,
+	LIT_CURR_6,
+	LIT_CURR_9,
+	LIT_CURR_12,
+	LIT_CURR_15,
+	LIT_CURR_18,
+	LIT_CURR_21,
+	/* below setting only used for main/aux/keypad */
+	LIT_CURR_HI_0,
+	LIT_CURR_HI_6,
+	LIT_CURR_HI_12,
+	LIT_CURR_HI_18,
+	LIT_CURR_HI_24,
+	LIT_CURR_HI_30,
+	LIT_CURR_HI_36,
+	LIT_CURR_HI_42,
+};
+
+enum lit_channel {
+	LIT_MAIN = 0,
+	LIT_AUX,
+	LIT_KEY,
+	LIT_RED,
+	LIT_GREEN,
+	LIT_BLUE,
+};
+
+#endif
 
 /* EXPORTED FUNCTIONS */
 #ifdef __KERNEL__
@@ -1026,6 +1059,23 @@ PMIC_STATUS pmic_bklit_config_boost_mode(unsigned int abms, unsigned int abr);
  * @return       This function returns 0 if successful.
  */
 PMIC_STATUS pmic_bklit_gets_boost_mode(unsigned int *abms, unsigned int *abr);
+
+#if defined(CONFIG_MXC_PMIC_MC13892)
+
+PMIC_STATUS mc13892_bklit_set_current(enum lit_channel channel,
+				      unsigned char level);
+PMIC_STATUS mc13892_bklit_get_current(enum lit_channel channel,
+				      unsigned char *level);
+PMIC_STATUS mc13892_bklit_set_dutycycle(enum lit_channel channel,
+					unsigned char dc);
+PMIC_STATUS mc13892_bklit_get_dutycycle(enum lit_channel channel,
+					unsigned char *dc);
+PMIC_STATUS mc13892_bklit_set_ramp(enum lit_channel channel, int flag);
+PMIC_STATUS mc13892_bklit_get_ramp(enum lit_channel channel, int *flag);
+PMIC_STATUS mc13892_bklit_set_blink_p(enum lit_channel channel, int period);
+PMIC_STATUS mc13892_bklit_get_blink_p(enum lit_channel channel, int *period);
+
+#endif
 
 #endif				/* __KERNEL__ */
 

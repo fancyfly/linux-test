@@ -378,6 +378,8 @@ static sensor_interface *ov2640_config(int *frame_rate, int high_quality)
 	else
 		ov2640_init_mode(ov2640_mode_800_600);
 
+	msleep(300);
+
 	return interface_param;
 }
 

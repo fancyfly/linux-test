@@ -84,6 +84,7 @@ fsl_ep0_desc = {
 	.bmAttributes =		USB_ENDPOINT_XFER_CONTROL,
 	.wMaxPacketSize =	USB_MAX_CTRL_PAYLOAD,
 };
+static const size_t g_iram_size = IRAM_TD_PPH_SIZE;
 
 static int udc_suspend(struct fsl_udc *udc);
 static int fsl_udc_suspend(struct device *dev, pm_message_t state);
@@ -693,12 +694,37 @@ static void fsl_free_request(struct usb_ep *_ep, struct usb_request *_req)
 		kfree(req);
 }
 
+static void update_qh(struct fsl_req *req)
+{
+	struct fsl_ep *ep = req->ep;
+	int i = ep_index(ep) * 2 + ep_is_in(ep);
+	u32 temp;
+	struct ep_queue_head *dQH = &ep->udc->ep_qh[i];
+
+	/* Write dQH next pointer and terminate bit to 0 */
+	temp = req->head->td_dma & EP_QUEUE_HEAD_NEXT_POINTER_MASK;
+	if (NEED_IRAM(req->ep)) {
+		/* set next dtd stop bit,ensure only one dtd in this list */
+		req->cur->next_td_ptr |= cpu_to_hc32(DTD_NEXT_TERMINATE);
+		temp = req->cur->td_dma & EP_QUEUE_HEAD_NEXT_POINTER_MASK;
+	}
+	dQH->next_dtd_ptr = cpu_to_hc32(temp);
+	/* Clear active and halt bit */
+	temp = cpu_to_hc32(~(EP_QUEUE_HEAD_STATUS_ACTIVE
+			     | EP_QUEUE_HEAD_STATUS_HALT));
+	dQH->size_ioc_int_sts &= temp;
+
+	/* Prime endpoint by writing 1 to ENDPTPRIME */
+	temp = ep_is_in(ep)
+	    ? (1 << (ep_index(ep) + 16))
+	    : (1 << (ep_index(ep)));
+	fsl_writel(temp, &dr_regs->endpointprime);
+}
+
 /*-------------------------------------------------------------------------*/
 static int fsl_queue_td(struct fsl_ep *ep, struct fsl_req *req)
 {
-	int i = ep_index(ep) * 2 + ep_is_in(ep);
 	u32 temp, bitmask, tmp_stat;
-	struct ep_queue_head *dQH = &ep->udc->ep_qh[i];
 
 	/* VDBG("QH addr Register 0x%8x", dr_regs->endpointlistaddr);
 	VDBG("ep_qh[%d] addr is 0x%8x", i, (u32)&(ep->udc->ep_qh[i])); */
@@ -716,6 +742,8 @@ static int fsl_queue_td(struct fsl_ep *ep, struct fsl_req *req)
 			cpu_to_hc32(req->head->td_dma & DTD_ADDR_MASK);
 		/* Read prime bit, if 1 goto done */
 		if (fsl_readl(&dr_regs->endpointprime) & bitmask)
+			goto out;
+		if (NEED_IRAM(ep))
 			goto out;
 
 		do {
@@ -735,21 +763,7 @@ static int fsl_queue_td(struct fsl_ep *ep, struct fsl_req *req)
 		if (tmp_stat)
 			goto out;
 	}
-
-	/* Write dQH next pointer and terminate bit to 0 */
-	temp = req->head->td_dma & EP_QUEUE_HEAD_NEXT_POINTER_MASK;
-	dQH->next_dtd_ptr = cpu_to_hc32(temp);
-
-	/* Clear active and halt bit */
-	temp = cpu_to_hc32(~(EP_QUEUE_HEAD_STATUS_ACTIVE
-			| EP_QUEUE_HEAD_STATUS_HALT));
-	dQH->size_ioc_int_sts &= temp;
-
-	/* Prime endpoint by writing 1 to ENDPTPRIME */
-	temp = ep_is_in(ep)
-		? (1 << (ep_index(ep) + 16))
-		: (1 << (ep_index(ep)));
-	fsl_writel(temp, &dr_regs->endpointprime);
+	update_qh(req);
 out:
 	return 0;
 }
@@ -769,7 +783,8 @@ static struct ep_td_struct *fsl_build_dtd(struct fsl_req *req, unsigned *length,
 	/* how big will this transfer be? */
 	*length = min(req->req.length - req->req.actual,
 			(unsigned)EP_MAX_LENGTH_TRANSFER);
-
+	if (NEED_IRAM(req->ep))
+		*length = min(*length, g_iram_size);
 	dtd = dma_pool_alloc(udc_controller->td_pool, GFP_KERNEL, dma);
 	if (dtd == NULL)
 		return dtd;
@@ -782,6 +797,8 @@ static struct ep_td_struct *fsl_build_dtd(struct fsl_req *req, unsigned *length,
 
 	/* Init all of buffer page pointers */
 	swap_temp = (u32) (req->req.dma + req->req.actual);
+	if (NEED_IRAM(req->ep))
+		swap_temp = (u32) (req->req.dma);
 	dtd->buff_ptr0 = cpu_to_hc32(swap_temp);
 	dtd->buff_ptr1 = cpu_to_hc32(swap_temp + 0x1000);
 	dtd->buff_ptr2 = cpu_to_hc32(swap_temp + 0x2000);
@@ -809,6 +826,8 @@ static struct ep_td_struct *fsl_build_dtd(struct fsl_req *req, unsigned *length,
 	/* Enable interrupt for the last dtd of a request */
 	if (*is_last && !req->req.no_interrupt)
 		swap_temp |= DTD_IOC;
+	if (NEED_IRAM(req->ep))
+		swap_temp |= DTD_IOC;
 
 	dtd->size_ioc_sts = cpu_to_hc32(swap_temp);
 
@@ -827,6 +846,19 @@ static int fsl_req_to_dtd(struct fsl_req *req)
 	int		is_first = 1;
 	struct ep_td_struct	*last_dtd = NULL, *dtd;
 	dma_addr_t dma;
+
+	if (NEED_IRAM(req->ep)) {
+		req->oridma = req->req.dma;
+		/* here, replace user buffer to iram buffer */
+		if (ep_is_in(req->ep)) {
+			req->req.dma = req->ep->udc->iram_buffer[1];
+			/* copy data to iram */
+			memcpy((char *)req->ep->udc->iram_buffer_v[1],
+			       req->req.buf, min(req->req.length, g_iram_size));
+		} else {
+			req->req.dma = req->ep->udc->iram_buffer[0];
+		}
+	}
 
 	if (USE_MSC_WR(req->req.length))
 		req->req.dma += 1;
@@ -849,7 +881,7 @@ static int fsl_req_to_dtd(struct fsl_req *req)
 	} while (!is_last);
 
 	dtd->next_td_ptr = cpu_to_hc32(DTD_NEXT_TERMINATE);
-
+	req->cur = req->head;
 	req->tail = dtd;
 
 	return 0;
@@ -907,6 +939,10 @@ fsl_ep_queue(struct usb_ep *_ep, struct usb_request *_req, gfp_t gfp_flags)
 	req->req.status = -EINPROGRESS;
 	req->req.actual = 0;
 	req->dtd_count = 0;
+	if (NEED_IRAM(ep)) {
+		req->last_one = 0;
+		req->buffer_offset = 0;
+	}
 
 	spin_lock_irqsave(&udc->lock, flags);
 
@@ -1569,6 +1605,64 @@ static void tripwire_handler(struct fsl_udc *udc, u8 ep_num, u8 *buffer_ptr)
 	fsl_writel(temp & ~USB_CMD_SUTW, &dr_regs->usbcmd);
 }
 
+static void iram_process_ep_complete(struct fsl_req *curr_req,
+				     int cur_transfer)
+{
+	char *buf;
+	u32 len;
+	int in = ep_is_in(curr_req->ep);
+
+	if (in)
+		buf = (char *)udc_controller->iram_buffer_v[1];
+	else
+		buf = (char *)udc_controller->iram_buffer_v[0];
+
+	if (curr_req->cur->next_td_ptr == cpu_to_hc32(DTD_NEXT_TERMINATE)
+	    || (cur_transfer < g_iram_size)
+	    || (curr_req->req.length == curr_req->req.actual))
+		curr_req->last_one = 1;
+
+	if (curr_req->last_one) {
+		/* the last transfer */
+		if (!in) {
+			memcpy(curr_req->req.buf + curr_req->buffer_offset, buf,
+			       cur_transfer);
+		}
+		if (curr_req->tail->next_td_ptr !=
+				    cpu_to_hc32(DTD_NEXT_TERMINATE)) {
+			/* have next request,queue it */
+			struct fsl_req *next_req;
+			next_req =
+			    list_entry(curr_req->queue.next,
+				       struct fsl_req, queue);
+			if (in)
+				memcpy(buf, next_req->req.buf,
+				       min(g_iram_size, next_req->req.length));
+			update_qh(next_req);
+		}
+		curr_req->req.dma = curr_req->oridma;
+	} else {
+		/* queue next dtd */
+		/* because had next dtd, so should finish */
+		/* tranferring g_iram_size data */
+		curr_req->buffer_offset += g_iram_size;
+		/* pervious set stop bit,now clear it */
+		curr_req->cur->next_td_ptr &= ~cpu_to_hc32(DTD_NEXT_TERMINATE);
+		curr_req->cur = curr_req->cur->next_td_virt;
+		if (in) {
+			len =
+			    min(curr_req->req.length - curr_req->buffer_offset,
+				g_iram_size);
+			memcpy(buf, curr_req->req.buf + curr_req->buffer_offset,
+			       len);
+		} else {
+			memcpy(curr_req->req.buf + curr_req->buffer_offset -
+			       g_iram_size, buf, g_iram_size);
+		}
+		update_qh(curr_req);
+	}
+}
+
 /* process-ep_req(): free the completed Tds for this req */
 static int process_ep_req(struct fsl_udc *udc, int pipe,
 		struct fsl_req *curr_req)
@@ -1579,16 +1673,28 @@ static int process_ep_req(struct fsl_udc *udc, int pipe,
 	int	errors = 0;
 	struct  ep_queue_head *curr_qh = &udc->ep_qh[pipe];
 	int direction = pipe % 2;
+	int total = 0, real_len;
 
 	curr_td = curr_req->head;
 	td_complete = 0;
 	actual = curr_req->req.length;
+	real_len = curr_req->req.length;
 
 	for (j = 0; j < curr_req->dtd_count; j++) {
 		remaining_length = (hc32_to_cpu(curr_td->size_ioc_sts)
 					& DTD_PACKET_SIZE)
 				>> DTD_LENGTH_BIT_POS;
+		if (NEED_IRAM(curr_req->ep)) {
+			if (real_len >= g_iram_size) {
+				actual = g_iram_size;
+				real_len -= g_iram_size;
+			} else {	/* the last packet */
+				actual = real_len;
+				curr_req->last_one = 1;
+			}
+		}
 		actual -= remaining_length;
+		total += actual;
 
 		errors = hc32_to_cpu(curr_td->size_ioc_sts) & DTD_ERROR_MASK;
 		if (errors) {
@@ -1633,16 +1739,19 @@ static int process_ep_req(struct fsl_udc *udc, int pipe,
 			td_complete++;
 			VDBG("dTD transmitted successful ");
 		}
-
+		if (NEED_IRAM(curr_req->ep))
+			if (curr_td->
+			    next_td_ptr & cpu_to_hc32(DTD_NEXT_TERMINATE))
+				break;
 		if (j != curr_req->dtd_count - 1)
 			curr_td = (struct ep_td_struct *)curr_td->next_td_virt;
 	}
 
 	if (status)
 		return status;
-
-	curr_req->req.actual = actual;
-
+	curr_req->req.actual = total;
+	if (NEED_IRAM(curr_req->ep))
+		iram_process_ep_complete(curr_req, actual);
 	return 0;
 }
 
@@ -1693,10 +1802,16 @@ static void dtd_complete_irq(struct fsl_udc *udc)
 			if (ep_num == 0) {
 				ep0_req_complete(udc, curr_ep, curr_req);
 				break;
-			} else
-				done(curr_ep, curr_req, status);
+			} else {
+				if (NEED_IRAM(curr_ep)) {
+					if (curr_req->last_one)
+						done(curr_ep, curr_req, status);
+					/* only check the 1th req */
+					break;
+				} else
+					done(curr_ep, curr_req, status);
+			}
 		}
-
 		dump_ep_queue(curr_ep);
 	}
 }
@@ -2571,6 +2686,15 @@ static int __init fsl_udc_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err4;
 	}
+	if (g_iram_size) {
+		for (i = 0; i < IRAM_PPH_NTD; i++) {
+			udc_controller->iram_buffer[i] =
+			    USB_IRAM_BASE_ADDR + i * g_iram_size;
+			udc_controller->iram_buffer_v[i] =
+			    IO_ADDRESS(udc_controller->iram_buffer[i]);
+		}
+	}
+
 	create_proc_file();
 	return 0;
 

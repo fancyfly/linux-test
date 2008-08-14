@@ -286,6 +286,12 @@ config USB_GADGET_ARC
 	   dynamically linked module called "arc_udc" and force all
 	   gadget drivers to also be dynamically linked.
 
+config USB_STATIC_IRAM_PPH
+	bool "Apply static IRAM patch"
+	depends on USB_GADGET_ARC && ARCH_MX37
+	help
+	   Apply static IRAM patch to peripheral driver.  
+
 config USB_ARC
 	tristate
 	depends on USB_GADGET_ARC

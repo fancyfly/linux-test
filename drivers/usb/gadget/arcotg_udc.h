@@ -27,6 +27,18 @@
 #define USE_MSC_WR(len) ((cpu_is_mx37_rev(CHIP_REV_1_0) == 1) && \
 	((len) == MSC_BULK_CB_WRAP_LEN))
 
+/* Iram patch */
+#ifdef CONFIG_USB_STATIC_IRAM_PPH
+#define IRAM_TD_PPH_SIZE	1024	/* size of 1 qTD's buffer */
+#define IRAM_PPH_NTD	2	/* number of TDs in IRAM  */
+#else
+#define IRAM_TD_PPH_SIZE	0
+#define IRAM_PPH_NTD	0
+#endif
+
+#define NEED_IRAM(ep) ((g_iram_size) && \
+	((ep)->desc->bmAttributes == USB_ENDPOINT_XFER_BULK))
+
 /* ### define USB registers here
  */
 #define USB_MAX_ENDPOINTS		8
@@ -499,6 +511,11 @@ struct fsl_req {
 	struct ep_td_struct *head, *tail;	/* For dTD List
 						   this is a BigEndian Virtual addr */
 	unsigned int dtd_count;
+	/* just for IRAM patch */
+	dma_addr_t oridma;	/* original dma */
+	size_t buffer_offset;	/* offset of user buffer */
+	int last_one;		/* mark if reach to last packet */
+	struct ep_td_struct *cur;	/* current tranfer dtd */
 };
 
 #define REQ_UNCOMPLETE		(1)
@@ -557,6 +574,8 @@ struct fsl_udc {
 	u8 device_address;	/* Device USB address */
 
 	struct completion *done;	/* to make sure release() is done */
+	u32 iram_buffer[IRAM_PPH_NTD];
+	u32 iram_buffer_v[IRAM_PPH_NTD];
 };
 
 /*-------------------------------------------------------------------------*/

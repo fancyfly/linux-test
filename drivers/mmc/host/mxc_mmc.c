@@ -842,7 +842,18 @@ static irqreturn_t mxcmci_irq(int irq, void *devid)
 #ifdef CONFIG_MMC_DEBUG
 	dump_status(__FUNCTION__, status);
 #endif
-	if (status & (STATUS_WRITE_OP_DONE | STATUS_READ_OP_DONE)) {
+	if (status & STATUS_END_CMD_RESP) {
+		__raw_writel(STATUS_END_CMD_RESP, host->base + MMC_STATUS);
+		mxcmci_cmd_done(host, status);
+	}
+#ifdef MXC_MMC_DMA_ENABLE
+	/*
+	 * If read length < fifo length, STATUS_END_CMD_RESP and
+	 * STATUS_READ_OP_DONE may come together. In this case, it's using PIO
+	 * mode, we ignore STATUS_READ_OP_DONE.
+	 */
+	if ((status & (STATUS_WRITE_OP_DONE | STATUS_READ_OP_DONE)) &&
+	     !(status & STATUS_END_CMD_RESP)) {
 		pr_debug(KERN_INFO "MXC MMC IO OP DONE INT.\n");
 		intctrl = __raw_readl(host->base + MMC_INT_CNTR);
 		__raw_writel((~(INT_CNTR_WRITE_OP_DONE | INT_CNTR_READ_OP_DONE)
@@ -884,11 +895,7 @@ static irqreturn_t mxcmci_irq(int irq, void *devid)
 
 		mxcmci_data_done(host, status);
 	}
-	if (status & STATUS_END_CMD_RESP) {
-		__raw_writel(STATUS_END_CMD_RESP, host->base + MMC_STATUS);
-		mxcmci_cmd_done(host, status);
-	}
-
+#endif
 	status = __raw_readl(host->base + MMC_STATUS);
 	intctrl = __raw_readl(host->base + MMC_INT_CNTR);
 	if ((status & STATUS_SDIO_INT_ACTIVE)

@@ -146,6 +146,7 @@ struct ch7024_input_timing {
 #define TVOUT_FMT_PAL	2
 
 static int enabled;		/* enable power on or not */
+static int pm_status;		/* status before suspend */
 
 static struct i2c_client *ch7024_client;
 static struct fb_info *ch7024_fbi;
@@ -805,17 +806,22 @@ static int ch7024_remove(struct i2c_client *client)
 static int ch7024_suspend(struct i2c_client *client, pm_message_t state)
 {
 	pr_debug("Ch7024 suspend routing..\n");
-	ch7024_disable();
+	if (enabled) {
+		ch7024_disable();
+		pm_status = 1;
+	} else {
+		pm_status = 0;
+	}
 	return 0;
 }
 
 static int ch7024_resume(struct i2c_client *client)
 {
 	pr_debug("Ch7024 resume routing..\n");
-	ch7024_enable();
-	ch7024_write_reg(CH7024_RESET, 0x0);
-	ch7024_write_reg(CH7024_RESET, 0x3);
-	ch7024_write_reg(CH7024_POWER, 0x0D);
+	if (pm_status) {
+		ch7024_enable();
+		ch7024_setup(ch7024_cur_mode);
+	}
 	return 0;
 }
 #else

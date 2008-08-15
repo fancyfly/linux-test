@@ -261,7 +261,7 @@ static void fs_unifi_power_on(int check_card)
 	regulator_set_voltage(reg_unifi->reg_1v5_ana_bb, 1500000);
 	regulator_enable(reg_unifi->reg_1v5_ana_bb);
 
-	regulator_set_voltage(reg_unifi->reg_vdd_vpa, 2300000);
+	regulator_set_voltage(reg_unifi->reg_vdd_vpa, 3000000);
 	regulator_enable(reg_unifi->reg_vdd_vpa);
 
 	/* WL_1V5DD should come on last, 10ms after other supplies */
@@ -294,7 +294,7 @@ static void fs_unifi_power_off(int check_card)
 	regulator_disable(reg_unifi->reg_vdd_vpa);
 
 	if (check_card && fsl_mmc_host)
-		mmc_detect_change(fsl_mmc_host, msecs_to_jiffies(50));
+		mmc_detect_change(fsl_mmc_host, msecs_to_jiffies(5));
 
 }
 
@@ -352,7 +352,9 @@ int fs_sdio_register_driver(struct fs_driver *driver)
 		driver->probe(available_sdio_dev);
 
 		/* Register the IRQ handler to the SDIO IRQ. */
+		sdio_claim_host(available_sdio_dev->func);
 		ret = sdio_claim_irq(available_sdio_dev->func, fs_sdio_irq);
+		sdio_release_host(available_sdio_dev->func);
 		if (ret)
 			return ret;
 	}
@@ -384,7 +386,8 @@ void fs_sdio_unregister_driver(struct fs_driver *driver)
 
 	/* Power down the UniFi */
 	fs_unifi_power_off(-1);
-
+	/* Wait for card removed */
+	msleep(100);
 	/* invalidate the context to the device driver to the global */
 	available_driver = NULL;
 }

@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Copyright (C) 2007 Freescale Inc Ltd
+ * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
  /*!
@@ -76,7 +76,7 @@
 /* -39dB */
 #define PMIC_OUTPUT_VOLUME_MIN			PMIC_INPUT_VOLUME_MIN
 /* +6dB */
-#define PMIC_OUTPUT_VOLUME_MAX            		0xf
+#define PMIC_OUTPUT_VOLUME_MAX            		0xd
 /* -8dB */
 #define INPUT_VOLUME_MIN				0x0
 /* +23dB */

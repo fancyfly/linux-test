@@ -527,12 +527,13 @@ static int flexcan_suspend(struct platform_device *pdev, pm_message_t state)
 	struct net_device *net;
 	struct flexcan_device *flexcan;
 	struct flexcan_platform_data *plat_data;
-
 	net = (struct net_device *)dev_get_drvdata(&pdev->dev);
 	flexcan = netdev_priv(net);
 
 	BUG_ON(!flexcan);
 
+	if (!(net->flags & IFF_UP))
+		return 0;
 	if (flexcan->wakeup)
 		set_irq_wake(flexcan->irq, 1);
 	else {
@@ -550,7 +551,6 @@ static int flexcan_suspend(struct platform_device *pdev, pm_message_t state)
 		if (plat_data && plat_data->inactive)
 			plat_data->inactive(pdev->id);
 	}
-
 	return 0;
 }
 
@@ -559,11 +559,13 @@ static int flexcan_resume(struct platform_device *pdev)
 	struct net_device *net;
 	struct flexcan_device *flexcan;
 	struct flexcan_platform_data *plat_data;
-
 	net = (struct net_device *)dev_get_drvdata(&pdev->dev);
 	flexcan = netdev_priv(net);
 
 	BUG_ON(!flexcan);
+
+	if (!(net->flags & IFF_UP))
+		return 0;
 
 	if (flexcan->wakeup)
 		set_irq_wake(flexcan->irq, 0);

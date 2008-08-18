@@ -605,6 +605,7 @@ void flexcan_device_free(struct platform_device *pdev)
 	int i, num;
 	net = (struct net_device *)dev_get_drvdata(&pdev->dev);
 
+	unregister_netdev(net);
 	flexcan = netdev_priv(net);
 	del_timer(&flexcan->timer);
 

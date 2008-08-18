@@ -867,7 +867,7 @@ PMIC_STATUS pmic_audio_set_autodetect(int val)
 	reg_mask = 0;
 	if (val == 1) {
 		reg_write = SET_BITS(regAUDIO_RX_0, HSDETEN, 1) |
-			SET_BITS(regAUDIO_RX_0, HSDETAUTOB, 1);
+		    SET_BITS(regAUDIO_RX_0, HSDETAUTOB, 1);
 	} else {
 		reg_write = 0;
 	}
@@ -4625,12 +4625,7 @@ PMIC_STATUS pmic_audio_output_set_pgaGain(const PMIC_AUDIO_HANDLE handle,
 		rc = PMIC_NOT_SUPPORTED;
 		pr_debug("output set PGA gain - wrong gain value\n");
 	} else {
-		if ((gain >= OUTPGA_GAIN_MINUS_33DB)
-		    && (gain <= OUTPGA_GAIN_PLUS_6DB)) {
-			reg_gain = gain + 2;
-		} else {
-			reg_gain = gain;
-		}
+		reg_gain = gain + 2;
 		if ((handle == extStereoIn.handle) &&
 		    (extStereoIn.handleState == HANDLE_IN_USE)) {
 			reg_mask = SET_BITS(regAUDIO_RX_1, ARXIN, 15) |

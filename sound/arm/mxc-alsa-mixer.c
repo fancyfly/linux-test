@@ -213,7 +213,7 @@ static int pmic_pb_volume_info(struct snd_kcontrol *kcontrol,
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 1;
-	uinfo->value.integer.min = 0;
+	uinfo->value.integer.min = 1;
 	uinfo->value.integer.max = 100;
 	uinfo->value.integer.step = 1;
 	return 0;

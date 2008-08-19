@@ -36,6 +36,10 @@
 #define IRAM_PPH_NTD	0
 #endif
 
+#ifndef USB_IRAM_BASE_ADDR
+#define USB_IRAM_BASE_ADDR 0
+#endif
+
 #define NEED_IRAM(ep) ((g_iram_size) && \
 	((ep)->desc->bmAttributes == USB_ENDPOINT_XFER_BULK))
 

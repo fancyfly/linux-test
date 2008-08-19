@@ -1828,12 +1828,15 @@ int reg_mc13892_probe(void)
 						   constraints);
 
 		reg.id = reg_mc13892[i].regulator.id;
-		if (reg_mc13892[i].regulator.ops->enable == NULL) {
+
+		if (reg_mc13892[i].regulator.ops->enable == NULL ||
+		    reg.id == MC13892_VIOHI ||
+		    reg.id == MC13892_VGEN2 || reg.id == MC13892_VPLL) {
 			reg_mc13892[i].regulator.use_count = 1;
 		} else {
-			/*default set all regulator on */
-			reg_mc13892[i].regulator.use_count = 1;
-			reg_mc13892[i].regulator.ops->enable(&reg);
+			/*default set all regulator off */
+			reg_mc13892[i].regulator.use_count = 0;
+			reg_mc13892[i].regulator.ops->disable(&reg);
 		}
 		if (ret11 < 0) {
 			printk(KERN_ERR "%s: failed to register %s err %d\n",

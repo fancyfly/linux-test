@@ -46,6 +46,8 @@ void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
 	sdma_script_addr->mxc_sdma_per_2_app_addr = per_2_app_ADDR;
 	sdma_script_addr->mxc_sdma_mcu_2_app_addr = mcu_2_app_ADDR;
 
+	sdma_script_addr->mxc_sdma_per_2_per_addr = p_2_p_ADDR;
+
 	sdma_script_addr->mxc_sdma_uartsh_2_per_addr = uartsh_2_per_ADDR;
 	sdma_script_addr->mxc_sdma_uartsh_2_mcu_addr = uartsh_2_mcu_ADDR;
 	sdma_script_addr->mxc_sdma_per_2_shp_addr = per_2_shp_ADDR;
@@ -65,9 +67,11 @@ void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
 	sdma_script_addr->mxc_sdma_spdif_2_mcu_addr = spdif_2_mcu_ADDR;
 	sdma_script_addr->mxc_sdma_mcu_2_spdif_addr = mcu_2_spdif_ADDR;
 
+	sdma_script_addr->mxc_sdma_asrc_2_mcu_addr = asrc__mcu_ADDR;
+
 	sdma_script_addr->mxc_sdma_dptc_dvfs_addr = -1;
 	sdma_script_addr->mxc_sdma_ext_mem_2_ipu_addr = ext_mem__ipu_ram_ADDR;
-	sdma_script_addr->mxc_sdma_descrambler_addr = descrambler_ADDR;
+	sdma_script_addr->mxc_sdma_descrambler_addr = -1;
 
 	sdma_script_addr->mxc_sdma_start_addr = (unsigned short *)sdma_code;
 	sdma_script_addr->mxc_sdma_ram_code_size = RAM_CODE_SIZE;

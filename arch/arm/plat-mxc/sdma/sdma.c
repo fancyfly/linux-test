@@ -324,8 +324,7 @@ static unsigned short sdma_get_pc(sdma_periphT peripheral_type,
 		}
 	} else if (peripheral_type == SSI_SP || peripheral_type == MMC ||
 		   peripheral_type == SDHC || peripheral_type == CSPI_SP ||
-		   peripheral_type == ESAI || peripheral_type == MSHC_SP ||
-		   peripheral_type == ASRC) {
+		   peripheral_type == ESAI || peripheral_type == MSHC_SP) {
 		switch (transfer_type) {
 		case per_2_int:
 			res = sdma_script_addrs.mxc_sdma_shp_2_per_addr;
@@ -338,6 +337,20 @@ static unsigned short sdma_get_pc(sdma_periphT peripheral_type,
 			break;
 		case emi_2_per:
 			res = sdma_script_addrs.mxc_sdma_mcu_2_shp_addr;
+			break;
+		default:
+			res = -EINVAL;
+		}
+	} else if (peripheral_type == ASRC) {
+		switch (transfer_type) {
+		case per_2_emi:
+			res = sdma_script_addrs.mxc_sdma_asrc_2_mcu_addr;
+			break;
+		case emi_2_per:
+			res = sdma_script_addrs.mxc_sdma_mcu_2_shp_addr;
+			break;
+		case per_2_per:
+			res = sdma_script_addrs.mxc_sdma_per_2_per_addr;
 			break;
 		default:
 			res = -EINVAL;

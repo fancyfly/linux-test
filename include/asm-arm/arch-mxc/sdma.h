@@ -225,6 +225,8 @@ typedef struct {
 	int mxc_sdma_per_2_app_addr;
 	/*! address of mcu_2_app script */
 	int mxc_sdma_mcu_2_app_addr;
+	/*! address of per_2_per script */
+	int mxc_sdma_per_2_per_addr;
 
 	/*! address of uartsh_2_per script */
 	int mxc_sdma_uartsh_2_per_addr;
@@ -258,6 +260,9 @@ typedef struct {
 	int mxc_sdma_spdif_2_mcu_addr;
 	/*! address of mcu_2_spdif script */
 	int mxc_sdma_mcu_2_spdif_addr;
+
+	/*! address of asrc_2_mcu script */
+	int mxc_sdma_asrc_2_mcu_addr;
 
 	/*! address of ext_mem_2_ipu script */
 	int mxc_sdma_ext_mem_2_ipu_addr;

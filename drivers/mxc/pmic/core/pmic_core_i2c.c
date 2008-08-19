@@ -78,6 +78,18 @@ static struct platform_device light_ldm = {
 	.name = "pmic_light",
 	.id = 1,
 };
+static struct platform_device rleds_ldm = {
+	.name = "pmic_leds",
+	.id = 'r',
+};
+static struct platform_device gleds_ldm = {
+	.name = "pmic_leds",
+	.id = 'g',
+};
+static struct platform_device bleds_ldm = {
+	.name = "pmic_leds",
+	.id = 'b',
+};
 
 static void pmic_pdev_register(void)
 {
@@ -86,6 +98,9 @@ static void pmic_pdev_register(void)
 	platform_device_register(&rtc_ldm);
 	platform_device_register(&power_ldm);
 	platform_device_register(&light_ldm);
+	platform_device_register(&rleds_ldm);
+	platform_device_register(&gleds_ldm);
+	platform_device_register(&bleds_ldm);
 	reg_mc13783_probe();
 }
 

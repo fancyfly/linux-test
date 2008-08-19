@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Wed Aug 13 14:07:25 2008
+# Tue Aug 19 12:07:39 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -853,7 +853,7 @@ CONFIG_LCD_CLASS_DEVICE=y
 CONFIG_BACKLIGHT_CLASS_DEVICE=y
 # CONFIG_BACKLIGHT_CORGI is not set
 CONFIG_BACKLIGHT_MXC=y
-CONFIG_BACKLIGHT_MXC_PMIC=y
+CONFIG_BACKLIGHT_MXC_MC13892=y
 
 #
 # Display device support
@@ -905,7 +905,18 @@ CONFIG_LOGO_LINUX_CLUT224=y
 # 
 #
 # CONFIG_MMC is not set
-# CONFIG_NEW_LEDS is not set
+CONFIG_NEW_LEDS=y
+CONFIG_LEDS_CLASS=y
+
+#
+# LED drivers
+#
+CONFIG_LEDS_MC13892=y
+
+#
+# LED Triggers
+#
+# CONFIG_LEDS_TRIGGERS is not set
 CONFIG_RTC_LIB=y
 # CONFIG_RTC_CLASS is not set
 

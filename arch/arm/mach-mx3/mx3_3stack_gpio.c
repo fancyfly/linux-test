@@ -448,6 +448,17 @@ void gpio_sdhc_active(int module)
 				  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
 		mxc_iomux_set_pad(MX31_PIN_SD1_DATA3,
 				  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
+
+		/*
+		 * Active the Buffer Enable Pin only if there is
+		 * a card in slot.
+		 * To fix the card voltage issue caused by
+		 * bi-directional chip TXB0108 on 3Stack
+		 */
+		if (mxc_get_gpio_datain(MX31_PIN_GPIO3_1))
+			mxc_set_gpio_dataout(MX31_PIN_GPIO3_0, 0);
+		else
+			mxc_set_gpio_dataout(MX31_PIN_GPIO3_0, 1);
 		break;
 	case 1:
 		mxc_request_iomux(MX31_PIN_PC_CD2_B, OUTPUTCONFIG_ALT1,

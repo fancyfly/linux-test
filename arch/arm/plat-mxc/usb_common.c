@@ -540,6 +540,12 @@ static void otg_set_utmi_xcvr(void)
 	/* Enable UTMI interface in PHY control Reg */
 	USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_UTMI_ENABLE;
 
+	if (cpu_is_mx51()) {
+		/* Set the PHY clock to 19.2MHz */
+		USB_PHY_CTR_FUNC2 &= ~USB_UTMI_PHYCTRL2_PLLDIV_MASK;
+		USB_PHY_CTR_FUNC2 |= 0x01;
+	}
+
 	if (UOG_HCSPARAMS & HCSPARAMS_PPC)
 		UOG_PORTSC1 |= PORTSC_PORT_POWER;
 

@@ -35,7 +35,7 @@ config ARCH_MX35
 config ARCH_MX51
     bool "MX51-based"
 	select CPU_V7
-	#select USB_ARCH_HAS_EHCI
+	select USB_ARCH_HAS_EHCI
 	select MXC_TZIC
     help
       This enables support for systems based on Freescale i.MX51
@@ -125,7 +125,7 @@ config ISP1504_MXC_OTG
 config UTMI_MXC
 	bool
 	default y if USB_EHCI_FSL_UTMI || USB_GADGET_FSL_UTMI
-	depends on ARCH_MX35 || ARCH_MX37
+	depends on ARCH_MX35 || ARCH_MX37 || ARCH_MX51
 
 # set iff we need the 1301 transceiver code
 config ISP1301_MXC

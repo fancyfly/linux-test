@@ -21,6 +21,7 @@ obj-$(CONFIG_ARCH_MX3) += dptc.o usb_common.o
 obj-$(CONFIG_ARCH_MX35) += usb_common.o serialxc.o
 obj-$(CONFIG_ARCH_MXC91321) += dptc.o
 obj-$(CONFIG_ARCH_MX37)     += usb_common.o utmixc.o
+obj-$(CONFIG_ARCH_MX51)	+= usb_common.o utmixc.o
 obj-$(CONFIG_MXC_DSP_BRINGUP) += dsp_bringup.o
 
 # LEDs support

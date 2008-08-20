@@ -24,8 +24,8 @@
 #define FALSE 0
 
 #define MSC_BULK_CB_WRAP_LEN 31
-#define USE_MSC_WR(len) ((cpu_is_mx37_rev(CHIP_REV_1_0) == 1) && \
-	((len) == MSC_BULK_CB_WRAP_LEN))
+#define USE_MSC_WR(len) (((cpu_is_mx37_rev(CHIP_REV_1_0) == 1) ||\
+	(cpu_is_mx51() == 1)) && ((len) == MSC_BULK_CB_WRAP_LEN))
 
 /* Iram patch */
 #ifdef CONFIG_USB_STATIC_IRAM_PPH

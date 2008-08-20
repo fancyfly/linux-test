@@ -1231,45 +1231,45 @@ static struct clk tmax_clk[] = {
 
 };
 
-static void _clk_usboh2_recalc(struct clk *clk)
+static void _clk_usboh3_recalc(struct clk *clk)
 {
 	u32 reg, prediv, podf;
 
 	reg = __raw_readl(MXC_CCM_CSCDR1);
-	prediv = ((reg & MXC_CCM_CSCDR1_USBOH2_CLK_PRED_MASK) >>
-		  MXC_CCM_CSCDR1_USBOH2_CLK_PRED_OFFSET) + 1;
+	prediv = ((reg & MXC_CCM_CSCDR1_USBOH3_CLK_PRED_MASK) >>
+		  MXC_CCM_CSCDR1_USBOH3_CLK_PRED_OFFSET) + 1;
 	if (prediv == 1)
 		BUG();
-	podf = ((reg & MXC_CCM_CSCDR1_USBOH2_CLK_PODF_MASK) >>
-		MXC_CCM_CSCDR1_USBOH2_CLK_PODF_OFFSET) + 1;
+	podf = ((reg & MXC_CCM_CSCDR1_USBOH3_CLK_PODF_MASK) >>
+		MXC_CCM_CSCDR1_USBOH3_CLK_PODF_OFFSET) + 1;
 
 	clk->rate = clk->parent->rate / (prediv * podf);
 }
 
-static int _clk_usboh2_set_parent(struct clk *clk, struct clk *parent)
+static int _clk_usboh3_set_parent(struct clk *clk, struct clk *parent)
 {
 	u32 reg, mux;
 
 	mux = _get_mux(parent, &pll1_sw_clk, &pll2_sw_clk, &pll3_sw_clk,
 		       &lp_apm_clk);
-	reg = __raw_readl(MXC_CCM_CSCMR1) & ~MXC_CCM_CSCMR1_USBOH2_CLK_SEL_MASK;
-	reg |= mux << MXC_CCM_CSCMR1_USBOH2_CLK_SEL_OFFSET;
+	reg = __raw_readl(MXC_CCM_CSCMR1) & ~MXC_CCM_CSCMR1_USBOH3_CLK_SEL_MASK;
+	reg |= mux << MXC_CCM_CSCMR1_USBOH3_CLK_SEL_OFFSET;
 	__raw_writel(reg, MXC_CCM_CSCMR1);
 
 	return 0;
 }
 
-static struct clk usboh2_clk[] = {
+static struct clk usboh3_clk[] = {
 	{
-	 .name = "usboh2_clk",
+	 .name = "usboh3_clk",
 	 .parent = &pll3_sw_clk,
-	 .set_parent = _clk_usboh2_set_parent,
-	 .recalc = _clk_usboh2_recalc,
+	 .set_parent = _clk_usboh3_set_parent,
+	 .recalc = _clk_usboh3_recalc,
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR2,
 	 .enable_shift = MXC_CCM_CCGR2_CG14_OFFSET,
 	 .disable = _clk_disable,
-	 .secondary = &usboh2_clk[1],
+	 .secondary = &usboh3_clk[1],
 	 },
 	{
 	 .name = "usb_ahb_clk",
@@ -1830,8 +1830,8 @@ static struct clk *mxc_clks[] = {
 	&tmax_clk[0],
 	&tmax_clk[1],
 	&tmax_clk[2],
-	&usboh2_clk[0],
-	&usboh2_clk[1],
+	&usboh3_clk[0],
+	&usboh3_clk[1],
 	&usb_phy_clk,
 	&usb_utmi_clk,
 	&usb_clk,

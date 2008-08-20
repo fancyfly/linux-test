@@ -16,7 +16,13 @@
 #define USB_OTGREGS_BASE	(OTG_BASE_ADDR + 0x000)
 #define USB_H1REGS_BASE		(OTG_BASE_ADDR + 0x200)
 #define USB_H2REGS_BASE		(OTG_BASE_ADDR + 0x400)
+#ifdef CONFIG_ARCH_MX51
+#define USB_H3REGS_BASE		(OTG_BASE_ADDR + 0x600)
+#define USB_OTHERREGS_BASE	(OTG_BASE_ADDR + 0x800)
+#else
 #define USB_OTHERREGS_BASE	(OTG_BASE_ADDR + 0x600)
+#endif
+
 
 #define USBOTG_REG32(offset)	(*((volatile u32 *)(IO_ADDRESS(USB_OTGREGS_BASE + (offset)))))
 #define USBOTG_REG16(offset)	(*((volatile u16 *)(IO_ADDRESS(USB_OTGREGS_BASE + (offset)))))
@@ -55,7 +61,7 @@
 #define UOG_BURSTSIZE		USBOTG_REG32(0x160)	/* host ctrlr embedded TT async buf status */
 #define UOG_TXFILLTUNING	USBOTG_REG32(0x164)	/* TX FIFO fill tuning */
 #define UOG_ULPIVIEW		USBOTG_REG32(0x170)	/* ULPI viewport */
-#define	UOG_CFGFLAG		USBOTG_REG32(0x180)	/* configflag (supports HS) */
+#define UOG_CFGFLAG		USBOTG_REG32(0x180)	/* configflag (supports HS) */
 #define UOG_PORTSC1		USBOTG_REG32(0x184)	/* port status and control */
 /* end EHCI registers: */
 #define UOG_OTGSC		USBOTG_REG32(0x1a4)	/* OTG status and control */
@@ -134,7 +140,8 @@
  */
 #define USBCTRL			USBOTHER_REG(0x00)	/* USB Control register */
 #define USB_OTG_MIRROR		USBOTHER_REG(0x04)	/* USB OTG mirror register */
-#define USB_PHY_CTR_FUNC        USBOTHER_REG(0x08)      /* OTG UTMI PHY Function Control register */
+#define USB_PHY_CTR_FUNC	USBOTHER_REG(0x08)      /* OTG UTMI PHY Function Control register */
+#define USB_PHY_CTR_FUNC2	USBOTHER_REG(0x0c)      /* OTG UTMI PHY Function Control register */
 
 /*
  * register bits
@@ -288,6 +295,10 @@
 
 /* USB_PHY_CTRL_FUNC */
 #define USB_UTMI_PHYCTRL_UTMI_ENABLE   0x01000000
+
+/* USB_PHY_CTRL_FUNC2*/
+#define USB_UTMI_PHYCTRL2_PLLDIV_MASK		0x3
+#define USB_UTMI_PHYCTRL2_PLLDIV_SHIFT		0
 
 /* ULPIVIEW register bits */
 #define ULPIVW_OFF		(0x170)

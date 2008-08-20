@@ -2,16 +2,36 @@
  * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.  */
 
 /*
- * The code contained herein is licensed under the GNU General Public
- * License. You may obtain a copy of the GNU General Public License
- * Version 2 or later at the following locations:
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * http://www.opensource.org/licenses/gpl-license.html
- * http://www.gnu.org/copyleft/gpl.html
- */
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  */
 
-#ifndef SDMA_SCRIPT_CODE_H
-#define SDMA_SCRIPT_CODE_H
+/*!
+ * @file sdma_script_code.h
+ * @brief This file contains functions of SDMA scripts code initialization
+ *
+ * The file was generated automatically. Based on sdma scripts library.
+ *
+ * @ingroup SDMA
+ */
+/*******************************************************************************
+
+			SDMA RELEASE LABEL: 	"SS15_ELVIS"
+
+*******************************************************************************/
+
+#ifndef __SDMA_SCRIPT_CODE_H__
+#define __SDMA_SCRIPT_CODE_H__
 
 /*!
 * SDMA ROM scripts start addresses and sizes
@@ -100,7 +120,10 @@
 /*!
 * Buffer that holds the SDMA RAM image
 */
-
+__attribute__ ((__aligned__(4)))
+#ifndef CONFIG_XIP_KERNEL
+const
+#endif
 static const short sdma_code[] = {
 	0x0e70, 0x0611, 0x5616, 0xc13c, 0x7d2a, 0x5ade, 0x008e, 0xc14e,
 	0x7c26, 0x5be0, 0x5ef0, 0x5ce8, 0x0688, 0x08ff, 0x0011, 0x28ff,

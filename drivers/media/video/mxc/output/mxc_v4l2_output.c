@@ -1262,7 +1262,7 @@ mxc_v4l2out_do_ioctl(struct inode *inode, struct file *file,
 
 			/* mmapped buffers are L1 WB cached,
 			 * so we need to clean them */
-			if (buf->flags & V4L2_BUF_FLAG_MAPPED) {
+			if (buf->memory & V4L2_MEMORY_MMAP) {
 				flush_cache_all();
 			}
 

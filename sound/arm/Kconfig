@@ -4,7 +4,7 @@ menu "ALSA ARM devices"
 	depends on SND!=n && ARM
 
 config SND_MXC_SPDIF
-        tristate "MXC SPDIF sound card spports"
+        tristate "MXC SPDIF sound card support"
         select SND_PCM
         help
           Say Y here to enable SPDIF sound card

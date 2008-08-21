@@ -462,6 +462,11 @@ static irqreturn_t pata_fsl_adma_intr(int irq, void *dev_instance)
 	return IRQ_RETVAL(handled);
 }
 
+static int pata_fsl_check_atapi_dma(struct ata_queued_cmd *qc)
+{
+	return 1;		/* ATAPI DMA not yet supported */
+}
+
 static void pata_fsl_bmdma_setup(struct ata_queued_cmd *qc)
 {
 	int chan, i;
@@ -690,6 +695,7 @@ static struct ata_port_operations pata_fsl_port_ops = {
 	.set_piomode = pata_fsl_set_piomode,
 	.set_dmamode = pata_fsl_set_dmamode,
 
+	.check_atapi_dma = pata_fsl_check_atapi_dma,
 	.cable_detect = ata_cable_unknown,
 
 	.bmdma_setup = pata_fsl_bmdma_setup,

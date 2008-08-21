@@ -322,6 +322,109 @@ static inline void mxc_init_enet(void)
 }
 #endif
 
+#if defined(CONFIG_MMC_IMX_ESDHCI) || defined(CONFIG_MMC_IMX_ESDHCI_MODULE)
+static struct mxc_mmc_platform_data mmc_data = {
+	.ocr_mask = MMC_VDD_32_33,
+	.min_clk = 400000,
+	.max_clk = 52000000,
+	.card_inserted_state = 1,
+	.status = sdhc_get_card_det_status,
+	.wp_status = sdhc_write_protect,
+	.clock_mmc = "esdhc_clk",
+	.power_mmc = NULL,
+};
+
+/*!
+ * Resource definition for the SDHC1
+ */
+static struct resource mxcsdhc1_resources[] = {
+	[0] = {
+	       .start = MMC_SDHC1_BASE_ADDR,
+	       .end = MMC_SDHC1_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_MMC_SDHC1,
+	       .end = MXC_INT_MMC_SDHC1,
+	       .flags = IORESOURCE_IRQ,
+	       },
+	[2] = {
+	       .start = 0,
+	       .end = 0,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*!
+ * Resource definition for the SDHC2
+ */
+static struct resource mxcsdhc2_resources[] = {
+	[0] = {
+	       .start = MMC_SDHC2_BASE_ADDR,
+	       .end = MMC_SDHC2_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_MMC_SDHC2,
+	       .end = MXC_INT_MMC_SDHC2,
+	       .flags = IORESOURCE_IRQ,
+	       },
+	[2] = {
+	       .start = 0,
+	       .end = 0,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Device Definition for MXC SDHC1 */
+static struct platform_device mxcsdhc1_device = {
+	.name = "mxsdhci",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mmc_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcsdhc1_resources),
+	.resource = mxcsdhc1_resources,
+};
+
+/*! Device Definition for MXC SDHC2 */
+static struct platform_device mxcsdhc2_device = {
+	.name = "mxsdhci",
+	.id = 1,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mmc_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcsdhc2_resources),
+	.resource = mxcsdhc2_resources,
+};
+
+static inline void mxc_init_mmc(void)
+{
+	int cd_irq;
+
+	cd_irq = sdhc_init_card_det(0);
+	if (cd_irq) {
+		mxcsdhc1_device.resource[2].start = cd_irq;
+		mxcsdhc1_device.resource[2].end = cd_irq;
+	}
+
+	cd_irq = sdhc_init_card_det(1);
+	if (cd_irq) {
+		mxcsdhc2_device.resource[2].start = cd_irq;
+		mxcsdhc2_device.resource[2].end = cd_irq;
+	}
+
+	(void)platform_device_register(&mxcsdhc1_device);
+	(void)platform_device_register(&mxcsdhc2_device);
+}
+#else
+static inline void mxc_init_mmc(void)
+{
+}
+#endif
+
 static u32 brd_io;
 static void expio_ack_irq(u32 irq);
 
@@ -503,6 +606,7 @@ static void __init mxc_board_init(void)
 	mxc_init_bl();
 	mxc_init_keypad();
 	mxc_init_nand_mtd();
+	mxc_init_mmc();
 
 #ifdef CONFIG_I2C_MXC
 

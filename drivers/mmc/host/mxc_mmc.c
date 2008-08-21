@@ -322,6 +322,7 @@ struct mmc_host *mxc_mmc_get_host(int id)
 	else
 		return NULL;
 }
+
 EXPORT_SYMBOL(mxc_mmc_get_host);
 
 /*!
@@ -853,7 +854,7 @@ static irqreturn_t mxcmci_irq(int irq, void *devid)
 	 * mode, we ignore STATUS_READ_OP_DONE.
 	 */
 	if ((status & (STATUS_WRITE_OP_DONE | STATUS_READ_OP_DONE)) &&
-	     !(status & STATUS_END_CMD_RESP)) {
+	    !(status & STATUS_END_CMD_RESP)) {
 		pr_debug(KERN_INFO "MXC MMC IO OP DONE INT.\n");
 		intctrl = __raw_readl(host->base + MMC_INT_CNTR);
 		__raw_writel((~(INT_CNTR_WRITE_OP_DONE | INT_CNTR_READ_OP_DONE)
@@ -1099,7 +1100,7 @@ static int mxcmci_get_ro(struct mmc_host *mmc)
 	struct mxcmci_host *host = mmc_priv(mmc);
 
 	if (host->plat_data->wp_status)
-		return host->plat_data->wp_status();
+		return host->plat_data->wp_status(mmc->parent);
 	else
 		return 0;
 }
@@ -1261,7 +1262,7 @@ static int mxcmci_probe(struct platform_device *pdev)
 
 		do {
 			card_gpio_status =
-				host->plat_data->status(host->mmc->parent);
+			    host->plat_data->status(host->mmc->parent);
 			if (card_gpio_status)
 				set_irq_type(host->detect_irq, IRQT_FALLING);
 			else

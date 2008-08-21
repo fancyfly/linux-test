@@ -62,7 +62,6 @@ extern void mxc_cpu_common_init(void);
 extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
 
-
 /* working point(wp): 0 - 532MHz; 1 - 200MHz; */
 static struct cpu_wp cpu_wp_auto[] = {
 	{
@@ -86,8 +85,6 @@ struct cpu_wp *get_cpu_wp(int *wp)
 	*wp = 2;
 	return cpu_wp_auto;
 }
-
-
 
 static void mxc_nop_release(struct device *dev)
 {
@@ -425,10 +422,6 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 }
 
 #if defined(CONFIG_MMC_IMX_ESDHCI) || defined(CONFIG_MMC_IMX_ESDHCI_MODULE)
-extern unsigned int sdhc_get_card_det_status(struct device *dev);
-extern int sdhc_init_card_det(int id);
-extern int sdhc_write_protect(void);
-
 static struct mxc_mmc_platform_data mmc_data = {
 	.ocr_mask = MMC_VDD_32_33,
 	.min_clk = 400000,

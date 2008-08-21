@@ -620,7 +620,7 @@ EXPORT_SYMBOL(sdhc_get_card_det_status);
 /*!
  * Get pin value to detect write protection
  */
-int sdhc_write_protect(void)
+int sdhc_write_protect(struct device *dev)
 {
 	unsigned int rc = 0;
 

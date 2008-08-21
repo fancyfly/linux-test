@@ -120,4 +120,8 @@
 /*! This is System IRQ used by LAN9217 */
 #define LAN9217_IRQ	EXPIO_INT_ENET
 
+extern unsigned int sdhc_get_card_det_status(struct device *dev);
+extern int sdhc_write_protect(struct device *dev);
+extern int sdhc_init_card_det(int id);
+
 #endif				/* __ASM_ARCH_MXC_BOARD_MX51_3STACK_H__ */

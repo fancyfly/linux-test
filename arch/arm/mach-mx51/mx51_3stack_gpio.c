@@ -489,6 +489,40 @@ EXPORT_SYMBOL(gpio_activate_audio_ports);
  */
 void gpio_sdhc_active(int module)
 {
+	int pad_val = PAD_CTL_DRV_MAX | PAD_CTL_22K_PU | PAD_CTL_SRE_FAST;
+
+	switch (module) {
+	case 0:
+		mxc_request_iomux(MX51_PIN_SD1_CMD,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX51_PIN_SD1_CLK,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX51_PIN_SD1_DATA0, IOMUX_CONFIG_ALT0);
+		mxc_request_iomux(MX51_PIN_SD1_DATA1, IOMUX_CONFIG_ALT0);
+		mxc_request_iomux(MX51_PIN_SD1_DATA2, IOMUX_CONFIG_ALT0);
+		mxc_request_iomux(MX51_PIN_SD1_DATA3, IOMUX_CONFIG_ALT0);
+
+		mxc_iomux_set_pad(MX51_PIN_SD1_CLK, pad_val);
+		mxc_iomux_set_pad(MX51_PIN_SD1_CMD, pad_val);
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA0, pad_val);
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA1, pad_val);
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA2, pad_val);
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA3, pad_val);
+
+		/* Write Protected Pin */
+		mxc_request_iomux(MX51_PIN_GPIO1_1, IOMUX_CONFIG_ALT0 |
+				  IOMUX_CONFIG_SION);
+		mxc_iomux_set_pad(MX51_PIN_GPIO1_1, PAD_CTL_DRV_HIGH |
+				  PAD_CTL_HYS_ENABLE | PAD_CTL_100K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_SRE_FAST);
+		mxc_set_gpio_direction(MX51_PIN_GPIO1_1, 1);
+		break;
+	case 1:
+		break;
+	default:
+		break;
+	}
 }
 
 EXPORT_SYMBOL(gpio_sdhc_active);
@@ -500,6 +534,41 @@ EXPORT_SYMBOL(gpio_sdhc_active);
  */
 void gpio_sdhc_inactive(int module)
 {
+	switch (module) {
+	case 0:
+		mxc_free_iomux(MX51_PIN_SD1_CMD,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX51_PIN_SD1_CLK,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX51_PIN_SD1_DATA0, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX51_PIN_SD1_DATA1, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX51_PIN_SD1_DATA2, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX51_PIN_SD1_DATA3, IOMUX_CONFIG_ALT0);
+
+		mxc_iomux_set_pad(MX51_PIN_SD1_CLK,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX51_PIN_SD1_CMD,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA0,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA1,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA2,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA3,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+
+		/* Free Write Protected Pin */
+		mxc_free_iomux(MX51_PIN_GPIO1_1, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_GPIO1_1,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		break;
+	case 1:
+		/* TODO:what are the pins for SDHC2? */
+		break;
+	default:
+		break;
+	}
 }
 
 EXPORT_SYMBOL(gpio_sdhc_inactive);
@@ -509,7 +578,14 @@ EXPORT_SYMBOL(gpio_sdhc_inactive);
  */
 int sdhc_get_card_det_status(struct device *dev)
 {
-	return 0;
+	int ret;
+
+	if (to_platform_device(dev)->id == 0) {
+		ret = mxc_get_gpio_datain(MX51_PIN_GPIO1_0);
+		return ret;
+	} else {		/* config the det pin for SDHC2 */
+		return 0;
+	}
 }
 
 EXPORT_SYMBOL(sdhc_get_card_det_status);
@@ -519,10 +595,41 @@ EXPORT_SYMBOL(sdhc_get_card_det_status);
  */
 int sdhc_init_card_det(int id)
 {
-	return 0;
+	if (id == 0) {
+		mxc_request_iomux(MX51_PIN_GPIO1_0, IOMUX_CONFIG_ALT0 |
+				  IOMUX_CONFIG_SION);
+		mxc_iomux_set_pad(MX51_PIN_GPIO1_0, PAD_CTL_DRV_HIGH |
+				  PAD_CTL_HYS_ENABLE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_100K_PU | PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_set_gpio_direction(MX51_PIN_GPIO1_0, 1);
+		return IOMUX_TO_IRQ(MX51_PIN_GPIO1_0);
+	} else {		/* config the det pin for SDHC2 */
+		return 0;
+
+	}
 }
 
 EXPORT_SYMBOL(sdhc_init_card_det);
+
+/*!
+ * Get WP pin value to detect write protection
+ */
+int sdhc_write_protect(struct device *dev)
+{
+	unsigned short rc = 0;
+
+	if (to_platform_device(dev)->id == 0)
+		rc = mxc_get_gpio_datain(MX51_PIN_GPIO1_1);
+	else
+		rc = 0;
+	if (rc > 0)
+		return 1;
+	else
+		return 0;
+}
+
+EXPORT_SYMBOL(sdhc_write_protect);
 
 /*!
  * Setup GPIO for LCD to be active

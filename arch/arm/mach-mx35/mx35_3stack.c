@@ -554,11 +554,7 @@ static void ata_exit(void)
 
 static struct fsl_ata_platform_data ata_data = {
 	.adma_flag = 1,		/* 0:smart dma, 1:ADMA */
-#if defined(CONFIG_BLK_DEV_SR)
-	.udma_mask = 0xF,
-#else
 	.udma_mask = 0x3F,
-#endif
 	.mwdma_mask = 0x1F,
 	.pio_mask = ATA_PIO4,
 	.fifo_alarm = MXC_IDE_DMA_WATERMARK / 2,

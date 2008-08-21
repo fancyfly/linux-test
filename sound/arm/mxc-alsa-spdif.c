@@ -753,6 +753,9 @@ static void spdif_tx_uninit(void)
 	regval = __raw_readl(SPDIF_REG_SCR + spdif_base_addr) & 0xffffe3;
 	regval |= SCR_TXSEL_OFF;
 	__raw_writel(regval, SPDIF_REG_SCR + spdif_base_addr);
+	regval = __raw_readl(SPDIF_REG_STC + spdif_base_addr) & ~0x7FF;
+	regval |= (0x7 << STC_TXCLK_SRC_OFFSET);
+	__raw_writel(regval, SPDIF_REG_STC + spdif_base_addr);
 
 }
 

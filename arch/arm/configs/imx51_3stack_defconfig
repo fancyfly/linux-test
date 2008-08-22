@@ -891,7 +891,7 @@ CONFIG_LOGO_LINUX_CLUT224=y
 #
 # CONFIG_SOUND is not set
 # CONFIG_HID_SUPPORT is not set
-# CONFIG_USB_SUPPORT is not set
+CONFIG_USB_SUPPORT=y
 
 #
 # USB Gadget Support

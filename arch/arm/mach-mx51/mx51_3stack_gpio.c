@@ -722,6 +722,124 @@ EXPORT_SYMBOL(gpio_sensor_inactive);
  */
 void gpio_ata_active(void)
 {
+#define ATA_PAD_CONFIG PAD_CTL_DRV_HIGH | PAD_CTL_DRV_VOT_HIGH
+
+	/*BUFFER_EN */
+	mxc_request_iomux(MX51_PIN_NANDF_ALE, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_ALE, ATA_PAD_CONFIG);
+
+	/*PATA_CS_0 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS2, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS2, ATA_PAD_CONFIG);
+
+	/*PATA_CS_1 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS3, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS3, ATA_PAD_CONFIG);
+
+	/*PATA_DA0 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS4, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS4, ATA_PAD_CONFIG);
+
+	/*PATA_DA1 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS5, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS5, ATA_PAD_CONFIG);
+
+	/*PATA_DA2 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS6, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS6, ATA_PAD_CONFIG);
+
+	/*PATA_DIOR */
+	mxc_request_iomux(MX51_PIN_NANDF_RE_B, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_RE_B, ATA_PAD_CONFIG);
+
+	/*PATA_DIOW */
+	mxc_request_iomux(MX51_PIN_NANDF_WE_B, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_WE_B, ATA_PAD_CONFIG);
+
+	/*PATA_RESET */
+	mxc_request_iomux(MX51_PIN_NANDF_CLE, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CLE, ATA_PAD_CONFIG);
+
+	/*PATA_DMARQ */
+	mxc_request_iomux(MX51_PIN_NANDF_RB0, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_RB0, ATA_PAD_CONFIG);
+
+	/*PATA_DMACK */
+	mxc_request_iomux(MX51_PIN_NANDF_WP_B, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_WP_B, ATA_PAD_CONFIG);
+
+	/*PATA_INTRQ */
+	mxc_request_iomux(MX51_PIN_NANDF_RB5, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_RB5, ATA_PAD_CONFIG);
+
+	/*PATA_IORDY */
+	mxc_request_iomux(MX51_PIN_NANDF_RB1, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_RB1, ATA_PAD_CONFIG);
+
+	/*PATA_D0 */
+	mxc_request_iomux(MX51_PIN_NANDF_D0, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D0, ATA_PAD_CONFIG);
+
+	/*PATA_D1 */
+	mxc_request_iomux(MX51_PIN_NANDF_D1, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D1, ATA_PAD_CONFIG);
+
+	/*PATA_D2 */
+	mxc_request_iomux(MX51_PIN_NANDF_D2, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D2, ATA_PAD_CONFIG);
+
+	/*PATA_D3 */
+	mxc_request_iomux(MX51_PIN_NANDF_D3, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D3, ATA_PAD_CONFIG);
+
+	/*PATA_D4 */
+	mxc_request_iomux(MX51_PIN_NANDF_D4, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D4, ATA_PAD_CONFIG);
+
+	/*PATA_D5 */
+	mxc_request_iomux(MX51_PIN_NANDF_D5, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D5, ATA_PAD_CONFIG);
+
+	/*PATA_D6 */
+	mxc_request_iomux(MX51_PIN_NANDF_D6, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D6, ATA_PAD_CONFIG);
+
+	/*PATA_D7 */
+	mxc_request_iomux(MX51_PIN_NANDF_D7, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D7, ATA_PAD_CONFIG);
+
+	/*PATA_D8 */
+	mxc_request_iomux(MX51_PIN_NANDF_D8, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D8, ATA_PAD_CONFIG);
+
+	/*PATA_D9 */
+	mxc_request_iomux(MX51_PIN_NANDF_D9, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D9, ATA_PAD_CONFIG);
+
+	/*PATA_D10 */
+	mxc_request_iomux(MX51_PIN_NANDF_D10, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D10, ATA_PAD_CONFIG);
+
+	/*PATA_D11 */
+	mxc_request_iomux(MX51_PIN_NANDF_D11, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D11, ATA_PAD_CONFIG);
+
+	/*PATA_D12 */
+	mxc_request_iomux(MX51_PIN_NANDF_D12, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D12, ATA_PAD_CONFIG);
+
+	/*PATA_D13 */
+	mxc_request_iomux(MX51_PIN_NANDF_D13, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D13, ATA_PAD_CONFIG);
+
+	/*PATA_D14 */
+	mxc_request_iomux(MX51_PIN_NANDF_D14, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D14, ATA_PAD_CONFIG);
+
+	/*PATA_D15 */
+	mxc_request_iomux(MX51_PIN_NANDF_D15, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_D15, ATA_PAD_CONFIG);
+
 }
 
 EXPORT_SYMBOL(gpio_ata_active);
@@ -732,6 +850,93 @@ EXPORT_SYMBOL(gpio_ata_active);
  */
 void gpio_ata_inactive(void)
 {
+	/*BUFFER_EN */
+	mxc_request_iomux(MX51_PIN_NANDF_ALE, IOMUX_CONFIG_ALT0);
+
+	/*PATA_CS_0 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS2, IOMUX_CONFIG_ALT0);
+
+	/*PATA_CS_1 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS3, IOMUX_CONFIG_ALT0);
+
+	/*PATA_DA0 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS4, IOMUX_CONFIG_ALT0);
+
+	/*PATA_DA1 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS5, IOMUX_CONFIG_ALT0);
+
+	/*PATA_DA2 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS6, IOMUX_CONFIG_ALT0);
+
+	/*PATA_DIOR */
+	mxc_request_iomux(MX51_PIN_NANDF_RE_B, IOMUX_CONFIG_ALT0);
+
+	/*PATA_DIOW */
+	mxc_request_iomux(MX51_PIN_NANDF_WE_B, IOMUX_CONFIG_ALT0);
+
+	/*PATA_DMARQ */
+	mxc_request_iomux(MX51_PIN_NANDF_RB0, IOMUX_CONFIG_ALT0);
+
+	/*PATA_DMACK */
+	mxc_request_iomux(MX51_PIN_NANDF_WP_B, IOMUX_CONFIG_ALT0);
+
+	/*PATA_INTRQ */
+	mxc_request_iomux(MX51_PIN_NANDF_RB5, IOMUX_CONFIG_ALT0);
+
+	/*PATA_IORDY */
+	mxc_request_iomux(MX51_PIN_NANDF_RB1, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D0 */
+	mxc_request_iomux(MX51_PIN_NANDF_D0, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D1 */
+	mxc_request_iomux(MX51_PIN_NANDF_D1, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D2 */
+	mxc_request_iomux(MX51_PIN_NANDF_D2, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D3 */
+	mxc_request_iomux(MX51_PIN_NANDF_D3, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D4 */
+	mxc_request_iomux(MX51_PIN_NANDF_D4, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D5 */
+	mxc_request_iomux(MX51_PIN_NANDF_D5, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D6 */
+	mxc_request_iomux(MX51_PIN_NANDF_D6, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D7 */
+	mxc_request_iomux(MX51_PIN_NANDF_D7, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D8 */
+	mxc_request_iomux(MX51_PIN_NANDF_D8, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D9 */
+	mxc_request_iomux(MX51_PIN_NANDF_D9, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D10 */
+	mxc_request_iomux(MX51_PIN_NANDF_D10, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D11 */
+	mxc_request_iomux(MX51_PIN_NANDF_D11, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D12 */
+	mxc_request_iomux(MX51_PIN_NANDF_D12, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D13 */
+	mxc_request_iomux(MX51_PIN_NANDF_D13, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D14 */
+	mxc_request_iomux(MX51_PIN_NANDF_D14, IOMUX_CONFIG_ALT0);
+
+	/*PATA_D15 */
+	mxc_request_iomux(MX51_PIN_NANDF_D15, IOMUX_CONFIG_ALT0);
+
+	/*PATA_RESET */
+	mxc_request_iomux(MX51_PIN_NANDF_CLE, IOMUX_CONFIG_ALT0);
+
 }
 
 EXPORT_SYMBOL(gpio_ata_inactive);

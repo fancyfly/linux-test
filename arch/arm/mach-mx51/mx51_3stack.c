@@ -265,7 +265,7 @@ static inline void mxc_init_bl(void)
 	platform_device_register(&mxcbl_device);
 }
 
-#ifdef CONFIG_I2C_MXC
+#if defined(CONFIG_I2C_MXC) || defined(CONFIG_I2C_MXC_MODULE)
 
 #ifdef CONFIG_I2C_MXC_SELECT1
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
@@ -279,7 +279,10 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	 .addr = 0x08,
 	 .platform_data = (void *)MX51_PIN_GPIO1_5,
 	 },
-
+	{
+	 .driver_name = "wm8903-i2c",
+	 .addr = 0x1a,
+	 },
 };
 #endif
 
@@ -608,7 +611,7 @@ static void __init mxc_board_init(void)
 	mxc_init_nand_mtd();
 	mxc_init_mmc();
 
-#ifdef CONFIG_I2C_MXC
+#if defined(CONFIG_I2C_MXC) || defined(CONFIG_I2C_MXC_MODULE)
 
 #ifdef CONFIG_I2C_MXC_SELECT1
 	i2c_register_board_info(0, mxc_i2c0_board_info,

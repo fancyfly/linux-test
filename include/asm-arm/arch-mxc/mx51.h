@@ -69,6 +69,21 @@
  */
 #define IRAM_BASE_ADDR		0x1FFE8000	/* internal ram */
 
+#ifdef CONFIG_SDMA_IRAM
+#define SDMA_IRAM_SIZE  CONFIG_SDMA_IRAM_SIZE
+#else
+#define SDMA_IRAM_SIZE  0
+#endif
+
+#ifdef CONFIG_SND_MXC_SOC_IRAM
+#define SND_RAM_SIZE 0x6000
+#else
+#define SND_RAM_SIZE 0
+#endif
+
+#define SDMA_RAM_BASE_ADDR (IRAM_BASE_ADDR)
+#define SND_RAM_BASE_ADDR	(IRAM_BASE_ADDR + SDMA_IRAM_SIZE)
+
 /*
  * NFC
  */

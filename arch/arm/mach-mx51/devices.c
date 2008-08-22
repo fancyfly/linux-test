@@ -557,6 +557,32 @@ static inline void mxc_init_dma(void)
 	(void)platform_device_register(&mxc_dma_device);
 }
 
+static struct mxc_audio_platform_data mxc_audio_data;
+
+static struct platform_device mxc_alsa_device = {
+	.name = "imx-3stack-wm8903",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_audio_data,
+		},
+};
+
+static void mxc_init_audio(void)
+{
+	mxc_audio_data.ssi_clk[0] = clk_get(NULL, "ssi_clk.0");
+	clk_put(mxc_audio_data.ssi_clk[0]);
+
+	mxc_audio_data.ssi_clk[1] = clk_get(NULL, "ssi_clk.1");
+	clk_put(mxc_audio_data.ssi_clk[1]);
+
+	mxc_audio_data.ssi_num = 1;
+	mxc_audio_data.src_port = 2;
+	mxc_audio_data.ext_port = 3;
+
+	platform_device_register(&mxc_alsa_device);
+}
+
 static int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
@@ -567,6 +593,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_owire();
 	mxc_init_ipu();
 	mxc_init_vpu();
+	mxc_init_audio();
 
 	return 0;
 }

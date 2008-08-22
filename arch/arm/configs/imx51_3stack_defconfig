@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Tue Aug 19 12:07:39 2008
+# Wed Aug 20 11:18:20 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -889,7 +889,63 @@ CONFIG_LOGO_LINUX_CLUT224=y
 #
 # Sound
 #
-# CONFIG_SOUND is not set
+CONFIG_SOUND=y
+
+#
+# Advanced Linux Sound Architecture
+#
+CONFIG_SND=y
+CONFIG_SND_TIMER=y
+CONFIG_SND_PCM=y
+# CONFIG_SND_SEQUENCER is not set
+CONFIG_SND_OSSEMUL=y
+CONFIG_SND_MIXER_OSS=y
+CONFIG_SND_PCM_OSS=y
+CONFIG_SND_PCM_OSS_PLUGINS=y
+# CONFIG_SND_DYNAMIC_MINORS is not set
+CONFIG_SND_SUPPORT_OLD_API=y
+CONFIG_SND_VERBOSE_PROCFS=y
+# CONFIG_SND_VERBOSE_PRINTK is not set
+# CONFIG_SND_DEBUG is not set
+
+#
+# Generic devices
+#
+# CONFIG_SND_DUMMY is not set
+# CONFIG_SND_MTPAV is not set
+# CONFIG_SND_SERIAL_U16550 is not set
+# CONFIG_SND_MPU401 is not set
+
+#
+# ALSA ARM devices
+#
+# CONFIG_SND_MXC_SPDIF is not set
+
+#
+# SPI devices
+#
+
+#
+# System on Chip audio support
+#
+CONFIG_SND_SOC=y
+
+#
+# SoC Audio support for SuperH
+#
+CONFIG_SND_MXC_SOC=y
+CONFIG_SND_MXC_SOC_SSI=y
+# CONFIG_SND_MXC_SOC_IRAM is not set
+# CONFIG_SND_SOC_IMX_3STACK_WM8350 is not set
+# CONFIG_SND_SOC_IMX_3STACK_AK4647 is not set
+# CONFIG_SND_SOC_IMX_3STACK_WM8580 is not set
+CONFIG_SND_SOC_IMX_3STACK_WM8903=y
+CONFIG_SND_SOC_WM8903=y
+
+#
+# Open Sound System
+#
+# CONFIG_SOUND_PRIME is not set
 # CONFIG_HID_SUPPORT is not set
 CONFIG_USB_SUPPORT=y
 

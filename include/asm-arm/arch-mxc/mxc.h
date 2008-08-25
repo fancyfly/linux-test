@@ -208,6 +208,10 @@ struct flexcan_platform_data {
 	void (*inactive) (int id);
 };
 
+struct mxc_srtc_platform_data {
+	u32 srtc_sec_mode_addr;
+};
+
 extern void mxc_wd_reset(void);
 extern void mxc_kick_wd(void);
 unsigned long board_get_ckih_rate(void);

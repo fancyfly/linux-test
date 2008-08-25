@@ -119,6 +119,10 @@ static inline void mxc_init_owire(void)
 #endif
 
 #if defined(CONFIG_RTC_DRV_MXC_V2) || defined(CONFIG_RTC_DRV_MXC_V2_MODULE)
+static struct mxc_srtc_platform_data srtc_data = {
+	.srtc_sec_mode_addr = 0x83F98840,
+};
+
 static struct resource rtc_resources[] = {
 	{
 	 .start = SRTC_BASE_ADDR,
@@ -135,6 +139,7 @@ static struct platform_device mxc_rtc_device = {
 	.id = 0,
 	.dev = {
 		.release = mxc_nop_release,
+		.platform_data = &srtc_data,
 		},
 	.num_resources = ARRAY_SIZE(rtc_resources),
 	.resource = rtc_resources,

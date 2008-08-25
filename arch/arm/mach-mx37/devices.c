@@ -27,6 +27,8 @@
 #include "sdma_script_code.h"
 #include <asm/arch/mxc_scc2_driver.h>
 
+extern struct dptc_wp dptc_gp_wp_allfreq[DPTC_GP_WP_SUPPORTED];
+extern struct dptc_wp dptc_lp_wp_allfreq[DPTC_LP_WP_SUPPORTED];
 extern void gpio_spdif_active(void);
 
 void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
@@ -268,7 +270,7 @@ static inline void mxc_init_scc(void)
 
 	}
 
-	/*Freeing 2 partitions for SCC2*/
+	/*Freeing 2 partitions for SCC2 */
 	scc_partno = 9 - (SCC_IRAM_SIZE / SZ_8K);
 	for (partition_no = scc_partno; partition_no < 9; partition_no++) {
 		reg_value = ((partition_no << SCM_ZCMD_PART_SHIFT) &
@@ -277,8 +279,8 @@ static inline void mxc_init_scc(void)
 						    & SCM_ZCMD_CCMD_MASK);
 		__raw_writel(reg_value, scc_base + SCM_ZCMD_REG);
 
-			 while ((__raw_readl(scc_base + SCM_STATUS_REG) &
-				 SCM_STATUS_SRS_READY) != SCM_STATUS_SRS_READY);
+		while ((__raw_readl(scc_base + SCM_STATUS_REG) &
+			SCM_STATUS_SRS_READY) != SCM_STATUS_SRS_READY) ;
 	}
 	iounmap(scm_ram_base);
 	iounmap(scc_base);
@@ -597,6 +599,36 @@ struct mxc_gpio_port mxc_gpio_ports[GPIO_PORT_NUM] = {
 	 },
 };
 
+/*! Device Definition for DPTC GP */
+static struct platform_device mxc_dptc_gp_device = {
+	.name = "mxc_dptc_gp",
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &dptc_gp_wp_allfreq,
+		},
+};
+
+static inline void mxc_init_dptc_gp(void)
+{
+
+	(void)platform_device_register(&mxc_dptc_gp_device);
+}
+
+/*! Device Definition for DPTC LP */
+static struct platform_device mxc_dptc_lp_device = {
+	.name = "mxc_dptc_lp",
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &dptc_lp_wp_allfreq,
+		},
+};
+
+static inline void mxc_init_dptc_lp(void)
+{
+
+	(void)platform_device_register(&mxc_dptc_lp_device);
+}
+
 #if defined(CONFIG_MXC_VPU) || defined(CONFIG_MXC_VPU_MODULE)
 static struct resource vpu_resources[] = {
 	{
@@ -708,6 +740,8 @@ static int __init mxc_init_devices(void)
 	mxc_init_spdif();
 	mxc_init_tve();
 	mx37_init_lpmode();
+	mxc_init_dptc_gp();
+	mxc_init_dptc_lp();
 	/* SPBA configuration for SSI2 - SDMA and MCU are set */
 	spba_take_ownership(SPBA_SSI2, SPBA_MASTER_C | SPBA_MASTER_A);
 	return 0;

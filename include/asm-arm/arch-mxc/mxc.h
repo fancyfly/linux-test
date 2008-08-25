@@ -284,6 +284,8 @@ struct mxc_unifi_platform_data *get_unifi_plat_data(void);
 #define MXC_IDE_DMA_BD_NR	(512/3/4)	/* Number of BDs per channel */
 
 #define DPTC_WP_SUPPORTED	17
+#define DPTC_GP_WP_SUPPORTED	7
+#define DPTC_LP_WP_SUPPORTED	9
 
 #ifndef IS_MEM_DEVICE_NONSHARED
 /* all peripherals on MXC so far are below 0x80000000 but leave L2CC alone */
@@ -297,7 +299,7 @@ struct dptc_wp {
 	u32 dcvr1;
 	u32 dcvr2;
 	u32 dcvr3;
-	u32 regulator;
+	char *regulator;
 	u32 voltage;
 };
 struct cpu_wp {

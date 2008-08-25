@@ -500,4 +500,10 @@
 
 #define MXC_GPIO_SPLIT_IRQ_2
 
+/*!
+ * Macro to convert elv, llv, ulv to a data which is used to set DCVR0, DCVR1,
+ * DCVR2, or DCVR3.
+ */
+#define DCVR(elv, llv, ulv)     ((elv << 0) | (llv << 10) | (ulv << 21))
+
 #endif				/*  __ASM_ARCH_MXC_MX37_H__ */

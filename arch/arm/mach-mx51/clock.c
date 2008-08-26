@@ -1685,7 +1685,7 @@ static int _clk_vpu_set_parent(struct clk *clk, struct clk *parent)
 static struct clk vpu_clk[] = {
 	{
 	 .name = "vpu_clk",
-	 .parent = &axi_a_clk,
+	 .parent = &ahb_clk,
 	 .set_parent = _clk_vpu_set_parent,
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR5,
@@ -1695,7 +1695,7 @@ static struct clk vpu_clk[] = {
 	 },
 	{
 	 .name = "vpu_core_clk",
-	 .parent = &axi_a_clk,
+	 .parent = &ahb_clk,
 	 .set_parent = _clk_vpu_set_parent,
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR5,

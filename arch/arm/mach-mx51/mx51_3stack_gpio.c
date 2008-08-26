@@ -1212,6 +1212,157 @@ EXPORT_SYMBOL(gpio_pcmcia_inactive);
  */
 void gpio_fec_active(void)
 {
+	/*TX_ER */
+	mxc_request_iomux(MX51_PIN_DI_GP3, IOMUX_CONFIG_ALT2);
+	/*CRS */
+	mxc_request_iomux(MX51_PIN_DI2_PIN4, IOMUX_CONFIG_ALT2);
+	/*MDC */
+	mxc_request_iomux(MX51_PIN_DI2_PIN2, IOMUX_CONFIG_ALT2);
+	/*MDIO */
+	mxc_request_iomux(MX51_PIN_DI2_PIN3, IOMUX_CONFIG_ALT2);
+	/*RDATA[1] */
+	mxc_request_iomux(MX51_PIN_DI2_DISP_CLK, IOMUX_CONFIG_ALT2);
+	/*RDATA[2] */
+	mxc_request_iomux(MX51_PIN_DI_GP4, IOMUX_CONFIG_ALT2);
+	/*RDATA[3] */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT0, IOMUX_CONFIG_ALT2);
+	/*RX_ER */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT1, IOMUX_CONFIG_ALT2);
+	/*TDATA[1] */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT6, IOMUX_CONFIG_ALT2);
+	/*TDATA[2] */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT7, IOMUX_CONFIG_ALT2);
+	/*TDATA[3] */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT8, IOMUX_CONFIG_ALT2);
+	/*TX_EN */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT9, IOMUX_CONFIG_ALT2);
+	/*COL */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT10, IOMUX_CONFIG_ALT2);
+	/*RX_CLK */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT11, IOMUX_CONFIG_ALT2);
+	/*RX_DV */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT12, IOMUX_CONFIG_ALT2);
+	/*TX_CLK */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT13, IOMUX_CONFIG_ALT2);
+	/*RDATA[0] */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT14, IOMUX_CONFIG_ALT2);
+	/*TDATA[0] */
+	mxc_request_iomux(MX51_PIN_DISP2_DAT15, IOMUX_CONFIG_ALT2);
+
+	/*TX_ER */
+	mxc_iomux_set_pad(MX51_PIN_DI_GP3,
+			  PAD_CTL_100K_PU | PAD_CTL_DRV_HIGH |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*CRS */
+	mxc_iomux_set_pad(MX51_PIN_DI2_PIN4,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*MDC */
+	mxc_iomux_set_pad(MX51_PIN_DI2_PIN2,
+			  PAD_CTL_100K_PU | PAD_CTL_DRV_HIGH |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*MDIO */
+	mxc_iomux_set_pad(MX51_PIN_DI2_PIN3,
+			  PAD_CTL_SRE_FAST | PAD_CTL_DRV_HIGH |
+			  PAD_CTL_ODE_OPENDRAIN_ENABLE | PAD_CTL_22K_PU |
+			  PAD_CTL_HYS_ENABLE | PAD_CTL_DRV_VOT_HIGH);
+	/*RDATA[1] */
+	mxc_iomux_set_pad(MX51_PIN_DI2_DISP_CLK,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*RDATA[2] */
+	mxc_iomux_set_pad(MX51_PIN_DI_GP4,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*RDATA[3] */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT0,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*RX_ER */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT1,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*TDATA[1] */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT6,
+			  PAD_CTL_100K_PU | PAD_CTL_DRV_HIGH |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*TDATA[2] */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT7,
+			  PAD_CTL_100K_PU | PAD_CTL_DRV_HIGH |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*TDATA[3] */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT8,
+			  PAD_CTL_100K_PU | PAD_CTL_DRV_HIGH |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*TX_EN */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT9,
+			  PAD_CTL_100K_PU | PAD_CTL_DRV_HIGH |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*COL */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT10,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*RX_CLK */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT11,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*RX_DV */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT12,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*TX_CLK */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT13,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*RDATA[0] */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT14,
+			  PAD_CTL_100K_PU | PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	/*TDATA[0] */
+	mxc_iomux_set_pad(MX51_PIN_DISP2_DAT15,
+			  PAD_CTL_100K_PU | PAD_CTL_DRV_HIGH |
+			  PAD_CTL_DRV_VOT_HIGH);
+
+	/*COL */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_COL_SELECT_INPUT, INPUT_CTL_PATH1);
+	/*CRS */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_CRS_SELECT_INPUT, INPUT_CTL_PATH1);
+	/*MDIO */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_MDI_SELECT_INPUT, INPUT_CTL_PATH1);
+	/*RDATA[0] */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_RDATA_0_SELECT_INPUT,
+			    INPUT_CTL_PATH1);
+	/*RDATA[1] */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_RDATA_1_SELECT_INPUT,
+			    INPUT_CTL_PATH1);
+	/*RDATA[2] */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_RDATA_2_SELECT_INPUT,
+			    INPUT_CTL_PATH1);
+	/*RDATA[3] */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_RDATA_3_SELECT_INPUT,
+			    INPUT_CTL_PATH1);
+	/*RX_CLK */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_RX_CLK_SELECT_INPUT,
+			    INPUT_CTL_PATH1);
+	/*RX_DV */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_RX_DV_SELECT_INPUT, INPUT_CTL_PATH1);
+	/*RX_ER */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_RX_ER_SELECT_INPUT, INPUT_CTL_PATH1);
+	/*TX_CLK */
+	mxc_iomux_set_input(MUX_IN_FEC_FEC_TX_CLK_SELECT_INPUT,
+			    INPUT_CTL_PATH1);
+
+	/*reset */
+	mxc_request_iomux(MX51_PIN_DISPB2_SER_DIO, IOMUX_CONFIG_GPIO);
+	mxc_iomux_set_pad(MX51_PIN_DISPB2_SER_DIO,
+			  PAD_CTL_SRE_FAST | PAD_CTL_DRV_HIGH | PAD_CTL_100K_PU
+			  | PAD_CTL_PUE_PULL | PAD_CTL_PKE_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH);
+	mxc_set_gpio_direction(MX51_PIN_DISPB2_SER_DIO, 0);
+	mxc_set_gpio_dataout(MX51_PIN_DISPB2_SER_DIO, 0);
+	msleep(10);
+	mxc_set_gpio_dataout(MX51_PIN_DISPB2_SER_DIO, 1);
+	msleep(100);
 }
 
 EXPORT_SYMBOL(gpio_fec_active);
@@ -1221,6 +1372,45 @@ EXPORT_SYMBOL(gpio_fec_active);
  */
 void gpio_fec_inactive(void)
 {
+	/*TX_ER */
+	mxc_free_iomux(MX51_PIN_DI_GP3, IOMUX_CONFIG_ALT2);
+	/*CRS */
+	mxc_free_iomux(MX51_PIN_DI2_PIN4, IOMUX_CONFIG_ALT2);
+	/*MDC */
+	mxc_free_iomux(MX51_PIN_DI2_PIN2, IOMUX_CONFIG_ALT2);
+	/*MDIO */
+	mxc_free_iomux(MX51_PIN_DI2_PIN3, IOMUX_CONFIG_ALT2);
+	/*RDATA[1] */
+	mxc_free_iomux(MX51_PIN_DI2_DISP_CLK, IOMUX_CONFIG_ALT2);
+	/*RDATA[2] */
+	mxc_free_iomux(MX51_PIN_DI_GP4, IOMUX_CONFIG_ALT2);
+	/*RDATA[3] */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT0, IOMUX_CONFIG_ALT2);
+	/*RX_ER */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT1, IOMUX_CONFIG_ALT2);
+	/*TDATA[1] */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT6, IOMUX_CONFIG_ALT2);
+	/*TDATA[2] */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT7, IOMUX_CONFIG_ALT2);
+	/*TDATA[3] */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT8, IOMUX_CONFIG_ALT2);
+	/*TX_EN */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT9, IOMUX_CONFIG_ALT2);
+	/*COL */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT10, IOMUX_CONFIG_ALT2);
+	/*RX_CLK */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT11, IOMUX_CONFIG_ALT2);
+	/*RX_DV */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT12, IOMUX_CONFIG_ALT2);
+	/*TX_CLK */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT13, IOMUX_CONFIG_ALT2);
+	/*RDATA[0] */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT14, IOMUX_CONFIG_ALT2);
+	/*TDATA[0] */
+	mxc_free_iomux(MX51_PIN_DISP2_DAT15, IOMUX_CONFIG_ALT2);
+	/*reset */
+	mxc_free_iomux(MX51_PIN_DISPB2_SER_DIO, IOMUX_CONFIG_GPIO);
+
 }
 
 EXPORT_SYMBOL(gpio_fec_inactive);

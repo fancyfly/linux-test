@@ -1772,6 +1772,15 @@ static struct clk ata_clk = {
 	.disable = _clk_disable,
 };
 
+static struct clk fec_clk = {
+	.name = "fec_clk",
+	.parent = &ipg_clk,
+	.enable = _clk_enable,
+	.enable_reg = MXC_CCM_CCGR2,
+	.enable_shift = MXC_CCM_CCGR2_CG12_OFFSET,
+	.disable = _clk_disable,
+};
+
 static struct clk *mxc_clks[] = {
 	&osc_clk,
 	&ckih_clk,
@@ -1854,6 +1863,7 @@ static struct clk *mxc_clks[] = {
 	&pgc_clk,
 	&rtc_clk,
 	&ata_clk,
+	&fec_clk,
 	&mipi_hsc1_clk,
 	&mipi_hsc2_clk,
 	&mipi_esc_clk,

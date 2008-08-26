@@ -68,6 +68,8 @@ struct wm8350_out_ramp {
 	struct wm8350_output out2;
 };
 
+static int wm8350_dapm_event(struct snd_soc_codec *codec, int event);
+
 static unsigned int wm8350_codec_cache_read(struct snd_soc_codec *codec,
 					    unsigned int reg)
 {
@@ -493,6 +495,25 @@ static int wm8350_add_controls(struct snd_soc_codec *codec,
 	return 0;
 }
 
+/* Same as snd_soc_dapm_put_volsw, but change power state */
+static int wm8350_dapm_put_volsw(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dapm_widget *widget = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = widget->codec;
+	if (ucontrol->value.integer.value[0]) {
+		if (codec->dapm_state != SNDRV_CTL_POWER_D0) {
+			wm8350_dapm_event(codec, SNDRV_CTL_POWER_D1);
+			snd_soc_dapm_put_volsw(kcontrol, ucontrol);
+			wm8350_dapm_event(codec, SNDRV_CTL_POWER_D0);
+		} else
+			snd_soc_dapm_put_volsw(kcontrol, ucontrol);
+	} else {
+		snd_soc_dapm_put_volsw(kcontrol, ucontrol);
+		wm8350_dapm_event(codec, SNDRV_CTL_POWER_D3hot);
+	}
+}
+
 /*
  * DAPM Controls
  */
@@ -500,7 +521,8 @@ static int wm8350_add_controls(struct snd_soc_codec *codec,
 /* Left Playback Mixer */
 static const struct snd_kcontrol_new wm8350_left_play_mixer_controls[] = {
 SOC_DAPM_SINGLE("Playback Switch", WM8350_LEFT_MIXER_CONTROL, 11, 1, 0),
-SOC_DAPM_SINGLE("Left Bypass Switch", WM8350_LEFT_MIXER_CONTROL, 2, 1, 0),
+SOC_SINGLE_EXT("Left Bypass Switch", WM8350_LEFT_MIXER_CONTROL, 2, 1, 0,
+		snd_soc_dapm_get_volsw, wm8350_dapm_put_volsw),
 SOC_DAPM_SINGLE("Right Playback Switch", WM8350_LEFT_MIXER_CONTROL, 12, 1, 0),
 SOC_DAPM_SINGLE("Left Sidetone Switch", WM8350_LEFT_MIXER_CONTROL, 0, 1, 0),
 SOC_DAPM_SINGLE("Right Sidetone Switch", WM8350_LEFT_MIXER_CONTROL, 1, 1, 0),
@@ -509,7 +531,8 @@ SOC_DAPM_SINGLE("Right Sidetone Switch", WM8350_LEFT_MIXER_CONTROL, 1, 1, 0),
 /* Right Playback Mixer */
 static const struct snd_kcontrol_new wm8350_right_play_mixer_controls[] = {
 SOC_DAPM_SINGLE("Playback Switch", WM8350_RIGHT_MIXER_CONTROL, 12, 1, 0),
-SOC_DAPM_SINGLE("Right Bypass Switch", WM8350_RIGHT_MIXER_CONTROL, 3, 1, 0),
+SOC_SINGLE_EXT("Right Bypass Switch", WM8350_RIGHT_MIXER_CONTROL, 3, 1, 0,
+		snd_soc_dapm_get_volsw, wm8350_dapm_put_volsw),
 SOC_DAPM_SINGLE("Left Playback Switch", WM8350_RIGHT_MIXER_CONTROL, 11, 1, 0),
 SOC_DAPM_SINGLE("Left Sidetone Switch", WM8350_RIGHT_MIXER_CONTROL, 0, 1, 0),
 SOC_DAPM_SINGLE("Right Sidetone Switch", WM8350_RIGHT_MIXER_CONTROL, 1, 1, 0),

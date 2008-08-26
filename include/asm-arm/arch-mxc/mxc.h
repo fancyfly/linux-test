@@ -294,12 +294,17 @@ struct mxc_unifi_platform_data *get_unifi_plat_data(void);
 
 #ifndef __ASSEMBLY__
 #include <linux/types.h>
+
 struct dptc_wp {
 	u32 dcvr0;
 	u32 dcvr1;
 	u32 dcvr2;
 	u32 dcvr3;
+#if defined(CONFIG_ARCH_MX37)
 	char *regulator;
+#else
+	u32 regulator;
+#endif
 	u32 voltage;
 };
 struct cpu_wp {

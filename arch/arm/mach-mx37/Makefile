@@ -11,6 +11,9 @@ obj-$(CONFIG_MACH_MX37_3DS) += mx37_3stack.o mx37_3stack_gpio.o
 obj-$(CONFIG_SPI_MXC) += mx37_3stack_cpld.o
 obj-$(CONFIG_REGULATOR_WM8350) += mx37_3stack_pmic_wm8350.o
 
+imx37-cpufreq-objs := cpufreq.o
+obj-$(CONFIG_CPU_FREQ_IMX37)    += imx37-cpufreq.o
+
 # power management
 obj-$(CONFIG_PM)        += pm.o
 

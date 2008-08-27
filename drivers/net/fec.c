@@ -2721,13 +2721,13 @@ static void set_multicast_list(struct net_device *dev)
 			/* Catch all multicast addresses, so set the
 			 * filter to all 1's.
 			 */
-			ep->fec_hash_table_high = 0xffffffff;
-			ep->fec_hash_table_low = 0xffffffff;
+			ep->fec_grp_hash_table_high = 0xffffffff;
+			ep->fec_grp_hash_table_low = 0xffffffff;
 		} else {
 			/* Clear filter and add the addresses in hash register.
 			*/
-			ep->fec_hash_table_high = 0;
-			ep->fec_hash_table_low = 0;
+			ep->fec_grp_hash_table_high = 0;
+			ep->fec_grp_hash_table_low = 0;
 
 			dmi = dev->mc_list;
 
@@ -2758,9 +2758,10 @@ static void set_multicast_list(struct net_device *dev)
 				hash = (crc >> (32 - HASH_BITS)) & 0x3f;
 
 				if (hash > 31)
-					ep->fec_hash_table_high |= 1 << (hash - 32);
+					ep->fec_grp_hash_table_high |=
+							1 << (hash - 32);
 				else
-					ep->fec_hash_table_low |= 1 << hash;
+					ep->fec_grp_hash_table_low |= 1 << hash;
 			}
 		}
 	}

@@ -192,7 +192,7 @@ OS_DEV_INIT(rng_init)
 
 	clk = clk_get(NULL, "rng_clk");
 
-	/* Check that the clock was found*/
+	/* Check that the clock was found */
 	if (IS_ERR(clk)) {
 #ifdef RNG_DEBUG
 		LOG_KDIAG("RNG: Failed to find rng_clock.");
@@ -270,6 +270,8 @@ OS_DEV_INIT(rng_init)
 		/* Self Testing For RNG */
 		do {
 			RNG_CLEAR_ERR();
+			/* wait for Clearing Erring finished */
+			msleep(1);
 			RNG_UNMASK_ALL_INTERRUPTS();
 			RNG_SELF_TEST();
 #if defined(FSL_HAVE_RNGC)
@@ -297,7 +299,7 @@ OS_DEV_INIT(rng_init)
 #ifndef RNG_NO_FORCE_HIGH_ASSURANCE
 #ifdef RNG_DEBUG
 			LOG_KDIAG
-		    ("RNG Driver: RNG could not be put in High Assurance mode");
+			("RNG Driver: RNG could not be put in High Assurance mode");
 #endif
 #endif				/* RNG_NO_FORCE_HIGH_ASSURANCE */
 			rng_availability = RNG_STATUS_FAILED;
@@ -969,7 +971,7 @@ static fsl_shw_return_t rng_drain_fifo(uint32_t * random_p, int count_words)
 			wait_for_completion(&rng_seed_done);
 			if (count_for_reseed == 3) {
 				os_printk(KERN_ALERT
-				  "Device was not able to enter RESEED Mode\n");
+					"Device was not able to enter RESEED Mode\n");
 				code = FSL_RETURN_INTERNAL_ERROR_S;
 			}
 			count_for_reseed++;

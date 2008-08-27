@@ -41,7 +41,7 @@ config USB_EHCI_ARC
 
 config USB_EHCI_ARC_H1
 	bool "Support for Host1 port on Freescale controller"
-	depends on USB_EHCI_ARC	&& (ARCH_MX27 || ARCH_MX3)
+	depends on USB_EHCI_ARC	&& (ARCH_MX27 || ARCH_MX3 || ARCH_MX51)
 	---help---
 	  Enable support for the USB Host1 port.
 
@@ -76,7 +76,7 @@ choice
 	depends on USB_EHCI_ARC_OTG
 	default USB_EHCI_FSL_1504 if ARCH_MX3
 	default USB_EHCI_FSL_1301 if ARCH_MX27
-	default USB_EHCI_FSL_UTMI if (ARCH_MX35 || ARCH_MX37)
+	default USB_EHCI_FSL_UTMI if (ARCH_MX35 || ARCH_MX37 || ARCH_MX51)
 	---help---
 	  Choose the transceiver to use with the Freescale DR port.
 
@@ -108,7 +108,7 @@ config USB_EHCI_FSL_1504
 
 config USB_EHCI_FSL_UTMI
 	bool "Internal UTMI"
-	depends on (ARCH_MX35 || ARCH_MX37)
+	depends on (ARCH_MX35 || ARCH_MX37 || ARCH_MX51)
 	---help---
 	  Enable support for the on-chip High Speed UTMI transceiver.
 

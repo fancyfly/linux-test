@@ -34,5 +34,9 @@ obj-$(CONFIG_MC13783_MXC) += mc13783_xc.o
 obj-$(CONFIG_USB_EHCI_FSL_UTMI) += utmixc.o
 
 ifneq ($(CONFIG_USB_EHCI_ARC_H1),)
+ifneq ($(CONFIG_ARCH_MX51),y)
 obj-y += serialxc.o
+else
+obj-y += isp1504xc.o
+endif
 endif

@@ -142,6 +142,7 @@
 #define USB_OTG_MIRROR		USBOTHER_REG(0x04)	/* USB OTG mirror register */
 #define USB_PHY_CTR_FUNC	USBOTHER_REG(0x08)      /* OTG UTMI PHY Function Control register */
 #define USB_PHY_CTR_FUNC2	USBOTHER_REG(0x0c)      /* OTG UTMI PHY Function Control register */
+#define USB_CTRL_1		USBOTHER_REG(0x10)	/* USB Cotrol Register 1*/
 
 /*
  * register bits
@@ -258,6 +259,7 @@
 #define UCTRL_H1SIC_SB3		(3 << 13)	/* single-ended/bidirectional  3 wire */
 #define UCTRL_OLOCKD		(1 << 13)	/* otg lock disable */
 #define UCTRL_H2LOCKD		(1 << 12)	/* HOST2 lock disable */
+#define UCTRL_H1UIE		(1 << 12)	/* Host1 ULPI interrupt enable */
 
 #define UCTRL_PP                (1 << 11)       /* power polarity bit */
 #define UCTRL_H1WIE		(1 << 11)	/* HOST1 wakeup intr enable */
@@ -283,6 +285,7 @@
 /* USBCMD */
 #define UCMD_RUN_STOP           (1 << 0)        /* controller run/stop */
 #define UCMD_RESET		(1 << 1)	/* controller reset */
+#define UCMD_ITC_NO_THRESHOLD	 ~(0xff << 16)	/* Interrupt Threshold Control */
 
 /* OTG_MIRROR */
 #define OTGM_SESEND		(1 << 4)	/* B device session end */
@@ -295,10 +298,15 @@
 
 /* USB_PHY_CTRL_FUNC */
 #define USB_UTMI_PHYCTRL_UTMI_ENABLE   0x01000000
+#define USB_UTMI_PHYCTRL_OC_POL	(1 << 9)	/* OTG Polarity of Overcurrent */
+#define USB_UTMI_PHYCTRL_OC_DIS	(1 << 8)	/* OTG Disable Overcurrent Event */
 
 /* USB_PHY_CTRL_FUNC2*/
 #define USB_UTMI_PHYCTRL2_PLLDIV_MASK		0x3
 #define USB_UTMI_PHYCTRL2_PLLDIV_SHIFT		0
+
+/* USB_CTRL_1 */
+#define USB_CTRL_UH1_EXT_CLK_EN			(1 << 25)
 
 /* ULPIVIEW register bits */
 #define ULPIVW_OFF		(0x170)

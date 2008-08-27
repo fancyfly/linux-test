@@ -19,6 +19,10 @@ extern void gpio_usbotg_hs_inactive(void);
 extern struct platform_device *host_pdev_register(struct resource *res,
 		  int n_res, struct fsl_usb2_platform_data *config);
 
+extern int fsl_usb_host_init(struct platform_device *pdev);
+extern void fsl_usb_host_uninit(struct fsl_usb2_platform_data *pdata);
+extern int gpio_usbh1_active(void);
+extern void gpio_usbh1_inactive(void);
 extern int gpio_usbotg_utmi_active(void);
 extern void gpio_usbotg_utmi_inactive(void);
 static int usbotg_init_ext(struct platform_device *pdev);

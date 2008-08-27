@@ -38,10 +38,13 @@
 #include <asm/arch/hardware.h>
 #include <linux/regulator/regulator-platform.h>
 #include "crm_regs.h"
-#include <asm/arch/mxc_uart.h>
 
 
 #define ARM_LP_CLK  200000000
+#define GP_LPM_VOLTAGE 850000
+#define LP_LPM_VOLTAGE 1000000
+#define GP_NORMAL_VOLTAGE 1000000
+#define LP_NORMAL_VOLTAGE 1200000
 
 static int org_cpu_rate;
 int lp_video_mode;
@@ -57,9 +60,6 @@ void enter_lp_video_mode(void)
 	struct clk *vmode_parent_clk;
 	struct regulator *gp_core;
 
-	/* Set the periph_apm_clk parent to be lp_apm. */
-	clk_set_parent(clk_get(NULL, "periph_apm_clk"),
-							clk_get(NULL, "lp_apm"));
 	tclk = clk_get(NULL, "main_bus_clk");
 	vmode_parent_clk = clk_get(NULL, "pll2");
 	p_clk = clk_get_parent(tclk);
@@ -73,13 +73,6 @@ void enter_lp_video_mode(void)
 		clk_set_rate(clk_get(NULL, "emi_core_clk"), 133000000);
 		clk_set_rate(clk_get(NULL, "nfc_clk"), 26600000);
 		clk_set_rate(clk_get(NULL, "ahb_clk"), 133000000);
-	}
-
-	/* Set UART clock's parent to be PLL2. */
-	tclk = clk_get(NULL, "uart_main_clk");
-	if (clk_get_parent(tclk) != vmode_parent_clk) {
-		clk_set_parent(tclk, vmode_parent_clk);
-		clk_set_rate(tclk, 66500000);
 	}
 
 	/* move VPU clock to source from the emi_core_clk */
@@ -103,7 +96,8 @@ void enter_lp_video_mode(void)
 
 	/* disable PLL3 */
 	tclk = clk_get(NULL, "pll3");
-	clk_disable(tclk);
+	if (tclk->usecount == 1)
+		clk_disable(tclk);
 
 	tclk = clk_get(NULL, "cpu_clk");
 	org_cpu_rate = clk_get_rate(tclk);
@@ -116,7 +110,7 @@ void enter_lp_video_mode(void)
 
 	gp_core = regulator_get(NULL, "DCDC1");
 
-	ret = regulator_set_voltage(gp_core, 850000);
+	ret = regulator_set_voltage(gp_core, GP_LPM_VOLTAGE);
 	if (ret < 0)
 		printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!\n");
 	lp_video_mode = 1;
@@ -131,7 +125,7 @@ void exit_lp_video_mode(void)
 	/*Set the voltage to 0.8v for the GP domain. */
 	gp_core = regulator_get(NULL, "DCDC1");
 
-	ret = regulator_set_voltage(gp_core, 1000000);
+	ret = regulator_set_voltage(gp_core, GP_NORMAL_VOLTAGE);
 	if (ret < 0)
 		printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!\n");
 
@@ -141,9 +135,6 @@ void exit_lp_video_mode(void)
 	if (ret != 0)
 		printk(KERN_DEBUG "cannot set CPU clock rate\n");
 
-	/* enable PLL3 */
-	tclk = clk_get(NULL, "pll3");
-	clk_enable(tclk);
 	lp_video_mode = 0;
 }
 
@@ -156,15 +147,82 @@ void enter_lp_audio_mode(void)
 	struct clk *amode_parent_clk;
 	struct regulator *gp_core;
 	struct regulator *lp_core;
-	u32 uart_addr = IO_ADDRESS(UART1_BASE_ADDR);
-    u32 reg;
-
 
 	tclk = clk_get(NULL, "ipu_clk");
 	if (clk_get_usecount(tclk) != 0) {
 		printk(KERN_INFO
 		"Cannot enter AUDIO LPM mode - display is still active\n");
 		return;
+	}
+
+	tclk = clk_get(NULL, "periph_apm_clk");
+	amode_parent_clk = clk_get(NULL, "lp_apm");
+	p_clk = clk_get_parent(tclk);
+
+	/* Make sure osc_clk is the parent of lp_apm. */
+	clk_set_parent(amode_parent_clk, clk_get(NULL, "osc"));
+
+	/* Set the parent of periph_apm_clk to be lp_apm */
+	clk_set_parent(tclk, amode_parent_clk);
+	amode_parent_clk = tclk;
+
+	tclk = clk_get(NULL, "main_bus_clk");
+	p_clk = clk_get_parent(tclk);
+	/* Set the parent of main_bus_clk to be periph_apm_clk */
+	clk_set_parent(tclk, amode_parent_clk);
+	/*disable the old parent. */
+	clk_disable(p_clk);
+
+	clk_set_rate(clk_get(NULL, "axi_a_clk"), 24000000);
+	clk_set_rate(clk_get(NULL, "axi_b_clk"), 24000000);
+	clk_set_rate(clk_get(NULL, "axi_c_clk"), 24000000);
+	clk_set_rate(clk_get(NULL, "emi_core_clk"), 24000000);
+	clk_set_rate(clk_get(NULL, "nfc_clk"), 4800000);
+	clk_set_rate(clk_get(NULL, "ahb_clk"), 24000000);
+
+	amode_parent_clk = clk_get(NULL, "emi_core_clk");
+
+	tclk = clk_get(NULL, "arm_axi_clk");
+	p_clk = clk_get_parent(tclk);
+	if (p_clk != amode_parent_clk) {
+		clk_set_parent(tclk, amode_parent_clk);
+		/* Disable the old parent */
+		clk_disable(p_clk);
+	}
+
+	tclk = clk_get(NULL, "vpu_clk");
+	p_clk = clk_get_parent(tclk);
+	if (p_clk != amode_parent_clk) {
+		clk_set_parent(tclk, amode_parent_clk);
+		/* Disable the old parent */
+		clk_disable(p_clk);
+	}
+
+	tclk = clk_get(NULL, "vpu_core_clk");
+	p_clk = clk_get_parent(tclk);
+	if (p_clk != amode_parent_clk) {
+		clk_set_parent(tclk, amode_parent_clk);
+		/* Disable the old parent */
+		clk_disable(p_clk);
+	}
+
+	/* disable PLL3 */
+	tclk = clk_get(NULL, "pll3");
+	if (tclk->usecount == 1)
+		clk_disable(tclk);
+
+	/* disable PLL2 */
+	tclk = clk_get(NULL, "pll2");
+	if (tclk->usecount == 1)
+		clk_disable(tclk);
+
+	/* Set the voltage to 1.0v for the LP domain. */
+	lp_core = regulator_get(NULL, "DCDC4");
+
+	if (lp_core != NULL) {
+		ret = regulator_set_voltage(lp_core, LP_LPM_VOLTAGE);
+		if (ret < 0)
+			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!!!\n");
 	}
 
 	tclk = clk_get(NULL, "cpu_clk");
@@ -178,94 +236,9 @@ void enter_lp_audio_mode(void)
 	gp_core = regulator_get(NULL, "DCDC1");
 
 	if (gp_core != NULL) {
-		ret = regulator_set_voltage(gp_core, 850000);
+		ret = regulator_set_voltage(gp_core, GP_LPM_VOLTAGE);
 		if (ret < 0)
 			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!!\n");
-	}
-
-
-	tclk = clk_get(NULL, "periph_apm_clk");
-	amode_parent_clk = clk_get(NULL, "lp_apm");
-	p_clk = clk_get_parent(tclk);
-
-	if (p_clk != amode_parent_clk) {
-		/* Make sure osc_clk is the parent of lp_apm. */
-		clk_set_parent(amode_parent_clk, clk_get(NULL, "osc"));
-
-		/* Set the parent of periph_apm_clk to be lp_apm */
-		clk_set_parent(tclk, amode_parent_clk);
-		amode_parent_clk = clk_get(NULL, "periph_apm_clk");
-
-		/* Set the parent of main_bus_clk to be periph_apm_clk */
-		clk_set_parent(clk_get(NULL, "main_bus_clk"), amode_parent_clk);
-
-		clk_set_rate(clk_get(NULL, "axi_a_clk"), 24000000);
-		clk_set_rate(clk_get(NULL, "axi_b_clk"), 24000000);
-		clk_set_rate(clk_get(NULL, "axi_c_clk"), 24000000);
-		clk_set_rate(clk_get(NULL, "emi_core_clk"), 24000000);
-		clk_set_rate(clk_get(NULL, "nfc_clk"), 4800000);
-		clk_set_rate(clk_get(NULL, "ahb_clk"), 24000000);
-	}
-
-	amode_parent_clk = clk_get(NULL, "lp_apm");
-
-	/* Set UART clock's parent to be lp_apm. */
-	tclk = clk_get(NULL, "uart_main_clk");
-	if (clk_get_parent(tclk) != amode_parent_clk) {
-		clk_disable(tclk);
-		clk_set_parent(tclk, amode_parent_clk);
-		clk_enable(tclk);
-		clk_set_rate(tclk, 24000000);
-		/* Set the UART baud registers.
-		 * Set the RFDIV to divide by 2.
-		 */
-		reg = __raw_readl(uart_addr + MXC_UARTUFCR);
-		reg &= ~MXC_UARTUFCR_RFDIV_MASK;
-		reg |= 4 << MXC_UARTUFCR_RFDIV_OFFSET;
-		__raw_writel(reg, uart_addr + MXC_UARTUFCR);
-
-		/* Setup the BAUD dividers for input clock at 24MHz and output
-		 * at 115200
-		 */
-		reg = 0x0000047F;
-		__raw_writel(reg, uart_addr + MXC_UARTUBIR);
-		reg = 0x09a8;
-	__raw_writel(reg, uart_addr + MXC_UARTUBMR);
-	}
-
-	amode_parent_clk = clk_get(NULL, "emi_core_clk");
-
-	tclk = clk_get(NULL, "arm_axi_clk");
-	if (clk_get_parent(tclk) != amode_parent_clk)
-		clk_set_parent(tclk, amode_parent_clk);
-
-	tclk = clk_get(NULL, "ddr_clk");
-	if (clk_get_parent(tclk) != amode_parent_clk)
-		clk_set_parent(tclk, amode_parent_clk);
-
-	tclk = clk_get(NULL, "vpu_clk");
-	if (clk_get_parent(tclk) != amode_parent_clk)
-		clk_set_parent(tclk, amode_parent_clk);
-
-	tclk = clk_get(NULL, "vpu_core_clk");
-	if (clk_get_parent(tclk) != amode_parent_clk)
-		clk_set_parent(tclk, amode_parent_clk);
-
-	/* disable PLL3 */
-	tclk = clk_get(NULL, "pll3");
-	clk_disable(tclk);
-
-	/* disable PLL2 */
-	tclk = clk_get(NULL, "pll2");
-	clk_disable(tclk);
-
-	/* Set the voltage to 1.0v for the LP domain. */
-	lp_core = regulator_get(NULL, "DCDC4");
-
-	if (lp_core != NULL) {
-		ret = regulator_set_voltage(lp_core, 1000000);
-		if (ret < 0)
-			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!!!\n");
 	}
 	lp_audio_mode = 1;
 }
@@ -275,14 +248,17 @@ void exit_lp_audio_mode(void)
 	struct regulator *gp_core;
 	struct regulator *lp_core;
 	struct clk *tclk;
+	struct clk *p_clk;
 	struct clk *rmode_parent_clk;
 	int ret;
+
+	lp_audio_mode = 0;
 
 	/* Set the voltage to 1.2v for the LP domain. */
 	lp_core = regulator_get(NULL, "DCDC4");
 
 	if (lp_core != NULL) {
-		ret = regulator_set_voltage(lp_core, 1200000);
+		ret = regulator_set_voltage(lp_core, LP_NORMAL_VOLTAGE);
 		if (ret < 0)
 			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!!!\n");
 	}
@@ -290,7 +266,7 @@ void exit_lp_audio_mode(void)
 	/* Set the voltage to 1.0v for the GP domain. */
 	gp_core = regulator_get(NULL, "DCDC1");
 
-	ret = regulator_set_voltage(gp_core, 1000000);
+	ret = regulator_set_voltage(gp_core, GP_NORMAL_VOLTAGE);
 	if (ret < 0)
 		printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!\n");
 
@@ -300,63 +276,24 @@ void exit_lp_audio_mode(void)
 	if (ret != 0)
 		printk(KERN_DEBUG "cannot set CPU clock rate\n");
 
-	clk_enable(clk_get(NULL, "pll3"));
-
-	clk_enable(clk_get(NULL, "pll2"));
-
-	clk_enable(clk_get(NULL, "ahbmux1_clk"));
-
 	rmode_parent_clk = clk_get(NULL, "pll2");
+	clk_enable(rmode_parent_clk);
 
 	/* Set the dividers before setting the parent clock.*/
 	clk_set_rate(clk_get(NULL, "axi_a_clk"), 4800000);
 	clk_set_rate(clk_get(NULL, "axi_b_clk"), 4000000);
 	clk_set_rate(clk_get(NULL, "axi_c_clk"), 6000000);
 
-
 	clk_set_rate(clk_get(NULL, "emi_core_clk"), 4800000);
 	clk_set_rate(clk_get(NULL, "ahb_clk"), 4800000);
 
 	/* Set the parent of main_bus_clk to be pll2 */
-	clk_set_parent(clk_get(NULL, "main_bus_clk"), rmode_parent_clk);
-
-	tclk = clk_get(NULL, "ddr_clk");
-	if (clk_get_parent(tclk) != clk_get(NULL, "axi_c_clk"))
-		clk_set_parent(tclk, clk_get(NULL, "axi_c_clk"));
-
-	tclk = clk_get(NULL, "arm_axi_clk");
-	if (clk_get_parent(tclk) != clk_get(NULL, "emi_core_clk"))
-		clk_set_parent(tclk, clk_get(NULL, "emi_core_clk"));
-
-	/* Set the parent of periph_apm_clk to be pll1 */
-	clk_set_parent(clk_get(NULL, "periph_apm_clk"),
-						clk_get(NULL, "pll1_sw_clk"));
-
-	/* Set UART clock's parent to be lp_apm. */
-	tclk = clk_get(NULL, "uart_main_clk");
-	if (clk_get_parent(tclk) != rmode_parent_clk) {
-		u32 uart_addr = IO_ADDRESS(UART1_BASE_ADDR);
-	    u32 reg;
-
-		/*Set the divider before setting the parent. */
-		clk_set_rate(tclk, 2400000);
-		clk_set_parent(tclk, rmode_parent_clk);
-
-		/*Set the RFDIV to divide by 6. */
-		reg = __raw_readl(uart_addr + MXC_UARTUFCR);
-		reg &= ~MXC_UARTUFCR_RFDIV_MASK;
-		__raw_writel(reg, uart_addr + MXC_UARTUFCR);
-
-		/*Setup the BAUD dividers for input clock at 24MHz and
-		 * output at 115200
-		 */
-		reg = 0x0000047F;
-		__raw_writel(reg, uart_addr + MXC_UARTUBIR);
-		reg = 0x1b0e;
-		__raw_writel(reg, uart_addr + MXC_UARTUBMR);
-	}
-
-	lp_audio_mode = 0;
+	tclk = clk_get(NULL, "main_bus_clk");
+	p_clk = clk_get_parent(tclk);
+	clk_set_parent(tclk, rmode_parent_clk);
+	/* Need to increase the count */
+	clk_enable(rmode_parent_clk);
+	udelay(5);
 }
 
 static ssize_t lp_curr_mode(struct device *dev,

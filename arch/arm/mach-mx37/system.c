@@ -36,8 +36,6 @@
 extern int mxc_jtag_enabled;
 extern int lp_video_mode;
 extern int lp_audio_mode;
-static struct clk *srpg_clk;
-static struct clk *cpu_clk;
 static struct clk *pll1_main;
 static struct clk *pll1_sw_clk;
 static struct clk *lp_apm_clk;
@@ -46,7 +44,7 @@ static struct clk *lp_apm_clk;
 void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 {
 	u32 plat_lpc, gpc_pgr, arm_srpgcr, empgcr0, empgcr1, ccm_clpcr;
-    u32 reg;
+
 	/* always allow platform to issue a deep sleep mode request */
 	plat_lpc = __raw_readl(MXC_ARM1176_PLAT_LPC) &
 	    ~(MXC_ARM1176_PLAT_LPC_DSM);
@@ -101,9 +99,6 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 			pll1_sw_clk = clk_get(NULL, "pll1_sw_clk");
 		if (lp_apm_clk == NULL)
 			lp_apm_clk = clk_get(NULL, "lp_apm");
-
-		if (cpu_clk == NULL)
-			cpu_clk = clk_get(NULL, "cpu_clk");
 		if (pll1_main == NULL)
 			pll1_main = clk_get(NULL, "pll1_main_clk");
 
@@ -161,15 +156,14 @@ static int arch_idle_mode = WAIT_UNCLOCKED_POWER_OFF;
  */
 void arch_idle(void)
 {
-	u32 reg;
-
 	if (likely(!mxc_jtag_enabled)) {
 		mxc_cpu_lp_set(arch_idle_mode);
 		cpu_do_idle();
 
 		if (lp_audio_mode || lp_video_mode) {
 			/* Move ARM back to PLL from step clk. */
-			clk_enable(pll1_main);
+			if (pll1_main->usecount == 0)
+				clk_enable(pll1_main);
 			/* Move the PLL1 back to the pll1_main_clk */
 			clk_set_parent(pll1_sw_clk, pll1_main);
 		}

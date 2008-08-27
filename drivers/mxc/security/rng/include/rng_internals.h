@@ -349,7 +349,6 @@ inline static void RNG_ADD_WORK_ENTRY(rng_work_entry_t * work)
 /* Return non-zero if RESEED Required */
 #define RNG_RESEED() 1
 
-
 /** Return non-zero if Seeding is done */
 #define RNG_SEED_DONE()  1
 
@@ -485,7 +484,6 @@ inline static void RNG_ADD_WORK_ENTRY(rng_work_entry_t * work)
 #define RNG_CHECK_SEED_ERR()                                                 \
         (RNG_READ_REGISTER(RNGC_ERROR) & RNGC_ERROR_STATUS_STAT_ERR)
 
-/** Configure RNG for Self Test */
 #define RNG_SELF_TEST()                                                       \
 {                                                                             \
     register uint32_t command = RNG_READ_REGISTER(RNGC_COMMAND);              \
@@ -499,7 +497,6 @@ inline static void RNG_ADD_WORK_ENTRY(rng_work_entry_t * work)
     RNG_WRITE_REGISTER(RNGC_COMMAND, command                                  \
                                     | RNGC_COMMAND_CLEAR_ERROR);              \
 }
-
 
 /** Return non-zero if Self Test Done */
 #define RNG_SELF_TEST_DONE()                                                  \

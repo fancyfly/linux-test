@@ -184,6 +184,11 @@ static struct mxc_lcd_platform_data lcd_data = {
 	.reset = lcd_reset,
 };
 
+static struct mxc_dvfs_platform_data dvfs_data = {
+	.vddgp_reg = "DCDC1",
+	.vcclp_reg = "DCDC4",
+};
+
 #if defined(CONFIG_KEYBOARD_MPR084) || defined(CONFIG_KEYBOARD_MPR084_MODULE)
 /*!
  * These functions are used to configure and the GPIO pins for keypad to
@@ -215,6 +220,10 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	 .addr = 0x5D,
 	 .platform_data = &keypad_data,
 	 .irq = IOMUX_TO_IRQ(MX37_PIN_GPIO1_3),
+	 },
+	{
+	 .driver_name = "DVFSCORE",
+	 .platform_data = &dvfs_data,
 	 },
 };
 static struct spi_board_info mxc_spi_board_info[] __initdata = {

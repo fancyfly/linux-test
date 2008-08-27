@@ -184,6 +184,11 @@ static struct mxc_lcd_platform_data lcd_data = {
 	.reset = lcd_reset,
 };
 
+static struct mxc_dvfs_platform_data dvfs_data = {
+	.vddgp_reg = "DCDC1",
+	.vcclp_reg = "DCDC4",
+};
+
 #if defined(CONFIG_KEYBOARD_MPR084) || defined(CONFIG_KEYBOARD_MPR084_MODULE)
 /*!
  * These functions are used to configure and the GPIO pins for keypad to

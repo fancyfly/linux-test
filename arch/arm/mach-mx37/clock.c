@@ -266,7 +266,7 @@ static int _clk_pll1_sw_set_parent(struct clk *clk, struct clk *parent)
 			       &pll3_sw_clk);
 		reg = (reg & ~MXC_CCM_CCSR_STEP_SEL_MASK) |
 		    (mux << MXC_CCM_CCSR_STEP_SEL_OFFSET);
-__raw_writel(reg, MXC_CCM_CCSR);
+		__raw_writel(reg, MXC_CCM_CCSR);
 		reg = __raw_readl(MXC_CCM_CCSR);
 		reg |= MXC_CCM_CCSR_PLL1_SW_CLK_SEL;
 	}
@@ -2384,15 +2384,20 @@ int __init mxc_clocks_init(void)
 	reg &= ~MXC_CCM_CCSR_STEP_SEL_MASK;
 	__raw_writel(reg, MXC_CCM_CCSR);
 
-
 	/* This will propagate to all children and init all the clock rates */
 	propagate_rate(&osc_clk);
 	propagate_rate(&ckih_clk);
 	propagate_rate(&ckil_clk);
 
+	/* Enable the PLLs.
+	 * They are already enabled, basically done to set the usecount.
+	 */
+	clk_enable(&pll1_sw_clk);
+	clk_enable(&pll2_sw_clk);
+	clk_enable(&pll3_sw_clk);
+
 	clk_enable(&gpt_clk[1]);
 	clk_enable(&spba_clk);
-	clk_enable(&iim_clk);
 	clk_enable(&gpc_dvfs_clk);
 	clk_enable(&ahbmux_clk[0]);
 

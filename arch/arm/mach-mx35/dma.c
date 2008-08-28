@@ -17,6 +17,12 @@
 
 #include "serial.h"
 
+#ifdef CONFIG_SND_MXC_SOC_IRAM
+#define trans_type  int_2_per
+#else
+#define trans_type emi_2_per
+#endif
+
 #define MXC_SPDIF_TXFIFO_WML      8
 #define MXC_SPDIF_RXFIFO_WML      8
 #define MXC_SPDIF_TX_REG          0x2C
@@ -202,7 +208,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_8bit_tx0_params = {
 			.watermark_level = MXC_SSI_TXFIFO_WML,
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX0_REG,
 			.peripheral_type = SSI,
-			.transfer_type = emi_2_per,
+			.transfer_type = trans_type,
 			.event_id = DMA_REQ_SSI1_TX1,
 			.bd_number = 32,
 			.word_size = TRANSFER_8BIT,
@@ -230,7 +236,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_tx0_params = {
 			.watermark_level = MXC_SSI_TXFIFO_WML,
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX0_REG,
 			.peripheral_type = SSI,
-			.transfer_type = emi_2_per,
+			.transfer_type = trans_type,
 			.event_id = DMA_REQ_SSI1_TX1,
 			.bd_number = 32,
 			.word_size = TRANSFER_16BIT,
@@ -258,7 +264,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_tx0_params = {
 			.watermark_level = MXC_SSI_TXFIFO_WML,
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX0_REG,
 			.peripheral_type = SSI,
-			.transfer_type = emi_2_per,
+			.transfer_type = trans_type,
 			.event_id = DMA_REQ_SSI1_TX1,
 			.bd_number = 32,
 			.word_size = TRANSFER_32BIT,
@@ -286,7 +292,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_8bit_tx1_params = {
 			.watermark_level = MXC_SSI_TXFIFO_WML,
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX1_REG,
 			.peripheral_type = SSI,
-			.transfer_type = emi_2_per,
+			.transfer_type = trans_type,
 			.event_id = DMA_REQ_SSI1_TX2,
 			.bd_number = 32,
 			.word_size = TRANSFER_8BIT,
@@ -314,7 +320,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_tx1_params = {
 			.watermark_level = MXC_SSI_TXFIFO_WML,
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX1_REG,
 			.peripheral_type = SSI,
-			.transfer_type = emi_2_per,
+			.transfer_type = trans_type,
 			.event_id = DMA_REQ_SSI1_TX2,
 			.bd_number = 32,
 			.word_size = TRANSFER_16BIT,
@@ -342,7 +348,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_tx1_params = {
 			.watermark_level = MXC_SSI_TXFIFO_WML,
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX1_REG,
 			.peripheral_type = SSI,
-			.transfer_type = emi_2_per,
+			.transfer_type = trans_type,
 			.event_id = DMA_REQ_SSI1_TX2,
 			.bd_number = 32,
 			.word_size = TRANSFER_32BIT,
@@ -737,6 +743,11 @@ EXPORT_SYMBOL(mxc_sdma_get_channel_params);
 void mxc_get_static_channels(mxc_dma_channel_t *chnl)
 {
 	/* No channels statically allocated for MX35 */
+#ifdef CONFIG_SDMA_IRAM
+	int i;
+	for (i = MXC_DMA_CHANNEL_IRAM; i < MAX_DMA_CHANNELS; i++)
+		chnl[i].dynamic = 0;
+#endif
 }
 
 EXPORT_SYMBOL(mxc_get_static_channels);

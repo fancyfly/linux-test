@@ -523,7 +523,6 @@ static int mxc_rtc_probe(struct platform_device *pdev)
 
 	pdata->clk = clk_get(&pdev->dev, "rtc_clk");
 	clk_enable(pdata->clk);
-
 	pdata->baseaddr = res->start;
 	pdata->ioaddr = ioremap(pdata->baseaddr, 0x40);
 	ioaddr = pdata->ioaddr;
@@ -559,6 +558,8 @@ static int mxc_rtc_probe(struct platform_device *pdev)
 	rtc_write_sync_lp(ioaddr);
 
 	plat_data = (struct mxc_srtc_platform_data *)pdev->dev.platform_data;
+	clk = clk_get(NULL, "iim_clk");
+	clk_enable(clk);
 	srtc_secmode_addr = ioremap(plat_data->srtc_sec_mode_addr, 1);
 
 	/* Check SRTC security mode */
@@ -586,6 +587,8 @@ static int mxc_rtc_probe(struct platform_device *pdev)
 		__raw_writel(0xFFFFFFFF, ioaddr + SRTC_LPSR);
 		rtc_write_sync_lp(ioaddr);
 	}
+	clk_disable(clk);
+	clk_put(clk);
 
 	rtc = rtc_device_register(pdev->name, &pdev->dev,
 				  &mxc_rtc_ops, THIS_MODULE);

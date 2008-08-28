@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Mon Aug 25 17:37:03 2008
+# Thu Aug 28 12:16:35 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -259,6 +259,11 @@ CONFIG_CMDLINE="noinitrd console=ttymxc0,115200 root=/dev/mtdblock2 rw rootfstyp
 # CONFIG_KEXEC is not set
 
 #
+# CPU Frequency scaling
+#
+# CONFIG_CPU_FREQ is not set
+
+#
 # Floating point emulation
 #
 
@@ -267,6 +272,7 @@ CONFIG_CMDLINE="noinitrd console=ttymxc0,115200 root=/dev/mtdblock2 rw rootfstyp
 #
 CONFIG_VFP=y
 CONFIG_VFPv3=y
+CONFIG_NEON=y
 
 #
 # Userspace binary formats
@@ -590,6 +596,7 @@ CONFIG_NET_PCI=y
 # CONFIG_APRICOT is not set
 # CONFIG_B44 is not set
 # CONFIG_CS89x0 is not set
+# CONFIG_FEC is not set
 # CONFIG_NETDEV_1000 is not set
 # CONFIG_NETDEV_10000 is not set
 # CONFIG_TR is not set

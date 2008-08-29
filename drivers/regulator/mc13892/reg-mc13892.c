@@ -257,7 +257,7 @@ enum {
 
 static int mc13892_get_sw_hi_bit(int sw)
 {
-	unsigned int register_val = 0, register_mask = 0;
+	unsigned int register_val = 0;
 	unsigned int reg = 0;
 
 	switch (sw) {

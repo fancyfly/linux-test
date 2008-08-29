@@ -32,7 +32,7 @@
 #endif
 
 /* Size of contiguous memory for DMA and other h/w blocks */
-#define CONSISTENT_DMA_SIZE	(14 * SZ_1M)
+#define CONSISTENT_DMA_SIZE	(32 * SZ_1M)
 
 #ifndef __ASSEMBLY__
 

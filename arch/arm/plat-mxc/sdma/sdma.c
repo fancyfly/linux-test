@@ -344,7 +344,7 @@ static unsigned short sdma_get_pc(sdma_periphT peripheral_type,
 	} else if (peripheral_type == ASRC) {
 		switch (transfer_type) {
 		case per_2_emi:
-			res = sdma_script_addrs.mxc_sdma_asrc_2_mcu_addr;
+			res = sdma_script_addrs.mxc_sdma_shp_2_mcu_addr;
 			break;
 		case emi_2_per:
 			res = sdma_script_addrs.mxc_sdma_mcu_2_shp_addr;

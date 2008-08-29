@@ -101,7 +101,6 @@ static void pmic_pdev_register(void)
 	platform_device_register(&rleds_ldm);
 	platform_device_register(&gleds_ldm);
 	platform_device_register(&bleds_ldm);
-	reg_mc13783_probe();
 }
 
 /*!
@@ -173,6 +172,9 @@ static int __devinit is_chip_onboard(struct i2c_client *client)
 
 	/*bind the right device to the driver */
 	ret = pmic_i2c_24bit_read(client, REG_IDENTIFICATION);
+
+	if (ret == -1)
+		return ret;
 
 	if (MC13892_GEN_ID_VALUE != BITFEXT(ret, MC13892_GENERATION_ID)) {
 		/*compare the address value */

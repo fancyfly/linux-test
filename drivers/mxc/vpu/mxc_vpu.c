@@ -397,7 +397,7 @@ static int vpu_dev_probe(struct platform_device *pdev)
 			return err;
 	}
 
-	if (cpu_is_mx37()) {
+	if (cpu_is_mx37() || cpu_is_mx51()) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 		if (!res) {
 			printk(KERN_ERR "vpu: unable to get VPU IRAM base\n");

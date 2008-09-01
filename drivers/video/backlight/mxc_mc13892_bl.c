@@ -21,8 +21,14 @@
 
 #include <asm/arch/pmic_light.h>
 
+/*
 #define MXC_MAX_INTENSITY 	255
 #define MXC_DEFAULT_INTENSITY 	127
+*/
+/* workaround for atlas hot issue */
+#define MXC_MAX_INTENSITY 	128
+#define MXC_DEFAULT_INTENSITY 	64
+
 #define MXC_INTENSITY_OFF 	0
 
 static int intensity;
@@ -80,8 +86,9 @@ static int __init mxcbl_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, bd);
 
-	/* according to LCD spec, set current to 18mA */
-	mc13892_bklit_set_current(LIT_MAIN, LIT_CURR_18);
+	/* according to LCD spec, current should be 18mA */
+	/* workaround for atlas hot issue, set current 15mA */
+	mc13892_bklit_set_current(LIT_MAIN, LIT_CURR_15);
 	bd->props.brightness = MXC_DEFAULT_INTENSITY;
 	bd->props.max_brightness = MXC_MAX_INTENSITY;
 	bd->props.power = FB_BLANK_UNBLANK;

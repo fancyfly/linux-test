@@ -243,6 +243,7 @@ struct sdhci_host {
 	struct resource *res;	/* IO map memory */
 	int irq;		/* Device IRQ */
 	int detect_irq;		/* Card Detect IRQ number. */
+	int sdio_enable;	/* sdio interrupt enable number. */
 	struct clk *clk;	/* Clock id */
 	int bar;		/* PCI BAR index */
 	unsigned long addr;	/* Bus address */

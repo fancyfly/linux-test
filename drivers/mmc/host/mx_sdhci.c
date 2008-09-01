@@ -103,6 +103,12 @@ static unsigned int debug_quirks;
 static unsigned int mxc_wml_value = 512;
 static unsigned int *adma_des_table;
 
+#ifndef MXC_SDHCI_NUM
+#define MXC_SDHCI_NUM	4
+#endif
+
+static struct sdhci_chip *mxc_fix_chips[MXC_SDHCI_NUM];
+
 static void sdhci_prepare_data(struct sdhci_host *, struct mmc_data *);
 static void sdhci_finish_data(struct sdhci_host *);
 
@@ -113,6 +119,25 @@ static void sdhci_finish_command(struct sdhci_host *);
 extern void gpio_sdhc_active(int module);
 extern void gpio_sdhc_inactive(int module);
 static void sdhci_dma_irq(void *devid, int error, unsigned int cnt);
+
+void mxc_mmc_force_detect(int id)
+{
+	struct sdhci_host *host;
+	if ((id < 0) || (id >= MXC_SDHCI_NUM))
+		return;
+	if (!mxc_fix_chips[id])
+		return;
+	host = mxc_fix_chips[id]->hosts[0];
+	if (host->flags & SDHCI_CD_PRESENT)
+		return;
+	if (host->detect_irq)
+		return;
+
+	schedule_work(&host->cd_wq);
+	return;
+}
+
+EXPORT_SYMBOL(mxc_mmc_force_detect);
 
 static void sdhci_dumpregs(struct sdhci_host *host)
 {
@@ -966,23 +991,41 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
 	struct sdhci_host *host;
 	unsigned long flags;
-	u32 ier;
+	u32 ier, prot, clk;
 
 	host = mmc_priv(mmc);
 
 	spin_lock_irqsave(&host->lock, flags);
 
+	if (enable) {
+		if (host->sdio_enable++)
+			goto exit_unlock;
+	} else {
+		if (--(host->sdio_enable))
+			goto exit_unlock;
+	}
 	ier = readl(host->ioaddr + SDHCI_INT_ENABLE);
+	prot = readl(host->ioaddr + SDHCI_HOST_CONTROL);
+	clk = readl(host->ioaddr + SDHCI_CLOCK_CONTROL);
 
-	ier &= ~SDHCI_INT_CARD_INT;
-	if (enable)
+	if (enable) {
 		ier |= SDHCI_INT_CARD_INT;
+		prot |= SDHCI_CTRL_D3CD;
+		clk |= SDHCI_CLOCK_PER_EN | SDHCI_CLOCK_IPG_EN;
+	} else {
+		ier &= ~SDHCI_INT_CARD_INT;
+		prot &= ~SDHCI_CTRL_D3CD;
+		clk &= ~(SDHCI_CLOCK_PER_EN | SDHCI_CLOCK_IPG_EN);
+	}
+	writel(SDHCI_INT_CARD_INT, host->ioaddr + SDHCI_INT_STATUS);
 
+	writel(prot, host->ioaddr + SDHCI_HOST_CONTROL);
 	writel(ier, host->ioaddr + SDHCI_INT_ENABLE);
 	writel(ier, host->ioaddr + SDHCI_SIGNAL_ENABLE);
+	writel(clk, host->ioaddr + SDHCI_CLOCK_CONTROL);
 
 	mmiowb();
-
+exit_unlock:
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
@@ -1310,6 +1353,8 @@ static void esdhc_cd_callback(struct work_struct *work)
 
 	mmc_detect_change(host->mmc, msecs_to_jiffies(500));
 
+	if (!host->detect_irq)
+		return;
 	do {
 		cd_status = host->plat_data->status(host->mmc->parent);
 		if (cd_status)
@@ -1570,8 +1615,10 @@ static int __devinit sdhci_probe_slot(struct platform_device
 	}
 	host->detect_irq = platform_get_irq(pdev, 1);
 	if (!host->detect_irq) {
-		ret = -ENOMEM;
-		goto out2;
+		host->flags &= ~SDHCI_CD_PRESENT;
+		if ((pdev->id >= 0) && (pdev->id < MXC_SDHCI_NUM))
+			mxc_fix_chips[pdev->id] = chip;
+		goto no_detect_irq;
 	}
 
 	do {
@@ -1589,7 +1636,7 @@ static int __devinit sdhci_probe_slot(struct platform_device
 		host->flags |= SDHCI_CD_PRESENT;
 
 	DBG("slot %d at 0x%x, irq %d\n", slot, host->res->start, host->irq);
-
+no_detect_irq:
 	if (!request_mem_region(host->res->start,
 				host->res->end -
 				host->res->start + 1, pdev->name)) {
@@ -1648,7 +1695,7 @@ static int __devinit sdhci_probe_slot(struct platform_device
 	if (caps & SDHCI_CAN_DO_HISPD)
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED;
 
-	mmc->ocr_avail = 0;
+	mmc->ocr_avail = mmc_plat->ocr_mask;
 	if (caps & SDHCI_CAN_VDD_330)
 		mmc->ocr_avail |= MMC_VDD_32_33 | MMC_VDD_33_34;
 	if (caps & SDHCI_CAN_VDD_300)
@@ -1734,9 +1781,12 @@ static int __devinit sdhci_probe_slot(struct platform_device
 
 	setup_timer(&host->timer, sdhci_timeout_timer, (unsigned long)host);
 
-	ret = request_irq(host->detect_irq, sdhci_cd_irq, 0, pdev->name, host);
-	if (ret)
-		goto out4;
+	if (host->detect_irq) {
+		ret = request_irq(host->detect_irq, sdhci_cd_irq, 0,
+				  pdev->name, host);
+		if (ret)
+			goto out4;
+	}
 
 	ret = request_irq(host->irq, sdhci_irq, IRQF_SHARED, pdev->name, host);
 	if (ret)
@@ -1781,6 +1831,10 @@ out6:
 out5:
 	if (host->detect_irq)
 		free_irq(host->detect_irq, host);
+	else {
+		if ((pdev->id >= 0) && (pdev->id < MXC_SDHCI_NUM))
+			mxc_fix_chips[pdev->id] = chip;
+	}
 out4:
 	del_timer_sync(&host->timer);
 	tasklet_kill(&host->card_tasklet);
@@ -1817,6 +1871,10 @@ static void sdhci_remove_slot(struct platform_device *pdev, int slot)
 
 	if (host->detect_irq)
 		free_irq(host->detect_irq, host);
+	else {
+		if ((pdev->id >= 0) && (pdev->id < MXC_SDHCI_NUM))
+			mxc_fix_chips[pdev->id] = NULL;
+	}
 	free_irq(host->irq, host);
 	if (chip->quirks & SDHCI_QUIRK_EXTERNAL_DMA_MODE) {
 		host->flags &= ~SDHCI_USE_EXTERNAL_DMA;

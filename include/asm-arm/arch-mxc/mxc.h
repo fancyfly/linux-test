@@ -180,7 +180,7 @@ struct mxc_keyp_platform_data {
 
 struct mxc_unifi_platform_data {
 	void (*hardreset) (void);
-
+	void (*enable) (int en);
 	/* power parameters */
 	char *reg_gpo1;
 	char *reg_gpo2;

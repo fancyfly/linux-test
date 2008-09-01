@@ -72,8 +72,7 @@ static struct sdio_dev *available_sdio_dev;
 static struct fs_driver *available_driver;
 struct mxc_unifi_platform_data *plat_data;
 
-static struct mmc_host *fsl_mmc_host;
-struct mmc_host *mxc_mmc_get_host(int id);
+extern void mxc_mmc_force_detect(int id);
 
 enum sdio_cmd_direction {
 	CMD_READ,
@@ -254,27 +253,44 @@ EXPORT_SYMBOL(fs_sdio_set_block_size);
 static void fs_unifi_power_on(int check_card)
 {
 	struct regulator_unifi *reg_unifi;
+	unsigned int tmp;
 
 	reg_unifi = plat_data->priv;
 
-	regulator_enable(reg_unifi->reg_gpo1);
-	regulator_enable(reg_unifi->reg_gpo2);
+	if (reg_unifi->reg_gpo1)
+		regulator_enable(reg_unifi->reg_gpo1);
+	if (reg_unifi->reg_gpo2)
+		regulator_enable(reg_unifi->reg_gpo2);
 
-	regulator_set_voltage(reg_unifi->reg_1v5_ana_bb, 1500000);
-	regulator_enable(reg_unifi->reg_1v5_ana_bb);
+	if (plat_data->enable)
+		plat_data->enable(1);
 
-	regulator_set_voltage(reg_unifi->reg_vdd_vpa, 3000000);
-	regulator_enable(reg_unifi->reg_vdd_vpa);
-
+	if (reg_unifi->reg_1v5_ana_bb) {
+		tmp = regulator_get_voltage(reg_unifi->reg_1v5_ana_bb);
+		if (tmp < 1500000)
+			regulator_set_voltage(reg_unifi->reg_1v5_ana_bb,
+					     1500000);
+		regulator_enable(reg_unifi->reg_1v5_ana_bb);
+	}
+	if (reg_unifi->reg_vdd_vpa) {
+		tmp = regulator_get_voltage(reg_unifi->reg_vdd_vpa);
+		if (tmp < 3000000)
+			regulator_set_voltage(reg_unifi->reg_vdd_vpa, 3000000);
+		regulator_enable(reg_unifi->reg_vdd_vpa);
+	}
 	/* WL_1V5DD should come on last, 10ms after other supplies */
 	msleep(10);
-	regulator_set_voltage(reg_unifi->reg_1v5_dd, 1500000);
-	regulator_enable(reg_unifi->reg_1v5_dd);
+	if (reg_unifi->reg_1v5_dd) {
+		tmp = regulator_get_voltage(reg_unifi->reg_1v5_dd);
+		if (tmp < 1500000)
+			regulator_set_voltage(reg_unifi->reg_1v5_dd, 1500000);
+		regulator_enable(reg_unifi->reg_1v5_dd);
+	}
 	msleep(10);
-	if (check_card && fsl_mmc_host) {
+	if (check_card) {
 		do_sdio_hard_reset(NULL);
 		msleep(500);
-		mmc_detect_change(fsl_mmc_host, msecs_to_jiffies(100));
+		mxc_mmc_force_detect(plat_data->host_id);
 	}
 }
 
@@ -290,13 +306,25 @@ static void fs_unifi_power_off(int check_card)
 	struct regulator_unifi *reg_unifi;
 
 	reg_unifi = plat_data->priv;
-	regulator_disable(reg_unifi->reg_gpo2);
-	regulator_disable(reg_unifi->reg_1v5_ana_bb);
-	regulator_disable(reg_unifi->reg_1v5_dd);
-	regulator_disable(reg_unifi->reg_vdd_vpa);
+	if (reg_unifi->reg_1v5_dd)
+		regulator_disable(reg_unifi->reg_1v5_dd);
+	if (reg_unifi->reg_vdd_vpa)
+		regulator_disable(reg_unifi->reg_vdd_vpa);
 
-	if (check_card && fsl_mmc_host)
-		mmc_detect_change(fsl_mmc_host, msecs_to_jiffies(5));
+	if (reg_unifi->reg_1v5_ana_bb)
+		regulator_disable(reg_unifi->reg_1v5_ana_bb);
+
+	if (plat_data->enable)
+		plat_data->enable(0);
+
+	if (reg_unifi->reg_gpo2)
+		regulator_disable(reg_unifi->reg_gpo2);
+
+	if (reg_unifi->reg_gpo1)
+		regulator_disable(reg_unifi->reg_gpo1);
+
+	if (check_card)
+		mxc_mmc_force_detect(plat_data->host_id);
 
 }
 
@@ -441,6 +469,8 @@ static int fs_sdio_probe(struct sdio_func *func,
 
 	/* Allocate our private context */
 	fdev = kmalloc(sizeof(struct sdio_dev), GFP_KERNEL);
+	if (!fdev)
+		return -ENOMEM;
 	available_sdio_dev = fdev;
 	memset(fdev, 0, sizeof(struct sdio_dev));
 	fdev->func = func;
@@ -505,63 +535,78 @@ static int fs_unifi_init(void)
 	int err = 0;
 
 	plat_data = get_unifi_plat_data();
-	fsl_mmc_host = mxc_mmc_get_host(plat_data->host_id);
-	if (!fsl_mmc_host || !plat_data)
+
+	if (!plat_data)
 		return -ENOENT;
 
 	reg_unifi = kzalloc(sizeof(struct regulator_unifi), GFP_KERNEL);
+	if (!reg_unifi)
+		return -ENOMEM;
 
-	reg = regulator_get(NULL, plat_data->reg_gpo1);
-	if (reg != ERR_PTR(-ENOENT))
-		reg_unifi->reg_gpo1 = reg;
-	else {
-		err = -EINVAL;
-		goto err_reg_gpo1;
+	if (plat_data->reg_gpo1) {
+		reg = regulator_get(NULL, plat_data->reg_gpo1);
+		if (!IS_ERR(reg))
+			reg_unifi->reg_gpo1 = reg;
+		else {
+			err = -EINVAL;
+			goto err_reg_gpo1;
+		}
 	}
 
-	reg = regulator_get(NULL, plat_data->reg_gpo2);
-	if (reg != ERR_PTR(-ENOENT))
-		reg_unifi->reg_gpo2 = reg;
-	else {
-		err = -EINVAL;
-		goto err_reg_gpo2;
+	if (plat_data->reg_gpo2) {
+		reg = regulator_get(NULL, plat_data->reg_gpo2);
+		if (!IS_ERR(reg))
+			reg_unifi->reg_gpo2 = reg;
+		else {
+			err = -EINVAL;
+			goto err_reg_gpo2;
+		}
 	}
 
-	reg = regulator_get(NULL, plat_data->reg_1v5_ana_bb);
-	if (reg != ERR_PTR(-ENOENT))
-		reg_unifi->reg_1v5_ana_bb = reg;
-	else {
-		err = -EINVAL;
-		goto err_reg_1v5_ana_bb;
+	if (plat_data->reg_1v5_ana_bb) {
+		reg = regulator_get(NULL, plat_data->reg_1v5_ana_bb);
+		if (!IS_ERR(reg))
+			reg_unifi->reg_1v5_ana_bb = reg;
+		else {
+			err = -EINVAL;
+			goto err_reg_1v5_ana_bb;
+		}
 	}
 
-	reg = regulator_get(NULL, plat_data->reg_vdd_vpa);
-	if (reg != ERR_PTR(-ENOENT))
-		reg_unifi->reg_vdd_vpa = reg;
-	else {
-		err = -EINVAL;
-		goto err_reg_vdd_vpa;
+	if (plat_data->reg_vdd_vpa) {
+		reg = regulator_get(NULL, plat_data->reg_vdd_vpa);
+		if (!IS_ERR(reg))
+			reg_unifi->reg_vdd_vpa = reg;
+		else {
+			err = -EINVAL;
+			goto err_reg_vdd_vpa;
+		}
 	}
 
-	reg = regulator_get(NULL, plat_data->reg_1v5_dd);
-	if (reg != ERR_PTR(-ENOENT))
-		reg_unifi->reg_1v5_dd = reg;
-	else {
-		err = -EINVAL;
-		goto err_reg_1v5_dd;
+	if (plat_data->reg_1v5_dd) {
+		reg = regulator_get(NULL, plat_data->reg_1v5_dd);
+		if (!IS_ERR(reg))
+			reg_unifi->reg_1v5_dd = reg;
+		else {
+			err = -EINVAL;
+			goto err_reg_1v5_dd;
+		}
 	}
-
 	plat_data->priv = reg_unifi;
 	return 0;
 
 err_reg_1v5_dd:
-	regulator_put(reg_unifi->reg_vdd_vpa, NULL);
+	if (reg_unifi->reg_vdd_vpa)
+		regulator_put(reg_unifi->reg_vdd_vpa, NULL);
 err_reg_vdd_vpa:
-	regulator_put(reg_unifi->reg_1v5_ana_bb, NULL);
+	if (reg_unifi->reg_1v5_ana_bb)
+		regulator_put(reg_unifi->reg_1v5_ana_bb, NULL);
 err_reg_1v5_ana_bb:
-	regulator_put(reg_unifi->reg_gpo2, NULL);
+	if (reg_unifi->reg_gpo2)
+		regulator_put(reg_unifi->reg_gpo2, NULL);
 err_reg_gpo2:
-	regulator_put(reg_unifi->reg_gpo1, NULL);
+	if (reg_unifi->reg_gpo1)
+		regulator_put(reg_unifi->reg_gpo1, NULL);
 err_reg_gpo1:
 	kfree(reg_unifi);
 	return err;
@@ -574,11 +619,20 @@ int fs_unifi_remove(void)
 	reg_unifi = plat_data->priv;
 	plat_data->priv = NULL;
 
-	regulator_put(reg_unifi->reg_1v5_dd, NULL);
-	regulator_put(reg_unifi->reg_vdd_vpa, NULL);
-	regulator_put(reg_unifi->reg_1v5_ana_bb, NULL);
-	regulator_put(reg_unifi->reg_gpo2, NULL);
-	regulator_put(reg_unifi->reg_gpo1, NULL);
+	if (reg_unifi->reg_1v5_dd)
+		regulator_put(reg_unifi->reg_1v5_dd, NULL);
+	if (reg_unifi->reg_vdd_vpa)
+		regulator_put(reg_unifi->reg_vdd_vpa, NULL);
+
+	if (reg_unifi->reg_1v5_ana_bb)
+		regulator_put(reg_unifi->reg_1v5_ana_bb, NULL);
+
+	if (reg_unifi->reg_gpo2)
+		regulator_put(reg_unifi->reg_gpo2, NULL);
+
+	if (reg_unifi->reg_gpo1)
+		regulator_put(reg_unifi->reg_gpo1, NULL);
+
 	kfree(reg_unifi);
 	return 0;
 }

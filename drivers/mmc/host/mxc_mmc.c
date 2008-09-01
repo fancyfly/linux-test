@@ -315,17 +315,15 @@ static int mxcmci_data_done(struct mxcmci_host *host, unsigned int stat);
 #define MAX_HOST 10
 static struct mmc_host *hosts[MAX_HOST];
 
-struct mmc_host *mxc_mmc_get_host(int id)
+void mxc_mmc_force_detect(int id)
 {
 	if (id < MAX_HOST)
-		return hosts[id];
-	else
-		return NULL;
+		mmc_detect_change(hosts[id], msecs_to_jiffies(100));
 }
-EXPORT_SYMBOL(mxc_mmc_get_host);
+EXPORT_SYMBOL(mxc_mmc_force_detect);
 
 /*!
- * This function sets the SDHC register to stop the clock and waits for the
+  This function sets the SDHC register to stop the clock and waits for the
  * clock stop indication.
  */
 static void mxcmci_stop_clock(struct mxcmci_host *host, bool wait)

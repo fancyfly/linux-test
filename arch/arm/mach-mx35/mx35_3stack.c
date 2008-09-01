@@ -299,6 +299,45 @@ static inline void mxc_init_mlb(void)
 }
 #endif
 
+#if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
+static void mxc_unifi_hardreset(void)
+{
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 1, 0);
+	msleep(100);
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 1, 1);
+}
+
+static void mxc_unifi_enable(int en)
+{
+	if (en) {
+		pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 5, 1);
+		msleep(10);
+	} else
+		pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 5, 0);
+}
+
+static struct mxc_unifi_platform_data unifi_data = {
+	.hardreset = mxc_unifi_hardreset,
+	.enable = mxc_unifi_enable,
+	.reg_1v5_ana_bb = "SW4",
+	.reg_vdd_vpa = "SW1",
+	.reg_1v5_dd = "SW4",
+	.host_id = 1,
+};
+
+struct mxc_unifi_platform_data *get_unifi_plat_data(void)
+{
+	return &unifi_data;
+}
+#else
+struct mxc_unifi_platform_data *get_unifi_plat_data(void)
+{
+	return NULL;
+}
+#endif
+
+EXPORT_SYMBOL(get_unifi_plat_data);
+
 static struct mxc_tsc_platform_data tsc2007_data = {
 	.vdd_reg = "SW1",
 	.penup_threshold = 30,
@@ -435,7 +474,7 @@ EXPORT_SYMBOL(expio_intr_fec);
 #endif
 
 #if defined(CONFIG_MMC_IMX_ESDHCI) || defined(CONFIG_MMC_IMX_ESDHCI_MODULE)
-static struct mxc_mmc_platform_data mmc_data = {
+static struct mxc_mmc_platform_data mmc0_data = {
 	.ocr_mask = MMC_VDD_32_33,
 	.min_clk = 400000,
 	.max_clk = 52000000,
@@ -472,15 +511,60 @@ static struct platform_device mxcsdhc1_device = {
 	.id = 0,
 	.dev = {
 		.release = mxc_nop_release,
-		.platform_data = &mmc_data,
+		.platform_data = &mmc0_data,
 		},
 	.num_resources = ARRAY_SIZE(mxcsdhc1_resources),
 	.resource = mxcsdhc1_resources,
 };
 
+#if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
+static struct mxc_mmc_platform_data mmc1_data = {
+	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30 |
+		    MMC_VDD_31_32,
+	.min_clk = 150000,
+	.max_clk = 25000000,
+	.card_inserted_state = 1,
+	.status = sdhc_get_card_det_status,
+	.wp_status = sdhc_write_protect,
+	.clock_mmc = "sdhc_clk",
+};
+
+static struct resource mxcsdhc2_resources[] = {
+	[0] = {
+	       .start = MMC_SDHC2_BASE_ADDR,
+	       .end = MMC_SDHC2_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_MMC_SDHC2,
+	       .end = MXC_INT_MMC_SDHC2,
+	       .flags = IORESOURCE_IRQ,
+	},
+	[2] = {
+	       .start = 0,
+	       .end = 0,
+	       .flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device mxcsdhc2_device = {
+	.name = "mxsdhci",
+	.id = 1,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mmc1_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcsdhc2_resources),
+	.resource = mxcsdhc2_resources,
+};
+#endif
+
 static inline void mxc_init_mmc(void)
 {
 	(void)platform_device_register(&mxcsdhc1_device);
+#if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
+	(void)platform_device_register(&mxcsdhc2_device);
+#endif
 }
 #else
 static inline void mxc_init_mmc(void)

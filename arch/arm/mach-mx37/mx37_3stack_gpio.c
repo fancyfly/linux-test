@@ -636,14 +636,24 @@ void gpio_keypad_active(void)
 	mxc_request_iomux(MX37_PIN_DISP1_DAT18, IOMUX_CONFIG_ALT4);
 
 	/* fast slew rate */
-	pad_val = (PAD_CTL_SRE_FAST | PAD_CTL_PKE_NONE | PAD_CTL_100K_PU);
+	pad_val = (PAD_CTL_SRE_FAST | PAD_CTL_DRV_HIGH | PAD_CTL_22K_PU | \
+	  PAD_CTL_ODE_OPENDRAIN_ENABLE | PAD_CTL_HYS_NONE | \
+	  PAD_CTL_DDR_INPUT_CMOS | PAD_CTL_DRV_VOT_LOW);
 	/*KEY_INT */
 	mxc_iomux_set_pad(MX37_PIN_GPIO1_3, pad_val);
+
+	/* fast slew rate */
+	pad_val = (PAD_CTL_SRE_FAST | PAD_CTL_DRV_HIGH | \
+  PAD_CTL_ODE_OPENDRAIN_NONE | PAD_CTL_HYS_NONE | \
+  PAD_CTL_DDR_INPUT_CMOS | PAD_CTL_DRV_VOT_LOW);
 	/*KEY_WAKE */
 	mxc_iomux_set_pad(MX37_PIN_DISP1_DAT18, pad_val);
 
 	mxc_set_gpio_direction(MX37_PIN_DISP1_DAT18, 0);
 	mxc_set_gpio_direction(MX37_PIN_GPIO1_3, 1);
+
+	/* drive initial value */
+	mxc_set_gpio_dataout(MX37_PIN_DISP1_DAT18, 1);
 }
 
 EXPORT_SYMBOL(gpio_keypad_active);

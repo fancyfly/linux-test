@@ -224,7 +224,7 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 		writel(SDHCI_WML_128_WORDS, host->ioaddr + SDHCI_WML);
 	else
 		writel(SDHCI_WML_16_WORDS, host->ioaddr + SDHCI_WML);
-	writel(mask_u32, host->ioaddr + SDHCI_INT_ENABLE);
+	writel(mask_u32 | SDHCI_INT_CARD_INT, host->ioaddr + SDHCI_INT_ENABLE);
 	writel(mask_u32, host->ioaddr + SDHCI_SIGNAL_ENABLE);
 }
 
@@ -248,7 +248,7 @@ static void sdhci_init(struct sdhci_host *host)
 		writel(SDHCI_WML_128_WORDS, host->ioaddr + SDHCI_WML);
 	else
 		writel(SDHCI_WML_16_WORDS, host->ioaddr + SDHCI_WML);
-	writel(intmask, host->ioaddr + SDHCI_INT_ENABLE);
+	writel(intmask | SDHCI_INT_CARD_INT, host->ioaddr + SDHCI_INT_ENABLE);
 	writel(intmask, host->ioaddr + SDHCI_SIGNAL_ENABLE);
 }
 
@@ -1004,7 +1004,7 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 		if (--(host->sdio_enable))
 			goto exit_unlock;
 	}
-	ier = readl(host->ioaddr + SDHCI_INT_ENABLE);
+	ier = readl(host->ioaddr + SDHCI_SIGNAL_ENABLE);
 	prot = readl(host->ioaddr + SDHCI_HOST_CONTROL);
 	clk = readl(host->ioaddr + SDHCI_CLOCK_CONTROL);
 
@@ -1020,7 +1020,6 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	writel(SDHCI_INT_CARD_INT, host->ioaddr + SDHCI_INT_STATUS);
 
 	writel(prot, host->ioaddr + SDHCI_HOST_CONTROL);
-	writel(ier, host->ioaddr + SDHCI_INT_ENABLE);
 	writel(ier, host->ioaddr + SDHCI_SIGNAL_ENABLE);
 	writel(clk, host->ioaddr + SDHCI_CLOCK_CONTROL);
 
@@ -1434,7 +1433,8 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 	intmask &= ~SDHCI_INT_BUS_POWER;
 
 	if (intmask & SDHCI_INT_CARD_INT)
-		cardint = 1;
+		cardint = readl(host->ioaddr + SDHCI_SIGNAL_ENABLE) &
+			SDHCI_INT_CARD_INT;
 
 	intmask &= ~SDHCI_INT_CARD_INT;
 

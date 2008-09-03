@@ -871,6 +871,40 @@ static struct clk i2c_clk[] = {
 	 },
 };
 
+static void _clk_hsi2c_serial_recalc(struct clk *clk)
+{
+	u32 reg, prediv, podf;
+
+	reg = __raw_readl(MXC_CCM_CSCDR3);
+	prediv = ((reg & MXC_CCM_CSCDR3_HSI2C_CLK_PRED_MASK) >>
+		  MXC_CCM_CSCDR3_HSI2C_CLK_PRED_OFFSET) + 1;
+	podf = ((reg & MXC_CCM_CSCDR3_HSI2C_CLK_PODF_MASK) >>
+		MXC_CCM_CSCDR3_HSI2C_CLK_PODF_OFFSET) + 1;
+
+	clk->rate = clk->parent->rate / (prediv * podf);
+}
+
+static struct clk hsi2c_serial_clk = {
+	.name = "hsi2c_serial_clk",
+	.id = 0,
+	.parent = &pll3_sw_clk,
+	.enable_reg = MXC_CCM_CCGR1,
+	.enable_shift = MXC_CCM_CCGR1_CG11_OFFSET,
+	.recalc = _clk_hsi2c_serial_recalc,
+	.enable = _clk_enable,
+	.disable = _clk_disable,
+};
+
+static struct clk hsi2c_clk = {
+	.name = "hsi2c_clk",
+	.id = 0,
+	.parent = &ipg_perclk,
+	.enable_reg = MXC_CCM_CCGR1,
+	.enable_shift = MXC_CCM_CCGR1_CG12_OFFSET,
+	.enable = _clk_enable,
+	.disable = _clk_disable,
+};
+
 static void _clk_cspi_recalc(struct clk *clk)
 {
 	u32 reg, prediv, podf;
@@ -1818,6 +1852,8 @@ static struct clk *mxc_clks[] = {
 	&i2c_clk[0],
 	&i2c_clk[1],
 	&i2c_clk[2],
+	&hsi2c_clk,
+	&hsi2c_serial_clk,
 	&gpt_clk[0],
 	&gpt_clk[1],
 	&gpt_clk[2],

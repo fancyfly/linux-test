@@ -528,6 +528,49 @@ static inline void mxc_init_i2c(void)
 }
 #endif
 
+#if defined(CONFIG_I2C_MXC_HS) || defined(CONFIG_I2C_MXC_HS_MODULE)
+
+static struct resource mxci2c_hs_resources[] = {
+	[0] = {
+	       .start = HSI2C_DMA_BASE_ADDR,
+	       .end = HSI2C_DMA_BASE_ADDR + SZ_16K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_HS_I2C,
+	       .end = MXC_INT_HS_I2C,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for MXC I2C */
+static struct mxc_i2c_platform_data mxci2c_hs_data = {
+	.i2c_clk = 400000,
+};
+
+static struct platform_device mxci2c_hs_device = {
+	.name = "mxc_i2c_hs",
+	.id = 3,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxci2c_hs_data,
+		},
+	.num_resources = ARRAY_SIZE(mxci2c_hs_resources),
+	.resource = mxci2c_hs_resources
+};
+
+static inline void mxc_init_i2c_hs(void)
+{
+	if (platform_device_register(&mxci2c_hs_device) < 0)
+		dev_err(&mxci2c_hs_device.dev,
+			"Unable to register High Speed I2C device\n");
+}
+#else
+static inline void mxc_init_i2c_hs(void)
+{
+}
+#endif
+
 struct mxc_gpio_port mxc_gpio_ports[GPIO_PORT_NUM] = {
 	{
 	 .num = 0,
@@ -603,6 +646,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_wdt();
 	mxc_init_spi();
 	mxc_init_i2c();
+	mxc_init_i2c_hs();
 	mxc_init_rtc();
 	mxc_init_dma();
 	mxc_init_owire();

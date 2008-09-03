@@ -272,7 +272,6 @@ static inline void mxc_init_bl(void)
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 };
 #endif
-
 #ifdef CONFIG_I2C_MXC_SELECT2
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
@@ -284,6 +283,10 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	 .driver_name = "wm8903-i2c",
 	 .addr = 0x1a,
 	 },
+};
+#endif
+#ifdef CONFIG_I2C_MXC_HS
+static struct i2c_board_info mxc_i2c_hs_board_info[] __initdata = {
 };
 #endif
 
@@ -685,10 +688,13 @@ static void __init mxc_board_init(void)
 	i2c_register_board_info(0, mxc_i2c0_board_info,
 				ARRAY_SIZE(mxc_i2c0_board_info));
 #endif
-
 #ifdef CONFIG_I2C_MXC_SELECT2
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 				ARRAY_SIZE(mxc_i2c1_board_info));
+#endif
+#ifdef CONFIG_I2C_MXC_HS
+	i2c_register_board_info(3, mxc_i2c_hs_board_info,
+				ARRAY_SIZE(mxc_i2c_hs_board_info));
 #endif
 
 #endif

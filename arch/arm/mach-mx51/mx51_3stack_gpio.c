@@ -457,6 +457,25 @@ void gpio_i2c_inactive(int i2c_num)
 
 EXPORT_SYMBOL(gpio_i2c_inactive);
 
+void gpio_i2c_hs_active()
+{
+	mxc_request_iomux(MX51_PIN_I2C1_CLK,
+			  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+	mxc_iomux_set_pad(MX51_PIN_I2C1_CLK, 0x1E4);
+
+	mxc_request_iomux(MX51_PIN_I2C1_DAT,
+			  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+	mxc_iomux_set_pad(MX51_PIN_I2C1_DAT, 0x1E4);
+}
+
+EXPORT_SYMBOL(gpio_i2c_hs_active);
+
+void gpio_i2c_hs_inactive()
+{
+}
+
+EXPORT_SYMBOL(gpio_i2c_hs_inactive);
+
 void gpio_pmic_active(void)
 {
 	mxc_request_iomux(MX51_PIN_GPIO1_5, IOMUX_CONFIG_GPIO

@@ -53,7 +53,7 @@ int pmic_i2c_24bit_read(struct i2c_client *client, unsigned int reg_num)
 		ret = buf[0] << 16 | buf[1] << 8 | buf[2];
 		return ret;
 	} else {
-		printk(KERN_ERR "24bit read error, ret = %d\n", ret);
+		pr_debug("24bit read error, ret = %d\n", ret);
 		return -1;	/* return -1 on failure */
 	}
 }

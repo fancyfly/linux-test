@@ -187,6 +187,8 @@ typedef enum {
 	MEM_PF_V_MEM = _MAKE_CHAN(21, 28, 31, 0xFF),	/*!< V Memory to Post-filter to V Memory */
 
 	MEM_DC_SYNC = CHAN_NONE,
+	DIRECT_ASYNC0 = CHAN_NONE,
+	DIRECT_ASYNC1 = CHAN_NONE,
 #else
 	MEM_ROT_ENC_MEM = _MAKE_CHAN(1, 45, NO_DMA, NO_DMA, 48),
 	MEM_ROT_VF_MEM = _MAKE_CHAN(2, 46, NO_DMA, NO_DMA, 49),
@@ -206,6 +208,9 @@ typedef enum {
 	MEM_BG_ASYNC1 = _MAKE_ALT_CHAN(MEM_BG_ASYNC0),
 	MEM_FG_ASYNC1 = _MAKE_ALT_CHAN(MEM_FG_ASYNC0),
 
+	DIRECT_ASYNC0 = _MAKE_CHAN(13, NO_DMA, NO_DMA, NO_DMA, NO_DMA),
+	DIRECT_ASYNC1 = _MAKE_CHAN(14, NO_DMA, NO_DMA, NO_DMA, NO_DMA),
+
 	MEM_PP_ADC = CHAN_NONE,
 	ADC_SYS2 = CHAN_NONE,
 #endif
@@ -223,6 +228,9 @@ typedef enum {
 	IPU_INPUT_BUFFER = IPU_VIDEO_IN_BUFFER,
 	IPU_SEC_INPUT_BUFFER = IPU_GRAPH_IN_BUFFER,
 } ipu_buffer_t;
+
+#define IPU_PANEL_SERIAL		1
+#define IPU_PANEL_PARALLEL		2
 
 /*!
  * Enumeration of DI ports for ADC.
@@ -383,6 +391,9 @@ typedef union {
 		uint32_t in_pixel_fmt;
 		uint32_t out_pixel_fmt;
 	} mem_dp_fg_sync;
+	struct {
+		uint32_t di;
+	} direct_async;
 	struct {
 		display_port_t disp;
 		mcu_mode_t ch_mode;
@@ -708,6 +719,7 @@ typedef struct {
 	unsigned data_pol:1;
 	unsigned clk_pol:1;
 	unsigned cs_pol:1;
+	unsigned rs_pol:1;
 	unsigned addr_pol:1;
 	unsigned read_pol:1;
 	unsigned write_pol:1;
@@ -843,6 +855,10 @@ int32_t ipu_disp_set_global_alpha(ipu_channel_t channel, bool enable,
 				  uint8_t alpha);
 int32_t ipu_disp_set_color_key(ipu_channel_t channel, bool enable,
 			       uint32_t colorKey);
+
+int ipu_init_async_panel(int disp, int type, uint32_t cycle_time,
+			 uint32_t pixel_fmt, ipu_adc_sig_cfg_t sig);
+void ipu_disp_direct_write(ipu_channel_t channel, u32 value, u32 offset);
 
 /* ADC API */
 int32_t ipu_adc_write_template(display_port_t disp, uint32_t * pCmd,

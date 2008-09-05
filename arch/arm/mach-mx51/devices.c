@@ -13,6 +13,7 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/err.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
@@ -174,6 +175,59 @@ static void mxc_init_wdt(void)
 }
 #else
 static inline void mxc_init_wdt(void)
+{
+}
+#endif
+
+#if defined(CONFIG_MXC_IPU_V3) || defined(CONFIG_MXC_IPU_V3_MODULE)
+static struct mxc_ipu_config mxc_ipu_data = {
+	.rev = 1,
+};
+
+static struct resource ipu_resources[] = {
+	{
+	 .start = IPU_CTRL_BASE_ADDR,
+	 .end = IPU_CTRL_BASE_ADDR + SZ_512M,
+	 .flags = IORESOURCE_MEM,
+	 },
+	{
+	 .start = MXC_INT_IPU_SYN,
+	 .flags = IORESOURCE_IRQ,
+	 },
+	{
+	 .start = MXC_INT_IPU_ERR,
+	 .flags = IORESOURCE_IRQ,
+	 },
+};
+
+static struct platform_device mxc_ipu_device = {
+	.name = "mxc_ipu",
+	.id = -1,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_ipu_data,
+		},
+	.num_resources = ARRAY_SIZE(ipu_resources),
+	.resource = ipu_resources,
+};
+
+static void mxc_init_ipu(void)
+{
+	u32 base = IO_ADDRESS(MIPI_HSC_BASE_ADDR);
+	struct clk *clk;
+
+	/* Temporarily setup MIPI module to legacy mode */
+	clk = clk_get(NULL, "mipi_hsp_clk");
+	if (!IS_ERR(clk)) {
+		clk_enable(clk);
+		__raw_writel(0xF00, base);
+		clk_disable(clk);
+		clk_put(clk);
+	}
+	platform_device_register(&mxc_ipu_device);
+}
+#else
+static inline void mxc_init_ipu(void)
 {
 }
 #endif
@@ -490,6 +544,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_rtc();
 	mxc_init_dma();
 	mxc_init_owire();
+	mxc_init_ipu();
 
 	return 0;
 }

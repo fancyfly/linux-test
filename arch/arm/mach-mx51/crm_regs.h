@@ -365,6 +365,7 @@
 #define MXC_CCM_CDCR_PERIPH_CLK_DVFS_PODF_MASK		(0x3)
 
 /* Define the bits in register CLPCR */
+#define MXC_CCM_CLPCR_BYPASS_HSC_LPM_HS		(0x1 << 23)
 #define MXC_CCM_CLPCR_BYPASS_SCC_LPM_HS		(0x1 << 22)
 #define MXC_CCM_CLPCR_BYPASS_MAX_LPM_HS		(0x1 << 21)
 #define MXC_CCM_CLPCR_BYPASS_SDMA_LPM_HS		(0x1 << 20)

@@ -13,6 +13,7 @@
 
 #include <linux/kernel.h>
 #include <linux/clk.h>
+#include <linux/platform_device.h>
 #include <asm/io.h>
 #include <asm/hardware.h>
 #include <asm/proc-fns.h>
@@ -30,6 +31,16 @@
  */
 
 extern int mxc_jtag_enabled;
+
+void mxc_pg_enable(struct platform_device *pdev)
+{
+}
+EXPORT_SYMBOL(mxc_pg_enable);
+
+void mxc_pg_disable(struct platform_device *pdev)
+{
+}
+EXPORT_SYMBOL(mxc_pg_disable);
 
 /*!
  * This function puts the CPU into idle mode. It is called by default_idle()

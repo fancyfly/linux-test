@@ -558,6 +558,65 @@ static struct clk ipu_di_clk = {
 	.disable = _clk_disable,
 };
 
+static int _clk_hsc_enable(struct clk *clk)
+{
+	u32 reg;
+
+	/* Clear HSC ack bypass */
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg &= ~MXC_CCM_CLPCR_BYPASS_HSC_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
+
+	_clk_enable(clk);
+
+	return 0;
+}
+
+static void _clk_hsc_disable(struct clk *clk)
+{
+	u32 reg;
+
+	_clk_disable(clk);
+
+	/* Set HSC ack bypass */
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg |= MXC_CCM_CLPCR_BYPASS_HSC_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
+}
+
+static struct clk mipi_esc_clk = {
+	.name = "mipi_esc_clk",
+	.parent = &pll2_sw_clk,
+	.enable_reg = MXC_CCM_CCGR4,
+	.enable_shift = MXC_CCM_CCGR4_CG5_OFFSET,
+};
+
+static struct clk mipi_hsc2_clk = {
+	.name = "mipi_hsc2_clk",
+	.parent = &pll2_sw_clk,
+	.enable_reg = MXC_CCM_CCGR4,
+	.enable_shift = MXC_CCM_CCGR4_CG4_OFFSET,
+	.secondary = &mipi_esc_clk,
+};
+
+static struct clk mipi_hsc1_clk = {
+	.name = "mipi_hsc1_clk",
+	.parent = &pll2_sw_clk,
+	.enable_reg = MXC_CCM_CCGR4,
+	.enable_shift = MXC_CCM_CCGR4_CG3_OFFSET,
+	.secondary = &mipi_hsc2_clk,
+};
+
+static struct clk mipi_hsp_clk = {
+	.name = "mipi_hsp_clk",
+	.parent = &ipu_clk,
+	.enable_reg = MXC_CCM_CCGR4,
+	.enable_shift = MXC_CCM_CCGR4_CG6_OFFSET,
+	.enable = _clk_hsc_enable,
+	.disable = _clk_hsc_disable,
+	.secondary = &mipi_hsc1_clk,
+};
+
 static int _clk_tve_set_parent(struct clk *clk, struct clk *parent)
 {
 	u32 reg;
@@ -1795,6 +1854,10 @@ static struct clk *mxc_clks[] = {
 	&pgc_clk,
 	&rtc_clk,
 	&ata_clk,
+	&mipi_hsc1_clk,
+	&mipi_hsc2_clk,
+	&mipi_esc_clk,
+	&mipi_hsp_clk,
 };
 
 static void clk_tree_init(void)

@@ -1,6 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
+# Wed Aug 13 14:07:25 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -354,6 +355,7 @@ CONFIG_DEFAULT_TCP_CONG="cubic"
 #
 # CONFIG_NET_PKTGEN is not set
 # CONFIG_HAMRADIO is not set
+# CONFIG_CAN is not set
 # CONFIG_IRDA is not set
 # CONFIG_BT is not set
 # CONFIG_AF_RXRPC is not set
@@ -845,7 +847,13 @@ CONFIG_FB_MXC_EPSON_VGA_SYNC_PANEL=y
 # CONFIG_FB_UVESA is not set
 # CONFIG_FB_S1D13XXX is not set
 # CONFIG_FB_VIRTUAL is not set
-# CONFIG_BACKLIGHT_LCD_SUPPORT is not set
+CONFIG_BACKLIGHT_LCD_SUPPORT=y
+CONFIG_LCD_CLASS_DEVICE=y
+# CONFIG_LCD_LTV350QV is not set
+CONFIG_BACKLIGHT_CLASS_DEVICE=y
+# CONFIG_BACKLIGHT_CORGI is not set
+CONFIG_BACKLIGHT_MXC=y
+CONFIG_BACKLIGHT_MXC_PMIC=y
 
 #
 # Display device support
@@ -967,6 +975,14 @@ CONFIG_MXC_MC13892_POWER=y
 
 #
 # MXC Bluetooth support
+#
+
+#
+# Broadcom GPS ioctrl support
+#
+
+#
+# MXC Media Local Bus Driver
 #
 
 #

@@ -256,6 +256,15 @@ static inline void mxc_init_fb(void)
 }
 #endif
 
+static struct platform_device mxcbl_device = {
+	.name = "mxc_mc13892_bl",
+};
+
+static inline void mxc_init_bl(void)
+{
+	platform_device_register(&mxcbl_device);
+}
+
 #ifdef CONFIG_I2C_MXC
 
 #ifdef CONFIG_I2C_MXC_SELECT1
@@ -491,6 +500,7 @@ static void __init mxc_board_init(void)
 	mxc_expio_init();
 	mxc_init_enet();
 	mxc_init_fb();
+	mxc_init_bl();
 	mxc_init_keypad();
 	mxc_init_nand_mtd();
 

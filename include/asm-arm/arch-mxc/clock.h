@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -85,6 +85,7 @@ int clk_set_pll_dither(struct clk *clk, unsigned int pll_ppm);
 #define RATE_PROPAGATES		(1 << 0)	/* Program children too */
 #define ALWAYS_ENABLED		(1 << 1)	/* Clock cannot be disabled */
 #define RATE_FIXED		(1 << 2)	/* Fixed clock rate */
+#define CPU_FREQ_TRIG_UPDATE	(1 << 3)	/* CPUFREQ trig update */
 
 #endif				/* __ASSEMBLY__ */
 #endif				/* __ASM_ARCH_MXC_CLOCK_H__ */

@@ -39,6 +39,7 @@
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
 #include <linux/proc_fs.h>
+#include <linux/cpufreq.h>
 
 #include <asm/io.h>
 #include <asm/semaphore.h>
@@ -202,6 +203,11 @@ int clk_enable(struct clk *clk)
 
 	spin_unlock_irqrestore(&clockfw_lock, flags);
 
+#if defined(CONFIG_CPU_FREQ)
+	if ((clk->flags & CPU_FREQ_TRIG_UPDATE)
+	    && (clk_get_usecount(clk) == 1))
+		cpufreq_update_policy(0);
+#endif
 	return ret;
 }
 
@@ -229,6 +235,12 @@ void clk_disable(struct clk *clk)
 	__clk_disable(clk);
 
 	spin_unlock_irqrestore(&clockfw_lock, flags);
+
+#if defined(CONFIG_CPU_FREQ)
+	if ((clk->flags & CPU_FREQ_TRIG_UPDATE)
+	    && (clk_get_usecount(clk) == 0))
+		cpufreq_update_policy(0);
+#endif
 }
 
 EXPORT_SYMBOL(clk_disable);

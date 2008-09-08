@@ -232,6 +232,27 @@ static inline void mxc_init_ipu(void)
 }
 #endif
 
+#if defined(CONFIG_MXC_VPU) || defined(CONFIG_MXC_VPU_MODULE)
+/*! Platform Data for MXC VPU */
+static struct platform_device mxcvpu_device = {
+	.name = "mxc_vpu",
+	.dev = {
+		.release = mxc_nop_release,
+		},
+	.id = 0,
+};
+
+static inline void mxc_init_vpu(void)
+{
+	if (platform_device_register(&mxcvpu_device) < 0)
+		printk(KERN_ERR "Error: Registering the VPU.\n");
+}
+#else
+static inline void mxc_init_vpu(void)
+{
+}
+#endif
+
 /* SPI controller and device data */
 #if defined(CONFIG_SPI_MXC) || defined(CONFIG_SPI_MXC_MODULE)
 
@@ -545,6 +566,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_dma();
 	mxc_init_owire();
 	mxc_init_ipu();
+	mxc_init_vpu();
 
 	return 0;
 }

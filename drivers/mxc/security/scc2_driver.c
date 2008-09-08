@@ -112,8 +112,8 @@ static volatile void *scc_base;
     #scc_monitor_security_failure() and processed by
     #scc_perform_callbacks() */
 static void (*scc_callbacks[SCC_CALLBACK_SIZE]) (void);
-
-uint32_t scm_ram_phys_base = SCC_IRAM_BASE_ADDR;
+/*SCC need IRAM's base address but use only the partitions allocated for it.*/
+uint32_t scm_ram_phys_base = IRAM_BASE_ADDR;
 
 void *scm_ram_base = NULL;
 

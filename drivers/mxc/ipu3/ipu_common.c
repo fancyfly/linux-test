@@ -302,14 +302,13 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 	__raw_writel(0xFFFFFFFF, IPU_INT_CTRL(9));
 	__raw_writel(0xFFFFFFFF, IPU_INT_CTRL(10));
 
-
-	spin_lock_irqsave(&ipu_lock, lock_flags);
-
 	ipu_conf = __raw_readl(IPU_CONF);
 	if (ipu_conf == 0) {
 		g_ipu_clk_enabled = true;
 		clk_enable(g_ipu_clk);
 	}
+
+	spin_lock_irqsave(&ipu_lock, lock_flags);
 
 	if (g_channel_init_mask & (1L << IPU_CHAN_ID(channel))) {
 		dev_err(g_ipu_dev, "Warning: channel already initialized %d\n",
@@ -570,12 +569,12 @@ void ipu_uninit_channel(ipu_channel_t channel)
 
 	__raw_writel(ipu_conf, IPU_CONF);
 
+	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+
 	if (ipu_conf == 0) {
 		clk_disable(g_ipu_clk);
 		g_ipu_clk_enabled = false;
 	}
-
-	spin_unlock_irqrestore(&ipu_lock, lock_flags);
 
 	WARN_ON(ipu_ic_use_count < 0);
 	WARN_ON(ipu_rot_use_count < 0);

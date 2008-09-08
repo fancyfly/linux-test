@@ -2018,6 +2018,7 @@ static struct clk ipu_clk = {
 	.enable_shift = MXC_CCM_CCGR4_CG15_OFFSET,
 	.enable = _clk_enable,
 	.disable = _clk_disable,
+	.flags = CPU_FREQ_TRIG_UPDATE,
 };
 
 static struct clk ipu_di_clk = {
@@ -2108,6 +2109,7 @@ static struct clk vpu_clk[] = {
 	 .enable_shift = MXC_CCM_CCGR5_CG7_OFFSET,
 	 .disable = _clk_disable,
 	 .secondary = &vpu_clk[1],
+	 .flags = CPU_FREQ_TRIG_UPDATE,
 	 },
 	{
 	 .name = "vpu_core_clk",

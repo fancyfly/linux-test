@@ -2105,7 +2105,7 @@ static void __inline__ fec_get_mac(struct net_device *dev)
 	}
 
 	memset(tmpaddr, 0, ETH_ALEN);
-	if (!machine_is_mx35_3ds()) {
+	if (!(machine_is_mx35_3ds() || machine_is_mx51_3ds())) {
 	/*
 	 * Get MAC address from IIM.
 	 * If it is all 1's or 0's, use the default.
@@ -2158,17 +2158,20 @@ __setup("fec_mac=", fec_mac_setup);
 
 static void __inline__ fec_enable_phy_intr(void)
 {
-	enable_irq(expio_intr_fec);
+	if (expio_intr_fec > 0)
+		enable_irq(expio_intr_fec);
 }
 
 static void __inline__ fec_disable_phy_intr(void)
 {
-	disable_irq(expio_intr_fec);
+	if (expio_intr_fec > 0)
+		disable_irq(expio_intr_fec);
 }
 
 static void __inline__ fec_phy_ack_intr(void)
 {
-	disable_irq(expio_intr_fec);
+	if (expio_intr_fec > 0)
+		disable_irq(expio_intr_fec);
 }
 
 static void __inline__ fec_localhw_setup(void)

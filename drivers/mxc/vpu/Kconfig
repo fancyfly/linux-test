@@ -14,7 +14,7 @@ config MXC_VPU
 
 config MXC_VPU_IRAM
 	  tristate "Use IRAM as temporary buffer for VPU to enhance performace"
-	  depends on ARCH_MX37
+	  depends on (ARCH_MX37 || ARCH_MX51)
 	  default y
 	---help---
 	  The VPU can use internal RAM as temporary buffer to save external

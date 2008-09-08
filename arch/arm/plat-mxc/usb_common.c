@@ -261,6 +261,40 @@ static void usbh1_set_serial_xcvr(void)
 		   UCTRL_H1PM;			/* power mask */
 }
 
+static void usbh1_set_ulpi_xcvr(void)
+{
+	pr_debug("%s: \n", __func__);
+
+	/* Stop then Reset */
+	UH1_USBCMD &= ~UCMD_RUN_STOP;
+	while (UH1_USBCMD & UCMD_RUN_STOP) ;
+
+	UH1_USBCMD |= UCMD_RESET;
+	while (UH1_USBCMD & UCMD_RESET) ;
+
+	/* Select the clock from external PHY */
+	USB_CTRL_1 |= USB_CTRL_UH1_EXT_CLK_EN;
+
+	/* select ULPI PHY PTS=2 */
+	UH1_PORTSC1 = (UH1_PORTSC1 & ~PORTSC_PTS_MASK) | PORTSC_PTS_ULPI;
+
+	USBCTRL |= UCTRL_H1WIE; /* HOST1 wakeup intr enable */
+	USBCTRL |= UCTRL_H1UIE; /* Host1 ULPI interrupt enable */
+	USBCTRL &= ~UCTRL_H1PM; /* HOST1 power mask */
+
+	/* Interrupt Threshold Control:Immediate (no threshold) */
+	UH1_USBCMD &= UCMD_ITC_NO_THRESHOLD;
+
+	UH1_USBCMD |= UCMD_RESET;       /* reset the controller */
+
+	/* allow controller to reset, and leave time for
+	* the ULPI transceiver to reset too.
+	*/
+	msleep(100);
+
+	/* Turn off the usbpll for ulpi tranceivers */
+	clk_disable(usb_clk);
+}
 static void usbh2_set_ulpi_xcvr(void)
 {
 	u32 tmp;
@@ -323,6 +357,7 @@ static void usbh2_set_serial_xcvr(void)
 
 extern void usbh2_get_xcvr_power(struct device *dev);
 extern void usbh2_put_xcvr_power(struct device *dev);
+extern void gpio_usbh1_setback_stp(void);
 
 int fsl_usb_host_init(struct platform_device *pdev)
 {
@@ -363,6 +398,12 @@ int fsl_usb_host_init(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+	if (cpu_is_mx51()) {
+		usb_clk = clk_get(NULL, "usboh3_clk");
+		clk_enable(usb_clk);
+		clk_put(usb_clk);
+	}
+
 	if (xops->init)
 		xops->init(xops);
 
@@ -372,7 +413,11 @@ int fsl_usb_host_init(struct platform_device *pdev)
 		else
 			usbh1_set_serial_xcvr();
 	} else if (xops->xcvr_type == PORTSC_PTS_ULPI) {
-		usbh2_set_ulpi_xcvr();
+		if (cpu_is_mx51()) {
+			usbh1_set_ulpi_xcvr();
+			gpio_usbh1_setback_stp();
+		} else
+			usbh2_set_ulpi_xcvr();
 	}
 
 	pr_debug("%s: %s success\n", __func__, pdata->name);
@@ -396,6 +441,12 @@ void fsl_usb_host_uninit(struct fsl_usb2_platform_data *pdata)
 		 && (machine_is_mx31_3ds())) {
 		usbh2_put_xcvr_power(&(pdata->xcvr_pwr->usb_pdev->dev));
 		kfree(pdata->xcvr_pwr);
+	}
+
+	if (cpu_is_mx51()) {
+		usb_clk = clk_get(NULL, "usboh3_clk");
+		clk_disable(usb_clk);
+		clk_put(usb_clk);
 	}
 }
 EXPORT_SYMBOL(fsl_usb_host_uninit);
@@ -526,24 +577,35 @@ static void otg_set_utmi_xcvr(void)
 	UOG_USBCMD |= UCMD_RESET;
 	while ((UOG_USBCMD) & (UCMD_RESET)) ;
 
-	USBCTRL &= ~UCTRL_PP;	/* USBOTG_PWR low active */
-	USBCTRL &= ~UCTRL_OCPOL;	/* OverCurrent Polarity is Low Active */
+	if (cpu_is_mx51()) {
+		/* OTG Polarity of Overcurrent is Low active */
+		USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_OC_POL;
+		/* Enable OTG Overcurrent Event */
+		USB_PHY_CTR_FUNC &= ~USB_UTMI_PHYCTRL_OC_DIS;
+	} else {
+		/* USBOTG_PWR low active */
+		USBCTRL &= ~UCTRL_PP;
+		/* OverCurrent Polarity is Low Active */
+		USBCTRL &= ~UCTRL_OCPOL;
+		/* OTG Lock Disable */
+		USBCTRL |= UCTRL_OLOCKD;
+	}
+
 	USBCTRL &= ~UCTRL_OPM;	/* OTG Power Mask */
 	USBCTRL |= UCTRL_OWIE;	/* OTG Wakeup Intr Enable */
-	USBCTRL |= UCTRL_OLOCKD;	/* OTG Lock Disable */
 
 	/* set UTMI xcvr */
 	tmp = UOG_PORTSC1 & ~PORTSC_PTS_MASK;
 	tmp |= PORTSC_PTS_UTMI;
 	UOG_PORTSC1 = tmp;
 
-	/* Enable UTMI interface in PHY control Reg */
-	USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_UTMI_ENABLE;
-
 	if (cpu_is_mx51()) {
 		/* Set the PHY clock to 19.2MHz */
 		USB_PHY_CTR_FUNC2 &= ~USB_UTMI_PHYCTRL2_PLLDIV_MASK;
 		USB_PHY_CTR_FUNC2 |= 0x01;
+	} else if (machine_is_mx35_3ds()) {
+		/* Enable UTMI interface in PHY control Reg */
+		USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_UTMI_ENABLE;
 	}
 
 	if (UOG_HCSPARAMS & HCSPARAMS_PPC)

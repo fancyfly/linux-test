@@ -376,6 +376,7 @@ void gpio_i2c_active(int i2c_num)
 				  PAD_CTL_HYS_ENABLE |
 				  PAD_CTL_DRV_VOT_LOW | PAD_CTL_DDR_INPUT_CMOS);
 		break;
+
 	case 1:
 		mxc_request_iomux(MX51_PIN_GPIO1_2,
 				  IOMUX_CONFIG_ALT2 | IOMUX_CONFIG_SION);
@@ -401,7 +402,6 @@ void gpio_i2c_active(int i2c_num)
 				  PAD_CTL_100K_PU |
 				  PAD_CTL_HYS_ENABLE |
 				  PAD_CTL_DRV_VOT_LOW | PAD_CTL_DDR_INPUT_CMOS);
-
 		break;
 	case 2:
 		break;
@@ -473,11 +473,41 @@ void gpio_pmic_active(void)
 EXPORT_SYMBOL(gpio_pmic_active);
 
 /*!
- * This function activates DAM ports 4 & 5 to enable
- * audio I/O.
+ * This function activates DAM port 3 to enable audio I/O.
  */
 void gpio_activate_audio_ports(void)
 {
+	unsigned int pad_val;
+
+	pad_val = PAD_CTL_SRE_FAST | PAD_CTL_DRV_HIGH |
+	    PAD_CTL_ODE_OPENDRAIN_NONE | PAD_CTL_100K_PU |
+	    PAD_CTL_HYS_NONE | PAD_CTL_DDR_INPUT_CMOS | PAD_CTL_DRV_VOT_LOW;
+
+	/* AUD3_TXD */
+	mxc_request_iomux(MX51_PIN_AUD3_BB_TXD, IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX51_PIN_AUD3_BB_TXD, pad_val);
+
+	/* AUD3_RXD */
+	mxc_request_iomux(MX51_PIN_AUD3_BB_RXD, IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX51_PIN_AUD3_BB_RXD, pad_val);
+
+	/* AUD3_CLK */
+	mxc_request_iomux(MX51_PIN_AUD3_BB_CK, IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX51_PIN_AUD3_BB_CK, pad_val);
+
+	/* AUD3_FS */
+	mxc_request_iomux(MX51_PIN_AUD3_BB_FS, IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX51_PIN_AUD3_BB_FS, pad_val);
+
+	/*
+	 * CPU3 AAPL board:
+	 * codec mclk is driven by 12MHz external xtal oscillator.
+	 * enable it by driving EIM_D16 high.
+	 */
+	mxc_request_iomux(MX51_PIN_EIM_D16, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_EIM_D16, pad_val);
+	mxc_set_gpio_direction(MX51_PIN_EIM_D16, 0);
+	mxc_set_gpio_dataout(MX51_PIN_EIM_D16, 1);
 }
 
 EXPORT_SYMBOL(gpio_activate_audio_ports);

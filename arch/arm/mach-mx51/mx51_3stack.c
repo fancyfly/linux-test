@@ -326,6 +326,12 @@ static inline void mxc_init_enet(void)
 }
 #endif
 
+#if defined(CONFIG_FEC) || defined(CONFIG_FEC_MODULE)
+unsigned int expio_intr_fec;
+
+EXPORT_SYMBOL(expio_intr_fec);
+#endif
+
 #if defined(CONFIG_MMC_IMX_ESDHCI) || defined(CONFIG_MMC_IMX_ESDHCI_MODULE)
 static struct mxc_mmc_platform_data mmc_data = {
 	.ocr_mask = MMC_VDD_32_33,

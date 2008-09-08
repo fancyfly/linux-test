@@ -68,6 +68,7 @@
  * IRAM
  */
 #define IRAM_BASE_ADDR		0x1FFE8000	/* internal ram */
+#define IRAM_SIZE 		(12 * SZ_8K)	/* 96K */
 
 #ifdef CONFIG_SDMA_IRAM
 #define SDMA_IRAM_SIZE  CONFIG_SDMA_IRAM_SIZE
@@ -81,8 +82,19 @@
 #define SND_RAM_SIZE 0
 #endif
 
-#define SDMA_RAM_BASE_ADDR (IRAM_BASE_ADDR)
+#ifdef CONFIG_MXC_VPU_IRAM
+#define VPU_IRAM_SIZE  0x7000
+#else
+#define VPU_IRAM_SIZE 0
+#endif
+
+#if (IRAM_SIZE < (SDMA_IRAM_SIZE + SND_RAM_SIZE + VPU_IRAM_SIZE))
+#error "IRAM size exceeded"
+#endif
+
+#define SDMA_RAM_BASE_ADDR	(IRAM_BASE_ADDR)
 #define SND_RAM_BASE_ADDR	(IRAM_BASE_ADDR + SDMA_IRAM_SIZE)
+#define VPU_IRAM_BASE_ADDR	(SND_RAM_BASE_ADDR + SND_RAM_SIZE)
 
 /*
  * NFC

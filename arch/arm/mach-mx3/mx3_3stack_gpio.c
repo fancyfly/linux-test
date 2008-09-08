@@ -551,7 +551,7 @@ EXPORT_SYMBOL(gpio_sdhc_inactive);
 /*
  * Probe for the card. If present the GPIO data would be set.
  */
-int sdhc_get_card_det_status(struct device *dev)
+unsigned int sdhc_get_card_det_status(struct device *dev)
 {
 	int ret;
 
@@ -605,7 +605,7 @@ EXPORT_SYMBOL(sdhc_init_card_det);
 /*!
  * Get SD1_WP ADIN7 of ATLAS pin value to detect write protection
  */
-int sdhc_write_protect(void)
+int sdhc_write_protect(struct device *dev)
 {
 	unsigned short rc = 0;
 

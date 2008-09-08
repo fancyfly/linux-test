@@ -245,24 +245,6 @@ static void sdhci_deactivate_led(struct sdhci_host *host)
 	writel(ctrl, host->ioaddr + SDHCI_HOST_CONTROL);
 }
 
-#ifdef CONFIG_LEDS_CLASS
-static void sdhci_led_control(struct led_classdev *led,
-			      enum led_brightness brightness)
-{
-	struct sdhci_host *host = container_of(led, struct sdhci_host, led);
-	unsigned long flags;
-
-	spin_lock_irqsave(&host->lock, flags);
-
-	if (brightness == LED_OFF)
-		sdhci_deactivate_led(host);
-	else
-		sdhci_activate_led(host);
-
-	spin_unlock_irqrestore(&host->lock, flags);
-}
-#endif
-
 /*****************************************************************************\
  *                                                                           *
  * Core functions                                                            *
@@ -868,9 +850,7 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	WARN_ON(host->mrq != NULL);
 
-#ifndef CONFIG_LEDS_CLASS
 	sdhci_activate_led(host);
-#endif
 
 	spin_unlock_irqrestore(&host->lock, flags);
 	host->mrq = mrq;
@@ -977,7 +957,7 @@ static int sdhci_get_ro(struct mmc_host *mmc)
 	host = mmc_priv(mmc);
 
 	if (host->plat_data->wp_status)
-		return host->plat_data->wp_status();
+		return host->plat_data->wp_status(mmc->parent);
 	else
 		return 0;
 }
@@ -1100,9 +1080,7 @@ static void sdhci_tasklet_finish(unsigned long param)
 	host->cmd = NULL;
 	host->data = NULL;
 
-#ifndef CONFIG_LEDS_CLASS
 	sdhci_deactivate_led(host);
-#endif
 
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -1562,6 +1540,15 @@ static int __devinit sdhci_probe_slot(struct platform_device
 	/* Active the eSDHC bus */
 	gpio_sdhc_active(pdev->id);
 
+	/* Get pwr supply for eSDHC */
+	if (NULL != mmc_plat->power_mmc) {
+		host->regulator_mmc =
+		    regulator_get(&pdev->dev, mmc_plat->power_mmc);
+		if (IS_ERR(host->regulator_mmc)) {
+			ret = PTR_ERR(host->regulator_mmc);
+			goto out1;
+		}
+	}
 	/* Get the SDHC clock from clock system APIs */
 	host->clk = clk_get(&pdev->dev, mmc_plat->clock_mmc);
 	if (NULL != host->clk) {
@@ -1574,17 +1561,17 @@ static int __devinit sdhci_probe_slot(struct platform_device
 	host->res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!host->res) {
 		ret = -ENOMEM;
-		goto out1;
+		goto out2;
 	}
 	host->irq = platform_get_irq(pdev, 0);
 	if (!host->irq) {
 		ret = -ENOMEM;
-		goto out1;
+		goto out2;
 	}
 	host->detect_irq = platform_get_irq(pdev, 1);
 	if (!host->detect_irq) {
 		ret = -ENOMEM;
-		goto out1;
+		goto out2;
 	}
 
 	do {
@@ -1608,7 +1595,7 @@ static int __devinit sdhci_probe_slot(struct platform_device
 				host->res->start + 1, pdev->name)) {
 		printk(KERN_ERR "request_mem_region failed\n");
 		ret = -ENOMEM;
-		goto out1;
+		goto out2;
 	}
 	host->ioaddr = (void *)ioremap(host->res->start, host->res->end -
 				       host->res->start + 1);
@@ -1774,17 +1761,6 @@ static int __devinit sdhci_probe_slot(struct platform_device
 	sdhci_dumpregs(host);
 #endif
 
-#ifdef CONFIG_LEDS_CLASS
-	host->led.name = mmc_hostname(mmc);
-	host->led.brightness = LED_OFF;
-	host->led.default_trigger = mmc_hostname(mmc);
-	host->led.brightness_set = sdhci_led_control;
-
-	ret = led_classdev_register(&pdev->dev, &host->led);
-	if (ret)
-		goto out6;
-#endif
-
 	mmiowb();
 
 	if (mmc_add_host(mmc) < 0)
@@ -1814,8 +1790,9 @@ out3:
 		kfree(adma_des_table);
 	release_mem_region(host->res->start,
 			   host->res->end - host->res->start + 1);
-out1:
+out2:
 	clk_disable(host->clk);
+out1:
 	gpio_sdhc_inactive(pdev->id);
 out0:
 	mmc_free_host(mmc);
@@ -1835,10 +1812,6 @@ static void sdhci_remove_slot(struct platform_device *pdev, int slot)
 	chip->hosts[slot] = NULL;
 
 	mmc_remove_host(mmc);
-
-#ifdef CONFIG_LEDS_CLASS
-	led_classdev_unregister(&host->led);
-#endif
 
 	sdhci_reset(host, SDHCI_RESET_ALL);
 

@@ -652,10 +652,6 @@ static void __inline mxc_init_pmic_audio(void)
 /* MMC device data */
 
 #if defined(CONFIG_MMC_MXC) || defined(CONFIG_MMC_MXC_MODULE)
-extern unsigned int sdhc_get_card_det_status(struct device *dev);
-extern int sdhc_init_card_det(int id);
-extern int sdhc_write_protect(void);
-
 static struct mxc_mmc_platform_data mmc0_data = {
 	.ocr_mask = MMC_VDD_32_33,
 	.min_clk = 150000,
@@ -689,7 +685,7 @@ static struct resource mxcsdhc1_resources[] = {
 
 static struct mxc_mmc_platform_data mmc1_data = {
 	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30 |
-		    MMC_VDD_31_32,
+	    MMC_VDD_31_32,
 	.min_clk = 150000,
 	.max_clk = 25000000,
 	.card_fixed = 1,
@@ -937,8 +933,8 @@ static struct mxc_unifi_platform_data unifi_data = {
 	.reg_gpo2 = "GPO4",
 
 	.reg_1v5_ana_bb = "VRF1",	/* VRF1 -> WL_1V5ANA and WL_1V5BB */
-	.reg_vdd_vpa = "VMMC2",		/* VMMC2 -> WL_VDD and WL_VPA */
-	.reg_1v5_dd = "VRF2",		/* VRF2 -> WL_1V5DD */
+	.reg_vdd_vpa = "VMMC2",	/* VMMC2 -> WL_VDD and WL_VPA */
+	.reg_1v5_dd = "VRF2",	/* VRF2 -> WL_1V5DD */
 
 	.host_id = 1,
 };
@@ -947,6 +943,7 @@ struct mxc_unifi_platform_data *get_unifi_plat_data(void)
 {
 	return &unifi_data;
 }
+
 EXPORT_SYMBOL(get_unifi_plat_data);
 
 #if defined(CONFIG_GPS_IOCTRL) || defined(CONFIG_GPS_IOCTRL_MODULE)

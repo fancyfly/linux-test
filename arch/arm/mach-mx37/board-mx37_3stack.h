@@ -1,5 +1,5 @@
 /*
- * Copyright 2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -101,5 +101,9 @@
 #define MAGIC_NUMBER2_REG	BOARD_IO_ADDR + 0x48
 /* CPLD code version */
 #define CPLD_CODE_VER_REG	BOARD_IO_ADDR + 0x50
+
+extern unsigned int sdhc_get_card_det_status(struct device *dev);
+extern int sdhc_write_protect(struct device *dev);
+extern int sdhc_init_card_det(int id);
 
 #endif				/* __ASM_ARCH_MXC_BOARD_MX37_3STACK_H__ */

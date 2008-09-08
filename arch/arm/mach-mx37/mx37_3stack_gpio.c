@@ -399,7 +399,7 @@ EXPORT_SYMBOL(sdhc_init_card_det);
 /*!
  * Get CSPI1_SS0 pin value to detect write protection
  */
-int sdhc_write_protect(void)
+int sdhc_write_protect(struct device *dev)
 {
 	unsigned short rc = 0;
 

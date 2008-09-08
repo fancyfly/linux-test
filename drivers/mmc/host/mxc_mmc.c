@@ -1099,7 +1099,7 @@ static int mxcmci_get_ro(struct mmc_host *mmc)
 	struct mxcmci_host *host = mmc_priv(mmc);
 
 	if (host->plat_data->wp_status)
-		return host->plat_data->wp_status();
+		return host->plat_data->wp_status(mmc->parent);
 	else
 		return 0;
 }

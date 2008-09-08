@@ -142,5 +142,9 @@
 #define MXC_BD_LED_ON(led)
 #define MXC_BD_LED_OFF(led)
 
+extern unsigned int sdhc_get_card_det_status(struct device *dev);
+extern int sdhc_init_card_det(int id);
+extern int sdhc_write_protect(struct device *dev);
+
 #endif				/* CONFIG_MACH_MX31_3DS */
 #endif				/* __ASM_ARCH_MXC_BOARD_MX31PDK_H__ */

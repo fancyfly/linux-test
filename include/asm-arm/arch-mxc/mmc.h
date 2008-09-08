@@ -24,7 +24,7 @@ struct mxc_mmc_platform_data {
 	unsigned int card_inserted_state:1;
 //      u32 (*translate_vdd)(struct device *, unsigned int);
 	unsigned int (*status) (struct device *);
-	int (*wp_status) (void);
+	int (*wp_status) (struct device *);
 	char *power_mmc;
 	char *clock_mmc;
 };

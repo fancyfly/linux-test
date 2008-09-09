@@ -1197,6 +1197,9 @@ static int mxcmci_probe(struct platform_device *pdev)
 
 	mmc->f_min = mmc_plat->min_clk;
 	mmc->f_max = mmc_plat->max_clk;
+	mmc->max_req_size = 32 * 1024;
+	mmc->max_seg_size = mmc->max_req_size;
+	mmc->max_blk_count = 65536;
 
 	spin_lock_init(&host->lock);
 	host->mmc = mmc;

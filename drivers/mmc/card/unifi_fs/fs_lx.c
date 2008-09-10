@@ -1,18 +1,7 @@
 /*
- * Freescale SDIO glue modules.
+ * fs_lx.c - Freescale SDIO glue module for UniFi.
  *
  * Copyright (C) 2008 Cambridge Silicon Radio Ltd.
- *
- *  Note:
- *      The Freescale MMC/SDIO driver is a project under development so the
- *      code that interfaces their driver is likely to have changed between
- *      releases. This code is tested only with the SDIO/MMC driver released
- *      by Freescale for the imx31_3stack board using Linux Kernel 2.6.24.
- *
- *      Also, the code in the probe that sets the pull-ups is platform
- *      specific and should really be part of the controller's initialisation.
- *      In the aforesaid Freescale release this code was missing but may
- *      be in place in the future releases.
  *
  *  Important:
  *      This module does not support more than one device driver instances.
@@ -21,7 +10,14 @@
 /*
  * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
-
+/*
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/delay.h>

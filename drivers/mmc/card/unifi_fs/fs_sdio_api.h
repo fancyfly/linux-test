@@ -1,11 +1,19 @@
 /*
- * Freescale SDIO glue module API.
+ *fs_sdio_api.h - Freescale SDIO glue module API for UniFi.
  *
  * Copyright (C) 2008 Cambridge Silicon Radio Ltd.
  *
  */
 /*
  * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ */
+/*
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
  */
 #ifndef _FS_SDIO_API_H
 #define _FS_SDIO_API_H

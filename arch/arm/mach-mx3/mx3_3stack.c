@@ -308,21 +308,21 @@ static struct mxc_mma7450_platform_data mma7450_data = {
 
 static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	{
-	 .driver_name = "ov2640",
+	 .type = "ov2640",
 	 .addr = 0x30,
 	 .platform_data = (void *)&camera_data,},
 	{
-	 .driver_name = "ch7024",
+	 .type = "ch7024",
 	 .addr = 0x76,
 	 .platform_data = (void *)&tvout_data,
 	 .irq = IOMUX_TO_IRQ(MX31_PIN_BATT_LINE),},
 	{
-	 .driver_name = "si4702",
+	 .type = "si4702",
 	 .addr = 0x10,
 	 .platform_data = (void *)&si4702_data,
 	 },
 	{
-	 .driver_name = "mma7450",
+	 .type = "mma7450",
 	 .addr = 0x1d,
 	 .platform_data = (void *)&mma7450_data,
 	 },

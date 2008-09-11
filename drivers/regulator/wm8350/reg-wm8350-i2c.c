@@ -147,6 +147,12 @@ static int wm8350_i2c_resume(struct i2c_client *client)
 #define wm8350_i2c_resume	NULL
 #endif
 
+static const struct i2c_device_id wm8350_id[] = {
+	{ "WM8350", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, wm8350_id);
+
 static struct i2c_driver wm8350_i2c_driver = {
 	.driver = {
 		.name = "WM8350",
@@ -156,6 +162,7 @@ static struct i2c_driver wm8350_i2c_driver = {
 	.suspend	= wm8350_i2c_suspend,
 	.resume		= wm8350_i2c_resume,
 	.command =        NULL,
+	.id_table	= wm8350_id,
 };
 
 

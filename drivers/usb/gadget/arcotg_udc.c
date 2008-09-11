@@ -86,8 +86,8 @@ fsl_ep0_desc = {
 };
 
 static int udc_suspend(struct fsl_udc *udc);
-static int fsl_udc_suspend(struct device *dev, pm_message_t state);
-static int fsl_udc_resume(struct device *dev);
+static int fsl_udc_suspend(struct platform_device *pdev, pm_message_t state);
+static int fsl_udc_resume(struct platform_device *pdev);
 static void fsl_ep_fifo_flush(struct usb_ep *_ep);
 
 #ifdef CONFIG_USB_OTG
@@ -2639,7 +2639,7 @@ static int udc_suspend(struct fsl_udc *udc)
  * Modify Power management attributes
  * Used by OTG statemachine to disable gadget temporarily
  -----------------------------------------------------------------*/
-static int fsl_udc_suspend(struct device *dev, pm_message_t state)
+static int fsl_udc_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	return udc_suspend(udc_controller);
 }
@@ -2648,7 +2648,7 @@ static int fsl_udc_suspend(struct device *dev, pm_message_t state)
  * Invoked on USB resume. May be called in_interrupt.
  * Here we start the DR controller and enable the irq
  *-----------------------------------------------------------------*/
-static int fsl_udc_resume(struct device *dev)
+static int fsl_udc_resume(struct platform_device *pdev)
 {
 	/* Enable DR irq reg and set controller Run */
 	if (udc_controller->stopped) {

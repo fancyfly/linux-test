@@ -1299,7 +1299,7 @@ static struct platform_device mxc_dptc_device = {
 static int __init dptc_mx27_init(void)
 {
 	int res;
-	struct class_device *temp_class;
+	struct device *temp_class;
 
 	res = dvfs_dptc_init_default_table();
 
@@ -1339,9 +1339,8 @@ static int __init dptc_mx27_init(void)
 		goto err_out;
 	}
 
-	temp_class =
-	    class_device_create(mxc_dvfs_dptc_class, NULL, MKDEV(major, 0),
-				NULL, DEVICE_NAME);
+	temp_class = device_create(mxc_dvfs_dptc_class, NULL, MKDEV(major, 0),
+				   DEVICE_NAME);
 	if (IS_ERR(temp_class)) {
 		printk(KERN_ERR "DPTC: Error creating class device.\n");
 		goto err_out;
@@ -1377,7 +1376,7 @@ static int __init dptc_mx27_init(void)
 
       err_out:
 	printk(KERN_WARNING "MX27 DPTC driver was not initialized\n");
-	class_device_destroy(mxc_dvfs_dptc_class, MKDEV(major, 0));
+	device_destroy(mxc_dvfs_dptc_class, MKDEV(major, 0));
 	class_destroy(mxc_dvfs_dptc_class);
 	unregister_chrdev(major, DEVICE_NAME);
 	return -1;
@@ -1393,7 +1392,7 @@ static void __exit dptc_mx27_cleanup(void)
 	free_dvfs_dptc_table();
 
 	/* Un-register the driver and remove its node */
-	class_device_destroy(mxc_dvfs_dptc_class, MKDEV(major, 0));
+	device_destroy(mxc_dvfs_dptc_class, MKDEV(major, 0));
 	class_destroy(mxc_dvfs_dptc_class);
 	unregister_chrdev(major, DEVICE_NAME);
 

@@ -18,6 +18,7 @@
  */
 #include <linux/init.h>
 #include <linux/spinlock.h>
+#include <linux/module.h>
 
 #include <asm/cacheflush.h>
 #include <asm/io.h>

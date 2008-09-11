@@ -563,7 +563,7 @@ static struct file_operations dam_fops = {
 static int __init dam_init(void)
 {
 #ifdef TEST_DAM
-	struct class_device *temp_class;
+	struct device *temp_class;
 	printk(KERN_DEBUG "dam : dam_init(void) \n");
 
 	major_dam = register_chrdev(0, DAM_NAME, &dam_fops);
@@ -577,8 +577,8 @@ static int __init dam_init(void)
 		goto err_out;
 	}
 
-	temp_class = class_device_create(mxc_dam_class, NULL,
-					 MKDEV(major_dam, 0), NULL, DAM_NAME);
+	temp_class = device_create(mxc_dam_class, NULL,
+				   MKDEV(major_dam, 0), DAM_NAME);
 	if (IS_ERR(temp_class)) {
 		goto err_out;
 	}
@@ -587,7 +587,7 @@ static int __init dam_init(void)
 
       err_out:
 	printk(KERN_ERR "Error creating dam class device.\n");
-	class_device_destroy(mxc_dam_class, MKDEV(major_dam, 0));
+	device_destroy(mxc_dam_class, MKDEV(major_dam, 0));
 	class_destroy(mxc_dam_class);
 	unregister_chrdev(major_dam, DAM_NAME);
 	return -1;
@@ -601,7 +601,7 @@ static int __init dam_init(void)
 static void __exit dam_exit(void)
 {
 #ifdef TEST_DAM
-	class_device_destroy(mxc_dam_class, MKDEV(major_dam, 0));
+	device_destroy(mxc_dam_class, MKDEV(major_dam, 0));
 	class_destroy(mxc_dam_class);
 	unregister_chrdev(major_dam, DAM_NAME);
 	printk(KERN_DEBUG "dam : successfully unloaded\n");

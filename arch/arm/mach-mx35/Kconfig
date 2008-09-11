@@ -1,10 +1,19 @@
 menu "MX35 Options"
 	depends on ARCH_MX35
 
+config MX35_OPTIONS
+	bool
+	default y
+	select CPU_V6
+	select CACHE_L2X0
+	select OUTER_CACHE
+	select USB_ARCH_HAS_EHCI
+	select ARCH_HAS_EVTMON
+
 config MACH_MX35_3DS
 	bool "Support MX35 3STACK platforms"
 	default y
-	select MXC_PSEUDO_IRQS if MXC_PMIC 
+	select MXC_PSEUDO_IRQS if MXC_PMIC
 	help
 	  Include support for MX35 3STACK platform. This includes specific
 	  configurations for the board and its peripherals.
@@ -72,6 +81,6 @@ config I2C_MXC_SELECT3
 endmenu
 
 config MXC_PSEUDO_IRQS
-	bool 
- 
+	bool
+
 endmenu

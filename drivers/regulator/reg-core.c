@@ -116,14 +116,14 @@ static ssize_t dev_load_show(struct device *dev,
 	return sprintf(buf, "%d\n", load->uA_load);
 }
 
-static ssize_t regulator_uV_show(struct class_device *cdev, char *buf)
+static ssize_t regulator_uV_show(struct device *cdev, struct device_attribute *attr, char *buf)
 {
 	struct regulator *regulator = to_regulator(cdev);
 
 	return sprintf(buf, "%d\n", regulator_get_voltage(regulator));
 }
 
-static ssize_t regulator_uV_store(struct class_device *cdev,
+static ssize_t regulator_uV_store(struct device *cdev, struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
 	struct regulator *regulator = to_regulator(cdev);
@@ -140,14 +140,14 @@ static ssize_t regulator_uV_store(struct class_device *cdev,
 	return count;
 }
 
-static ssize_t regulator_uA_show(struct class_device *cdev, char *buf)
+static ssize_t regulator_uA_show(struct device *cdev, struct device_attribute *attr, char *buf)
 {
 	struct regulator *regulator = to_regulator(cdev);
 
 	return sprintf(buf, "%d\n", regulator_get_current(regulator));
 }
 
-static ssize_t regulator_mode_show(struct class_device *cdev, char *buf)
+static ssize_t regulator_mode_show(struct device *cdev, struct device_attribute *attr, char *buf)
 {
 	struct regulator *regulator = to_regulator(cdev);
 	int mode = regulator_get_mode(regulator);
@@ -165,7 +165,7 @@ static ssize_t regulator_mode_show(struct class_device *cdev, char *buf)
 	return sprintf(buf, "unknown\n");
 }
 
-static ssize_t regulator_state_show(struct class_device *cdev, char *buf)
+static ssize_t regulator_state_show(struct device *cdev, struct device_attribute *attr, char *buf)
 {
 	struct regulator *regulator = to_regulator(cdev);
 	int state = regulator_is_enabled(regulator);
@@ -179,7 +179,7 @@ static ssize_t regulator_state_show(struct class_device *cdev, char *buf)
 }
 
 static ssize_t
-regulator_constraint_uA_show(struct class_device *cdev, char *buf)
+regulator_constraint_uA_show(struct device *cdev, struct device_attribute *attr, char *buf)
 {
 	struct regulator *regulator = to_regulator(cdev);
 
@@ -191,7 +191,7 @@ regulator_constraint_uA_show(struct class_device *cdev, char *buf)
 }
 
 static ssize_t
-regulator_constraint_uV_show(struct class_device *cdev, char *buf)
+regulator_constraint_uV_show(struct device *cdev, struct device_attribute *attr, char *buf)
 {
 	struct regulator *regulator = to_regulator(cdev);
 
@@ -203,7 +203,7 @@ regulator_constraint_uV_show(struct class_device *cdev, char *buf)
 }
 
 static ssize_t
-regulator_constraint_modes_show(struct class_device *cdev, char *buf)
+regulator_constraint_modes_show(struct device *cdev, struct device_attribute *attr, char *buf)
 {
 	struct regulator *regulator = to_regulator(cdev);
 	int count = 0;
@@ -223,7 +223,7 @@ regulator_constraint_modes_show(struct class_device *cdev, char *buf)
 	return count;
 }
 
-static ssize_t regulator_total_dev_load(struct class_device *cdev, char *buf)
+static ssize_t regulator_total_dev_load(struct device *cdev, struct device_attribute *attr, char *buf)
 {
 	struct regulator *regulator = to_regulator(cdev);
 	struct regulator_load *load;
@@ -235,13 +235,13 @@ static ssize_t regulator_total_dev_load(struct class_device *cdev, char *buf)
 	return sprintf(buf, "%d\n", uA);
 }
 
-static ssize_t regulator_enabled_use_count(struct class_device *cdev, char *buf)
+static ssize_t regulator_enabled_use_count(struct device *cdev, struct device_attribute *attr, char *buf)
 {
 	struct regulator *regulator = to_regulator(cdev);
 	return sprintf(buf, "%d\n", regulator->use_count);
 }
 
-static ssize_t regulator_ctl(struct class_device *cdev,
+static ssize_t regulator_ctl(struct device *cdev, struct device_attribute *attr,
 			     const char *buf, size_t count)
 {
 	struct regulator *regulator = to_regulator(cdev);
@@ -257,7 +257,7 @@ static ssize_t regulator_ctl(struct class_device *cdev,
 	return count;
 }
 
-static struct class_device_attribute regulator_dev_attrs[] = {
+static struct device_attribute regulator_dev_attrs[] = {
 	__ATTR(uV, 0666, regulator_uV_show, regulator_uV_store),
 	__ATTR(uA, 0444, regulator_uA_show, NULL),
 	__ATTR(mode, 0444, regulator_mode_show, NULL),
@@ -271,14 +271,9 @@ static struct class_device_attribute regulator_dev_attrs[] = {
 	__ATTR_NULL,
 };
 
-static void regulator_dev_release(struct class_device *class_dev)
-{
-}
-
 struct class regulator_class = {
 	.name = "regulator",
-	.release = regulator_dev_release,
-	.class_dev_attrs = regulator_dev_attrs,
+	.dev_attrs = regulator_dev_attrs,
 };
 
 static struct regulator_load *create_load_dev(struct regulator *regulator,
@@ -673,13 +668,13 @@ int regulator_register(struct regulator *regulator)
 	BLOCKING_INIT_NOTIFIER_HEAD(&regulator->notifier);
 
 	regulator->cdev.class = &regulator_class;
-	class_device_initialize(&regulator->cdev);
-	snprintf(regulator->cdev.class_id, sizeof(regulator->cdev.class_id),
-		 "regulator-%ld-%s",
+	device_initialize(&regulator->cdev);
+	snprintf(regulator->cdev.bus_id, sizeof(regulator->cdev.bus_id),
+		 "regulator_%ld_%s",
 		 (unsigned long)atomic_inc_return(&regulator_no) - 1,
 		 regulator->name);
 
-	ret = class_device_add(&regulator->cdev);
+	ret = device_add(&regulator->cdev);
 	if (ret == 0)
 		list_add(&regulator->list, &regulators);
 	mutex_unlock(&list_mutex);
@@ -697,7 +692,7 @@ void regulator_unregister(struct regulator *regulator)
 	list_del(&regulator->list);
 	if (regulator->parent)
 		sysfs_remove_link(&regulator->cdev.kobj, "source");
-	class_device_unregister(&regulator->cdev);
+	device_unregister(&regulator->cdev);
 	mutex_unlock(&list_mutex);
 }
 

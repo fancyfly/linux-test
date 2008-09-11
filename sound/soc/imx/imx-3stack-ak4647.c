@@ -19,7 +19,6 @@
 #include <linux/i2c.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
-#include <sound/driver.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
@@ -243,7 +242,8 @@ static int ak4647_set_spk(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
-static int spk_amp_event(struct snd_soc_dapm_widget *w, int event)
+static int spk_amp_event(struct snd_soc_dapm_widget *w,
+			 struct snd_kcontrol *kcontrol, int event)
 {
 	if (SND_SOC_DAPM_EVENT_ON(event))
 		pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 0, 1);
@@ -307,7 +307,7 @@ static const struct snd_kcontrol_new ak4647_machine_controls[] = {
 
 static void headphone_detect_handler(struct work_struct *work)
 {
-	sysfs_notify(&imx_3stack_mach->pdev->dev.driver->kobj, NULL,
+	sysfs_notify(&imx_3stack_mach->pdev->dev.kobj, NULL,
 		     "headphone");
 
 }

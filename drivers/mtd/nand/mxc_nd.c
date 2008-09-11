@@ -873,13 +873,15 @@ static void mxc_nand_command(struct mtd_info *mtd, unsigned command,
 	 */
 	g_nandfc_info.bStatusRequest = false;
 
+	/* Reset column address to 0 */
+	g_nandfc_info.colAddr = 0;
+
 	/*
 	 * Command pre-processing step
 	 */
 	switch (command) {
 
 	case NAND_CMD_STATUS:
-		g_nandfc_info.colAddr = 0;
 		g_nandfc_info.bStatusRequest = true;
 		break;
 

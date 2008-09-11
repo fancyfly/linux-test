@@ -38,7 +38,7 @@
 #include <linux/regulator/regulator.h>
 #include <asm/mach/irq.h>
 
-#define DRIVER_NAME "TSC2007"
+#define DRIVER_NAME "tsc2007"
 
 enum tsc2007_pd {
 	PD_POWERDOWN = 0,	/* penirq */
@@ -220,7 +220,7 @@ static int tsc2007ts_thread(void *v)
 
 static int tsc2007_idev_open(struct input_dev *idev)
 {
-	struct tsc2007_data *d = idev->private;
+	struct tsc2007_data *d = input_get_drvdata(idev);
 	int ret = 0;
 
 	d->penirq_timer.data = (unsigned long)d;
@@ -237,7 +237,7 @@ static int tsc2007_idev_open(struct input_dev *idev)
 
 static void tsc2007_idev_close(struct input_dev *idev)
 {
-	struct tsc2007_data *d = idev->private;
+	struct tsc2007_data *d = input_get_drvdata(idev);
 	if (!IS_ERR(d->tstask))
 		kthread_stop(d->tstask);
 
@@ -269,7 +269,7 @@ static int tsc2007_driver_register(struct tsc2007_data *data)
 	}
 	idev = input_allocate_device();
 	data->idev = idev;
-	idev->private = data;
+	input_set_drvdata(idev, data);
 	idev->name = DRIVER_NAME;
 	idev->evbit[0] = BIT(EV_ABS);
 	idev->open = tsc2007_idev_open;
@@ -313,7 +313,7 @@ static int tsc2007_i2c_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int tsc2007_i2c_probe(struct i2c_client *client)
+static int tsc2007_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct tsc2007_data *data;
 	struct mxc_tsc_platform_data *tsc_data;
@@ -361,6 +361,12 @@ static int tsc2007_i2c_probe(struct i2c_client *client)
 	return err;
 }
 
+static const struct i2c_device_id tsc2007_id[] = {
+	{ "tsc2007", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, tsc2007_id);
+
 static struct i2c_driver tsc2007_driver = {
 	.driver = {
 		   .name = DRIVER_NAME,
@@ -368,6 +374,7 @@ static struct i2c_driver tsc2007_driver = {
 	.probe = tsc2007_i2c_probe,
 	.remove = tsc2007_i2c_remove,
 	.command = NULL,
+	.id_table = tsc2007_id,
 };
 
 static int __init tsc2007_init(void)

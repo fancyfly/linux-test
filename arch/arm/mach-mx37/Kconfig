@@ -1,6 +1,16 @@
 menu "MX37 Options"
 	depends on ARCH_MX37
 
+config MX37_OPTIONS
+	bool
+	default y
+	select CPU_V6
+	select CACHE_L2X0
+	select OUTER_CACHE
+	select USB_ARCH_HAS_EHCI
+	select ARCH_HAS_EVTMON
+	select MXC_TZIC
+
 config MACH_MX37_3DS
 	bool "Support MX37 3-Stack platforms"
 	default y

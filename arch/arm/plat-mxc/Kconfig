@@ -7,45 +7,27 @@ choice
 	default ARCH_MX3
 
 config ARCH_MX37
-    bool "MX37-based"
-	select CPU_V6
-	select CACHE_L2X0
-	select USB_ARCH_HAS_EHCI
-	select ARCH_HAS_EVTMON
-	select MXC_TZIC
+	bool "MX37-based"
     help
       This enables support for systems based on Freescale i.MX37
 
 config ARCH_MX35
     bool "MX35-based"
-        select CPU_V6
-        select CACHE_L2X0
-        select USB_ARCH_HAS_EHCI
-        select ARCH_HAS_EVTMON
     help
       This enables support for systems based on Freescale i.MX35
 
 config ARCH_MX3
 	bool "MX3-based"
-	select CPU_V6
-	select CACHE_L2X0
-	select USB_ARCH_HAS_EHCI
-	select ARCH_HAS_EVTMON
 	help
 	  This enables support for systems based on the Freescale i.MX31 and i.MX32
 
 config ARCH_MX27
 	bool "MX27-based"
-	select CPU_ARM926T
-	select MXC_EMMA
-	select USB_ARCH_HAS_EHCI
 	help
 	  This enables support for systems based on the Freescale i.MX27
 
 config ARCH_MX21
 	bool "MX21-based"
-	select CPU_ARM926T
-	select MXC_EMMA
 	help
 	  This enables support for systems based on the Freescale i.MX21
 

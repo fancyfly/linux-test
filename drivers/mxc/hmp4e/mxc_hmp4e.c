@@ -543,7 +543,7 @@ static s32 hmp4e_probe(struct platform_device *pdev)
 {
 	s32 result;
 	u32 hwid;
-	struct class_device *temp_class;
+	struct device *temp_class;
 
 	hmp4e_data.iobaseaddr = base_port;
 	hmp4e_data.irq = irq;
@@ -610,8 +610,8 @@ static s32 hmp4e_probe(struct platform_device *pdev)
 		goto error3;
 	}
 
-	temp_class = class_device_create(hmp4e_class, NULL,
-					 MKDEV(hmp4e_major, 0), NULL, "hmp4e");
+	temp_class = device_create(hmp4e_class, NULL, MKDEV(hmp4e_major, 0),
+				   "hmp4e");
 	if (IS_ERR(temp_class)) {
 		pr_debug("Error creating hmp4e class device.\n");
 		goto error4;
@@ -652,7 +652,7 @@ static s32 hmp4e_probe(struct platform_device *pdev)
  */
 static s32 hmp4e_remove(struct platform_device *pdev)
 {
-	class_device_destroy(hmp4e_class, MKDEV(hmp4e_major, 0));
+	device_destroy(hmp4e_class, MKDEV(hmp4e_major, 0));
 	class_destroy(hmp4e_class);
 	unregister_chrdev(hmp4e_major, "hmp4e");
 	hmp4e_free();

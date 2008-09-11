@@ -231,7 +231,7 @@ static struct device_attribute mc13892_dev_attr = {
 	.store = mc13892_store,
 };
 
-static int __devinit pmic_probe(struct i2c_client *client)
+static int __devinit pmic_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int ret = 0;
 	int pmic_irq;
@@ -303,6 +303,12 @@ static int pmic_resume(struct i2c_client *client)
 	return 0;
 }
 
+static const struct i2c_device_id mc13892_id[] = {
+	{ "mc13892", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, mc13892_id);
+
 static struct i2c_driver pmic_driver = {
 	.driver = {
 		   .name = "mc13892",
@@ -312,6 +318,7 @@ static struct i2c_driver pmic_driver = {
 	.remove = pmic_remove,
 	.suspend = pmic_suspend,
 	.resume = pmic_resume,
+	.id_table = mc13892_id,
 };
 
 static int __init pmic_init(void)

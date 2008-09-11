@@ -77,7 +77,7 @@
 #define MPR084_FIFO_PAD_IS_TOUCHED              0x10
 #define MPR084_FIFO_POSITION_MASK               0x0F
 
-#define DRIVER_NAME "MPR084"
+#define DRIVER_NAME "mpr084"
 
 struct mpr084_data {
 	struct i2c_client *client;
@@ -186,7 +186,7 @@ static int mpr084ts_thread(void *v)
 
 static int mpr084_idev_open(struct input_dev *idev)
 {
-	struct mpr084_data *d = idev->private;
+	struct mpr084_data *d = input_get_drvdata(idev);
 	int ret = 0;
 
 	d->tstask = kthread_run(mpr084ts_thread, d, DRIVER_NAME "kpd");
@@ -197,7 +197,7 @@ static int mpr084_idev_open(struct input_dev *idev)
 
 static void mpr084_idev_close(struct input_dev *idev)
 {
-	struct mpr084_data *d = idev->private;
+	struct mpr084_data *d = input_get_drvdata(idev);
 
 	if (!IS_ERR(d->tstask))
 		kthread_stop(d->tstask);
@@ -222,7 +222,7 @@ static int mpr084_driver_register(struct mpr084_data *data)
 	}
 	idev = input_allocate_device();
 	data->idev = idev;
-	idev->private = data;
+	input_set_drvdata(idev, data);
 	idev->name = DRIVER_NAME;
 	idev->open = mpr084_idev_open;
 	idev->close = mpr084_idev_close;
@@ -320,7 +320,7 @@ err:
 	return -ENODEV;
 }
 
-static int mpr084_i2c_probe(struct i2c_client *client)
+static int mpr084_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct mpr084_data *data;
 	int err = 0, i = 0;
@@ -359,6 +359,12 @@ exit_free:
 	return err;
 }
 
+static const struct i2c_device_id mpr084_id[] = {
+	{ "mpr084", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, mpr084_id);
+
 static struct i2c_driver mpr084_driver = {
 	.driver = {
 		   .name = DRIVER_NAME,
@@ -366,6 +372,7 @@ static struct i2c_driver mpr084_driver = {
 	.probe = mpr084_i2c_probe,
 	.remove = mpr084_i2c_remove,
 	.command = NULL,
+	.id_table = mpr084_id,
 };
 static int __init mpr084_init(void)
 {

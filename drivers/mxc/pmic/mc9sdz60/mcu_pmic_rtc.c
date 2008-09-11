@@ -66,24 +66,21 @@ static struct pmic_rtc_data mcu_pmic_rtc_data;
 static int mcu_pmic_rtc_event_subscribe(int event,
 					pmic_event_callback_t callback)
 {
-	down_interruptible(&event_mutex);
 	rtc_event_callback.func = callback.func;
-	up(&event_mutex);
 	return 0;
 }
 
 static int mcu_pmic_rtc_event_unsubscribe(int event,
 					  pmic_event_callback_t callback)
 {
-	down_interruptible(&event_mutex);
 	rtc_event_callback.func = NULL;
-	up(&event_mutex);
 	return 0;
 }
 
 static void rtc_alarm_handler(struct work_struct *work)
 {
-	down_interruptible(&event_mutex);
+	if (down_interruptible(&event_mutex) < 0)
+		return;
 	if (NULL != rtc_event_callback.func)
 		rtc_event_callback.func(rtc_event_callback.param);
 	up(&event_mutex);
@@ -235,10 +232,13 @@ EXPORT_SYMBOL(pmic_rtc_get_time);
  */
 PMIC_STATUS pmic_rtc_set_time_alarm(struct timeval *pmic_time)
 {
+	int ret;
 	u8 reg_val;
 	struct rtc_time greg_time;
 
-	down_interruptible(&mutex);
+	ret = down_interruptible(&mutex);
+	if (ret < 0)
+		return ret;
 
 	rtc_time_to_tm(pmic_time->tv_sec, &greg_time);
 	rtc_time_to_tm(pmic_time->tv_sec, &alarm_greg_time);
@@ -541,7 +541,7 @@ EXPORT_SYMBOL(pmic_rtc_loaded);
 
 static int pmic_rtc_remove(struct platform_device *pdev)
 {
-	class_device_destroy(pmic_rtc_class, MKDEV(pmic_rtc_major, 0));
+	device_destroy(pmic_rtc_class, MKDEV(pmic_rtc_major, 0));
 	class_destroy(pmic_rtc_class);
 	unregister_chrdev(pmic_rtc_major, MCU_PMIC_RTC_NAME);
 	free_irq(mcu_pmic_rtc_data.irq, pdev);
@@ -559,7 +559,7 @@ static int pmic_rtc_probe(struct platform_device *pdev)
 {
 	int val;
 	int ret = 0;
-	struct class_device *temp_class;
+	struct device *temp_class;
 
 	pmic_rtc_major = register_chrdev(0, MCU_PMIC_RTC_NAME, &pmic_rtc_fops);
 	if (pmic_rtc_major < 0) {
@@ -572,9 +572,9 @@ static int pmic_rtc_probe(struct platform_device *pdev)
 		goto err_out1;
 	}
 
-	temp_class = class_device_create(pmic_rtc_class, NULL,
-					 MKDEV(pmic_rtc_major, 0),
-					 NULL, MCU_PMIC_RTC_NAME);
+	temp_class = device_create(pmic_rtc_class, NULL,
+				   MKDEV(pmic_rtc_major, 0),
+				   MCU_PMIC_RTC_NAME);
 	if (IS_ERR(temp_class)) {
 		ret = PTR_ERR(temp_class);
 		goto err_out2;

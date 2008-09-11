@@ -112,10 +112,9 @@ void i2c_slave_device_free(i2c_slave_device_t *dev)
 
 int i2c_slave_device_register(i2c_slave_device_t *device)
 {
-	device->dev =
-	    class_device_create(i2c_slave_class, NULL,
-				(dev_t) MKDEV(i2c_slave_major, device->id),
-				NULL, "slave-i2c-%d", device->id);
+	device->dev = device_create(i2c_slave_class, NULL,
+				    MKDEV(i2c_slave_major, device->id),
+				    "slave-i2c-%d", device->id);
 	if (!device->dev) {
 		return -1;
 	}

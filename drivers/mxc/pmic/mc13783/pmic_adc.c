@@ -1443,7 +1443,7 @@ static struct file_operations mc13783_adc_fops = {
 static int pmic_adc_module_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	struct class_device *temp_class;
+	struct device *temp_class;
 
 	pmic_adc_major = register_chrdev(0, "pmic_adc", &mc13783_adc_fops);
 
@@ -1460,9 +1460,8 @@ static int pmic_adc_module_probe(struct platform_device *pdev)
 		goto err_out1;
 	}
 
-	temp_class = class_device_create(pmic_adc_class, NULL,
-					 MKDEV(pmic_adc_major, 0),
-					 NULL, "pmic_adc");
+	temp_class = device_create(pmic_adc_class, NULL,
+				   MKDEV(pmic_adc_major, 0), "pmic_adc");
 	if (IS_ERR(temp_class)) {
 		pr_debug(KERN_ERR "Error creating pmic_adc class device.\n");
 		ret = PTR_ERR(temp_class);
@@ -1479,7 +1478,7 @@ static int pmic_adc_module_probe(struct platform_device *pdev)
 	return ret;
 
       err_out4:
-	class_device_destroy(pmic_adc_class, MKDEV(pmic_adc_major, 0));
+	device_destroy(pmic_adc_class, MKDEV(pmic_adc_major, 0));
       err_out2:
 	class_destroy(pmic_adc_class);
       err_out1:
@@ -1490,7 +1489,7 @@ static int pmic_adc_module_probe(struct platform_device *pdev)
 static int pmic_adc_module_remove(struct platform_device *pdev)
 {
 	pmic_adc_deinit();
-	class_device_destroy(pmic_adc_class, MKDEV(pmic_adc_major, 0));
+	device_destroy(pmic_adc_class, MKDEV(pmic_adc_major, 0));
 	class_destroy(pmic_adc_class);
 	unregister_chrdev(pmic_adc_major, "pmic_adc");
 	pr_debug(KERN_INFO "PMIC ADC successfully removed\n");

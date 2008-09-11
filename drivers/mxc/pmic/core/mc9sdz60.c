@@ -55,7 +55,7 @@ int mc9sdz60_write_reg(u8 reg, u8 value)
  * @param adapter            struct i2c_adapter *
  * @return  0
  */
-static int mc9sdz60_probe(struct i2c_client *client)
+static int mc9sdz60_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	mc9sdz60_i2c_client = client;
 	return 0;
@@ -71,12 +71,20 @@ static int mc9sdz60_remove(struct i2c_client *client)
 {
 	return 0;
 }
+
+static const struct i2c_device_id mc9sdz60_id[] = {
+	{ "mc9sdz60", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, mc9sdz60_id);
+
 static struct i2c_driver mc9sdz60_i2c_driver = {
 	.driver = {.owner = THIS_MODULE,
 		   .name = "mc9sdz60",
 		   },
 	.probe = mc9sdz60_probe,
 	.remove = mc9sdz60_remove,
+	.id_table = mc9sdz60_id,
 };
 
 #define SET_BIT_IN_BYTE(byte, pos) (byte |= (0x01 << pos))

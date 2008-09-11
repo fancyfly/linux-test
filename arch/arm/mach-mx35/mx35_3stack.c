@@ -346,41 +346,41 @@ static struct mxc_fm_platform_data si4702_data = {
 
 static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	{
-	 .driver_name = "mc9sdz60",
+	 .type = "mc9sdz60",
 	 .addr = 0x69,
 	 },
 	{
-	 .driver_name = "max8660",
+	 .type = "max8660",
 	 .addr = 0x34,
 	 },
 	{
-	 .driver_name = "TSC2007",
+	 .type = "tsc2007",
 	 .addr = 0x48,
 	 .platform_data = &tsc2007_data,
 	 .irq = IOMUX_TO_IRQ(MX35_PIN_CAPTURE),
 	 },
 	{
-	 .driver_name = "ov2640",
+	 .type = "ov2640",
 	 .addr = 0x30,
 	 .platform_data = (void *)&camera_data,
 	 },
 	{
-	 .driver_name = "ak4647-i2c",
+	 .type = "ak4647-i2c",
 	 .addr = 0x12,
 	 },
 #if defined(CONFIG_I2C_SLAVE_CLIENT)
 	{
-	 .driver_name = "i2c-slave-client",
+	 .type = "i2c-slave-client",
 	 .addr = 0x55,
 	 },
 #endif
 	{
-	 .driver_name = "si4702",
+	 .type = "si4702",
 	 .addr = 0x10,
 	 .platform_data = (void *)&si4702_data,
 	 },
 	{
-	 .driver_name = "adv7180",
+	 .type = "adv7180",
 	 .addr = 0x21,
 	 },
 };

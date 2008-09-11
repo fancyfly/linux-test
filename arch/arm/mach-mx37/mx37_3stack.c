@@ -209,12 +209,12 @@ static struct mxc_keyp_platform_data keypad_data = {
 };
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
-	 .driver_name = "TSC2007",
+	 .type = "tsc2007",
 	 .addr = 0x48,
 	 .irq = IOMUX_TO_IRQ(MX37_PIN_AUD5_RXFS),
 	 },
 	{
-	 .driver_name = "MPR084",
+	 .type = "mpr084",
 	 .addr = 0x5D,
 	 .platform_data = &keypad_data,
 	 .irq = IOMUX_TO_IRQ(MX37_PIN_GPIO1_3),

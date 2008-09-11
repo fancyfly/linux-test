@@ -173,7 +173,7 @@ static int tve_update_detect_status(void)
 		     tve.base + TVE_STAT_REG);
 
 	if (old_detect != tve.detect)
-		sysfs_notify(&tve.pdev->dev.driver->kobj, NULL, "headphone");
+		sysfs_notify(&tve.pdev->dev.kobj, NULL, "headphone");
 
 	dev_dbg(&tve.pdev->dev, "detect = %d\n", tve.detect);
 	return tve.detect;
@@ -218,7 +218,7 @@ static irqreturn_t tve_detect_handler(int irq, void *data)
 	__raw_writel(stat | CD_MON_END_INT, tve.base + TVE_STAT_REG);
 
 	if (old_detect != tve.detect)
-		sysfs_notify(&tve.pdev->dev.driver->kobj, NULL, "headphone");
+		sysfs_notify(&tve.pdev->dev.kobj, NULL, "headphone");
 
 	return IRQ_HANDLED;
 }

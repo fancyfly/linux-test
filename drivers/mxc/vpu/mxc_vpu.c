@@ -394,7 +394,7 @@ struct file_operations vpu_fops = {
 static int vpu_dev_probe(struct platform_device *pdev)
 {
 	int err = 0;
-	struct class_device *temp_class;
+	struct device *temp_class;
 	struct resource *res;
 
 	if (cpu_is_mx32()) {
@@ -433,8 +433,8 @@ static int vpu_dev_probe(struct platform_device *pdev)
 		goto err_out_chrdev;
 	}
 
-	temp_class = class_device_create(vpu_class, NULL,
-					 MKDEV(vpu_major, 0), NULL, "mxc_vpu");
+	temp_class = device_create(vpu_class, NULL, MKDEV(vpu_major, 0),
+				   "mxc_vpu");
 	if (IS_ERR(temp_class)) {
 		err = PTR_ERR(temp_class);
 		goto err_out_class;
@@ -455,7 +455,7 @@ static int vpu_dev_probe(struct platform_device *pdev)
 	goto out;
 
       err_out_class:
-	class_device_destroy(vpu_class, MKDEV(vpu_major, 0));
+	device_destroy(vpu_class, MKDEV(vpu_major, 0));
 	class_destroy(vpu_class);
       err_out_chrdev:
 	unregister_chrdev(vpu_major, "mxc_vpu");
@@ -490,7 +490,7 @@ static void __exit vpu_exit(void)
 {
 	free_irq(MXC_INT_VPU, (void *)(&vpu_data));
 	if (vpu_major > 0) {
-		class_device_destroy(vpu_class, MKDEV(vpu_major, 0));
+		device_destroy(vpu_class, MKDEV(vpu_major, 0));
 		class_destroy(vpu_class);
 		unregister_chrdev(vpu_major, "mxc_vpu");
 		vpu_major = 0;

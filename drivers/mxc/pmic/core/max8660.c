@@ -92,7 +92,7 @@ int max8660_write_reg(u8 reg, u8 value)
  * @param adapter            struct i2c_client *
  * @return  Always 0 because max8660 is write-only and can not be detected
  */
-static int max8660_probe(struct i2c_client *client)
+static int max8660_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	max8660_i2c_client = client;
 	return 0;
@@ -108,12 +108,20 @@ static int max8660_remove(struct i2c_client *client)
 {
 	return 0;
 }
+
+static const struct i2c_device_id max8660_id[] = {
+	{ "max8660", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, max8660_id);
+
 static struct i2c_driver max8660_i2c_driver = {
 	.driver = {
 		   .owner = THIS_MODULE,
 		   .name = "max8660",},
 	.probe = max8660_probe,
 	.remove = max8660_remove,
+	.id_table = max8660_id,
 };
 
 /* called by pmic core when init*/

@@ -909,7 +909,7 @@ typedef enum {
  *
  * @return       This function returns PMIC_SUCCESS if successful.
  */
-PMIC_STATUS pmic_power_off(void);
+void pmic_power_off(void);
 
 /*!
  * This function sets the power control configuration.

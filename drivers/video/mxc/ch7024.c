@@ -432,7 +432,7 @@ static void hp_detect_wq_handler(struct work_struct *work)
 
 	enable_irq(ch7024_client->irq);
 
-	sysfs_notify(&ch7024_client->driver->driver.kobj, NULL, "headphone");
+	sysfs_notify(&ch7024_client->dev.kobj, NULL, "headphone");
 
 	/* send hw event by netlink */
 	event.args = detect;
@@ -676,7 +676,7 @@ static ssize_t store_sharpness(struct device_driver *dev, const char *buf,
 
 DRIVER_ATTR(sharpness, 0644, show_sharpness, store_sharpness);
 
-static int ch7024_probe(struct i2c_client *client)
+static int ch7024_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
 {
 	int ret, i;
 	u32 id;
@@ -823,6 +823,12 @@ static int ch7024_resume(struct i2c_client *client)
 #define ch7024_resume	NULL
 #endif
 
+static const struct i2c_device_id ch7024_id[] = {
+	{ "ch7024", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, ch7024_id);
+
 static struct i2c_driver ch7024_driver = {
 	.driver = {
 		   .name = "ch7024",
@@ -831,6 +837,7 @@ static struct i2c_driver ch7024_driver = {
 	.remove = ch7024_remove,
 	.suspend = ch7024_suspend,
 	.resume = ch7024_resume,
+	.id_table = ch7024_id,
 };
 
 static int __init ch7024_init(void)

@@ -351,7 +351,7 @@ static int ehci_fsl_setup(struct usb_hcd *hcd)
 	if (retval)
 		return retval;
 
-	ehci->is_tdi_rh_tt = 1;
+	hcd->has_tt = 1;
 
 	ehci->sbrn = 0x20;
 
@@ -446,9 +446,6 @@ static int ehci_fsl_drv_suspend(struct platform_device *pdev,
 
 	hcd->state = HC_STATE_SUSPENDED;
 	pdev->dev.power.power_state = PMSG_SUSPEND;
-
-	if (hcd->driver->suspend)
-		return hcd->driver->suspend(hcd, message);
 
 	/* ignore non-host interrupts */
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);

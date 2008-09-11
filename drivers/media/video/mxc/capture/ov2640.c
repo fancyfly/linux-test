@@ -145,8 +145,14 @@ struct i2c_client *ov2640_i2c_client;
 
 static sensor_interface *interface_param;
 static int reset_frame_rate = 30;
-static int ov2640_probe(struct i2c_client *adapter);
+static int ov2640_probe(struct i2c_client *adapter, const struct i2c_device_id *id);
 static int ov2640_remove(struct i2c_client *client);
+
+static const struct i2c_device_id ov2640_id[] = {
+	{ "ov2640", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, ov2640_id);
 
 static struct i2c_driver ov2640_i2c_driver = {
 	.driver = {
@@ -155,6 +161,7 @@ static struct i2c_driver ov2640_i2c_driver = {
 		   },
 	.probe = ov2640_probe,
 	.remove = ov2640_remove,
+	.id_table = ov2640_id,
 };
 
 /*!
@@ -163,7 +170,7 @@ static struct i2c_driver ov2640_i2c_driver = {
  * @param adapter            struct i2c_adapter *
  * @return  Error code indicating success or failure
  */
-static int ov2640_probe(struct i2c_client *client)
+static int ov2640_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct mxc_camera_platform_data *plat_data = client->dev.platform_data;
 

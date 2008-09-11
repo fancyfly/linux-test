@@ -1159,7 +1159,7 @@ static int mxc_asrc_probe(struct platform_device *pdev)
 {
 	int err = 0;
 	struct resource *res;
-	struct class_device *temp_class;
+	struct device *temp_class;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
@@ -1189,9 +1189,8 @@ static int mxc_asrc_probe(struct platform_device *pdev)
 		goto err_out_chrdev;
 	}
 
-	temp_class = class_device_create(asrc_class, NULL,
-					 MKDEV(asrc_major, 0), NULL,
-					 "mxc_asrc");
+	temp_class = device_create(asrc_class, NULL, MKDEV(asrc_major, 0),
+				   "mxc_asrc");
 	if (IS_ERR(temp_class)) {
 		err = PTR_ERR(temp_class);
 		goto err_out_class;
@@ -1213,7 +1212,7 @@ static int mxc_asrc_probe(struct platform_device *pdev)
 
       err_out_class:
 	clk_disable(mxc_asrc_data->asrc_core_clk);
-	class_device_destroy(asrc_class, MKDEV(asrc_major, 0));
+	device_destroy(asrc_class, MKDEV(asrc_major, 0));
 	class_destroy(asrc_class);
       err_out_chrdev:
 	unregister_chrdev(asrc_major, "mxc_asrc");
@@ -1238,7 +1237,7 @@ static int mxc_asrc_remove(struct platform_device *pdev)
 	mxc_asrc_data = NULL;
 	iounmap((unsigned long __iomem *)asrc_vrt_base_addr);
 	remove_proc_entry(proc_asrc->name, NULL);
-	class_device_destroy(asrc_class, MKDEV(asrc_major, 0));
+	device_destroy(asrc_class, MKDEV(asrc_major, 0));
 	class_destroy(asrc_class);
 	unregister_chrdev(asrc_major, "mxc_asrc");
 	return 0;

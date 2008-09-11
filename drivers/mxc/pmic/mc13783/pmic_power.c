@@ -113,7 +113,7 @@ static int pmic_power_resume(struct platform_device *pdev)
  *
  * @return       This function returns PMIC_SUCCESS if successful.
  */
-PMIC_STATUS pmic_power_off(void)
+void pmic_power_off(void)
 {
 	unsigned int mask, value;
 
@@ -121,9 +121,7 @@ PMIC_STATUS pmic_power_off(void)
 	value = BITFVAL(MC13783_PWRCTRL_USER_OFF_SPI,
 			MC13783_PWRCTRL_USER_OFF_SPI_ENABLE);
 
-	CHECK_ERROR(pmic_write_reg(REG_POWER_CONTROL_0, value, mask));
-
-	return PMIC_SUCCESS;
+	pmic_write_reg(REG_POWER_CONTROL_0, value, mask);
 }
 
 /*!

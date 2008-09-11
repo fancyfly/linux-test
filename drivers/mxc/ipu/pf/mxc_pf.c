@@ -938,7 +938,7 @@ static int mxc_pf_major = 0;
 int mxc_pf_dev_init(void)
 {
 	int ret = 0;
-	struct class_device *temp_class;
+	struct device *temp_class;
 
 	mxc_pf_major = register_chrdev(0, "mxc_ipu_pf", &mxc_pf_fops);
 
@@ -954,9 +954,8 @@ int mxc_pf_dev_init(void)
 		goto err_out1;
 	}
 
-	temp_class = class_device_create(mxc_pf_class, NULL,
-					 MKDEV(mxc_pf_major, 0), NULL,
-					 "mxc_ipu_pf");
+	temp_class = device_create(mxc_pf_class, NULL, MKDEV(mxc_pf_major, 0),
+				   "mxc_ipu_pf");
 	if (IS_ERR(temp_class)) {
 		printk(KERN_ERR "Error creating mxc_ipu_pf class device.\n");
 		ret = PTR_ERR(temp_class);
@@ -980,7 +979,7 @@ int mxc_pf_dev_init(void)
 static void mxc_pf_exit(void)
 {
 	if (mxc_pf_major > 0) {
-		class_device_destroy(mxc_pf_class, MKDEV(mxc_pf_major, 0));
+		device_destroy(mxc_pf_class, MKDEV(mxc_pf_major, 0));
 		class_destroy(mxc_pf_class);
 		unregister_chrdev(mxc_pf_major, "mxc_ipu_pf");
 	}

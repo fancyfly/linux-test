@@ -240,7 +240,7 @@ static struct file_operations pmic_fops = {
 static int __init pmic_dev_init(void)
 {
 	int ret = 0;
-	struct class_device *pmic_device;
+	struct device *pmic_device;
 	pmic_version_t pmic_ver;
 
 	pmic_ver = pmic_get_version();
@@ -262,9 +262,8 @@ static int __init pmic_dev_init(void)
 		goto err;
 	}
 
-	pmic_device =
-	    class_device_create(pmic_class, NULL, MKDEV(pmic_major, 0),
-				NULL, PMIC_NAME);
+	pmic_device = device_create(pmic_class, NULL, MKDEV(pmic_major, 0),
+				    PMIC_NAME);
 	if (IS_ERR(pmic_device)) {
 		printk(KERN_ERR "Error creating pmic class device.\n");
 		ret = PMIC_ERROR;
@@ -281,7 +280,7 @@ static int __init pmic_dev_init(void)
 	printk(KERN_INFO "PMIC Character device: successfully loaded\n");
 	return ret;
       err2:
-	class_device_destroy(pmic_class, MKDEV(pmic_major, 0));
+	device_destroy(pmic_class, MKDEV(pmic_major, 0));
       err1:
 	class_destroy(pmic_class);
       err:
@@ -298,7 +297,7 @@ static int __init pmic_dev_init(void)
  */
 static void __exit pmic_dev_exit(void)
 {
-	class_device_destroy(pmic_class, MKDEV(pmic_major, 0));
+	device_destroy(pmic_class, MKDEV(pmic_major, 0));
 	class_destroy(pmic_class);
 
 	unregister_chrdev(pmic_major, PMIC_NAME);

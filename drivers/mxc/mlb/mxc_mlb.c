@@ -212,7 +212,7 @@ static struct clk *mlb_clk;
 static struct cdev mxc_mlb_dev;	/* chareset device */
 static dev_t dev;
 static struct class *mlb_class;	/* device class */
-static struct class_device *class_dev;
+static struct device *class_dev;
 static unsigned long mlb_base;	/* mlb module base address */
 static unsigned int irq;
 
@@ -846,9 +846,8 @@ static int __devinit mxc_mlb_probe(struct platform_device *pdev)
 
 	for (i = 0; i < MLB_MINOR_DEVICES; i++) {
 
-		class_dev =
-		    class_device_create(mlb_class, NULL, MKDEV(mlb_major, i),
-					NULL, mlb_devinfo[i].dev_name);
+		class_dev = device_create(mlb_class, NULL, MKDEV(mlb_major, i),
+					  mlb_devinfo[i].dev_name);
 		if (IS_ERR(class_dev)) {
 			dev_err(&pdev->dev, "failed to create mlb %s"
 				" class device\n", mlb_devinfo[i].dev_name);
@@ -953,7 +952,7 @@ err0:
 	free_irq(irq, NULL);
 err1:
 	for (--i; i >= 0; i--)
-		class_device_destroy(mlb_class, MKDEV(mlb_major, i));
+		device_destroy(mlb_class, MKDEV(mlb_major, i));
 
 	class_destroy(mlb_class);
 err2:
@@ -991,7 +990,7 @@ static int __devexit mxc_mlb_remove(struct platform_device *pdev)
 
 	/* destroy mlb device class */
 	for (i = MLB_MINOR_DEVICES - 1; i >= 0; i--)
-		class_device_destroy(mlb_class, MKDEV(MAJOR(dev), i));
+		device_destroy(mlb_class, MKDEV(MAJOR(dev), i));
 	class_destroy(mlb_class);
 
 	/* Unregister the two MLB devices */

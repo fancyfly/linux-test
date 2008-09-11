@@ -177,8 +177,11 @@ PMIC_STATUS pmic_rtc_set_time_alarm(struct timeval * pmic_time)
 	unsigned int tod_reg_val = 0;
 	unsigned int day_reg_val = 0;
 	unsigned int mask, value;
+	int ret;
 
-	down_interruptible(&mutex);
+	if ((ret = down_interruptible(&mutex)) < 0)
+		return ret;
+
 	tod_reg_val = pmic_time->tv_sec % 86400;
 	day_reg_val = pmic_time->tv_sec / 86400;
 
@@ -471,7 +474,7 @@ int pmic_rtc_loaded(void)
 
 static int pmic_rtc_remove(struct platform_device *pdev)
 {
-	class_device_destroy(pmic_rtc_class, MKDEV(pmic_rtc_major, 0));
+	device_destroy(pmic_rtc_class, MKDEV(pmic_rtc_major, 0));
 	class_destroy(pmic_rtc_class);
 	unregister_chrdev(pmic_rtc_major, "pmic_rtc");
 	return 0;
@@ -480,7 +483,7 @@ static int pmic_rtc_remove(struct platform_device *pdev)
 static int pmic_rtc_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	struct class_device *temp_class;
+	struct device *temp_class;
 
 	pmic_rtc_major = register_chrdev(0, "pmic_rtc", &pmic_rtc_fops);
 	if (pmic_rtc_major < 0) {
@@ -495,9 +498,9 @@ static int pmic_rtc_probe(struct platform_device *pdev)
 		goto err_out1;
 	}
 
-	temp_class = class_device_create(pmic_rtc_class, NULL,
-					 MKDEV(pmic_rtc_major, 0),
-					 NULL, "pmic_rtc");
+	temp_class = device_create(pmic_rtc_class, NULL,
+				   MKDEV(pmic_rtc_major, 0),
+				   "pmic_rtc");
 	if (IS_ERR(temp_class)) {
 		printk(KERN_ERR "Error creating pmic rtc class device.\n");
 		ret = PTR_ERR(temp_class);

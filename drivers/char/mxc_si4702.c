@@ -67,7 +67,7 @@ struct si4702_info {
 static struct regulator *reg_vio;
 static struct regulator *reg_vdd;
 static struct class *radio_class;
-static struct class_device *class_dev;
+static struct device *class_dev;
 static struct si4702_info dev_info;
 /*by default, dev major is zero, and it's alloc dynamicaly. */
 static int dev_major = DEV_MAJOR;
@@ -78,7 +78,7 @@ DEFINE_SPINLOCK(count_lock);
 static struct i2c_client *si4702_client;
 static unsigned char reg_rw_buf[SI4702_REG_BYTE];
 static int si4702_id_detect(struct i2c_client *client);
-static int __devinit si4702_probe(struct i2c_client *client);
+static int __devinit si4702_probe(struct i2c_client *client, const struct i2c_device_id *id);
 static int __devexit si4702_remove(struct i2c_client *client);
 static int si4702_suspend(struct i2c_client *client, pm_message_t state);
 static int si4702_resume(struct i2c_client *client);
@@ -107,12 +107,20 @@ static struct device_attribute si4702_dev_attr = {
 	.show = si4702_show,
 	.store = si4702_store,
 };
+
+static const struct i2c_device_id si4702_id[] = {
+	{ "si4702", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, si4702_id);
+
 static struct i2c_driver i2c_si4702_driver = {
 	.driver = {
 		   .name = "si4702",
 		   },
 	.probe = si4702_probe,
 	.remove = si4702_remove,
+	.id_table = si4702_id,
 	.suspend = si4702_suspend,
 	.resume = si4702_resume,
 };
@@ -123,7 +131,7 @@ static struct file_operations si4702_fops = {
 	.ioctl = ioctl_si4702,
 };
 
-static int __devinit si4702_probe(struct i2c_client *client)
+static int __devinit si4702_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int ret = 0;
 	dev_t dev;
@@ -199,8 +207,8 @@ static int __devinit si4702_probe(struct i2c_client *client)
 	}
 
 	class_dev =
-	    class_device_create(radio_class, NULL, MKDEV(dev_major, dev_minor),
-				NULL, SI4702_DEV_NAME);
+	    device_create(radio_class, NULL, MKDEV(dev_major, dev_minor),
+			  SI4702_DEV_NAME);
 	if (IS_ERR(class_dev)) {
 		dev_err(&si4702_client->dev,
 			"SI4702: failed to create radio class device\n");
@@ -239,7 +247,7 @@ static int __devexit si4702_remove(struct i2c_client *client)
 
 	data = (struct mxc_fm_platform_data *)client->dev.platform_data;
 
-	class_device_destroy(radio_class, MKDEV(dev_major, dev_minor));
+	device_destroy(radio_class, MKDEV(dev_major, dev_minor));
 	class_destroy(radio_class);
 	cdev_del(&si4702_dev);
 	device_remove_file(&client->dev, &si4702_dev_attr);

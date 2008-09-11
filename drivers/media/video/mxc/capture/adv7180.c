@@ -38,8 +38,14 @@ extern PMIC_STATUS pmic_gpio_set_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
 					 unsigned int val);
 struct i2c_client *adv7180_i2c_client;
 
-static int adv7180_probe(struct i2c_client *adapter);
+static int adv7180_probe(struct i2c_client *adapter, const struct i2c_device_id *id);
 static int adv7180_detach(struct i2c_client *client);
+
+static const struct i2c_device_id adv7180_id[] = {
+	{ "adv7180", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, adv7180_id);
 
 static struct i2c_driver adv7180_i2c_driver = {
 	.driver = {
@@ -48,6 +54,7 @@ static struct i2c_driver adv7180_i2c_driver = {
 		   },
 	.probe = adv7180_probe,
 	.remove = adv7180_detach,
+	.id_table = adv7180_id,
 };
 
 /*! Structure initialized by adv7180_interface() and used to configure the
@@ -369,7 +376,7 @@ static void adv7180_hard_reset(void)
  *
  *  @return		Error code indicating success or failure.
  */
-static int adv7180_probe(struct i2c_client *client)
+static int adv7180_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int rev_id;
 

@@ -184,7 +184,7 @@ typedef struct {
 #else
     struct class        *cs;    /**< results of class_create() */
 #endif
-    struct class_device *cd;    /**< Result of class_simple_device_add() */
+    struct device *cd;    /**< Result of class_simple_device_add() */
     unsigned power_complete;    /**< TRUE if next inits succeeded */
 #if  LINUX_VERSION_CODE < KERNEL_VERSION(2,6,11)
     struct device_driver   dd;  /**< struct for register_driver() */
@@ -426,11 +426,9 @@ inline static int os_drv_do_reg(os_driver_reg_t *handle,
                     code = (os_error_code)handle->cs;
                     handle->cs = NULL;
                 } else {
-                    handle->cd = class_device_create(handle->cs, NULL,
-                                                        handle->dev, NULL,
-                                                        driver_name);
+                    handle->cd = device_create(handle->cs, NULL, handle->dev,
+                                               driver_name);
                     if (IS_ERR(handle->cd)) {
-                        class_device_destroy(handle->cs, handle->dev);
                         class_destroy(handle->cs);
                         unregister_chrdev(MAJOR(handle->dev), driver_name);
                         code = (os_error_code)handle->cs;
@@ -527,7 +525,7 @@ inline static int os_drv_rmv_reg(os_driver_reg_t* handle)
         unregister_chrdev(MAJOR(handle->dev), handle->dd.name);
 #else
         if (handle->cd != NULL) {
-            class_device_destroy(handle->cs, handle->dev);
+            device_destroy(handle->cs, handle->dev);
             handle->cd = NULL;
         }
         if (handle->cs != NULL) {

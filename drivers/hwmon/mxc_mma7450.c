@@ -90,7 +90,7 @@ static ssize_t mma7450_show(struct device *dev,
 static ssize_t mma7450_store(struct device *dev,
 			     struct device_attribute *attr, const char *buf,
 			     size_t count);
-static int mma7450_probe(struct i2c_client *client);
+static int mma7450_probe(struct i2c_client *client, const struct i2c_device_id *id);
 static int mma7450_remove(struct i2c_client *client);
 static int mma7450_suspend(struct i2c_client *client, pm_message_t state);
 static int mma7450_resume(struct i2c_client *client);
@@ -112,6 +112,13 @@ static struct device_attribute mma7450_dev_attr = {
 	.show = mma7450_show,
 	.store = mma7450_store,
 };
+
+static const struct i2c_device_id mma7450_id[] = {
+	{ "mma7450", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, mma7450_id);
+
 static struct i2c_driver i2c_mma7450_driver = {
 	.driver = {
 		   .name = "mma7450",
@@ -120,6 +127,7 @@ static struct i2c_driver i2c_mma7450_driver = {
 	.remove = mma7450_remove,
 	.suspend = mma7450_suspend,
 	.resume = mma7450_resume,
+	.id_table = mma7450_id,
 };
 
 static struct mma7450_status mma_status = {
@@ -591,7 +599,7 @@ error_bad_int:
 	return IRQ_RETVAL(1);
 }
 
-static int mma7450_probe(struct i2c_client *client)
+static int mma7450_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int ret;
 	struct input_dev *idev;

@@ -286,7 +286,7 @@ static int mxc_avic_resume(struct sys_device *dev)
  * This structure contains pointers to the power management callback functions.
  */
 static struct sysdev_class mxc_avic_sysclass = {
-	set_kset_name("mxc_irq"),
+	.name = "mxc_irq",
 	.suspend = mxc_avic_suspend,
 	.resume = mxc_avic_resume,
 };

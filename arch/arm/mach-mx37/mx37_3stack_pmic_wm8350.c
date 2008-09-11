@@ -83,13 +83,13 @@ void wm8350_free(struct wm8350 *wm8350)
 
 	flush_scheduled_work();
 
-	if (wm8350->pmic.dev.is_registered)
+	if (device_is_registered(&wm8350->pmic.dev))
 		device_unregister(&wm8350->pmic.dev);
-	if (wm8350->rtc.dev.is_registered)
+	if (device_is_registered(&wm8350->rtc.dev))
 		device_unregister(&wm8350->rtc.dev);
-	if (wm8350->wdg.dev.is_registered)
+	if (device_is_registered(&wm8350->wdg.dev))
 		device_unregister(&wm8350->wdg.dev);
-	if (wm8350->power.dev.is_registered)
+	if (device_is_registered(&wm8350->power.dev))
 		device_unregister(&wm8350->power.dev);
 
 	platform_device_unregister(imx_snd_device);

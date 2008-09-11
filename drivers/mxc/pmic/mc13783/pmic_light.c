@@ -2672,7 +2672,7 @@ static struct file_operations pmic_light_fops = {
 
 static int pmic_light_remove(struct platform_device *pdev)
 {
-	class_device_destroy(pmic_light_class, MKDEV(pmic_light_major, 0));
+	device_destroy(pmic_light_class, MKDEV(pmic_light_major, 0));
 	class_destroy(pmic_light_class);
 	unregister_chrdev(pmic_light_major, "pmic_light");
 	return 0;
@@ -2681,7 +2681,7 @@ static int pmic_light_remove(struct platform_device *pdev)
 static int pmic_light_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	struct class_device *temp_class;
+	struct device *temp_class;
 
 	while (suspend_flag == 1) {
 		swait++;
@@ -2705,9 +2705,9 @@ static int pmic_light_probe(struct platform_device *pdev)
 		goto err_out1;
 	}
 
-	temp_class = class_device_create(pmic_light_class, NULL,
-					 MKDEV(pmic_light_major, 0),
-					 NULL, "pmic_light");
+	temp_class = device_create(pmic_light_class, NULL,
+				   MKDEV(pmic_light_major, 0),
+				   "pmic_light");
 	if (IS_ERR(temp_class)) {
 		printk(KERN_ERR "Error creating pmic_light class device.\n");
 		ret = PTR_ERR(temp_class);
@@ -2723,7 +2723,7 @@ static int pmic_light_probe(struct platform_device *pdev)
 	return ret;
 
       err_out3:
-	class_device_destroy(pmic_light_class, MKDEV(pmic_light_major, 0));
+	device_destroy(pmic_light_class, MKDEV(pmic_light_major, 0));
       err_out2:
 	class_destroy(pmic_light_class);
       err_out1:

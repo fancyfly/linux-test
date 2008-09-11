@@ -1132,7 +1132,7 @@ static struct file_operations pmic_battery_fops = {
 
 static int pmic_battery_remove(struct platform_device *pdev)
 {
-	class_device_destroy(pmic_battery_class, MKDEV(pmic_battery_major, 0));
+	device_destroy(pmic_battery_class, MKDEV(pmic_battery_major, 0));
 	class_destroy(pmic_battery_class);
 	unregister_chrdev(pmic_battery_major, PMIC_BATTERY_STRING);
 	return 0;
@@ -1141,7 +1141,7 @@ static int pmic_battery_remove(struct platform_device *pdev)
 static int pmic_battery_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	struct class_device *temp_class;
+	struct device *temp_class;
 
 	pmic_battery_major = register_chrdev(0, PMIC_BATTERY_STRING,
 					     &pmic_battery_fops);
@@ -1159,9 +1159,9 @@ static int pmic_battery_probe(struct platform_device *pdev)
 		goto err_out1;
 	}
 
-	temp_class = class_device_create(pmic_battery_class, NULL,
-					 MKDEV(pmic_battery_major, 0),
-					 NULL, PMIC_BATTERY_STRING);
+	temp_class = device_create(pmic_battery_class, NULL,
+				   MKDEV(pmic_battery_major, 0),
+				   PMIC_BATTERY_STRING);
 	if (IS_ERR(temp_class)) {
 		printk(KERN_ERR "Error creating PMIC battery class device.\n");
 		ret = PTR_ERR(temp_class);

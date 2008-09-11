@@ -29,7 +29,6 @@
 #include <linux/regulator/wm8350/wm8350.h>
 #include <linux/regulator/wm8350/wm8350-audio.h>
 #include <linux/regulator/wm8350/wm8350-bus.h>
-#include <sound/driver.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>

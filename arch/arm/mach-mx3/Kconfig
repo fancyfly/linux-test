@@ -1,6 +1,15 @@
 menu "MX3 Options"
 	depends on ARCH_MX3
 
+config MX3_OPTIONS
+	bool
+	default y
+	select CPU_V6
+	select CACHE_L2X0
+	select OUTER_CACHE
+	select USB_ARCH_HAS_EHCI
+	select ARCH_HAS_EVTMON
+
 config MACH_MX31ADS
 	bool "Support MX31ADS platforms"
 	help

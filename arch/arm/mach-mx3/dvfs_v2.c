@@ -403,7 +403,7 @@ static SYSDEV_ATTR(enable, 0200, NULL, dvfs_enable_store);
 static SYSDEV_ATTR(status, 0644, dvfs_status_show, dvfs_status_store);
 
 static struct sysdev_class dvfs_sysclass = {
-	set_kset_name("dvfs"),
+	.name = "dvfs",
 };
 
 static struct sys_device dvfs_device = {

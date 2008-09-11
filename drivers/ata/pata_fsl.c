@@ -366,7 +366,7 @@ static irqreturn_t pata_fsl_adma_intr(int irq, void *dev_instance)
 			qc = ata_qc_from_tag(ap, ap->link.active_tag);
 			if (qc && (!(qc->tf.flags & ATA_TFLAG_POLLING)) &&
 			    (qc->flags & ATA_QCFLAG_ACTIVE))
-				handled |= ata_host_intr(ap, qc);
+				handled |= ata_sff_host_intr(ap, qc);
 		}
 	}
 
@@ -387,6 +387,7 @@ static void pata_fsl_bmdma_setup(struct ata_queued_cmd *qc)
 	struct fsl_ata_platform_data *plat = ap->dev->platform_data;
 	struct scatterlist tmp[plat->max_sg], *tsg, *sg;
 	int err;
+	unsigned int si;
 
 	priv->dma_dir = qc->dma_dir;
 
@@ -431,7 +432,7 @@ static void pata_fsl_bmdma_setup(struct ata_queued_cmd *qc)
 	 * Copy the sg list to an array.
 	 */
 	tsg = tmp;
-	ata_for_each_sg(sg, qc) {
+	for_each_sg(qc->sg, sg, qc->n_elem, si) {
 		memcpy(tsg, sg, sizeof *sg);
 		tsg++;
 		nr_sg++;
@@ -505,7 +506,7 @@ static void pata_fsl_bmdma_start(struct ata_queued_cmd *qc)
 
 	priv->dma_done = 0;
 
-	ap->ops->exec_command(ap, &qc->tf);
+	ata_sff_exec_command(ap, &qc->tf);
 }
 
 static void pata_fsl_bmdma_stop(struct ata_queued_cmd *qc)
@@ -525,7 +526,7 @@ static void pata_fsl_bmdma_stop(struct ata_queued_cmd *qc)
 	}
 
 	/* do a dummy read as in ata_bmdma_stop */
-	ata_altstatus(ap);
+	ata_sff_dma_pause(ap);
 }
 
 static u8 pata_fsl_bmdma_status(struct ata_port *ap)
@@ -571,7 +572,7 @@ static u8 pata_fsl_irq_ack(struct ata_port *ap, unsigned int chk_drq)
 	unsigned int bits = chk_drq ? ATA_BUSY | ATA_DRQ : ATA_BUSY;
 	u8 status;
 
-	status = ata_busy_wait(ap, bits, 1000);
+	status = ata_sff_busy_wait(ap, bits, 1000);
 	if (status & bits)
 		if (ata_msg_err(ap))
 			printk(KERN_ERR "abnormal status 0x%X\n", status);
@@ -603,36 +604,24 @@ static struct scsi_host_template pata_fsl_sht = {
 };
 
 static struct ata_port_operations pata_fsl_port_ops = {
+	.inherits = &ata_bmdma_port_ops,
 	.set_piomode = pata_fsl_set_piomode,
 	.set_dmamode = pata_fsl_set_dmamode,
 
-	.tf_load = ata_tf_load,
-	.tf_read = ata_tf_read,
-	.check_status = ata_check_status,
-	.exec_command = ata_exec_command,
-	.dev_select = ata_std_dev_select,
-
-	.freeze = ata_bmdma_freeze,
-	.thaw = ata_bmdma_thaw,
-	.error_handler = ata_bmdma_error_handler,
-	.post_internal_cmd = ata_bmdma_post_internal_cmd,
 	.cable_detect = ata_cable_unknown,
 
 	.bmdma_setup = pata_fsl_bmdma_setup,
 	.bmdma_start = pata_fsl_bmdma_start,
-
-	.qc_prep = ata_noop_qc_prep,
-	.qc_issue = ata_qc_issue_prot,
-
-	.data_xfer = ata_data_xfer_noirq,
-
-	.irq_clear = ata_dummy_noret,
-	.irq_on = ata_irq_on,
-
-	.port_start = pata_fsl_port_start,
-
 	.bmdma_stop = pata_fsl_bmdma_stop,
 	.bmdma_status = pata_fsl_bmdma_status,
+
+	.qc_prep = ata_noop_qc_prep,
+
+	.sff_data_xfer = ata_sff_data_xfer_noirq,
+	.sff_irq_clear = ata_dummy_noret,
+	.sff_irq_on = ata_sff_irq_on,
+
+	.port_start = pata_fsl_port_start,
 };
 
 static void fsl_setup_port(struct ata_ioports *ioaddr)
@@ -790,7 +779,7 @@ static int __devinit pata_fsl_probe(struct platform_device *pdev)
 					pata_fsl_adma_intr, 0, &pata_fsl_sht);
 	else
 		ret = ata_host_activate(host, platform_get_irq(pdev, 0),
-					ata_interrupt, 0, &pata_fsl_sht);
+					ata_sff_interrupt, 0, &pata_fsl_sht);
 
 	if (ret < 0)
 		goto err2;

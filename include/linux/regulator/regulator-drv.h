@@ -67,7 +67,7 @@ struct regulator {
 	struct blocking_notifier_head notifier;
 	struct mutex mutex;
 	struct module *owner;
-	struct class_device cdev;
+	struct device cdev;
 
 	struct regulator *parent; /* for tree */
 

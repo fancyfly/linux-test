@@ -563,7 +563,7 @@ static struct file_operations mxc_ipu_fops = {
 int register_ipu_device()
 {
 	int ret = 0;
-	struct class_device *temp;
+	struct device *temp;
 	mxc_ipu_major = register_chrdev(0, "mxc_ipu", &mxc_ipu_fops);
 	if (mxc_ipu_major < 0) {
 		printk(KERN_ERR
@@ -578,9 +578,8 @@ int register_ipu_device()
 		goto err1;
 	}
 
-	temp =
-	    class_device_create(mxc_ipu_class, NULL, MKDEV(mxc_ipu_major, 0),
-				NULL, "mxc_ipu");
+	temp = device_create(mxc_ipu_class, NULL, MKDEV(mxc_ipu_major, 0),
+			     "mxc_ipu");
 
 	if (IS_ERR(temp)) {
 		printk(KERN_ERR "Unable to create class device for Mxc Ipu\n");

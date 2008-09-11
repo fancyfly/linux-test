@@ -26,7 +26,6 @@
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
 
-#include <sound/driver.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -635,7 +634,7 @@ static struct snd_soc_device_driver ak4647_hifi_dai_driver = {
 		   },
 };
 
-static int ak4647_i2c_probe(struct i2c_client *client)
+static int ak4647_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	ak4647_i2c_client = client;
 	return 0;
@@ -646,12 +645,19 @@ static int ak4647_i2c_remove(struct i2c_client *client)
 	return 0;
 }
 
+static const struct i2c_device_id ak4647_id[] = {
+	{ "ak4647-i2c", 0 },
+	{},
+};
+MODULE_DEVICE_TABLE(i2c, ak4647_id);
+
 static struct i2c_driver ak4647_i2c_driver = {
 	.driver = {.owner = THIS_MODULE,
 		   .name = "ak4647-i2c",
 		   },
 	.probe = ak4647_i2c_probe,
 	.remove = ak4647_i2c_remove,
+	.id_table = ak4647_id,
 };
 
 static __init int ak4647_init(void)

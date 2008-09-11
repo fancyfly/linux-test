@@ -663,7 +663,7 @@ static int mxc_gpio_resume(struct sys_device *dev)
  * This structure contains pointers to the power management callback functions.
  */
 static struct sysdev_class mxc_gpio_sysclass = {
-	set_kset_name("mxc_gpio"),
+	.name = "mxc_gpio",
 	.suspend = mxc_gpio_suspend,
 	.resume = mxc_gpio_resume,
 };

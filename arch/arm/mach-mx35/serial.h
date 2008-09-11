@@ -1,5 +1,5 @@
 /*
- * Copyright 20088888888 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*

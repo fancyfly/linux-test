@@ -24,6 +24,9 @@
  * Bug fixes and cleanup by Philippe De Muyter (phdm@macqel.be)
  * Copyright (c) 2004-2006 Macq Electronique SA.
  */
+/*
+ * Copyright 2006-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ */
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -42,12 +45,14 @@
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
 #include <linux/bitops.h>
+#include <linux/clk.h>
 
 #include <asm/irq.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
 #include <asm/pgtable.h>
 #include <asm/cacheflush.h>
+#include <asm/mach-types.h>
 
 #if defined(CONFIG_M523x) || defined(CONFIG_M527x) || \
     defined(CONFIG_M5272) || defined(CONFIG_M528x) || \
@@ -55,11 +60,20 @@
 #include <asm/coldfire.h>
 #include <asm/mcfsim.h>
 #include "fec.h"
+#define FEC_ALIGNMENT  (0x03)          /*FEC needs 4bytes alignment*/
+#elif defined(CONFIG_ARCH_MXC)
+#include <asm/arch/hardware.h>
+#include <asm/arch/iim.h>
+#include "fec.h"
+#define FEC_ALIGNMENT  (0x0F)          /*FEC needs 128bits(32bytes) alignment*/
 #else
 #include <asm/8xx_immap.h>
 #include <asm/mpc8xx.h>
 #include "commproc.h"
+#define FEC_ALIGNMENT  (0x03)          /*FEC needs 4bytes alignment */
 #endif
+
+#define FEC_ADDR_ALIGNMENT(x) ((unsigned char *)(((unsigned long )(x) + (FEC_ALIGNMENT)) & (~FEC_ALIGNMENT)))
 
 #if defined(CONFIG_FEC2)
 #define	FEC_MAX_PORTS	2
@@ -86,6 +100,8 @@ static unsigned int fec_hw[] = {
 	(MCF_MBAR+0x30000),
 #elif defined(CONFIG_M532x)
 	(MCF_MBAR+0xfc030000),
+#elif defined(CONFIG_ARCH_MXC)
+	(IO_ADDRESS(FEC_BASE_ADDR)),
 #else
 	&(((immap_t *)IMAP_ADDR)->im_cpm.cp_fec),
 #endif
@@ -163,6 +179,12 @@ typedef struct {
 #define FEC_ENET_MII	((uint)0x00800000)	/* MII interrupt */
 #define FEC_ENET_EBERR	((uint)0x00400000)	/* SDMA bus error */
 
+#ifndef CONFIG_ARCH_MXC
+#define FEC_ENET_MASK   ((uint)0xffc00000)
+#else
+#define FEC_ENET_MASK   ((uint)0xfff80000)
+#endif
+
 /* The FEC stores dest/src/type, data, and checksum for receive packets.
  */
 #define PKT_MAXBUF_SIZE		1518
@@ -176,7 +198,7 @@ typedef struct {
  * account when setting it.
  */
 #if defined(CONFIG_M523x) || defined(CONFIG_M527x) || defined(CONFIG_M528x) || \
-    defined(CONFIG_M520x) || defined(CONFIG_M532x)
+    defined(CONFIG_M520x) || defined(CONFIG_M532x) || defined(CONFIG_ARCH_MXC)
 #define	OPT_FRAME_SIZE	(PKT_MAXBUF_SIZE << 16)
 #else
 #define	OPT_FRAME_SIZE	0
@@ -199,11 +221,13 @@ struct fec_enet_private {
 	/* The saved address of a sent-in-place packet/buffer, for skfree(). */
 	unsigned char *tx_bounce[TX_RING_SIZE];
 	struct	sk_buff* tx_skbuff[TX_RING_SIZE];
+	struct  sk_buff* rx_skbuff[RX_RING_SIZE];
 	ushort	skb_cur;
 	ushort	skb_dirty;
 
 	/* CPM dual port RAM relative addresses.
 	*/
+	void *  cbd_mem_base;           /* save the virtual base address of rx&tx buffer descripter */
 	cbd_t	*rx_bd_base;		/* Address of Rx and Tx buffers. */
 	cbd_t	*tx_bd_base;
 	cbd_t	*cur_rx, *cur_tx;		/* The next free ring entry */
@@ -220,6 +244,7 @@ struct fec_enet_private {
 	uint	phy_speed;
 	phy_info_t const	*phy;
 	struct work_struct phy_task;
+	struct net_device *net;
 
 	uint	sequence_done;
 	uint	mii_phy_task_queued;
@@ -231,6 +256,8 @@ struct fec_enet_private {
 	int	link;
 	int	old_link;
 	int	full_duplex;
+
+	struct clk *clk;
 };
 
 static int fec_enet_open(struct net_device *dev);
@@ -245,6 +272,17 @@ static void fec_restart(struct net_device *dev, int duplex);
 static void fec_stop(struct net_device *dev);
 static void fec_set_mac_address(struct net_device *dev);
 
+static void __inline__ fec_dcache_inv_range(void * start, void * end);
+static void __inline__ fec_dcache_flush_range(void * start, void * end);
+
+/*
+ *  fec_copy_threshold controls the copy when recieving ethernet frame.
+ *     If ethernet header aligns 4bytes, the ip header and upper header will not aligns 4bytes.
+ *     The resean is ethernet header is 14bytes.
+ *     And the max size of tcp & ip header is 128bytes. Normally it is 40bytes.
+ *     So I set the default value between 128 to 256.
+ */
+static int fec_copy_threshold = 192;
 
 /* MII processing.  We keep this as simple as possible.  Requests are
  * placed on the list (if there is room).  When the request is finished
@@ -356,10 +394,10 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	 *	4-byte boundaries. Use bounce buffers to copy data
 	 *	and get it aligned. Ugh.
 	 */
-	if (bdp->cbd_bufaddr & 0x3) {
+	if ((bdp->cbd_bufaddr) & FEC_ALIGNMENT) {
 		unsigned int index;
 		index = bdp - fep->tx_bd_base;
-		memcpy(fep->tx_bounce[index], (void *) bdp->cbd_bufaddr, bdp->cbd_datlen);
+		memcpy(fep->tx_bounce[index], (void *) skb->data, skb->len);
 		bdp->cbd_bufaddr = __pa(fep->tx_bounce[index]);
 	}
 
@@ -373,8 +411,8 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* Push the data cache so the CPM does not get stale memory
 	 * data.
 	 */
-	flush_dcache_range((unsigned long)skb->data,
-			   (unsigned long)skb->data + skb->len);
+	fec_dcache_flush_range(__va(bdp->cbd_bufaddr), __va(bdp->cbd_bufaddr) +
+		 bdp->cbd_datlen);
 
 	/* Send it on its way.  Tell FEC it's ready, interrupt when done,
 	 * it's the last BD of the frame, and to put the CRC on the end.
@@ -387,7 +425,7 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	dev->trans_start = jiffies;
 
 	/* Trigger transmission start */
-	fecp->fec_x_des_active = 0;
+	fecp->fec_x_des_active = 0x01000000;
 
 	/* If this was the last BD in the ring, start at the beginning again.
 	*/
@@ -474,7 +512,7 @@ fec_enet_interrupt(int irq, void * dev_id)
 
 		/* Handle receive event in its own function.
 		 */
-		if (int_events & FEC_ENET_RXF) {
+		if (int_events & (FEC_ENET_RXF | FEC_ENET_RXB)) {
 			ret = IRQ_HANDLED;
 			fec_enet_rx(dev);
 		}
@@ -483,7 +521,7 @@ fec_enet_interrupt(int irq, void * dev_id)
 		   descriptors. FEC handles all errors, we just discover
 		   them as part of the transmit process.
 		*/
-		if (int_events & FEC_ENET_TXF) {
+		if (int_events & (FEC_ENET_TXF | FEC_ENET_TXB)) {
 			ret = IRQ_HANDLED;
 			fec_enet_tx(dev);
 		}
@@ -586,6 +624,7 @@ fec_enet_rx(struct net_device *dev)
 	struct	sk_buff	*skb;
 	ushort	pkt_len;
 	__u8 *data;
+	int     rx_index ;
 
 #ifdef CONFIG_M532x
 	flush_cache_all();
@@ -602,7 +641,7 @@ fec_enet_rx(struct net_device *dev)
 	bdp = fep->cur_rx;
 
 while (!((status = bdp->cbd_sc) & BD_ENET_RX_EMPTY)) {
-
+	rx_index = bdp - fep->rx_bd_base;
 #ifndef final_version
 	/* Since we have allocated space to hold a complete frame,
 	 * the last indicator should be set.
@@ -646,20 +685,36 @@ while (!((status = bdp->cbd_sc) & BD_ENET_RX_EMPTY)) {
 	pkt_len = bdp->cbd_datlen;
 	dev->stats.rx_bytes += pkt_len;
 	data = (__u8*)__va(bdp->cbd_bufaddr);
+	fec_dcache_inv_range(data, data+pkt_len -4);
 
 	/* This does 16 byte alignment, exactly what we need.
 	 * The packet length includes FCS, but we don't want to
 	 * include that when passing upstream as it messes up
 	 * bridging applications.
 	 */
-	skb = dev_alloc_skb(pkt_len-4);
+	if ((pkt_len - 4) < fec_copy_threshold) {
+		skb = dev_alloc_skb(pkt_len);
+	} else {
+		skb = dev_alloc_skb(FEC_ENET_RX_FRSIZE);
+	}
 
 	if (skb == NULL) {
 		printk("%s: Memory squeeze, dropping packet.\n", dev->name);
 		dev->stats.rx_dropped++;
 	} else {
-		skb_put(skb,pkt_len-4);	/* Make room */
+		if ((pkt_len - 4) < fec_copy_threshold) {
+			skb_reserve(skb, 2);    /*skip 2bytes, so ipheader is align 4bytes*/
+			skb_put(skb,pkt_len-4); /* Make room */
 		skb_copy_to_linear_data(skb, data, pkt_len-4);
+		} else {
+			struct sk_buff * pskb = fep->rx_skbuff[rx_index];
+
+			fep->rx_skbuff[rx_index] = skb;
+			skb->data = FEC_ADDR_ALIGNMENT(skb->data);
+			bdp->cbd_bufaddr = __pa(skb->data);
+                        skb_put(pskb,pkt_len-4);        /* Make room */
+                        skb = pskb;
+                }
 		skb->protocol=eth_type_trans(skb,dev);
 		netif_rx(skb);
 	}
@@ -686,7 +741,7 @@ while (!((status = bdp->cbd_sc) & BD_ENET_RX_EMPTY)) {
 	 * incoming frames.  On a heavily loaded network, we should be
 	 * able to keep up at the expense of system resources.
 	 */
-	fecp->fec_r_des_active = 0;
+	fecp->fec_r_des_active = 0x01000000;
 #endif
    } /* while (!((status = bdp->cbd_sc) & BD_ENET_RX_EMPTY)) */
 	fep->cur_rx = (cbd_t *)bdp;
@@ -1221,6 +1276,26 @@ static phy_info_t phy_info_dp83848= {
 	},
 };
 
+static phy_info_t phy_info_lan8700 = {
+	0x0007C0C,
+	"LAN8700",
+	(const phy_cmd_t []) { /* config */
+		{ mk_mii_read(MII_REG_CR), mii_parse_cr },
+		{ mk_mii_read(MII_REG_ANAR), mii_parse_anar },
+		{ mk_mii_end, }
+	},
+	(const phy_cmd_t []) { /* startup */
+		{ mk_mii_write(MII_REG_CR, 0x1200), NULL }, /* autonegotiate */
+		{ mk_mii_read(MII_REG_SR), mii_parse_sr },
+		{ mk_mii_end, }
+	},
+	(const phy_cmd_t []) { /* act_int */
+		{ mk_mii_end, }
+	},
+	(const phy_cmd_t []) { /* shutdown */
+		{ mk_mii_end, }
+	},
+};
 /* ------------------------------------------------------------------------- */
 
 static phy_info_t const * const phy_info[] = {
@@ -1230,6 +1305,7 @@ static phy_info_t const * const phy_info[] = {
 	&phy_info_am79c874,
 	&phy_info_ks8721bl,
 	&phy_info_dp83848,
+	&phy_info_lan8700,
 	NULL
 };
 
@@ -1245,6 +1321,21 @@ mii_link_interrupt(int irq, void * dev_id);
 #endif
 
 #if defined(CONFIG_M5272)
+/*
+ *  * do some initializtion based architecture of this chip
+ *   */
+static void __inline__ fec_arch_init(void)
+{
+	        return;
+}
+/*
+ *  * do some cleanup based architecture of this chip
+ *   */
+static void __inline__ fec_arch_exit(void)
+{
+	        return;
+}
+
 /*
  *	Code specific to Coldfire 5272 setup.
  */
@@ -1351,15 +1442,56 @@ static void __inline__ fec_localhw_setup(void)
 }
 
 /*
- *	Do not need to make region uncached on 5272.
+ * invalidate dcache related with the virtual memory range(start, end)
  */
-static void __inline__ fec_uncache(unsigned long addr)
+static void __inline__ fec_dcache_inv_range(void * start, void * end)
 {
+	return ;
+}
+
+/*
+ * flush dcache related with the virtual memory range(start, end)
+ */
+static void __inline__ fec_dcache_flush_range(void * start, void * end)
+{
+	return ;
+}
+
+/*
+ * map memory space (addr, addr+size) to uncachable erea.
+ */
+static unsigned long __inline__ fec_map_uncache(unsigned long addr, int size)
+{
+	return addr;
+}
+
+/*
+ * unmap memory erea started with addr from uncachable erea.
+ */
+static void __inline__ fec_unmap_uncache(void * addr)
+{
+	return ;
 }
 
 /* ------------------------------------------------------------------------- */
 
 #elif defined(CONFIG_M523x) || defined(CONFIG_M527x) || defined(CONFIG_M528x)
+
+/*
+ * do some initializtion based architecture of this chip
+ */
+static void __inline__ fec_arch_init(void)
+{
+	return;
+}
+
+/*
+ * do some cleanup based architecture of this chip
+ */
+static void __inline__ fec_arch_exit(void)
+{
+	return;
+}
 
 /*
  *	Code specific to Coldfire 5230/5231/5232/5234/5235,
@@ -1511,17 +1643,55 @@ static void __inline__ fec_phy_ack_intr(void)
 static void __inline__ fec_localhw_setup(void)
 {
 }
+/*
+ * invalidate dcache related with the virtual memory range(start, end)
+ */
+static void __inline__ fec_dcache_inv_range(void * start, void * end)
+{
+	        return ;
+}
 
 /*
- *	Do not need to make region uncached on 5272.
+ * flush dcache related with the virtual memory range(start, end)
  */
-static void __inline__ fec_uncache(unsigned long addr)
+static void __inline__ fec_dcache_flush_range(void * start, void * end)
 {
+	return ;
+}
+
+/*
+ * map memory space (addr, addr+size) to uncachable erea.
+ */
+static unsigned long __inline__ fec_map_uncache(unsigned long addr, int size)
+{
+	return addr;
+}
+
+/*
+ * unmap memory erea started with addr from uncachable erea.
+ */
+static void __inline__ fec_unmap_uncache(void * addr)
+{
+	return ;
 }
 
 /* ------------------------------------------------------------------------- */
 
 #elif defined(CONFIG_M520x)
+/*
+ * do some initializtion based architecture of this chip
+ */
+static void __inline__ fec_arch_init(void)
+{
+	return;
+}
+/*
+ * do some cleanup based architecture of this chip
+ */
+static void __inline__ fec_arch_exit(void)
+{
+	return;
+}
 
 /*
  *	Code specific to Coldfire 520x
@@ -1633,13 +1803,59 @@ static void __inline__ fec_localhw_setup(void)
 {
 }
 
-static void __inline__ fec_uncache(unsigned long addr)
+/*
+ * invalidate dcache related with the virtual memory range(start, end)
+ */
+static void __inline__ fec_dcache_inv_range(void * start, void * end)
 {
+	return ;
 }
+
+/*
+ * flush dcache related with the virtual memory range(start, end)
+ */
+static void __inline__ fec_dcache_flush_range(void * start, void * end)
+{
+	return ;
+}
+
+/*
+ * map memory space (addr, addr+size) to uncachable erea.
+ */
+static unsigned long __inline__ fec_map_uncache(unsigned long addr, int size)
+{
+	return addr;
+}
+
+/*
+ * unmap memory erea started with addr from uncachable erea.
+ */
+static void __inline__ fec_unmap_uncache(void * addr)
+{
+	return ;
+}
+
 
 /* ------------------------------------------------------------------------- */
 
 #elif defined(CONFIG_M532x)
+
+/*
+ * do some initializtion based architecture of this chip
+ */
+static void __inline__ fec_arch_init(void)
+{
+	return;
+}
+
+/*
+ * do some cleanup based architecture of this chip
+ */
+static void __inline__ fec_arch_exit(void)
+{
+	return;
+}
+
 /*
  * Code specific for M532x
  */
@@ -1773,16 +1989,243 @@ static void __inline__ fec_localhw_setup(void)
 }
 
 /*
- *	Do not need to make region uncached on 532x.
+ * invalidate dcache related with the virtual memory range(start, end)
  */
-static void __inline__ fec_uncache(unsigned long addr)
+static void __inline__ fec_dcache_inv_range(void * start, void * end)
 {
+	return ;
+}
+
+/*
+ * flush dcache related with the virtual memory range(start, end)
+ */
+static void __inline__ fec_dcache_flush_range(void * start, void * end)
+{
+	return ;
+}
+
+/*
+ * map memory space (addr, addr+size) to uncachable erea.
+ */
+static unsigned long __inline__ fec_map_uncache(unsigned long addr, int size)
+{
+	return addr;
+}
+
+/*
+ * unmap memory erea started with addr from uncachable erea.
+ */
+static void __inline__ fec_unmap_uncache(void *  addr)
+{
+	return ;
 }
 
 /* ------------------------------------------------------------------------- */
 
+#elif defined(CONFIG_ARCH_MXC)
+
+extern void gpio_fec_active(void);
+extern void gpio_fec_inactive(void);
+extern unsigned int expio_intr_fec;
+
+/*
+ * do some initializtion based architecture of this chip
+ */
+static void __inline__ fec_arch_init(void)
+{
+	struct clk *clk;
+	gpio_fec_active();
+	clk = clk_get(NULL, "fec_clk");
+	clk_enable(clk);
+	clk_put(clk);
+	return;
+}
+/*
+ * do some cleanup based architecture of this chip
+ */
+static void __inline__ fec_arch_exit(void)
+{
+	struct clk *clk;
+	clk = clk_get(NULL, "fec_clk");
+	clk_disable(clk);
+	clk_put(clk);
+	gpio_fec_inactive();
+	return;
+}
+
+/*
+ * Code specific to Freescale i.MXC
+ */
+static void __inline__ fec_request_intrs(struct net_device *dev)
+{
+	/* Setup interrupt handlers. */
+	if (request_irq(MXC_INT_FEC, fec_enet_interrupt, 0, "fec", dev) != 0)
+		panic("FEC: Could not allocate FEC IRQ(%d)!\n", MXC_INT_FEC);
+	/* TODO: disable now due to CPLD issue */
+	if ((expio_intr_fec > 0) &&
+	(request_irq(expio_intr_fec, mii_link_interrupt, 0, "fec(MII)", dev) != 0))
+		panic("FEC: Could not allocate FEC(MII) IRQ(%d)!\n", expio_intr_fec);
+	disable_irq(expio_intr_fec);
+}
+
+static void __inline__ fec_set_mii(struct net_device *dev, struct fec_enet_private *fep)
+{
+	u32 rate;
+	struct clk *clk;
+	volatile fec_t *fecp;
+	fecp = fep->hwp;
+	fecp->fec_r_cntrl = OPT_FRAME_SIZE | 0x04;
+	fecp->fec_x_cntrl = 0x00;
+
+	/*
+	 * Set MII speed to 2.5 MHz
+	 */
+	clk = clk_get(NULL, "fec_clk");
+	rate = clk_get_rate(clk);
+	clk_put(clk);
+
+	fep->phy_speed =
+		((((rate / 2 + 4999999) / 2500000) / 2) & 0x3F) << 1;
+	fecp->fec_mii_speed = fep->phy_speed;
+	fec_restart(dev, 0);
+}
+
+#define FEC_IIM_BASE    IO_ADDRESS(IIM_BASE_ADDR)
+static void __inline__ fec_get_mac(struct net_device *dev)
+{
+	struct fec_enet_private *fep = netdev_priv(dev);
+	volatile fec_t *fecp;
+	unsigned char *iap, tmpaddr[ETH_ALEN];
+	int i;
+	unsigned long fec_mac_base = FEC_IIM_BASE + MXC_IIMKEY0;
+	fecp = fep->hwp;
+
+	if (cpu_is_mx27_rev(CHIP_REV_2_0) > 0) {
+		fec_mac_base = FEC_IIM_BASE + MXC_IIMMAC;
+	}
+
+	memset(tmpaddr, 0, ETH_ALEN);
+	if (!machine_is_mx35_3ds()) {
+	/*
+	 * Get MAC address from IIM.
+	 * If it is all 1's or 0's, use the default.
+	 */
+		for (i = 0; i < ETH_ALEN; i++) {
+			tmpaddr[ETH_ALEN-1-i] = __raw_readb(fec_mac_base + i * 4);
+		}
+	}
+	iap = &tmpaddr[0];
+
+	if ((iap[0] == 0) && (iap[1] == 0) && (iap[2] == 0) &&
+            (iap[3] == 0) && (iap[4] == 0) && (iap[5] == 0))
+                iap = fec_mac_default;
+        if ((iap[0] == 0xff) && (iap[1] == 0xff) && (iap[2] == 0xff) &&
+	    (iap[3] == 0xff) && (iap[4] == 0xff) && (iap[5] == 0xff))
+	        iap = fec_mac_default;
+
+        memcpy(dev->dev_addr, iap, ETH_ALEN);
+
+        /* Adjust MAC if using default MAC address */
+        if (iap == fec_mac_default)
+		dev->dev_addr[ETH_ALEN-1] = fec_mac_default[ETH_ALEN-1] + fep->index;
+}
+
+#ifndef MODULE
+static int fec_mac_setup(char *new_mac)
+{
+	char *ptr, *p = new_mac;
+	int i = 0;
+
+	while (p && (*p) && i < 6) {
+		ptr = strchr(p, ':');
+		if (ptr)
+			*ptr++ = '\0';
+
+		if (strlen(p)) {
+			unsigned long tmp = simple_strtoul(p, NULL, 16);
+			if (tmp > 0xff)
+				break;
+			fec_mac_default[i++] = tmp;
+		}
+		p = ptr;
+	}
+
+	return 0;
+}
+
+__setup("fec_mac=", fec_mac_setup);
+#endif
+
+static void __inline__ fec_enable_phy_intr(void)
+{
+	enable_irq(expio_intr_fec);
+}
+
+static void __inline__ fec_disable_phy_intr(void)
+{
+	disable_irq(expio_intr_fec);
+}
+
+static void __inline__ fec_phy_ack_intr(void)
+{
+	disable_irq(expio_intr_fec);
+}
+
+static void __inline__ fec_localhw_setup(void)
+{
+}
+
+/*
+ * invalidate dcache related with the virtual memory range(start, end)
+ */
+static void __inline__ fec_dcache_inv_range(void * start, void * end)
+{
+	dma_sync_single(NULL, (unsigned long)__pa(start), (unsigned long) (end-start), DMA_FROM_DEVICE);
+	return ;
+}
+
+/*
+ * flush dcache related with the virtual memory range(start, end)
+ */
+static void __inline__ fec_dcache_flush_range(void * start, void * end)
+{
+	dma_sync_single(NULL, (unsigned long)__pa(start), (unsigned long) (end-start), DMA_BIDIRECTIONAL);
+	return ;
+}
+
+/*
+ * map memory space (addr, addr+size) to uncachable erea.
+ */
+static unsigned long __inline__  fec_map_uncache(unsigned long addr, int size)
+{
+	return (unsigned long)ioremap(__pa(addr), size);
+}
+
+/*
+ * unmap memory erea started with addr from uncachable erea.
+ */
+static void __inline__ fec_unmap_uncache(void * addr)
+{
+	return iounmap(addr);
+}
+
+/* ------------------------------------------------------------------------- */
 
 #else
+/*
+ * do some initializtion based architecture of this chip
+ */
+static void __inline__ fec_arch_init(void)
+{
+	return;
+}
+/*
+ * do some cleanup based architecture of this chip
+ */
+static void __inline__ fec_arch_exit(void)
+{
+	return;
+}
 
 /*
  *	Code specific to the MPC860T setup.
@@ -1889,12 +2332,40 @@ static void __inline__ fec_localhw_setup(void)
 	fecp->fec_fun_code = 0x78000000;
 }
 
-static void __inline__ fec_uncache(unsigned long addr)
+/*
+ * invalidate dcache related with the virtual memory range(start, end)
+ */
+static void __inline__ fec_dcache_inv_range(void * start, void * end)
+{
+	return ;
+}
+
+/*
+ * flush dcache related with the virtual memory range(start, end)
+ */
+static void __inline__ fec_dcache_flush_range(void * start, void * end)
+{
+	return ;
+}
+
+/*
+ * map memory space (addr, addr+size) to uncachable erea.
+ */
+static unsigned long __inline__ fec_map_uncache(unsigned long addr, int size)
 {
 	pte_t *pte;
 	pte = va_to_pte(mem_addr);
 	pte_val(*pte) |= _PAGE_NO_CACHE;
 	flush_tlb_page(init_mm.mmap, mem_addr);
+	return addr;
+}
+
+/*
+ *  * unmap memory erea started with addr from uncachable erea.
+ *   */
+static void __inline__ fec_unmap_uncache(void *  addr)
+{
+	return ;
 }
 
 #endif
@@ -2125,10 +2596,14 @@ mii_link_interrupt(int irq, void * dev_id)
 #if 0
 	disable_irq(fep->mii_irq);  /* disable now, enable later */
 #endif
-
-	mii_do_cmd(dev, fep->phy->ack_int);
-	mii_do_cmd(dev, phy_cmd_relink);  /* restart and display status */
-
+        /*
+	 * Some board will trigger phy interrupt before phy enable.
+	 * And at that moment , fep->phy is not initialized.
+	 */
+	if (fep->phy) {
+		mii_do_cmd(dev, fep->phy->ack_int);
+		mii_do_cmd(dev, phy_cmd_relink);  /* restart and display status */
+	}
 	return IRQ_HANDLED;
 }
 #endif
@@ -2174,7 +2649,6 @@ fec_enet_open(struct net_device *dev)
 		fec_restart(dev, 1);
 	}
 
-	netif_start_queue(dev);
 	fep->opened = 1;
 	return 0;		/* Success */
 }
@@ -2187,9 +2661,9 @@ fec_enet_close(struct net_device *dev)
 	/* Don't know what to do yet.
 	*/
 	fep->opened = 0;
-	netif_stop_queue(dev);
-	fec_stop(dev);
-
+	if (fep->link) {
+		fec_stop(dev);
+	}
 	return 0;
 }
 
@@ -2300,6 +2774,7 @@ int __init fec_enet_init(struct net_device *dev)
 	unsigned long	mem_addr;
 	volatile cbd_t	*bdp;
 	cbd_t		*cbd_base;
+	struct  sk_buff* pskb;
 	volatile fec_t	*fecp;
 	int 		i, j;
 	static int	index = 0;
@@ -2307,6 +2782,10 @@ int __init fec_enet_init(struct net_device *dev)
 	/* Only allow us to be probed once. */
 	if (index >= FEC_MAX_PORTS)
 		return -ENXIO;
+
+	fep->net = dev;
+
+	spin_lock_init(&(fep->lock));
 
 	/* Allocate memory for buffer descriptors.
 	*/
@@ -2316,6 +2795,7 @@ int __init fec_enet_init(struct net_device *dev)
 		return -ENOMEM;
 	}
 
+	fep->cbd_mem_base = (void *)mem_addr;
 	spin_lock_init(&fep->hw_lock);
 	spin_lock_init(&fep->mii_lock);
 
@@ -2340,10 +2820,14 @@ int __init fec_enet_init(struct net_device *dev)
 	 */
 	fec_get_mac(dev);
 
-	cbd_base = (cbd_t *)mem_addr;
-	/* XXX: missing check for allocation failure */
+	cbd_base = (cbd_t *)fec_map_uncache(mem_addr, PAGE_SIZE);
+	if (cbd_base == NULL) {
+		free_page(mem_addr);
+		printk("FEC: map descriptor memory to uncacheable failed?\n");
+		return -ENOMEM;
+	}
 
-	fec_uncache(mem_addr);
+	/* XXX: missing check for allocation failure */
 
 	/* Set receive and transmit descriptor base.
 	*/
@@ -2358,25 +2842,24 @@ int __init fec_enet_init(struct net_device *dev)
 	/* Initialize the receive buffer descriptors.
 	*/
 	bdp = fep->rx_bd_base;
-	for (i=0; i<FEC_ENET_RX_PAGES; i++) {
-
-		/* Allocate a page.
-		*/
-		mem_addr = __get_free_page(GFP_KERNEL);
-		/* XXX: missing check for allocation failure */
-
-		fec_uncache(mem_addr);
-
-		/* Initialize the BD for every fragment in the page.
-		*/
-		for (j=0; j<FEC_ENET_RX_FRPPG; j++) {
-			bdp->cbd_sc = BD_ENET_RX_EMPTY;
-			bdp->cbd_bufaddr = __pa(mem_addr);
-			mem_addr += FEC_ENET_RX_FRSIZE;
-			bdp++;
+	for (i=0; i<RX_RING_SIZE; i++,  bdp++) {
+		pskb = dev_alloc_skb(FEC_ENET_RX_FRSIZE);
+		if(pskb == NULL) {
+			for(; i>0; i--) {
+				if( fep->rx_skbuff[i-1] ) {
+					kfree_skb(fep->rx_skbuff[i-1]);
+					fep->rx_skbuff[i-1] = NULL;
+				}
+			}
+			printk("FEC: allocate skb fail when initializing rx buffer \n");
+			free_page(mem_addr);
+			return -ENOMEM;
 		}
+		fep->rx_skbuff[i] = pskb;
+		pskb->data = FEC_ADDR_ALIGNMENT(pskb->data);
+		bdp->cbd_sc = BD_ENET_RX_EMPTY;
+		bdp->cbd_bufaddr = __pa(pskb->data);
 	}
-
 	/* Set the last buffer to wrap.
 	*/
 	bdp--;
@@ -2409,19 +2892,23 @@ int __init fec_enet_init(struct net_device *dev)
 
 	/* Set receive and transmit descriptor base.
 	*/
-	fecp->fec_r_des_start = __pa((uint)(fep->rx_bd_base));
-	fecp->fec_x_des_start = __pa((uint)(fep->tx_bd_base));
+	fecp->fec_r_des_start = __pa((uint)(fep->cbd_mem_base));
+	fecp->fec_x_des_start = __pa((uint)(fep->cbd_mem_base + RX_RING_SIZE*sizeof(cbd_t)));
 
 	/* Install our interrupt handlers. This varies depending on
 	 * the architecture.
 	*/
 	fec_request_intrs(dev);
 
+	/* Clear and enable interrupts */
+	fecp->fec_ievent = FEC_ENET_MASK;
+	fecp->fec_imask = FEC_ENET_TXF | FEC_ENET_TXB | FEC_ENET_RXF | FEC_ENET_RXB | FEC_ENET_MII;
+
 	fecp->fec_grp_hash_table_high = 0;
 	fecp->fec_grp_hash_table_low = 0;
 	fecp->fec_r_buff_size = PKT_MAXBLR_SIZE;
 	fecp->fec_ecntrl = 2;
-	fecp->fec_r_des_active = 0;
+	fecp->fec_r_des_active = 0x01000000;
 #ifndef CONFIG_M5272
 	fecp->fec_hash_table_high = 0;
 	fecp->fec_hash_table_low = 0;
@@ -2443,10 +2930,6 @@ int __init fec_enet_init(struct net_device *dev)
 
 	/* setup MII interface */
 	fec_set_mii(dev, fep);
-
-	/* Clear and enable interrupts */
-	fecp->fec_ievent = 0xffc00000;
-	fecp->fec_imask = (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII);
 
 	/* Queue up command to detect the PHY and initialize the
 	 * remainder of the interface.
@@ -2479,9 +2962,15 @@ fec_restart(struct net_device *dev, int duplex)
 	fecp->fec_ecntrl = 1;
 	udelay(10);
 
+	/* Enable interrupts we wish to service.
+	 */
+	fecp->fec_imask = FEC_ENET_TXF | FEC_ENET_TXB | FEC_ENET_RXF | FEC_ENET_RXB | FEC_ENET_MII;
+
 	/* Clear any outstanding interrupt.
-	*/
-	fecp->fec_ievent = 0xffc00000;
+	 *
+	 */
+	fecp->fec_ievent = FEC_ENET_MASK;
+
 	fec_enable_phy_intr();
 
 	/* Set station address.
@@ -2501,8 +2990,8 @@ fec_restart(struct net_device *dev, int duplex)
 
 	/* Set receive and transmit descriptor base.
 	*/
-	fecp->fec_r_des_start = __pa((uint)(fep->rx_bd_base));
-	fecp->fec_x_des_start = __pa((uint)(fep->tx_bd_base));
+	fecp->fec_r_des_start = __pa((uint)(fep->cbd_mem_base));
+	fecp->fec_x_des_start = __pa((uint)(fep->cbd_mem_base + RX_RING_SIZE*sizeof(cbd_t)));
 
 	fep->dirty_tx = fep->cur_tx = fep->tx_bd_base;
 	fep->cur_rx = fep->rx_bd_base;
@@ -2569,11 +3058,9 @@ fec_restart(struct net_device *dev, int duplex)
 	/* And last, enable the transmit and receive processing.
 	*/
 	fecp->fec_ecntrl = 2;
-	fecp->fec_r_des_active = 0;
+	fecp->fec_r_des_active = 0x01000000;
 
-	/* Enable interrupts we wish to service.
-	*/
-	fecp->fec_imask = (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII);
+	netif_start_queue(dev);
 }
 
 static void
@@ -2581,6 +3068,8 @@ fec_stop(struct net_device *dev)
 {
 	volatile fec_t *fecp;
 	struct fec_enet_private *fep;
+
+	netif_stop_queue(dev);
 
 	fep = netdev_priv(dev);
 	fecp = fep->hwp;
@@ -2617,6 +3106,7 @@ static int __init fec_enet_module_init(void)
 	DECLARE_MAC_BUF(mac);
 
 	printk("FEC ENET Version 0.2\n");
+	fec_arch_init();
 
 	for (i = 0; (i < FEC_MAX_PORTS); i++) {
 		dev = alloc_etherdev(sizeof(struct fec_enet_private));

@@ -50,7 +50,9 @@ int pmic_i2c_24bit_read(struct i2c_client *client, unsigned int reg_num)
 	ret = i2c_smbus_read_i2c_block_data(client, reg_num, 3, buf);
 
 	if (ret == 3) {
-		ret = buf[0] << 16 | buf[1] << 8 | buf[2];
+		ret =
+		    ((buf[0] << 16) & 0xFF0000) | ((buf[1] << 8) & 0xFF00) |
+		    (buf[2] & 0xFF);
 		return ret;
 	} else {
 		pr_debug("24bit read error, ret = %d\n", ret);

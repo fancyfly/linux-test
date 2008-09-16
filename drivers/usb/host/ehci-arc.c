@@ -231,6 +231,7 @@ static int usb_hcd_fsl_probe(const struct hc_driver *driver,
 	}
 #endif
 
+	fsl_platform_set_ahb_burst(hcd);
 	ehci_testmode_init(hcd_to_ehci(hcd));
 	return retval;
 

@@ -55,3 +55,16 @@ fsl_platform_set_vbus_power(struct fsl_usb2_platform_data *pdata, int on)
 	if (pdata->xcvr_ops && pdata->xcvr_ops->set_vbus_power)
 		pdata->xcvr_ops->set_vbus_power(pdata->xcvr_ops, pdata, on);
 }
+
+/* Set USB AHB burst length for host */
+static inline void
+fsl_platform_set_ahb_burst(struct usb_hcd *hcd)
+{
+	if (cpu_is_mx35()) {
+		unsigned int temp;
+
+		temp = readl(hcd->regs + 0x90);
+		/* usb should work in INCR mode in i.MX35 */
+		writel(temp & (~(0x7)), hcd->regs + 0x90);
+	}
+}

@@ -476,6 +476,11 @@ EXPORT_SYMBOL(expio_intr_fec);
 #if defined(CONFIG_MMC_IMX_ESDHCI) || defined(CONFIG_MMC_IMX_ESDHCI_MODULE)
 static struct mxc_mmc_platform_data mmc0_data = {
 	.ocr_mask = MMC_VDD_32_33,
+#if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
+	.caps = MMC_CAP_4_BIT_DATA,
+#else
+	.caps = MMC_CAP_8_BIT_DATA,
+#endif
 	.min_clk = 400000,
 	.max_clk = 52000000,
 	.card_inserted_state = 1,
@@ -520,7 +525,8 @@ static struct platform_device mxcsdhc1_device = {
 #if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
 static struct mxc_mmc_platform_data mmc1_data = {
 	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30 |
-		    MMC_VDD_31_32,
+	    MMC_VDD_31_32,
+	.caps = MMC_CAP_4_BIT_DATA,
 	.min_clk = 150000,
 	.max_clk = 25000000,
 	.card_inserted_state = 1,
@@ -539,12 +545,12 @@ static struct resource mxcsdhc2_resources[] = {
 	       .start = MXC_INT_MMC_SDHC2,
 	       .end = MXC_INT_MMC_SDHC2,
 	       .flags = IORESOURCE_IRQ,
-	},
+	       },
 	[2] = {
 	       .start = 0,
 	       .end = 0,
 	       .flags = IORESOURCE_IRQ,
-	},
+	       },
 };
 
 static struct platform_device mxcsdhc2_device = {

@@ -17,6 +17,7 @@
 
 struct mxc_mmc_platform_data {
 	unsigned int ocr_mask;	/* available voltages */
+	unsigned int caps;
 	unsigned int min_clk;
 	unsigned int max_clk;
 	unsigned int reserved:16;

@@ -67,6 +67,24 @@ void gpio_uart_active(int port, int no_irda)
 				  PAD_CTL_DRV_HIGH);
 		break;
 	case 1:
+		mxc_request_iomux(MX37_PIN_UART1_DCD, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX37_PIN_UART1_DCD, PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_input(MUX_IN_UART2_UART_RXD_MUX, INPUT_CTL_PATH1);
+		mxc_request_iomux(MX37_PIN_UART1_RI, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX37_PIN_UART1_RI, PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		mxc_request_iomux(MX37_PIN_UART1_DSR, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX37_PIN_UART1_DSR, PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH);
+		mxc_iomux_set_input(MUX_IN_UART2_UART_RTS_B, INPUT_CTL_PATH1);
+		mxc_request_iomux(MX37_PIN_UART1_DTR, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX37_PIN_UART1_DTR, PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH);
 		break;
 	case 2:
 		break;

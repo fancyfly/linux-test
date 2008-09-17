@@ -429,6 +429,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 #if defined(CONFIG_MMC_IMX_ESDHCI) || defined(CONFIG_MMC_IMX_ESDHCI_MODULE)
 static struct mxc_mmc_platform_data mmc_data = {
 	.ocr_mask = MMC_VDD_32_33,
+	.caps = MMC_CAP_4_BIT_DATA,
 	.min_clk = 400000,
 	.max_clk = 52000000,
 	.card_inserted_state = 1,

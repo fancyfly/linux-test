@@ -953,10 +953,13 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	ctrl = readl(host->ioaddr + SDHCI_HOST_CONTROL);
 
-	if (ios->bus_width == MMC_BUS_WIDTH_4)
+	if (ios->bus_width == MMC_BUS_WIDTH_4) {
+		ctrl &= ~SDHCI_CTRL_8BITBUS;
 		ctrl |= SDHCI_CTRL_4BITBUS;
-	else
+	} else if (ios->bus_width == MMC_BUS_WIDTH_8) {
 		ctrl &= ~SDHCI_CTRL_4BITBUS;
+		ctrl |= SDHCI_CTRL_8BITBUS;
+	}
 
 	if (host->flags & SDHCI_USE_DMA)
 		ctrl |= SDHCI_CTRL_ADMA;
@@ -1434,7 +1437,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 
 	if (intmask & SDHCI_INT_CARD_INT)
 		cardint = readl(host->ioaddr + SDHCI_SIGNAL_ENABLE) &
-			SDHCI_INT_CARD_INT;
+		    SDHCI_INT_CARD_INT;
 
 	intmask &= ~SDHCI_INT_CARD_INT;
 
@@ -1690,7 +1693,8 @@ no_detect_irq:
 	mmc->ops = &sdhci_ops;
 	mmc->f_min = host->min_clk;
 	mmc->f_max = host->max_clk;
-	mmc->caps = MMC_CAP_4_BIT_DATA | MMC_CAP_MULTIWRITE | MMC_CAP_SDIO_IRQ;
+	mmc->caps = MMC_CAP_MULTIWRITE | MMC_CAP_SDIO_IRQ;
+	mmc->caps |= mmc_plat->caps;
 
 	if (caps & SDHCI_CAN_DO_HISPD)
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED;

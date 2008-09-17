@@ -418,17 +418,9 @@ static snd_pcm_uframes_t imx_pcm_pointer(struct snd_pcm_substream *substream)
 	struct mxc_runtime_data *prtd = runtime->private_data;
 	unsigned int offset = 0;
 
-	/* is a transfer active ? */
-	if (prtd->dma_active) {
-		offset = (runtime->period_size * (prtd->periods)) +
-		    (runtime->period_size >> 1);
-		if (offset >= runtime->buffer_size)
-			offset = runtime->period_size >> 1;
-	} else {
-		offset = (runtime->period_size * (prtd->periods));
-		if (offset >= runtime->buffer_size)
-			offset = 0;
-	}
+	offset = (runtime->period_size * (prtd->periods));
+	if (offset >= runtime->buffer_size)
+		offset = 0;
 	dbg("pointer offset %x\n", offset);
 
 	return offset;

@@ -1,0 +1,329 @@
+/*
+ * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ */
+
+/*
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/platform_device.h>
+#include <linux/clk.h>
+#include <linux/spi/spi.h>
+
+#include <asm/hardware.h>
+#include <asm/arch/mmc.h>
+#include <asm/arch/spba.h>
+#include <asm/arch/sdma.h>
+
+#include "iomux.h"
+
+static void mxc_nop_release(struct device *dev)
+{
+	/* Nothing */
+}
+
+#if defined(CONFIG_MXC_WATCHDOG) || defined(CONFIG_MXC_WATCHDOG_MODULE)
+static struct resource wdt_resources[] = {
+	{
+	 .start = WDOG1_BASE_ADDR,
+	 .end = WDOG1_BASE_ADDR + 0x30,
+	 .flags = IORESOURCE_MEM,
+	 },
+};
+
+static struct platform_device mxc_wdt_device = {
+	.name = "mxc_wdt",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		},
+	.num_resources = ARRAY_SIZE(wdt_resources),
+	.resource = wdt_resources,
+};
+
+static void mxc_init_wdt(void)
+{
+	(void)platform_device_register(&mxc_wdt_device);
+}
+#else
+static inline void mxc_init_wdt(void)
+{
+}
+#endif
+
+/* SPI controller and device data */
+#if defined(CONFIG_SPI_MXC) || defined(CONFIG_SPI_MXC_MODULE)
+
+#ifdef CONFIG_SPI_MXC_SELECT1
+/*!
+ * Resource definition for the CSPI1
+ */
+static struct resource mxcspi1_resources[] = {
+	[0] = {
+	       .start = CSPI1_BASE_ADDR,
+	       .end = CSPI1_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_CSPI1,
+	       .end = MXC_INT_CSPI1,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for MXC CSPI1 */
+static struct mxc_spi_master mxcspi1_data = {
+	.maxchipselect = 4,
+	.spi_version = 7,
+};
+
+/*! Device Definition for MXC CSPI1 */
+static struct platform_device mxcspi1_device = {
+	.name = "mxc_spi",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxcspi1_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcspi1_resources),
+	.resource = mxcspi1_resources,
+};
+
+#endif				/* CONFIG_SPI_MXC_SELECT1 */
+
+#ifdef CONFIG_SPI_MXC_SELECT2
+/*!
+ * Resource definition for the CSPI2
+ */
+static struct resource mxcspi2_resources[] = {
+	[0] = {
+	       .start = CSPI2_BASE_ADDR,
+	       .end = CSPI2_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_CSPI2,
+	       .end = MXC_INT_CSPI2,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for MXC CSPI2 */
+static struct mxc_spi_master mxcspi2_data = {
+	.maxchipselect = 4,
+	.spi_version = 7,
+};
+
+/*! Device Definition for MXC CSPI2 */
+static struct platform_device mxcspi2_device = {
+	.name = "mxc_spi",
+	.id = 1,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxcspi2_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcspi2_resources),
+	.resource = mxcspi2_resources,
+};
+#endif				/* CONFIG_SPI_MXC_SELECT2 */
+
+static inline void mxc_init_spi(void)
+{
+#ifdef CONFIG_SPI_MXC_SELECT1
+	if (platform_device_register(&mxcspi1_device) < 0)
+		printk(KERN_ERR "Error: Registering the SPI Controller_1\n");
+#endif				/* CONFIG_SPI_MXC_SELECT1 */
+#ifdef CONFIG_SPI_MXC_SELECT2
+	if (platform_device_register(&mxcspi2_device) < 0)
+		printk(KERN_ERR "Error: Registering the SPI Controller_2\n");
+#endif				/* CONFIG_SPI_MXC_SELECT2 */
+}
+#else
+static inline void mxc_init_spi(void)
+{
+}
+#endif
+
+/* I2C controller and device data */
+#if defined(CONFIG_I2C_MXC) || defined(CONFIG_I2C_MXC_MODULE)
+
+#ifdef CONFIG_I2C_MXC_SELECT1
+/*!
+ * Resource definition for the I2C1
+ */
+static struct resource mxci2c1_resources[] = {
+	[0] = {
+	       .start = I2C_BASE_ADDR,
+	       .end = I2C_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_I2C,
+	       .end = MXC_INT_I2C,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for MXC I2C */
+static struct mxc_i2c_platform_data mxci2c1_data = {
+	.i2c_clk = 40000,
+};
+#endif
+
+#ifdef CONFIG_I2C_MXC_SELECT2
+/*!
+ * Resource definition for the I2C2
+ */
+static struct resource mxci2c2_resources[] = {
+	[0] = {
+	       .start = I2C2_BASE_ADDR,
+	       .end = I2C2_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_I2C2,
+	       .end = MXC_INT_I2C2,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for MXC I2C */
+static struct mxc_i2c_platform_data mxci2c2_data = {
+	.i2c_clk = 40000,
+};
+#endif
+
+#ifdef CONFIG_I2C_MXC_SELECT3
+/*!
+ * Resource definition for the I2C3
+ */
+static struct resource mxci2c3_resources[] = {
+	[0] = {
+	       .start = I2C3_BASE_ADDR,
+	       .end = I2C3_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_I2C3,
+	       .end = MXC_INT_I2C3,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for MXC I2C */
+static struct mxc_i2c_platform_data mxci2c3_data = {
+	.i2c_clk = 40000,
+};
+#endif
+
+/*! Device Definition for MXC I2C1 */
+static struct platform_device mxci2c_devices[] = {
+#ifdef CONFIG_I2C_MXC_SELECT1
+	{
+	 .name = "mxc_i2c",
+	 .id = 0,
+	 .dev = {
+		 .release = mxc_nop_release,
+		 .platform_data = &mxci2c1_data,
+		 },
+	 .num_resources = ARRAY_SIZE(mxci2c1_resources),
+	 .resource = mxci2c1_resources,},
+#endif
+#ifdef CONFIG_I2C_MXC_SELECT2
+	{
+	 .name = "mxc_i2c",
+	 .id = 1,
+	 .dev = {
+		 .release = mxc_nop_release,
+		 .platform_data = &mxci2c2_data,
+		 },
+	 .num_resources = ARRAY_SIZE(mxci2c2_resources),
+	 .resource = mxci2c2_resources,},
+#endif
+#ifdef CONFIG_I2C_MXC_SELECT3
+	{
+	 .name = "mxc_i2c",
+	 .id = 2,
+	 .dev = {
+		 .release = mxc_nop_release,
+		 .platform_data = &mxci2c3_data,
+		 },
+	 .num_resources = ARRAY_SIZE(mxci2c3_resources),
+	 .resource = mxci2c3_resources,},
+#endif
+};
+
+static inline void mxc_init_i2c(void)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(mxci2c_devices); i++) {
+		if (platform_device_register(&mxci2c_devices[i]) < 0)
+			dev_err(&mxci2c_devices[i].dev,
+				"Unable to register I2C device\n");
+	}
+}
+#else
+static inline void mxc_init_i2c(void)
+{
+}
+#endif
+
+struct mxc_gpio_port mxc_gpio_ports[GPIO_PORT_NUM] = {
+	{
+	 .num = 0,
+	 .base = IO_ADDRESS(GPIO1_BASE_ADDR),
+	 .irq = MXC_INT_GPIO1,
+	 .virtual_irq_start = MXC_GPIO_INT_BASE,
+	 },
+	{
+	 .num = 1,
+	 .base = IO_ADDRESS(GPIO2_BASE_ADDR),
+	 .irq = MXC_INT_GPIO2,
+	 .virtual_irq_start = MXC_GPIO_INT_BASE + GPIO_NUM_PIN,
+	 },
+	{
+	 .num = 2,
+	 .base = IO_ADDRESS(GPIO3_BASE_ADDR),
+	 .irq = MXC_INT_GPIO3,
+	 .virtual_irq_start = MXC_GPIO_INT_BASE + GPIO_NUM_PIN * 2,
+	 },
+	{
+	 .num = 3,
+	 .base = IO_ADDRESS(GPIO4_BASE_ADDR),
+	 .irq = MXC_INT_GPIO4,
+	 .virtual_irq_start = MXC_GPIO_INT_BASE + GPIO_NUM_PIN * 3,
+	 },
+};
+
+static struct platform_device mxc_dma_device = {
+	.name = "mxc_dma",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		},
+};
+
+static inline void mxc_init_dma(void)
+{
+	(void)platform_device_register(&mxc_dma_device);
+}
+
+static int __init mxc_init_devices(void)
+{
+	mxc_init_wdt();
+	mxc_init_spi();
+	mxc_init_i2c();
+	mxc_init_dma();
+
+	return 0;
+}
+
+arch_initcall(mxc_init_devices);

@@ -31,6 +31,12 @@ config ARCH_MX27
 	help
 	  This enables support for systems based on the Freescale i.MX27
 
+config ARCH_MX25
+	bool "MX25-based"
+	select MX25_OPTIONSS
+	help
+	  This enables support for systems based on the Freescale i.MX25
+
 config ARCH_MX21
 	bool "MX21-based"
 	help
@@ -39,6 +45,8 @@ config ARCH_MX21
 endchoice
 
 source "arch/arm/mach-mx27/Kconfig"
+
+source "arch/arm/mach-mx25/Kconfig"
 
 source "arch/arm/mach-mx21/Kconfig"
 

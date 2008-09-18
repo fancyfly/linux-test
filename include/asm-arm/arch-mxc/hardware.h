@@ -87,6 +87,13 @@ static inline int type## _rev (int rev)		\
 #define cpu_is_mx21()		(0)
 #endif
 
+#ifdef CONFIG_ARCH_MX25
+#include <asm/arch/mx25.h>
+#define cpu_is_mx25()		(1)
+#else
+#define cpu_is_mx25()		(0)
+#endif
+
 #ifdef CONFIG_ARCH_MX27
 #include <asm/arch/mx27.h>
 #define cpu_is_mx27()		(1)
@@ -106,6 +113,7 @@ static inline int type## _rev (int rev)		\
  *	-1 - cpu matches, but cpu revision is less than queried rev
  */
 MXC_REV(cpu_is_mx21);
+MXC_REV(cpu_is_mx25);
 MXC_REV(cpu_is_mx27);
 MXC_REV(cpu_is_mx31);
 MXC_REV(cpu_is_mx32);

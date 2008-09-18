@@ -21,7 +21,7 @@
 #ifndef __SMSC911X_H__
 #define __SMSC911X_H__
 
-#ifdef CONFIG_MACH_MX37_3DS
+#if defined(CONFIG_MACH_MX37_3DS) || defined(CONFIG_MACH_MX25_3DS)
 #define SMSC_CAN_USE_SPI	1
 #define SMSC_CAN_USE_32BIT	0
 #elif defined(CONFIG_MACH_MX31_3DS) || defined(CONFIG_MACH_MX35_3DS)

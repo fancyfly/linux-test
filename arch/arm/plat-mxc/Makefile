@@ -16,6 +16,7 @@ obj-y += irq.o
 endif
 
 obj-$(CONFIG_ARCH_MX21) += dma_mx2.o
+obj-$(CONFIG_ARCH_MX25) += 
 obj-$(CONFIG_ARCH_MX27) += dma_mx2.o usb_common.o
 obj-$(CONFIG_ARCH_MX3) += dptc.o usb_common.o
 obj-$(CONFIG_ARCH_MX35) += usb_common.o serialxc.o

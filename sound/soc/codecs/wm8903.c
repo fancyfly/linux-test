@@ -458,7 +458,6 @@ static int wm8903_output_event(struct snd_soc_dapm_widget *w,
 			wm8903_write(codec, WM8903_CHARGE_PUMP_0,
 				     cp_reg | WM8903_CP_ENA);
 			mdelay(4);
-
 		}
 	}
 
@@ -946,7 +945,8 @@ static const char *audio_map[][3] = {
 	{ "Left Input Mode Mux", "Differential Mic",
 	  "Left Input Inverting Mux" },
 
-	{ "Right Input Mode Mux", "Single-Ended", "Right Input Inverting Mux" },
+	{ "Right Input Mode Mux", "Single-Ended",
+	  "Right Input Inverting Mux" },
 	{ "Right Input Mode Mux", "Differential Line",
 	  "Right Input Mux" },
 	{ "Right Input Mode Mux", "Differential Line",
@@ -1188,11 +1188,10 @@ static int wm8903_digital_mute(struct snd_soc_dai *codec_dai, int mute)
 
 	reg = wm8903_read(codec, WM8903_DAC_DIGITAL_1);
 
-	if (mute) {
+	if (mute)
 		reg |= WM8903_DAC_MUTE;
-	} else {
+	else
 		reg &= ~WM8903_DAC_MUTE;
-	}
 
 	wm8903_write(codec, WM8903_DAC_DIGITAL_1, reg);
 

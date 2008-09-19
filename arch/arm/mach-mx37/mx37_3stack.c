@@ -490,6 +490,35 @@ static inline void mxc_init_mmc(void)
 }
 #endif
 
+static void bt_reset(void)
+{
+	mxc_request_iomux(MX37_PIN_AUD5_RXC, IOMUX_CONFIG_GPIO);
+	mxc_set_gpio_dataout(MX37_PIN_AUD5_RXC, 1);
+	mxc_set_gpio_direction(MX37_PIN_AUD5_RXC, 0);
+}
+
+static struct mxc_bt_platform_data mxc_bt_data = {
+	.bt_vdd = "DCDC3",
+	.bt_vdd_parent = NULL,
+	.bt_vusb = "DCDC6",
+	.bt_vusb_parent = NULL,
+	.bt_reset = bt_reset,
+};
+
+static struct platform_device mxc_bt_device = {
+	.name = "mxc_bt",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_bt_data,
+		},
+};
+
+static void mxc_init_bluetooth(void)
+{
+	(void)platform_device_register(&mxc_bt_device);
+}
+
 /*!
  * Board specific initialization.
  */
@@ -509,6 +538,7 @@ static void __init mxc_board_init(void)
 	mxc_init_pata();
 	mxc_init_fb();
 	mxc_init_touchscreen();
+	mxc_init_bluetooth();
 }
 
 /*

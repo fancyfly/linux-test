@@ -74,5 +74,6 @@ void _ipu_ic_init_rotate_pp(ipu_channel_params_t *params);
 void _ipu_ic_uninit_rotate_pp(void);
 int _ipu_ic_idma_init(int dma_chan, uint16_t width, uint16_t height,
 		      int burst_size, ipu_rotate_mode_t rot);
+void _ipu_dp_set_csc_coefficients(ipu_channel_t channel, int32_t param[][3]);
 
 #endif				/* __INCLUDE_IPU_PRV_H__ */

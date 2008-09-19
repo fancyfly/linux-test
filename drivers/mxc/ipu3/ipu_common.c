@@ -1462,6 +1462,12 @@ ipu_color_space_t format_to_colorspace(uint32_t fmt)
 	return RGB;
 }
 
+void ipu_set_csc_coefficients(ipu_channel_t channel, int32_t param[][3])
+{
+	_ipu_dp_set_csc_coefficients(channel, param);
+}
+EXPORT_SYMBOL(ipu_set_csc_coefficients);
+
 static int ipu_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	mxc_pg_enable(pdev);

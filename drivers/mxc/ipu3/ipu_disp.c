@@ -273,21 +273,7 @@ int _ipu_dp_init(ipu_channel_t channel, uint32_t in_pixel_fmt,
 			coeff = &rgb2ycbcr_coeff;
 		else
 			coeff = &ycbcr2rgb_coeff;
-
-		__raw_writel(mask_a((*coeff)[0][0]) |
-			     (mask_a((*coeff)[0][1]) << 16), DP_CSC_A_0(dp));
-		__raw_writel(mask_a((*coeff)[0][2]) |
-			     (mask_a((*coeff)[1][0]) << 16), DP_CSC_A_1(dp));
-		__raw_writel(mask_a((*coeff)[1][1]) |
-			     (mask_a((*coeff)[1][2]) << 16), DP_CSC_A_2(dp));
-		__raw_writel(mask_a((*coeff)[2][0]) |
-			     (mask_a((*coeff)[2][1]) << 16), DP_CSC_A_3(dp));
-		__raw_writel(mask_a((*coeff)[2][2]) |
-			     (mask_b((*coeff)[3][0]) << 16) |
-			     ((*coeff)[4][0] << 30), DP_CSC_0(dp));
-		__raw_writel(mask_b((*coeff)[3][1]) | ((*coeff)[4][1] << 14) |
-			     (mask_b((*coeff)[3][2]) << 16) |
-			     ((*coeff)[4][2] << 30), DP_CSC_1(dp));
+		_ipu_dp_set_csc_coefficients(channel, (void *) *coeff);
 	}
 
 	reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
@@ -579,6 +565,50 @@ int _ipu_pixfmt_to_map(uint32_t fmt)
 	}
 
 	return -1;
+}
+
+/*!
+ * This function sets the colorspace for of dp.
+ * modes.
+ *
+ * @param       channel         Input parameter for the logical channel ID.
+ *
+ * @param       param         	If it's not NULL, update the csc table
+ *                              with this parameter.
+ *
+ * @return      N/A
+ */
+void _ipu_dp_set_csc_coefficients(ipu_channel_t channel, int32_t param[][3])
+{
+	u32 reg;
+	int dp;
+
+	if (channel == MEM_FG_SYNC)
+		dp = DP_SYNC;
+	else if (channel == MEM_BG_SYNC)
+		dp = DP_SYNC;
+	else if (channel == MEM_BG_ASYNC0)
+		dp = DP_ASYNC0;
+	else
+		return;
+
+	__raw_writel(mask_a(param[0][0]) |
+		     (mask_a(param[0][1]) << 16), DP_CSC_A_0(dp));
+	__raw_writel(mask_a(param[0][2]) |
+		     (mask_a(param[1][0]) << 16), DP_CSC_A_1(dp));
+	__raw_writel(mask_a(param[1][1]) |
+		     (mask_a(param[1][2]) << 16), DP_CSC_A_2(dp));
+	__raw_writel(mask_a(param[2][0]) |
+		     (mask_a(param[2][1]) << 16), DP_CSC_A_3(dp));
+	__raw_writel(mask_a(param[2][2]) |
+		     (mask_b(param[3][0]) << 16) |
+		     (param[4][0] << 30), DP_CSC_0(dp));
+	__raw_writel(mask_b(param[3][1]) | (param[4][1] << 14) |
+		     (mask_b(param[3][2]) << 16) |
+		     (param[4][2] << 30), DP_CSC_1(dp));
+
+	reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
+	__raw_writel(reg, IPU_SRM_PRI2);
 }
 
 /*!

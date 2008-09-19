@@ -822,6 +822,7 @@ int ipu_request_irq(uint32_t irq,
 		    uint32_t irq_flags, const char *devname, void *dev_id);
 void ipu_free_irq(uint32_t irq, void *dev_id);
 bool ipu_get_irq_status(uint32_t irq);
+void ipu_set_csc_coefficients(ipu_channel_t channel, int32_t param[][3]);
 
 /* SDC API */
 int32_t ipu_sdc_init_panel(ipu_panel_t panel,

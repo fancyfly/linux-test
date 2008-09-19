@@ -31,6 +31,7 @@
 
 #include <asm/hardware.h>
 #include <asm/irq.h>
+#include <asm/mach/keypad.h>
 #include <asm/setup.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -56,6 +57,53 @@ static void mxc_nop_release(struct device *dev)
 {
 	/* Nothing */
 }
+
+#if defined(CONFIG_KEYBOARD_MXC) || defined(CONFIG_KEYBOARD_MXC_MODULE)
+static u16 keymapping[16] = {
+	KEY_UP, KEY_DOWN, KEY_VOLUMEDOWN, KEY_HOME,
+	KEY_RIGHT, KEY_LEFT, KEY_ENTER, KEY_VOLUMEUP,
+	KEY_F6, KEY_F8, KEY_F9, KEY_F10,
+	KEY_F1, KEY_F2, KEY_F3, KEY_POWER,
+};
+
+static struct resource mxc_kpp_resources[] = {
+	[0] = {
+	       .start = MXC_INT_KPP,
+	       .end = MXC_INT_KPP,
+	       .flags = IORESOURCE_IRQ,
+	       }
+};
+
+static struct keypad_data keypad_plat_data = {
+	.rowmax = 4,
+	.colmax = 4,
+	.irq = MXC_INT_KPP,
+	.learning = 0,
+	.delay = 2,
+	.matrix = keymapping,
+};
+
+/* mxc keypad driver */
+static struct platform_device mxc_keypad_device = {
+	.name = "mxc_keypad",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(mxc_kpp_resources),
+	.resource = mxc_kpp_resources,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &keypad_plat_data,
+		},
+};
+
+static void mxc_init_keypad(void)
+{
+	(void)platform_device_register(&mxc_keypad_device);
+}
+#else
+static inline void mxc_init_keypad(void)
+{
+}
+#endif
 
 /* MTD NAND flash */
 
@@ -208,6 +256,7 @@ static void __init mxc_board_init(void)
 	mxc_gpio_init();
 	mx25_3stack_gpio_init();
 	early_console_setup(saved_command_line);
+	mxc_init_keypad();
 #ifdef CONFIG_I2C
 	i2c_register_board_info(0, mxc_i2c_board_info,
 				ARRAY_SIZE(mxc_i2c_board_info));

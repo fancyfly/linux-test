@@ -1627,6 +1627,12 @@ uint32_t bytes_per_pixel(uint32_t fmt)
 	return 0;
 }
 
+void ipu_set_csc_coefficients(ipu_channel_t channel, int32_t param[][3])
+{
+	/* TODO */
+}
+EXPORT_SYMBOL(ipu_set_csc_coefficients);
+
 ipu_color_space_t format_to_colorspace(uint32_t fmt)
 {
 	switch (fmt) {

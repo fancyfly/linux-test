@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  * (c) 2005 MontaVista Software, Inc.
  */
 
@@ -93,7 +93,7 @@ static int __devinit mxcflash_probe(struct platform_device *pdev)
 	    parse_mtd_partitions(info->mtd, part_probes, &info->parts, 0);
 	if (nr_parts > 0) {
 		add_mtd_partitions(info->mtd, info->parts, nr_parts);
-	} else if (nr_parts < 0 && flash->parts) {
+	} else if (flash->parts) {
 		add_mtd_partitions(info->mtd, flash->parts, flash->nr_parts);
 	} else
 #endif

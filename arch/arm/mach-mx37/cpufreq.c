@@ -141,8 +141,6 @@ int set_low_bus_freq(void)
 	p_clk = clk_get_parent(main_bus_clk);
 	/* Set the parent of main_bus_clk to be periph_apm_clk */
 	clk_set_parent(main_bus_clk, amode_parent_clk);
-	/*disable the old parent. */
-	clk_disable(p_clk);
 
 	clk_set_rate(axi_a_clk, LP_LPM_CLK);
 	clk_set_rate(axi_b_clk, LP_LPM_CLK);
@@ -156,22 +154,16 @@ int set_low_bus_freq(void)
 	p_clk = clk_get_parent(arm_axi_clk);
 	if (p_clk != amode_parent_clk) {
 		clk_set_parent(arm_axi_clk, amode_parent_clk);
-		/* Disable the old parent */
-		clk_disable(p_clk);
 	}
 
 	p_clk = clk_get_parent(vpu_clk);
 	if (p_clk != amode_parent_clk) {
 		clk_set_parent(vpu_clk, amode_parent_clk);
-		/* Disable the old parent */
-		clk_disable(p_clk);
 	}
 
 	p_clk = clk_get_parent(vpu_core_clk);
 	if (p_clk != amode_parent_clk) {
 		clk_set_parent(vpu_core_clk, amode_parent_clk);
-		/* Disable the old parent */
-		clk_disable(p_clk);
 	}
 
 	/* Set the voltage to 1.0v for the LP domain. */
@@ -205,7 +197,6 @@ int set_high_bus_freq(void)
 	}
 
 	rmode_parent_clk = pll2;
-	clk_enable(rmode_parent_clk);
 
 	/* Set the dividers before setting the parent clock. */
 	clk_set_rate(axi_a_clk, 4800000);
@@ -218,8 +209,6 @@ int set_high_bus_freq(void)
 	/* Set the parent of main_bus_clk to be pll2 */
 	p_clk = clk_get_parent(main_bus_clk);
 	clk_set_parent(main_bus_clk, rmode_parent_clk);
-	/* Need to increase the count */
-	clk_enable(rmode_parent_clk);
 	udelay(5);
 	high_bus_freq_mode = 1;
 	return ret;

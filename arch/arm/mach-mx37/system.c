@@ -34,11 +34,12 @@
  */
 
 extern int mxc_jtag_enabled;
-extern int lp_video_mode;
-extern int lp_audio_mode;
+extern int low_bus_freq_mode;
+
 static struct clk *pll1_main;
 static struct clk *pll1_sw_clk;
 static struct clk *lp_apm_clk;
+static struct clk *gpc_dvfs_clk;
 
 /* set cpu low power mode before WFI instruction */
 void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
@@ -94,7 +95,12 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 
 	flush_cache_all();
 
-	if (lp_audio_mode || lp_video_mode) {
+	if (gpc_dvfs_clk == NULL)
+		gpc_dvfs_clk = clk_get(NULL, "gpc_dvfs_clk");
+
+	/* gpc clock is needed for SRPG */
+	clk_enable(gpc_dvfs_clk);
+	if (low_bus_freq_mode) {
 		if (pll1_sw_clk == NULL)
 			pll1_sw_clk = clk_get(NULL, "pll1_sw_clk");
 		if (lp_apm_clk == NULL)
@@ -105,7 +111,6 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 		/* Move the ARM to run off the 24MHz clock. Shutdown the PLL1 */
 		/* Change the source of pll1_sw_clk to be the step_clk */
 		clk_set_parent(pll1_sw_clk, lp_apm_clk);
-		clk_disable(pll1_main);
 	}
 }
 
@@ -121,8 +126,8 @@ void mxc_pg_enable(struct platform_device *pdev)
 		__raw_writel(MXC_PGCR_PCR, MXC_PGC_VPU_PGCR);
 		__raw_writel(MXC_PGSR_PSR, MXC_PGC_VPU_PGSR);
 	}
-
 }
+
 EXPORT_SYMBOL(mxc_pg_enable);
 
 void mxc_pg_disable(struct platform_device *pdev)
@@ -142,6 +147,7 @@ void mxc_pg_disable(struct platform_device *pdev)
 		__raw_writel(MXC_PGSR_PSR, MXC_PGC_VPU_PGSR);
 	}
 }
+
 EXPORT_SYMBOL(mxc_pg_disable);
 
 /* To change the idle power mode, need to set arch_idle_mode to a different
@@ -160,10 +166,10 @@ void arch_idle(void)
 		mxc_cpu_lp_set(arch_idle_mode);
 		cpu_do_idle();
 
-		if (lp_audio_mode || lp_video_mode) {
+		/* gpc clock is needed for SRPG */
+		clk_disable(gpc_dvfs_clk);
+		if (low_bus_freq_mode) {
 			/* Move ARM back to PLL from step clk. */
-			if (pll1_main->usecount == 0)
-				clk_enable(pll1_main);
 			/* Move the PLL1 back to the pll1_main_clk */
 			clk_set_parent(pll1_sw_clk, pll1_main);
 		}

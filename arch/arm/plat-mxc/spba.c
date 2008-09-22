@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -13,6 +13,7 @@
 
 #include <linux/types.h>
 #include <linux/module.h>
+#include <linux/clk.h>
 #include <asm/io.h>
 #include <asm/arch/hardware.h>
 #include <asm/arch/spba.h>
@@ -36,6 +37,10 @@ static DEFINE_SPINLOCK(spba_lock);
 static unsigned long spba_base = (unsigned long)IO_ADDRESS(SPBA_CTRL_BASE_ADDR);
 
 /*!
+ * SPBA clock
+ */
+static struct clk *spba_clk;
+/*!
  * This function allows the three masters (A, B, C) to take ownership of a
  * shared peripheral.
  *
@@ -54,6 +59,11 @@ int spba_take_ownership(int mod, int master)
 		BUG();		/* oops */
 	}
 
+	if (spba_clk == NULL)
+		spba_clk = clk_get(NULL, "spba_clk");
+
+	clk_enable(spba_clk);
+
 	spin_lock_irqsave(&spba_lock, spba_flags);
 	__raw_writel(master, spba_base + mod);
 
@@ -63,6 +73,7 @@ int spba_take_ownership(int mod, int master)
 
 	spin_unlock_irqrestore(&spba_lock, spba_flags);
 
+	clk_disable(spba_clk);
 	return rtn_val;
 }
 
@@ -84,7 +95,13 @@ int spba_rel_ownership(int mod, int master)
 		BUG();		/* oops */
 	}
 
+	if (spba_clk == NULL)
+		spba_clk = clk_get(NULL, "spba_clk");
+
+	clk_enable(spba_clk);
+
 	if ((__raw_readl(spba_base + mod) & master) == 0) {
+		clk_disable(spba_clk);
 		return 0;	/* does not own it */
 	}
 
@@ -97,10 +114,14 @@ int spba_rel_ownership(int mod, int master)
 
 	if ((__raw_readl(spba_base + mod) & master) != 0) {
 		spin_unlock_irqrestore(&spba_lock, spba_flags);
+		clk_disable(spba_clk);
 		return -1;
 	}
 
 	spin_unlock_irqrestore(&spba_lock, spba_flags);
+
+	clk_disable(spba_clk);
+
 	return 0;
 }
 

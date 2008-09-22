@@ -385,10 +385,15 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 {
 	unsigned long flags;
 	int ret = -EINVAL;
+	struct clk *prev_parent = clk->parent;
 
 	if (clk == NULL || IS_ERR(clk) || parent == NULL ||
 	    IS_ERR(parent) || clk->set_parent == NULL)
 		return ret;
+
+	if (clk->usecount != 0) {
+		clk_enable(parent);
+	}
 
 	spin_lock_irqsave(&clockfw_lock, flags);
 	ret = clk->set_parent(clk, parent);
@@ -403,6 +408,10 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 			propagate_rate(clk);
 	}
 	spin_unlock_irqrestore(&clockfw_lock, flags);
+
+	if (clk->usecount != 0) {
+		clk_disable(prev_parent);
+	}
 
 	return ret;
 }

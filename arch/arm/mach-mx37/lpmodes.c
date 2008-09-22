@@ -39,7 +39,6 @@
 #include <linux/regulator/regulator-platform.h>
 #include "crm_regs.h"
 
-
 #define ARM_LP_CLK  200000000
 #define GP_LPM_VOLTAGE 850000
 #define LP_LPM_VOLTAGE 1000000
@@ -113,6 +112,7 @@ void enter_lp_video_mode(void)
 	ret = regulator_set_voltage(gp_core, GP_LPM_VOLTAGE);
 	if (ret < 0)
 		printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!\n");
+
 	lp_video_mode = 1;
 }
 
@@ -151,7 +151,7 @@ void enter_lp_audio_mode(void)
 	tclk = clk_get(NULL, "ipu_clk");
 	if (clk_get_usecount(tclk) != 0) {
 		printk(KERN_INFO
-		"Cannot enter AUDIO LPM mode - display is still active\n");
+		       "Cannot enter AUDIO LPM mode - display is still active\n");
 		return;
 	}
 
@@ -170,8 +170,6 @@ void enter_lp_audio_mode(void)
 	p_clk = clk_get_parent(tclk);
 	/* Set the parent of main_bus_clk to be periph_apm_clk */
 	clk_set_parent(tclk, amode_parent_clk);
-	/*disable the old parent. */
-	clk_disable(p_clk);
 
 	clk_set_rate(clk_get(NULL, "axi_a_clk"), 24000000);
 	clk_set_rate(clk_get(NULL, "axi_b_clk"), 24000000);
@@ -186,24 +184,18 @@ void enter_lp_audio_mode(void)
 	p_clk = clk_get_parent(tclk);
 	if (p_clk != amode_parent_clk) {
 		clk_set_parent(tclk, amode_parent_clk);
-		/* Disable the old parent */
-		clk_disable(p_clk);
 	}
 
 	tclk = clk_get(NULL, "vpu_clk");
 	p_clk = clk_get_parent(tclk);
 	if (p_clk != amode_parent_clk) {
 		clk_set_parent(tclk, amode_parent_clk);
-		/* Disable the old parent */
-		clk_disable(p_clk);
 	}
 
 	tclk = clk_get(NULL, "vpu_core_clk");
 	p_clk = clk_get_parent(tclk);
 	if (p_clk != amode_parent_clk) {
 		clk_set_parent(tclk, amode_parent_clk);
-		/* Disable the old parent */
-		clk_disable(p_clk);
 	}
 
 	/* disable PLL3 */
@@ -253,7 +245,6 @@ void exit_lp_audio_mode(void)
 	int ret;
 
 	lp_audio_mode = 0;
-
 	/* Set the voltage to 1.2v for the LP domain. */
 	lp_core = regulator_get(NULL, "DCDC4");
 
@@ -279,37 +270,35 @@ void exit_lp_audio_mode(void)
 	rmode_parent_clk = clk_get(NULL, "pll2");
 	clk_enable(rmode_parent_clk);
 
-	/* Set the dividers before setting the parent clock.*/
+	tclk = clk_get(NULL, "main_bus_clk");
+	p_clk = clk_get_parent(tclk);
+
+	/* Set the dividers before setting the parent clock. */
 	clk_set_rate(clk_get(NULL, "axi_a_clk"), 4800000);
 	clk_set_rate(clk_get(NULL, "axi_b_clk"), 4000000);
 	clk_set_rate(clk_get(NULL, "axi_c_clk"), 6000000);
-
 	clk_set_rate(clk_get(NULL, "emi_core_clk"), 4800000);
 	clk_set_rate(clk_get(NULL, "ahb_clk"), 4800000);
 
 	/* Set the parent of main_bus_clk to be pll2 */
-	tclk = clk_get(NULL, "main_bus_clk");
-	p_clk = clk_get_parent(tclk);
 	clk_set_parent(tclk, rmode_parent_clk);
-	/* Need to increase the count */
-	clk_enable(rmode_parent_clk);
 	udelay(5);
 }
 
 static ssize_t lp_curr_mode(struct device *dev,
-								struct device_attribute *attr, char *buf)
+			    struct device_attribute *attr, char *buf)
 {
 	if (lp_video_mode)
 		return sprintf(buf, "in lp_video_mode\n");
 	else if (lp_audio_mode)
 		return sprintf(buf, "in lp_audio_mode\n");
-    else
+	else
 		return sprintf(buf, "in normal mode\n");
 }
 
 static ssize_t set_lp_mode(struct device *dev,
-								struct device_attribute *attr,
-								const char *buf, size_t size)
+			   struct device_attribute *attr,
+			   const char *buf, size_t size)
 {
 	printk(KERN_DEBUG "In set_lp_mode() \n");
 
@@ -331,7 +320,6 @@ static ssize_t set_lp_mode(struct device *dev,
 
 static DEVICE_ATTR(lp_modes, 0644, lp_curr_mode, set_lp_mode);
 
-
 /*!
  * This is the probe routine for the lp_mode driver.
  *
@@ -348,7 +336,7 @@ static int __devinit mx37_lpmode_probe(struct platform_device *pdev)
 	res = sysfs_create_file(&lpmode_dev->kobj, &dev_attr_lp_modes.attr);
 	if (res) {
 		printk(KERN_ERR
-			"lpmode_dev: Unable to register sysdev entry for lpmode_dev");
+		       "lpmode_dev: Unable to register sysdev entry for lpmode_dev");
 		return res;
 	}
 

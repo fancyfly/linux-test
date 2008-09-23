@@ -1614,12 +1614,6 @@ CONFIG_MXC_MC13783_CONNECTIVITY=y
 CONFIG_MXC_MC13783_POWER=y
 
 #
-# Advanced Power Management devices
-#
-# CONFIG_MXC_DPTC is not set
-# CONFIG_MXC_DVFS is not set
-
-#
 # MXC Security Drivers
 #
 CONFIG_MXC_SECURITY_SCC=y

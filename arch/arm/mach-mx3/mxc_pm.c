@@ -35,8 +35,6 @@
 #include <asm/arch/system.h>
 #include <asm/arch/mxc_pm.h>
 #include <asm/irq.h>
-#include <asm/arch/dvfs_dptc_struct.h>
-#include <asm/arch/dvfs.h>
 
 #include "crm_regs.h"
 

@@ -701,14 +701,14 @@ static const struct snd_kcontrol_new wm8903_snd_controls[] = {
 
 /* Input PGAs - No TLV since the scale depends on PGA mode */
 SOC_SINGLE("Left Input PGA Switch", WM8903_ANALOGUE_LEFT_INPUT_0,
-	   7, 1, 0),
+	   7, 1, 1),
 SOC_SINGLE("Left Input PGA Volume", WM8903_ANALOGUE_LEFT_INPUT_0,
 	   0, 31, 0),
 SOC_SINGLE("Left Input PGA Common Mode Switch", WM8903_ANALOGUE_LEFT_INPUT_1,
 	   6, 1, 0),
 
 SOC_SINGLE("Right Input PGA Switch", WM8903_ANALOGUE_RIGHT_INPUT_0,
-	   7, 1, 0),
+	   7, 1, 1),
 SOC_SINGLE("Right Input PGA Volume", WM8903_ANALOGUE_RIGHT_INPUT_0,
 	   0, 31, 0),
 SOC_SINGLE("Right Input PGA Common Mode Switch", WM8903_ANALOGUE_RIGHT_INPUT_1,
@@ -1685,6 +1685,19 @@ static int wm8903_codec_io_probe(struct snd_soc_codec *codec,
 	/* Configure GPIO1 to drive external spkr amp enable pin. */
 	wm8903_write(codec, WM8903_GPIO_CONTROL_1, 0x0000);
 
+	/* Configure Left input as differential mic */
+	val = wm8903_read(codec, WM8903_ANALOGUE_LEFT_INPUT_1);
+	val = (val & ~WM8903_L_MODE_MASK) | 2;
+	wm8903_write(codec, WM8903_ANALOGUE_LEFT_INPUT_1, val);
+
+	/* Unmute input */
+	val = wm8903_read(codec, WM8903_ANALOGUE_LEFT_INPUT_0);
+	val = (val & ~WM8903_LINMUTE);
+	wm8903_write(codec, WM8903_ANALOGUE_LEFT_INPUT_0, val);
+	val = wm8903_read(codec, WM8903_ANALOGUE_RIGHT_INPUT_0);
+	val = (val & ~WM8903_RINMUTE);
+	wm8903_write(codec, WM8903_ANALOGUE_RIGHT_INPUT_0, val);
+
 	wm8903_add_controls(codec, machine->card);
 	wm8903_add_widgets(codec, machine);
 
@@ -1788,7 +1801,7 @@ static struct snd_soc_device_driver wm8903_hifi_dai_driver = {
 		   },
 };
 
-static int wm8903_i2c_probe(struct i2c_client *client, struct i2c_device_id *id)
+static int wm8903_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	wm8903_i2c_client = client;
 	return 0;

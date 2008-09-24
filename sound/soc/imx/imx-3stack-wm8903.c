@@ -281,7 +281,7 @@ int mach_probe(struct snd_soc_machine *machine)
 
 	/* set unused imx_3stack WM8903 codec pins */
 	snd_soc_dapm_set_endpoint(machine, "IN2R", 0);
-	snd_soc_dapm_set_endpoint(machine, "IN2L", 0);
+	snd_soc_dapm_set_endpoint(machine, "IN1R", 0);
 
 	/* Add imx_3stack specific widgets */
 	for (i = 0; i < ARRAY_SIZE(imx_3stack_dapm_widgets); i++) {

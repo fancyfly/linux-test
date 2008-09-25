@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.26
-# Fri Sep 19 14:05:49 2008
+# Thu Sep 25 09:32:52 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1258,7 +1258,7 @@ CONFIG_USB_GADGET_SELECTED=y
 # CONFIG_USB_GADGET_LH7A40X is not set
 # CONFIG_USB_GADGET_OMAP is not set
 CONFIG_USB_GADGET_ARC=y
-# CONFIG_USB_STATIC_IRAM_PPH is not set
+CONFIG_USB_STATIC_IRAM_PPH=y
 CONFIG_USB_ARC=m
 # CONFIG_USB_GADGET_S3C2410 is not set
 # CONFIG_USB_GADGET_AT91 is not set

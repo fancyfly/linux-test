@@ -20,6 +20,7 @@
 #include <linux/regulator/wm8350/wm8350-supply.h>
 #include <linux/regulator/wm8350/wm8350-rtc.h>
 #include <linux/regulator/wm8350/wm8350-wdt.h>
+#include <sound/soc.h>
 
 /* number of WM8350 interrupts */
 #define WM8350_NUM_IRQ	79
@@ -64,7 +65,7 @@ struct wm8350 {
 	struct wm8350_pmic pmic;
 	struct wm8350_wdg wdg;
 	struct wm8350_rtc rtc;
-	struct snd_soc_machine *audio;
+	struct snd_soc_machine audio;
 	struct wm8350_power power;
 	
 	/* irq handlers and workq */

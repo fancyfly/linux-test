@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -738,14 +738,18 @@ static int fsl_queue_td(struct fsl_ep *ep, struct fsl_req *req)
 		/* Add td to the end */
 		struct fsl_req *lastreq;
 		lastreq = list_entry(ep->queue.prev, struct fsl_req, queue);
-		lastreq->tail->next_td_ptr =
-			cpu_to_hc32(req->head->td_dma & DTD_ADDR_MASK);
+		if (NEED_IRAM(ep)) {
+			/* only one dtd in dqh */
+			lastreq->tail->next_td_ptr =
+			    cpu_to_hc32(req->head->td_dma | DTD_NEXT_TERMINATE);
+			goto out;
+		} else {
+			lastreq->tail->next_td_ptr =
+			    cpu_to_hc32(req->head->td_dma & DTD_ADDR_MASK);
+		}
 		/* Read prime bit, if 1 goto done */
 		if (fsl_readl(&dr_regs->endpointprime) & bitmask)
 			goto out;
-		if (NEED_IRAM(ep))
-			goto out;
-
 		do {
 			/* Set ATDTW bit in USBCMD */
 			temp = fsl_readl(&dr_regs->usbcmd);
@@ -852,9 +856,13 @@ static int fsl_req_to_dtd(struct fsl_req *req)
 		/* here, replace user buffer to iram buffer */
 		if (ep_is_in(req->ep)) {
 			req->req.dma = req->ep->udc->iram_buffer[1];
-			/* copy data to iram */
-			memcpy((char *)req->ep->udc->iram_buffer_v[1],
-			       req->req.buf, min(req->req.length, g_iram_size));
+			if ((list_empty(&req->ep->queue))) {
+				/* copy data only when no bulk in transfer is
+				   running */
+				memcpy((char *)req->ep->udc->iram_buffer_v[1],
+				       req->req.buf, min(req->req.length,
+							 g_iram_size));
+			}
 		} else {
 			req->req.dma = req->ep->udc->iram_buffer[0];
 		}

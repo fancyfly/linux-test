@@ -677,10 +677,13 @@ static void spdif_irq_cnew(unsigned int bit, void *devid)
  */
 static void spdif_softreset(void)
 {
+	unsigned long value = 1;
+	int cycle = 0;
 	__raw_writel(SCR_SOFT_RESET, spdif_base_addr + SPDIF_REG_SCR);
+	while (value && (cycle++ < 10)) {
+		value = __raw_readl(spdif_base_addr + SPDIF_REG_SCR) & 0x1000;
+	}
 
-	/* Marly SPDIF do not have software reset, just wait */
-	udelay(10);
 }
 
 /*!

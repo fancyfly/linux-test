@@ -68,6 +68,9 @@ static int __init mxc_ts_init(void)
 {
 	int retval;
 
+	if (!is_pmic_adc_ready())
+		return -ENODEV;
+
 	mxc_inputdev = input_allocate_device();
 	if (!mxc_inputdev) {
 		printk(KERN_ERR

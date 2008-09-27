@@ -373,7 +373,7 @@ static ssize_t dvfs_status_show(struct sys_device *dev, char *buf)
 	if (dvfs_is_active) {
 		size = sprintf(buf, "DVFS is enabled\n");
 	} else {
-		size = sprintf(buf, "DVFS is enabled\n");
+		size = sprintf(buf, "DVFS is disabled\n");
 	}
 	size +=
 	    sprintf((buf + size), "UP:\t%d\t%d\t%d\t%d\n", dvfs_nr_up[0],

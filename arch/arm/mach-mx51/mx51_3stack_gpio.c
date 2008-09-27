@@ -457,7 +457,7 @@ void gpio_i2c_inactive(int i2c_num)
 
 EXPORT_SYMBOL(gpio_i2c_inactive);
 
-void gpio_i2c_hs_active()
+void gpio_i2c_hs_active(void)
 {
 	mxc_request_iomux(MX51_PIN_I2C1_CLK,
 			  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
@@ -470,7 +470,7 @@ void gpio_i2c_hs_active()
 
 EXPORT_SYMBOL(gpio_i2c_hs_active);
 
-void gpio_i2c_hs_inactive()
+void gpio_i2c_hs_inactive(void)
 {
 }
 
@@ -518,15 +518,6 @@ void gpio_activate_audio_ports(void)
 	mxc_request_iomux(MX51_PIN_AUD3_BB_FS, IOMUX_CONFIG_ALT0);
 	mxc_iomux_set_pad(MX51_PIN_AUD3_BB_FS, pad_val);
 
-	/*
-	 * CPU3 AAPL board:
-	 * codec mclk is driven by 12MHz external xtal oscillator.
-	 * enable it by driving EIM_D16 high.
-	 */
-	mxc_request_iomux(MX51_PIN_EIM_D16, IOMUX_CONFIG_ALT1);
-	mxc_iomux_set_pad(MX51_PIN_EIM_D16, pad_val);
-	mxc_set_gpio_direction(MX51_PIN_EIM_D16, 0);
-	mxc_set_gpio_dataout(MX51_PIN_EIM_D16, 1);
 }
 
 EXPORT_SYMBOL(gpio_activate_audio_ports);

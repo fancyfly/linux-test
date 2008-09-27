@@ -225,6 +225,15 @@ static unsigned channel_num[] = {
 	-1
 };
 
+static bool pmic_adc_ready;
+
+int is_pmic_adc_ready()
+{
+	return pmic_adc_ready;
+}
+EXPORT_SYMBOL(is_pmic_adc_ready);
+
+
 static int pmic_adc_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	suspend_flag = 1;
@@ -927,6 +936,7 @@ static int pmic_adc_module_probe(struct platform_device *pdev)
 		goto rm_dev_file;
 	}
 
+	pmic_adc_ready = 1;
 	pr_debug("PMIC ADC successfully probed\n");
 	return 0;
 
@@ -938,6 +948,7 @@ static int pmic_adc_module_probe(struct platform_device *pdev)
 static int pmic_adc_module_remove(struct platform_device *pdev)
 {
 	pmic_adc_deinit();
+	pmic_adc_ready = 0;
 	pr_debug("PMIC ADC successfully removed\n");
 	return 0;
 }

@@ -128,6 +128,15 @@ static unsigned channel_num[] = {
 	7
 };
 
+static bool pmic_adc_ready;
+
+int is_pmic_adc_ready()
+{
+	return pmic_adc_ready;
+}
+EXPORT_SYMBOL(is_pmic_adc_ready);
+
+
 /*!
  * This is the suspend of power management for the mc13783 ADC API.
  * It supports SAVE and POWER_DOWN state.
@@ -1474,6 +1483,7 @@ static int pmic_adc_module_probe(struct platform_device *pdev)
 		goto err_out4;
 	}
 
+	pmic_adc_ready = 1;
 	pr_debug(KERN_INFO "PMIC ADC successfully probed\n");
 	return ret;
 
@@ -1488,6 +1498,7 @@ static int pmic_adc_module_probe(struct platform_device *pdev)
 
 static int pmic_adc_module_remove(struct platform_device *pdev)
 {
+	pmic_adc_ready = 0;
 	pmic_adc_deinit();
 	device_destroy(pmic_adc_class, MKDEV(pmic_adc_major, 0));
 	class_destroy(pmic_adc_class);

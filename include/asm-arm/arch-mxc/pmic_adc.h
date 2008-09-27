@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -448,5 +448,8 @@ PMIC_STATUS pmic_adc_install_ts(void);
  * @return       This function returns 0 if successful.
  */
 PMIC_STATUS pmic_adc_remove_ts(void);
+
+int is_pmic_adc_ready(void);
+
 #endif				/* _KERNEL */
 #endif				/* __ASM_ARCH_MXC_PMIC_ADC_H__ */

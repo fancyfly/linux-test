@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.26
-# Tue Sep 16 10:19:23 2008
+# Fri Sep 26 18:56:15 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1041,7 +1041,7 @@ CONFIG_SND_VERBOSE_PROCFS=y
 #
 # ALSA ARM devices
 #
-# CONFIG_SND_MXC_SPDIF is not set
+CONFIG_SND_MXC_SPDIF=m
 
 #
 # SPI devices

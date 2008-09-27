@@ -1436,12 +1436,25 @@ EXPORT_SYMBOL(gpio_fec_inactive);
 
 void gpio_spdif_active(void)
 {
+	mxc_request_iomux(MX51_PIN_GPIO1_7, IOMUX_CONFIG_ALT2);
+	mxc_iomux_set_pad(MX51_PIN_GPIO1_7,
+			  PAD_CTL_DRV_HIGH | PAD_CTL_PUE_PULL |
+			  PAD_CTL_100K_PU | PAD_CTL_PKE_ENABLE |
+			  PAD_CTL_SRE_FAST);
+	mxc_request_iomux(MX51_PIN_EIM_D16, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_EIM_D16,
+			  PAD_CTL_DRV_HIGH | PAD_CTL_100K_PU |
+			  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+	mxc_set_gpio_direction(MX51_PIN_EIM_D16, 0);
+	mxc_set_gpio_dataout(MX51_PIN_EIM_D16, 1);
 }
 
 EXPORT_SYMBOL(gpio_spdif_active);
 
 void gpio_spdif_inactive(void)
 {
+	mxc_free_iomux(MX51_PIN_GPIO1_7, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_EIM_D16, IOMUX_CONFIG_GPIO);
 
 }
 

@@ -26,7 +26,7 @@
 #define MXC_SSI_RX1_REG           0xC
 #define MXC_SSI_TXFIFO_WML        0x4
 #define MXC_SSI_RXFIFO_WML        0x6
-#define MXC_SPDIF_TXFIFO_WML      0x0
+#define MXC_SPDIF_TXFIFO_WML      0x8
 #define MXC_SPDIF_TX_REG          0x2C
 
 typedef struct mxc_sdma_info_entry_s {

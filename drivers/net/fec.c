@@ -81,7 +81,8 @@
 #define	FEC_MAX_PORTS	1
 #endif
 
-#if defined(CONFIG_FADS) || defined(CONFIG_RPXCLASSIC) || defined(CONFIG_M5272)
+#if defined(CONFIG_FADS) || defined(CONFIG_RPXCLASSIC) \
+|| defined(CONFIG_M5272) || defined(CONFIG_ARCH_MXC)
 #define HAVE_mii_link_interrupt
 #endif
 
@@ -2787,8 +2788,6 @@ int __init fec_enet_init(struct net_device *dev)
 		return -ENXIO;
 
 	fep->net = dev;
-
-	spin_lock_init(&(fep->lock));
 
 	/* Allocate memory for buffer descriptors.
 	*/

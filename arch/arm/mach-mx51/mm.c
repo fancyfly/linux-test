@@ -30,6 +30,11 @@
  */
 static struct map_desc mxc_io_desc[] __initdata = {
 	{
+	 .virtual = IRAM_BASE_ADDR_VIRT,
+	 .pfn = __phys_to_pfn(IRAM_BASE_ADDR),
+	 .length = IRAM_SIZE,
+	 .type = MT_DEVICE},
+	{
 	 .virtual = DEBUG_BASE_ADDR_VIRT,
 	 .pfn = __phys_to_pfn(DEBUG_BASE_ADDR),
 	 .length = DEBUG_SIZE,

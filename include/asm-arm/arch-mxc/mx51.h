@@ -68,7 +68,16 @@
  * IRAM
  */
 #define IRAM_BASE_ADDR		0x1FFE8000	/* internal ram */
-#define IRAM_SIZE 		(12 * SZ_8K)	/* 96K */
+#define IRAM_BASE_ADDR_VIRT	0xFA3E8000
+#define IRAM_PARTITIONS		12
+#define IRAM_SIZE		(IRAM_PARTITIONS*SZ_8K)	/* 96KB */
+
+#if defined(CONFIG_MXC_SECURITY_SCC2) \
+    || defined(CONFIG_MXC_SECURITY_SCC2_MODULE)
+#define SCC_IRAM_SIZE  SZ_16K
+#else
+#define SCC_IRAM_SIZE  0
+#endif
 
 #ifdef CONFIG_SDMA_IRAM
 #define SDMA_IRAM_SIZE  CONFIG_SDMA_IRAM_SIZE
@@ -88,10 +97,12 @@
 #define VPU_IRAM_SIZE 0
 #endif
 
-#if (IRAM_SIZE < (SDMA_IRAM_SIZE + SND_RAM_SIZE + VPU_IRAM_SIZE))
+#if (IRAM_SIZE < (SDMA_IRAM_SIZE + SND_RAM_SIZE + VPU_IRAM_SIZE + \
+	SCC_IRAM_SIZE))
 #error "IRAM size exceeded"
 #endif
 
+#define SCC_IRAM_BASE_ADDR	(IRAM_BASE_ADDR + IRAM_SIZE - SCC_IRAM_SIZE)
 #define SDMA_RAM_BASE_ADDR	(IRAM_BASE_ADDR)
 #define SND_RAM_BASE_ADDR	(IRAM_BASE_ADDR + SDMA_IRAM_SIZE)
 #define VPU_IRAM_BASE_ADDR	(SND_RAM_BASE_ADDR + SND_RAM_SIZE)
@@ -191,6 +202,7 @@
 /*!
  * Defines for modules using static and dynamic DMA channels
  */
+#define MXC_DMA_CHANNEL_IRAM         30
 #define MXC_DMA_CHANNEL_SPDIF_TX        MXC_DMA_DYNAMIC_CHANNEL
 #define MXC_DMA_CHANNEL_UART1_RX	MXC_DMA_DYNAMIC_CHANNEL
 #define MXC_DMA_CHANNEL_UART1_TX	MXC_DMA_DYNAMIC_CHANNEL
@@ -203,7 +215,11 @@
 #define MXC_DMA_CHANNEL_SSI1_RX		MXC_DMA_DYNAMIC_CHANNEL
 #define MXC_DMA_CHANNEL_SSI1_TX		MXC_DMA_DYNAMIC_CHANNEL
 #define MXC_DMA_CHANNEL_SSI2_RX		MXC_DMA_DYNAMIC_CHANNEL
+#ifdef CONFIG_SDMA_IRAM
+#define MXC_DMA_CHANNEL_SSI2_TX  (MXC_DMA_CHANNEL_IRAM + 1)
+#else				/*CONFIG_SDMA_IRAM */
 #define MXC_DMA_CHANNEL_SSI2_TX		MXC_DMA_DYNAMIC_CHANNEL
+#endif				/*CONFIG_SDMA_IRAM */
 #define MXC_DMA_CHANNEL_CSPI1_RX	MXC_DMA_DYNAMIC_CHANNEL
 #define MXC_DMA_CHANNEL_CSPI1_TX	MXC_DMA_DYNAMIC_CHANNEL
 #define MXC_DMA_CHANNEL_CSPI2_RX	MXC_DMA_DYNAMIC_CHANNEL
@@ -275,29 +291,35 @@
  * it returns 0xDEADBEEF
  */
 #define IO_ADDRESS(x)   \
-	(((x >= (unsigned long)TZIC_BASE_ADDR) && \
-	    (x < (unsigned long)TZIC_BASE_ADDR + TZIC_SIZE)) ? \
+	((((x) >= (unsigned long)IRAM_BASE_ADDR) && \
+	    ((x) < (unsigned long)IRAM_BASE_ADDR + IRAM_SIZE)) ? \
+	     IRAM_IO_ADDRESS(x):\
+	(((x) >= (unsigned long)TZIC_BASE_ADDR) && \
+	    ((x) < (unsigned long)TZIC_BASE_ADDR + TZIC_SIZE)) ? \
 	     TZIC_IO_ADDRESS(x):\
-	((x >= (unsigned long)DEBUG_BASE_ADDR) && \
-	  (x < (unsigned long)DEBUG_BASE_ADDR + DEBUG_SIZE)) ? \
+	(((x) >= (unsigned long)DEBUG_BASE_ADDR) && \
+	  ((x) < (unsigned long)DEBUG_BASE_ADDR + DEBUG_SIZE)) ? \
 	   DEBUG_IO_ADDRESS(x):\
-	((x >= (unsigned long)SPBA0_BASE_ADDR) && \
-	  (x < (unsigned long)SPBA0_BASE_ADDR + SPBA0_SIZE)) ? \
+	(((x) >= (unsigned long)SPBA0_BASE_ADDR) && \
+	  ((x) < (unsigned long)SPBA0_BASE_ADDR + SPBA0_SIZE)) ? \
 	   SPBA0_IO_ADDRESS(x):\
-	((x >= (unsigned long)AIPS1_BASE_ADDR) && \
-	  (x < (unsigned long)AIPS1_BASE_ADDR + AIPS1_SIZE)) ? \
+	(((x) >= (unsigned long)AIPS1_BASE_ADDR) && \
+	  ((x) < (unsigned long)AIPS1_BASE_ADDR + AIPS1_SIZE)) ? \
 	   AIPS1_IO_ADDRESS(x):\
-	((x >= (unsigned long)AIPS2_BASE_ADDR) && \
-	  (x < (unsigned long)AIPS2_BASE_ADDR + AIPS2_SIZE)) ? \
+	(((x) >= (unsigned long)AIPS2_BASE_ADDR) && \
+	  ((x) < (unsigned long)AIPS2_BASE_ADDR + AIPS2_SIZE)) ? \
 	   AIPS2_IO_ADDRESS(x):\
-	((x >= (unsigned long)NFC_BASE_ADDR_AXI) && \
-	  (x < (unsigned long)NFC_BASE_ADDR_AXI + NFC_AXI_SIZE)) ? \
+	(((x) >= (unsigned long)NFC_BASE_ADDR_AXI) && \
+	  ((x) < (unsigned long)NFC_BASE_ADDR_AXI + NFC_AXI_SIZE)) ? \
 	   NFC_BASE_ADDR_AXI_IO_ADDRESS(x):\
 	0xDEADBEEF)
 
 /*
  * define the address mapping macros: in physical address order
  */
+
+#define IRAM_IO_ADDRESS(x)  \
+	(((x) - IRAM_BASE_ADDR) + IRAM_BASE_ADDR_VIRT)
 
 #define TZIC_IO_ADDRESS(x)  \
 	(((x) - TZIC_BASE_ADDR) + TZIC_BASE_ADDR_VIRT)

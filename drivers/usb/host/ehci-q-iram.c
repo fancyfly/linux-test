@@ -1288,7 +1288,7 @@ static void start_unlink_async(struct ehci_hcd *ehci, struct ehci_qh *qh)
 	cmd |= CMD_IAAD;
 	ehci_writel(ehci, cmd, &ehci->regs->command);
 	(void)ehci_readl(ehci, &ehci->regs->command);
-	iaa_watchdog_done(ehci);
+	iaa_watchdog_start(ehci);
 }
 
 /*-------------------------------------------------------------------------*/

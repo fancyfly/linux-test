@@ -262,6 +262,8 @@ static void lcd_init(void)
 		ipu_disp_direct_write(DIRECT_ASYNC1, 0x100, 0);
 		ipu_disp_direct_write(DIRECT_ASYNC1, 0x3A, 0);
 		ipu_disp_direct_write(DIRECT_ASYNC1, 0x160, 0);
+		msleep(1);
+		ipu_uninit_channel(DIRECT_ASYNC1);
 	}
 }
 
@@ -274,6 +276,7 @@ static void lcd_poweron(void)
 {
 	const u16 slpout = 0x11;
 	const u16 dison = 0x29;
+	ipu_channel_params_t param;
 
 	if (lcd_on)
 		return;
@@ -286,9 +289,13 @@ static void lcd_poweron(void)
 		msleep(60);
 		spi_write(lcd_spi, (const u8 *)&dison, 1);
 	} else {
+		memset(&param, 0, sizeof(param));
+		ipu_init_channel(DIRECT_ASYNC1, &param);
 		ipu_disp_direct_write(DIRECT_ASYNC1, slpout, 0);
 		msleep(60);
 		ipu_disp_direct_write(DIRECT_ASYNC1, dison, 0);
+		msleep(1);
+		ipu_uninit_channel(DIRECT_ASYNC1);
 	}
 	lcd_on = 1;
 }
@@ -301,6 +308,7 @@ static void lcd_poweroff(void)
 {
 	const u16 slpin = 0x10;
 	const u16 disoff = 0x28;
+	ipu_channel_params_t param;
 
 	if (!lcd_on)
 		return;
@@ -313,9 +321,13 @@ static void lcd_poweroff(void)
 		msleep(60);
 		spi_write(lcd_spi, (const u8 *)&slpin, 1);
 	} else {
+		memset(&param, 0, sizeof(param));
+		ipu_init_channel(DIRECT_ASYNC1, &param);
 		ipu_disp_direct_write(DIRECT_ASYNC1, disoff, 0);
 		msleep(60);
 		ipu_disp_direct_write(DIRECT_ASYNC1, slpin, 0);
+		msleep(1);
+		ipu_uninit_channel(DIRECT_ASYNC1);
 	}
 	lcd_on = 0;
 }

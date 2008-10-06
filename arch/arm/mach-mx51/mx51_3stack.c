@@ -283,6 +283,11 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	 .type = "wm8903-i2c",
 	 .addr = 0x1a,
 	 },
+	{
+	 .type = "tsc2007",
+	 .addr = 0x48,
+	 .irq  = IOMUX_TO_IRQ(MX51_PIN_GPIO1_5),
+	},
 };
 #endif
 #ifdef CONFIG_I2C_MXC_HS
@@ -637,6 +642,27 @@ static void __init mxc_init_pata(void)
 }
 #endif				/* CONFIG_PATA_FSL */
 
+#if defined(CONFIG_TOUCHSCREEN_TSC2007) \
+	|| defined(CONFIG_TOUCHSCREEN_TSC2007_MODULE)
+
+static int __init mxc_init_touchscreen(void)
+{
+	int pad_val;
+
+	mxc_request_iomux(MX51_PIN_GPIO1_5, IOMUX_CONFIG_GPIO);
+	pad_val = PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU;
+	mxc_iomux_set_pad(MX51_PIN_GPIO1_5, pad_val);
+	mxc_set_gpio_direction(MX51_PIN_GPIO1_5, 1);
+
+	return 0;
+}
+#else
+static int __init mxc_init_touchscreen(void)
+{
+	return 0;
+}
+#endif
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -699,6 +725,7 @@ static void __init mxc_board_init(void)
 #endif
 
 #endif
+	mxc_init_touchscreen();
 
 }
 

@@ -952,7 +952,8 @@ typedef struct {
 } t_sensor_bits;
 
 extern struct i2c_client *mc13892_client;
-int pmic_i2c_24bit_read(struct i2c_client *client, unsigned int reg_num);
+int pmic_i2c_24bit_read(struct i2c_client *client, unsigned int reg_num,
+			unsigned int *value);
 int pmic_read(int reg_num, unsigned int *reg_val);
 int pmic_write(int reg_num, const unsigned int reg_val);
 void gpio_pmic_active(void);

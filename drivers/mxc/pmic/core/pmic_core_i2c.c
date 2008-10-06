@@ -168,13 +168,11 @@ EXPORT_SYMBOL(pmic_get_version);
 
 static int __devinit is_chip_onboard(struct i2c_client *client)
 {
-	int ret = 0;
+	unsigned int ret = 0;
 
 	/*bind the right device to the driver */
-	ret = pmic_i2c_24bit_read(client, REG_IDENTIFICATION);
-
-	if (ret == -1)
-		return ret;
+	if (pmic_i2c_24bit_read(client, REG_IDENTIFICATION, &ret) == -1)
+		return -1;
 
 	if (MC13892_GEN_ID_VALUE != BITFEXT(ret, MC13892_GENERATION_ID)) {
 		/*compare the address value */
@@ -248,7 +246,8 @@ static struct device_attribute mc13892_dev_attr = {
 	.store = mc13892_store,
 };
 
-static int __devinit pmic_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int __devinit pmic_probe(struct i2c_client *client,
+				const struct i2c_device_id *id)
 {
 	int ret = 0;
 	int pmic_irq;
@@ -321,9 +320,10 @@ static int pmic_resume(struct i2c_client *client)
 }
 
 static const struct i2c_device_id mc13892_id[] = {
-	{ "mc13892", 0 },
+	{"mc13892", 0},
 	{},
 };
+
 MODULE_DEVICE_TABLE(i2c, mc13892_id);
 
 static struct i2c_driver pmic_driver = {

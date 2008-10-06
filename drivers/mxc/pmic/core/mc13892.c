@@ -41,18 +41,17 @@
  * Defines
  */
 
-int pmic_i2c_24bit_read(struct i2c_client *client, unsigned int reg_num)
+int pmic_i2c_24bit_read(struct i2c_client *client, unsigned int reg_num,
+			unsigned int *value)
 {
-	char buf[3];
+	unsigned char buf[3];
 	int ret;
 
 	memset(buf, 0, 3);
 	ret = i2c_smbus_read_i2c_block_data(client, reg_num, 3, buf);
 
 	if (ret == 3) {
-		ret =
-		    ((buf[0] << 16) & 0xFF0000) | ((buf[1] << 8) & 0xFF00) |
-		    (buf[2] & 0xFF);
+		*value = buf[0] << 16 | buf[1] << 8 | buf[2];
 		return ret;
 	} else {
 		pr_debug("24bit read error, ret = %d\n", ret);
@@ -77,9 +76,7 @@ int pmic_read(int reg_num, unsigned int *reg_val)
 	if (mc13892_client == NULL)
 		return PMIC_ERROR;
 
-	*reg_val = pmic_i2c_24bit_read(mc13892_client, reg_num);
-
-	if (*reg_val == -1)
+	if (pmic_i2c_24bit_read(mc13892_client, reg_num, reg_val) == -1)
 		return PMIC_ERROR;
 
 	return PMIC_SUCCESS;

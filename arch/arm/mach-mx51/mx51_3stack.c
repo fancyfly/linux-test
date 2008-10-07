@@ -290,7 +290,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 };
 #endif
-#ifdef CONFIG_I2C_MXC_HS
+#if defined(CONFIG_I2C_MXC_HS) || defined(CONFIG_I2C_MXC_HS_MODULE)
 static struct i2c_board_info mxc_i2c_hs_board_info[] __initdata = {
 };
 #endif
@@ -719,7 +719,7 @@ static void __init mxc_board_init(void)
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 				ARRAY_SIZE(mxc_i2c1_board_info));
 #endif
-#ifdef CONFIG_I2C_MXC_HS
+#if defined(CONFIG_I2C_MXC_HS) || defined(CONFIG_I2C_MXC_HS_MODULE)
 	i2c_register_board_info(3, mxc_i2c_hs_board_info,
 				ARRAY_SIZE(mxc_i2c_hs_board_info));
 #endif

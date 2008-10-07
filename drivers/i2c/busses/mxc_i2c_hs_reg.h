@@ -38,7 +38,7 @@
 
 #define  HISR          0x0c
 #define 	HISR_RDF		0x1
-#define 	HISR_TED		0x2
+#define 	HISR_TDE		0x2
 #define 	HISR_HIAAS	0x4
 #define 	HISR_HIAL	0x8
 #define 	HISR_BTD		0x10
@@ -73,21 +73,25 @@
 #define	HITFR_TFLSH	0x2
 #define	HITFR_TFWM(x) (((x) & 0x7) << 2)
 #define	HITFR_TFC(x)	(((x) >> 8) & 0xF)
+#define	HITFR_MAX_COUNT 8
 
 #define  HIRFR         0x28
 #define  	HIRFR_RFEN			0x1
 #define  	HIRFR_RFLSH		0x2
 #define  	HIRFR_RFWM(x)	 	(((x) & 0x7) << 2)
 #define  	HIRFR_RFC(x) 		(((x) >> 8) & 0xF)
+#define	HIRFR_MAX_COUNT 8
 
 #define  HITDCR        0x2c
 #define	HITDCR_TDC(x)		((x) & 0xFF)
 #define	HITDCR_TDC_EN	0x100
 #define	HITDCR_TDC_RSTA	0x200
+#define	HITDCR_MAX_COUNT 0xFF
 
 #define  HIRDCR        0x30
 #define	HIRDCR_RDC(x)		((x) & 0xFF)
 #define	HIRDCR_RDC_EN	0x100
 #define	HIRDCR_RDC_RSTA	0x200
+#define	HIRDCR_MAX_COUNT 0xFF
 
 #endif

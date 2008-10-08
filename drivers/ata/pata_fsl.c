@@ -467,6 +467,15 @@ static int pata_fsl_check_atapi_dma(struct ata_queued_cmd *qc)
 	return 1;		/* ATAPI DMA not yet supported */
 }
 
+unsigned long pata_fsl_bmdma_mode_filter(struct ata_device *adev,
+					unsigned long xfer_mask)
+{
+	/* Capability of the controller has been specified in the
+	 * platform data. Do not filter any modes, just return
+	 * the xfer_mask */
+	return xfer_mask;
+}
+
 static void pata_fsl_bmdma_setup(struct ata_queued_cmd *qc)
 {
 	int chan, i;
@@ -697,6 +706,7 @@ static struct ata_port_operations pata_fsl_port_ops = {
 
 	.check_atapi_dma = pata_fsl_check_atapi_dma,
 	.cable_detect = ata_cable_unknown,
+	.mode_filter = pata_fsl_bmdma_mode_filter,
 
 	.bmdma_setup = pata_fsl_bmdma_setup,
 	.bmdma_start = pata_fsl_bmdma_start,

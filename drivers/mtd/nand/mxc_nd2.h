@@ -25,11 +25,14 @@
 
 #include <asm/hardware.h>
 
-#define IS_2K_PAGE_NAND		(mtd->writesize == NAND_PAGESIZE_2KB)
-#define IS_4K_PAGE_NAND		(mtd->writesize == NAND_PAGESIZE_4KB)
+#define IS_2K_PAGE_NAND         ((mtd->writesize / num_of_interleave) \
+						== NAND_PAGESIZE_2KB)
+#define IS_4K_PAGE_NAND         ((mtd->writesize / num_of_interleave) \
+						== NAND_PAGESIZE_4KB)
+#define IS_LARGE_PAGE_NAND      ((mtd->writesize / num_of_interleave) > 512)
+
 #define NAND_PAGESIZE_2KB	2048
 #define NAND_PAGESIZE_4KB	4096
-#define IS_LARGE_PAGE_NAND	(mtd->writesize > 512)
 
 #ifdef CONFIG_ARCH_MXC_HAS_NFC_V3
 /*
@@ -310,9 +313,30 @@
 	(NFC_FIELD_RESET(NFC_PS_WIDTH, NFC_PS_SHIFT))) | \
 	((val) << NFC_PS_SHIFT), NFC_CONFIG2);
 
+#ifdef CONFIG_ARCH_MXC_HAS_NFC_V3_2
+#define UNLOCK_ADDR(start_addr,end_addr)     \
+{ \
+	int i = 0; \
+	for (; i < NAND_MAX_CHIPS; i++)  \
+	raw_write(start_addr | \
+	(end_addr << NFC_UNLOCK_END_ADDR_SHIFT), \
+	REG_UNLOCK_BLK_ADD0 + (i << 2)); \
+}
+#define NFC_SET_NFC_ACTIVE_CS(val) \
+	raw_write((raw_read(NFC_CONFIG1) & \
+	(NFC_FIELD_RESET(NFC_ACTIVE_CS_WIDTH, NFC_ACTIVE_CS_SHIFT))) | \
+	((val) << NFC_ACTIVE_CS_SHIFT), NFC_CONFIG1);
+
+#define NFC_GET_MAXCHIP_SP() 		8
+
+#else
 #define UNLOCK_ADDR(start_addr,end_addr)     \
 	raw_write(start_addr | \
 	(end_addr << NFC_UNLOCK_END_ADDR_SHIFT), REG_UNLOCK_BLK_ADD0);
+
+#define NFC_SET_NFC_ACTIVE_CS(val)
+#define NFC_GET_MAXCHIP_SP() 		1
+#endif
 
 #define NFC_SET_BLS(val) ((raw_read(REG_NFC_BLS) & NFC_BLS_RESET) | val )
 #define NFC_SET_WPC(val) ((raw_read(REG_NFC_WPC) & NFC_WPC_RESET) | val )
@@ -336,15 +360,27 @@
 	(NFC_FIELD_RESET(NFC_ITERATION_WIDTH, NFC_ITERATION_SHIFT))) | \
 	((val) << NFC_ITERATION_SHIFT), NFC_CONFIG1);
 
-#define NFC_SET_NFC_ACTIVE_CS(val) \
-	raw_write((raw_read(NFC_CONFIG1) & \
-	(NFC_FIELD_RESET(NFC_ACTIVE_CS_SHIFT, NFC_ACTIVE_CS_SHIFT))) | \
-	((val) << NFC_ACTIVE_CS_SHIFT), NFC_CONFIG2);
-
 #define NFC_SET_FW(val) \
 	raw_write((raw_read(NFC_CONFIG3) & \
-	(NFC_FIELD_RESET(NFC_FW_SHIFT, NFC_FW_SHIFT))) | \
+	(NFC_FIELD_RESET(NFC_FW_WIDTH, NFC_FW_SHIFT))) | \
 	((val) << NFC_FW_SHIFT), NFC_CONFIG3);
+
+#define NFC_SET_NUM_OF_DEVICE(val) \
+	raw_write((raw_read(NFC_CONFIG3) & \
+	(NFC_FIELD_RESET(NFC_NUM_OF_DEVICES_WIDTH, \
+	NFC_NUM_OF_DEVICES_SHIFT))) | \
+	((val) << NFC_NUM_OF_DEVICES_SHIFT), NFC_CONFIG3);
+
+#define NFC_SET_ADD_OP_MODE(val) \
+	 raw_write((raw_read(NFC_CONFIG3) & \
+	(NFC_FIELD_RESET(NFC_ADD_OP_WIDTH, NFC_ADD_OP_SHIFT))) | \
+	((val) << NFC_ADD_OP_SHIFT), NFC_CONFIG3);
+
+#define NFC_SET_ADD_CS_MODE(val) \
+{ \
+	NFC_SET_ADD_OP_MODE(val); \
+	NFC_SET_NUM_OF_DEVICE(this->numchips - 1); \
+}
 
 #define NFMS_NF_DWIDTH 0
 #define NFMS_NF_PG_SZ  1
@@ -375,8 +411,9 @@ do {	\
 			NFC_SET_NFC_NUM_ADDR_PHASE1(NUM_OF_ADDR_CYCLE - 1); \
 			NFC_SET_NFC_NUM_ADDR_PHASE0(NFC_ONE_LESS_PHASE1); \
 		}	\
+		NFC_SET_ADD_CS_MODE(1) \
 		NFC_SET_ECC_MODE(NFC_SPAS_128); \
-	}	\
+	} \
 } while (0)
 #endif
 
@@ -574,6 +611,8 @@ do {	\
         raw_write(end_addr,REG_END_BLKADDR);		\
 }
 
+#define NFC_SET_NFC_ACTIVE_CS(val)
+#define NFC_GET_MAXCHIP_SP() 		1
 #define NFC_SET_WPC(val)                val
 
 /* NULL Definitions */

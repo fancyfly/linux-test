@@ -154,10 +154,28 @@ static struct mtd_partition mxc_nand_partitions[] = {
 	 .size = MTDPART_SIZ_FULL},
 };
 
+extern void gpio_nand_active(void);
+extern void gpio_nand_inactive(void);
+
+static int nand_init(void)
+{
+	/* Configure the pins */
+	gpio_nand_active();
+	return 0;
+}
+
+static void nand_exit(void)
+{
+	/* Free the pins */
+	gpio_nand_inactive();
+}
+
 static struct flash_platform_data mxc_nand_data = {
 	.parts = mxc_nand_partitions,
 	.nr_parts = ARRAY_SIZE(mxc_nand_partitions),
 	.width = 1,
+	.init = nand_init,
+	.exit = nand_exit,
 };
 
 static struct platform_device mxc_nandv2_mtd_device = {

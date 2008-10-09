@@ -951,6 +951,33 @@ void gpio_ata_inactive(void)
 
 EXPORT_SYMBOL(gpio_ata_inactive);
 
+void gpio_nand_active(void)
+{
+	mxc_request_iomux(MX51_PIN_NANDF_CS0, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_NANDF_CS1, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_NANDF_CS2, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_NANDF_CS3, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_NANDF_CS4, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_NANDF_CS5, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_NANDF_CS6, IOMUX_CONFIG_ALT0);
+	mxc_request_iomux(MX51_PIN_NANDF_CS7, IOMUX_CONFIG_ALT0);
+}
+
+EXPORT_SYMBOL(gpio_nand_active);
+
+void gpio_nand_inactive(void)
+{
+	mxc_free_iomux(MX51_PIN_NANDF_CS0, IOMUX_CONFIG_ALT0);
+	mxc_free_iomux(MX51_PIN_NANDF_CS1, IOMUX_CONFIG_ALT0);
+	mxc_free_iomux(MX51_PIN_NANDF_CS2, IOMUX_CONFIG_ALT0);
+	mxc_free_iomux(MX51_PIN_NANDF_CS3, IOMUX_CONFIG_ALT0);
+	mxc_free_iomux(MX51_PIN_NANDF_CS4, IOMUX_CONFIG_ALT0);
+	mxc_free_iomux(MX51_PIN_NANDF_CS5, IOMUX_CONFIG_ALT0);
+	mxc_free_iomux(MX51_PIN_NANDF_CS6, IOMUX_CONFIG_ALT0);
+	mxc_free_iomux(MX51_PIN_NANDF_CS7, IOMUX_CONFIG_ALT0);
+}
+
+EXPORT_SYMBOL(gpio_nand_inactive);
 /*!
  * Setup GPIO for Keypad  to be active
  *

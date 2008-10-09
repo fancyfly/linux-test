@@ -87,25 +87,6 @@ static inline uint32_t channel_2_dma(ipu_channel_t ch, ipu_buffer_t type)
 #define idma_mask(ch)		(idma_is_valid(ch) ? (1UL << (ch & 0x1F)) : 0)
 #define idma_is_set(reg, dma)	(__raw_readl(reg(dma)) & idma_mask(dma))
 
-static int _di_clk_set_parent(struct clk *clk, struct clk *parent)
-{
-	if (parent != g_ipu_clk)
-		return -EINVAL;
-
-	return 0;
-}
-
-static struct clk di_clk[] = {
-	{
-	 .name = "di_clk",
-	 .id = 0,
-	 .set_parent = _di_clk_set_parent},
-	{
-	 .name = "di_clk",
-	 .id = 1,
-	 .rate = 27000000,},
-};
-
 /*!
  * This function is called by the driver framework to initialize the IPU
  * hardware.
@@ -118,6 +99,7 @@ static struct clk di_clk[] = {
 static int ipu_probe(struct platform_device *pdev)
 {
 	struct resource *res;
+	struct mxc_ipu_config *plat_data = pdev->dev.platform_data;
 	unsigned long ipu_base;
 
 	spin_lock_init(&ipu_lock);
@@ -182,12 +164,8 @@ static int ipu_probe(struct platform_device *pdev)
 
 	clk_enable(g_ipu_clk);
 
-	clk_register(&di_clk[0]);
-	g_di_clk[0] = &di_clk[0];
-	clk_set_parent(g_di_clk[0], g_ipu_clk);
-
-	clk_register(&di_clk[1]);
-	g_di_clk[1] = &di_clk[1];
+	g_di_clk[0] = plat_data->di_clk[0];
+	g_di_clk[1] = plat_data->di_clk[1];
 
 	__raw_writel(0x807FFFFF, IPU_MEM_RST);
 	while (__raw_readl(IPU_MEM_RST) & 0x80000000) ;
@@ -428,10 +406,14 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 		ipu_conf |= IPU_CONF_DP_EN;
 	if (ipu_dmfc_use_count == 1)
 		ipu_conf |= IPU_CONF_DMFC_EN;
-	if (ipu_di_use_count[0] == 1)
+	if (ipu_di_use_count[0] == 1) {
 		ipu_conf |= IPU_CONF_DI0_EN;
-	if (ipu_di_use_count[1] == 1)
+		clk_enable(g_di_clk[0]);
+	}
+	if (ipu_di_use_count[1] == 1) {
 		ipu_conf |= IPU_CONF_DI1_EN;
+		clk_enable(g_di_clk[1]);
+	}
 
 	__raw_writel(ipu_conf, IPU_CONF);
 
@@ -562,10 +544,14 @@ void ipu_uninit_channel(ipu_channel_t channel)
 		ipu_conf &= ~IPU_CONF_DP_EN;
 	if (ipu_dmfc_use_count == 0)
 		ipu_conf &= ~IPU_CONF_DMFC_EN;
-	if (ipu_di_use_count[0] == 0)
+	if (ipu_di_use_count[0] == 0) {
 		ipu_conf &= ~IPU_CONF_DI0_EN;
-	if (ipu_di_use_count[1] == 0)
+		clk_disable(g_di_clk[0]);
+	}
+	if (ipu_di_use_count[1] == 0) {
 		ipu_conf &= ~IPU_CONF_DI1_EN;
+		clk_disable(g_di_clk[1]);
+	}
 
 	__raw_writel(ipu_conf, IPU_CONF);
 

@@ -194,6 +194,10 @@ static struct platform_device mxc_ipu_device = {
 
 static void mxc_init_ipu(void)
 {
+	struct clk *clk;
+
+	mxc_ipu_data.di_clk[1] = clk_get(NULL, "ipu_di_clk");
+
 	platform_device_register(&mxc_ipu_device);
 }
 #else
@@ -549,6 +553,8 @@ static inline void mxc_init_i2c(void)
 }
 #endif
 
+static struct tve_platform_data tve_data;
+
 static struct resource tve_resources[] = {
 	{
 	 .start = TVE_BASE_ADDR,
@@ -565,6 +571,7 @@ static struct platform_device mxc_tve_device = {
 	.name = "tve",
 	.dev = {
 		.release = mxc_nop_release,
+		.platform_data = &tve_data,
 		},
 	.num_resources = ARRAY_SIZE(tve_resources),
 	.resource = tve_resources,

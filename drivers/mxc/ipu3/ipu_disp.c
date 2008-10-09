@@ -32,6 +32,12 @@
 #define SYNC_WAVE 0
 #define ASYNC_SER_WAVE 6
 
+/* DC display ID assignments */
+#define DC_DISP_ID_SYNC(di)	(di)
+#define DC_DISP_ID_SERIAL	2
+#define DC_DISP_ID_ASYNC	3
+
+
 /* all value below is determined by fix reg setting in _ipu_dmfc_init*/
 #define DMFC_FIFO_SIZE_28	(128*4)
 #define DMFC_FIFO_SIZE_29	(64*4)
@@ -345,17 +351,20 @@ void _ipu_dc_init(int dc_chan, int di, bool interlaced)
 			__raw_writel(reg, DC_WR_CH_CONF(6 - dc_chan));
 		}
 
-		reg = 0x1A;
+		reg = 0x2;
+		reg |= DC_DISP_ID_SYNC(di) << DC_WR_CH_CONF_PROG_DISP_ID_OFFSET;
 		reg |= di << 2;
 		if (interlaced)
 			reg |= DC_WR_CH_CONF_FIELD_MODE;
-		__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
 	} else if ((dc_chan == 8) || (dc_chan == 9)) {
 		/* async channels */
 		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA_W_0, 0x64, 1);
 		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA_W_1, 0x64, 1);
-		__raw_writel(0xB, DC_WR_CH_CONF(dc_chan));
+
+		reg = 0x3;
+		reg |= DC_DISP_ID_SERIAL << DC_WR_CH_CONF_PROG_DISP_ID_OFFSET;
 	}
+	__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
 
 	__raw_writel(0x00000000, DC_WR_CH_ADDR(dc_chan));
 
@@ -466,6 +475,10 @@ static irqreturn_t dc_irq_handler(int irq, void *dev_id)
 	reg &= ~DC_WR_CH_CONF_PROG_TYPE_MASK;
 	__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
 
+	if (__raw_readl(IPUIRQ_2_STATREG(IPU_IRQ_VSYNC_PRE_0 + g_dc_di_assignment[dc_chan])) &
+		IPUIRQ_2_MASK(IPU_IRQ_VSYNC_PRE_0 + g_dc_di_assignment[dc_chan]))
+		dev_err(g_ipu_dev, "VSyncPre occurred before DI%d disable\n", g_dc_di_assignment[dc_chan]);
+
 	complete(comp);
 	return IRQ_HANDLED;
 }
@@ -519,6 +532,8 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 		return;
 	}
 
+	__raw_writel(IPUIRQ_2_MASK(IPU_IRQ_VSYNC_PRE_0 + g_dc_di_assignment[dc_chan]),
+		     IPUIRQ_2_STATREG(IPU_IRQ_VSYNC_PRE_0 + g_dc_di_assignment[dc_chan]));
 	ipu_clear_irq(irq);
 	ret = ipu_request_irq(irq, dc_irq_handler, 0, NULL, &dc_comp);
 	if (ret < 0) {
@@ -663,6 +678,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 	uint32_t div, up;
 	uint32_t h_total, v_total;
 	int map;
+	struct clk *di_clk;
 
 	dev_dbg(g_ipu_dev, "panel size = %d x %d\n", width, height);
 
@@ -674,7 +690,11 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 
 	/* Init clocking */
 	dev_dbg(g_ipu_dev, "pixel clk = %d\n", pixel_clk);
-	div = (clk_get_rate(g_di_clk[disp]) * 16) / pixel_clk;
+	if (sig.ext_clk)
+		di_clk = g_di_clk[disp];
+	else
+		di_clk = g_ipu_clk;
+	div = (clk_get_rate(di_clk) * 16) / pixel_clk;
 	reg = __raw_readl(DI_GENERAL(disp));
 	if (sig.ext_clk) {
 		__raw_writel(reg | DI_GEN_DI_CLK_EXT, DI_GENERAL(disp));
@@ -846,7 +866,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 		reg |= DI_POL_DRDY_DATA_POLARITY;
 	__raw_writel(reg, DI_POL(disp));
 
-	__raw_writel(width, DC_DISP_CONF2(3));
+	__raw_writel(width, DC_DISP_CONF2(DC_DISP_ID_SYNC(disp)));
 
 	spin_unlock_irqrestore(&ipu_lock, lock_flags);
 
@@ -862,7 +882,7 @@ int ipu_init_async_panel(int disp, int type, uint32_t cycle_time,
 	int map;
 	u32 ser_conf = 0;
 	u32 div;
-	u32 di_clk = clk_get_rate(g_di_clk[disp]);
+	u32 di_clk = clk_get_rate(g_ipu_clk);
 
 	/* round up cycle_time, then calcalate the divider using scaled math */
 	cycle_time += (1000000000UL / di_clk) - 1;
@@ -888,7 +908,7 @@ int ipu_init_async_panel(int disp, int type, uint32_t cycle_time,
 		_ipu_dc_write_tmpl(0x64, WROD(0), 0, map, ASYNC_SER_WAVE, 0, 0);
 
 		/* Configure DC for serial panel */
-		__raw_writel(0x14, DC_DISP_CONF1(1));
+		__raw_writel(0x14, DC_DISP_CONF1(DC_DISP_ID_SERIAL));
 
 		if (sig.clk_pol)
 			ser_conf |= DI_SER_CONF_SERIAL_CLK_POL;

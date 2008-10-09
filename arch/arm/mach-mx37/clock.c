@@ -24,6 +24,7 @@
 #include <asm/arch/mxc_uart.h>
 
 #include "crm_regs.h"
+#include "iomux.h"
 
 extern int mxc_jtag_enabled;
 
@@ -1081,6 +1082,7 @@ static struct clk tve_clk = {
 	.set_rate = _clk_tve_set_rate,
 	.enable = _clk_enable,
 	.disable = _clk_disable,
+	 .flags = RATE_PROPAGATES,
 };
 
 static struct clk spba_clk = {
@@ -2252,11 +2254,45 @@ static struct clk ipu_clk[] = {
 	 }
 };
 
+static int _clk_ipu_di_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 reg;
+
+	if (parent == &tve_clk) {
+		mxc_iomux_set_gpr(MUX_IPUv3D_CAMP, false, 0);
+	} else if (parent == &ckih_clk) {
+		mxc_iomux_set_gpr(MUX_IPUv3D_CAMP, true, 0);
+		reg = __raw_readl(MXC_CCM_CSCMR1);
+		reg |= MXC_CCM_CSCMR1_DI_CLK_SEL;
+		__raw_writel(reg, MXC_CCM_CSCMR1);
+	} else if (parent == &osc_clk) {
+		mxc_iomux_set_gpr(MUX_IPUv3D_CAMP, true, 0);
+		reg = __raw_readl(MXC_CCM_CSCMR1);
+		reg &= ~MXC_CCM_CSCMR1_DI_CLK_SEL;
+		__raw_writel(reg, MXC_CCM_CSCMR1);
+	} else {
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static void _clk_ipu_di_recalc(struct clk *clk)
+{
+	if (clk->parent == &tve_clk) {
+		clk->rate = clk->parent->rate / 8;
+	} else {
+		clk->rate = clk->parent->rate;
+	}
+}
+
 static struct clk ipu_di_clk = {
 	.name = "ipu_di_clk",
-	.parent = &osc_clk,
+	.parent = &tve_clk,
 	.enable_reg = MXC_CCM_CCGR4,
 	.enable_shift = MXC_CCM_CCGR4_CG14_OFFSET,
+	.recalc = _clk_ipu_di_recalc,
+	.set_parent = _clk_ipu_di_set_parent,
 	.enable = _clk_enable,
 	.disable = _clk_disable,
 };

@@ -653,7 +653,7 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	u32 mode = 0;
 	unsigned long timeout;
 
-	DBG("sdhci_send_command is starting...\n");
+	DBG("sdhci_send_command 0x%x is starting...\n", cmd->opcode);
 	WARN_ON(host->cmd);
 
 	/* Wait max 10 ms */
@@ -775,18 +775,25 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 {
 	/*This variable holds the value of clock divider, prescaler */
 	int div = 0, prescaler = 0;
-	int clk_rate = clk_get_rate(host->clk);
+	int clk_rate;
 	u32 clk;
 	unsigned long timeout;
 
+	if (clock == 0) {
+		goto out;
+	} else {
+		if (!host->plat_data->clk_flg) {
+			clk_enable(host->clk);
+			host->plat_data->clk_flg = 1;
+		}
+	}
 	if (clock == host->clock)
 		return;
 
+	clk_rate = clk_get_rate(host->clk);
 	clk = readl(host->ioaddr + SDHCI_CLOCK_CONTROL) & ~SDHCI_CLOCK_MASK;
 	writel(clk, host->ioaddr + SDHCI_CLOCK_CONTROL);
 
-	if (clock == 0)
-		goto out;
 	if (clock == host->min_clk)
 		prescaler = 16;
 	else
@@ -840,7 +847,7 @@ static void sdhci_set_power(struct sdhci_host *host, unsigned short power)
 	if (host->regulator_mmc) {
 		if (power == (unsigned short)-1) {
 			regulator_disable(host->regulator_mmc);
-			pr_debug("mmc power off\n");
+			DBG("mmc power off\n");
 		} else {
 			if (power == 7)
 				voltage = 1800000;
@@ -849,7 +856,7 @@ static void sdhci_set_power(struct sdhci_host *host, unsigned short power)
 			regulator_set_voltage(host->regulator_mmc, voltage);
 
 			if (regulator_enable(host->regulator_mmc) == 0) {
-				pr_debug("mmc power on\n");
+				DBG("mmc power on\n");
 				msleep(300);
 			}
 		}
@@ -870,6 +877,12 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	unsigned long flags;
 
 	host = mmc_priv(mmc);
+
+	/* Enable the clock */
+	if (!host->plat_data->clk_flg) {
+		clk_enable(host->clk);
+		host->plat_data->clk_flg = 1;
+	}
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1129,6 +1142,15 @@ static void sdhci_tasklet_finish(unsigned long param)
 
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
+
+	/* Stop the clock when the req is done */
+	flags = SDHCI_DATA_ACTIVE | SDHCI_DOING_WRITE | SDHCI_DOING_READ;
+	if (!(readl(host->ioaddr + SDHCI_PRESENT_STATE) & flags)) {
+		if (host->plat_data->clk_flg) {
+			clk_disable(host->clk);
+			host->plat_data->clk_flg = 0;
+		}
+	}
 
 	mmc_request_done(host->mmc, mrq);
 }
@@ -1499,6 +1521,7 @@ static int sdhci_suspend(struct platform_device *pdev, pm_message_t state)
 			continue;
 		free_irq(chip->hosts[i]->irq, chip->hosts[i]);
 		clk_disable(chip->hosts[i]->clk);
+		chip->hosts[i]->plat_data->clk_flg = 0;
 	}
 
 	gpio_sdhc_inactive(pdev->id);
@@ -1521,6 +1544,7 @@ static int sdhci_resume(struct platform_device *pdev)
 
 	for (i = 0; i < chip->num_slots; i++) {
 		clk_enable(chip->hosts[i]->clk);
+		chip->hosts[i]->plat_data->clk_flg = 1;
 		if (!chip->hosts[i])
 			continue;
 		ret = request_irq(chip->hosts[i]->irq, sdhci_irq,
@@ -1602,6 +1626,7 @@ static int __devinit sdhci_probe_slot(struct platform_device
 	if (NULL != host->clk) {
 		if (clk_enable(host->clk))
 			printk(KERN_ERR "MXC MMC enable clock error.\n");
+		host->plat_data->clk_flg = 1;
 	} else
 		printk(KERN_ERR "MXC MMC can't get clock.\n");
 	DBG("SDHC:%d clock:%lu\n", pdev->id, clk_get_rate(host->clk));
@@ -1850,6 +1875,8 @@ out3:
 			   host->res->end - host->res->start + 1);
 out2:
 	clk_disable(host->clk);
+	host->plat_data->clk_flg = 0;
+	clk_put(host->clk);
 out1:
 	gpio_sdhc_inactive(pdev->id);
 out0:
@@ -1895,6 +1922,8 @@ static void sdhci_remove_slot(struct platform_device *pdev, int slot)
 	release_mem_region(host->res->start,
 			   host->res->end - host->res->start + 1);
 	clk_disable(host->clk);
+	host->plat_data->clk_flg = 0;
+	clk_put(host->clk);
 	mmc_free_host(mmc);
 	gpio_sdhc_inactive(pdev->id);
 }

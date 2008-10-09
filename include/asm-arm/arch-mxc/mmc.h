@@ -20,6 +20,7 @@ struct mxc_mmc_platform_data {
 	unsigned int caps;
 	unsigned int min_clk;
 	unsigned int max_clk;
+	unsigned int clk_flg;	/* 1 clock enable, 0 not */
 	unsigned int reserved:16;
 	unsigned int card_fixed:1;
 	unsigned int card_inserted_state:1;

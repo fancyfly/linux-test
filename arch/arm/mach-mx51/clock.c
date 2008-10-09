@@ -35,6 +35,7 @@ static struct clk pll1_sw_clk;
 static struct clk pll2_sw_clk;
 static struct clk pll3_sw_clk;
 static struct clk lp_apm_clk;
+static struct clk tve_clk;
 
 extern void propagate_rate(struct clk *tclk);
 extern void board_ref_clk_rate(unsigned long *ckil, unsigned long *osc,
@@ -542,18 +543,60 @@ static struct clk sdma_clk[] = {
 
 static struct clk ipu_clk = {
 	.name = "ipu_clk",
-	.parent = &axi_a_clk,
+	.parent = &ahb_clk,
 	.enable_reg = MXC_CCM_CCGR5,
 	.enable_shift = MXC_CCM_CCGR5_CG5_OFFSET,
 	.enable = _clk_enable,
 	.disable = _clk_disable,
 };
 
+static int _clk_ipu_di_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 reg;
+
+	reg = __raw_readl(MXC_CCM_CSCMR2);
+	reg &= ~MXC_CCM_CSCMR2_DI_CLK_SEL_MASK;
+	if (parent == &pll3_sw_clk)
+		;
+	else if (parent == &osc_clk)
+		reg |= 1 << MXC_CCM_CSCMR2_DI_CLK_SEL_OFFSET;
+	else if (parent == &ckih_clk)
+		reg |= 2 << MXC_CCM_CSCMR2_DI_CLK_SEL_OFFSET;
+	else if (parent == &tve_clk)
+		reg |= 3 << MXC_CCM_CSCMR2_DI_CLK_SEL_OFFSET;
+	else	/* Assume any other clock is external clock pin */
+		reg |= 4 << MXC_CCM_CSCMR2_DI_CLK_SEL_OFFSET;
+	__raw_writel(reg, MXC_CCM_CSCMR2);
+
+	return 0;
+}
+
+static void _clk_ipu_di_recalc(struct clk *clk)
+{
+	u32 reg, div, mux;
+
+	reg = __raw_readl(MXC_CCM_CSCMR2);
+	mux = (reg & MXC_CCM_CSCMR2_DI_CLK_SEL_MASK) >>
+		MXC_CCM_CSCMR2_DI_CLK_SEL_OFFSET;
+	if (mux == 0) {
+		reg = __raw_readl(MXC_CCM_CDCDR) &
+		    MXC_CCM_CDCDR_DI_CLK_PRED_MASK;
+		div = (reg >> MXC_CCM_CDCDR_DI_CLK_PRED_OFFSET) + 1;
+		clk->rate = clk->parent->rate / div;
+	} else if (mux == 3) {
+		clk->rate = clk->parent->rate / 8;
+	} else {
+		clk->rate = clk->parent->rate;
+	}
+}
+
 static struct clk ipu_di_clk = {
 	.name = "ipu_di_clk",
-	.parent = &osc_clk,
+	.parent = &pll3_sw_clk,
 	.enable_reg = MXC_CCM_CCGR5,
 	.enable_shift = MXC_CCM_CCGR5_CG6_OFFSET,
+	.recalc = _clk_ipu_di_recalc,
+	.set_parent = _clk_ipu_di_set_parent,
 	.enable = _clk_enable,
 	.disable = _clk_disable,
 };

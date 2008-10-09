@@ -225,6 +225,11 @@ static void mxc_init_ipu(void)
 	u32 base = IO_ADDRESS(MIPI_HSC_BASE_ADDR);
 	struct clk *clk;
 
+	mxc_ipu_data.di_clk[1] = clk_get(NULL, "ipu_di_clk");
+	clk = clk_get(NULL, "tve_clk");
+	clk_set_parent(mxc_ipu_data.di_clk[1], clk);
+	clk_put(clk);
+
 	/* Temporarily setup MIPI module to legacy mode */
 	clk = clk_get(NULL, "mipi_hsp_clk");
 	if (!IS_ERR(clk)) {
@@ -628,7 +633,6 @@ static inline void mxc_init_i2c(void)
 #endif
 
 #if defined(CONFIG_I2C_MXC_HS) || defined(CONFIG_I2C_MXC_HS_MODULE)
-
 static struct resource mxci2c_hs_resources[] = {
 	[0] = {
 	       .start = HSI2C_DMA_BASE_ADDR,
@@ -666,6 +670,43 @@ static inline void mxc_init_i2c_hs(void)
 }
 #else
 static inline void mxc_init_i2c_hs(void)
+{
+}
+#endif
+
+#if defined(CONFIG_FB_MXC_TVOUT_TVE) || defined(CONFIG_FB_MXC_TVOUT_TVE_MODULE)
+static struct resource tve_resources[] = {
+	{
+	 .start = TVE_BASE_ADDR,
+	 .end = TVE_BASE_ADDR + SZ_4K - 1,
+	 .flags = IORESOURCE_MEM,
+	 },
+	{
+	 .start = MXC_INT_TVE,
+	 .flags = IORESOURCE_IRQ,
+	 },
+};
+static struct tve_platform_data tve_data = {
+	.dac_reg = "VVIDEO",
+	.dig_reg = "VDIG",
+};
+
+static struct platform_device mxc_tve_device = {
+	.name = "tve",
+	.dev = {
+		.platform_data = &tve_data,
+		.release = mxc_nop_release,
+		},
+	.num_resources = ARRAY_SIZE(tve_resources),
+	.resource = tve_resources,
+};
+
+void __init mxc_init_tve(void)
+{
+	platform_device_register(&mxc_tve_device);
+}
+#else
+static inline void mxc_init_tve(void)
 {
 }
 #endif
@@ -790,6 +831,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_vpu();
 	mxc_init_audio();
 	mxc_init_spdif();
+	mxc_init_tve();
 
 	return 0;
 }

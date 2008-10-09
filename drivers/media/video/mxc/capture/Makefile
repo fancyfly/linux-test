@@ -23,5 +23,8 @@ obj-$(CONFIG_MXC_CAMERA_S5K3AAEX) += s5k3aaex_camera.o
 ov2640_camera-objs := ov2640.o sensor_clock.o
 obj-$(CONFIG_MXC_CAMERA_OV2640) += ov2640_camera.o
 
+ov3640_camera-objs := ov3640.o sensor_clock.o
+obj-$(CONFIG_MXC_CAMERA_OV3640) += ov3640_camera.o
+
 adv7180_tvin-objs := adv7180.o
 obj-$(CONFIG_MXC_TVIN_ADV7180) += adv7180_tvin.o

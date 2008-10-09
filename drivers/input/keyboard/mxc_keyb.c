@@ -847,18 +847,20 @@ static int mxc_kpp_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
-	retval = input_register_device(mxckbd_dev);
-	if (retval < 0) {
-		goto err2;
-	}
-
-	mxckbd_dev->keycode = &mxckpd_keycodes;
-	mxckbd_dev->keycodesize = sizeof(unsigned char);
+	mxckbd_dev->keycode = (void *)mxckpd_keycodes;
+	mxckbd_dev->keycodesize = sizeof(mxckpd_keycodes[0]);
 	mxckbd_dev->keycodemax = mxckpd_keycodes_size;
 	mxckbd_dev->name = "mxckpd";
 	mxckbd_dev->id.bustype = BUS_HOST;
 	mxckbd_dev->open = mxc_kpp_open;
 	mxckbd_dev->close = mxc_kpp_close;
+
+	retval = input_register_device(mxckbd_dev);
+	if (retval < 0) {
+		printk(KERN_ERR
+		       "mxckbd_dev: failed to register input device\n");
+		goto err2;
+	}
 
 	/* allocate required memory */
 	press_scancode = kmalloc(kpp_dev.kpp_rows * sizeof(press_scancode[0]),

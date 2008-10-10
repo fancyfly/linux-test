@@ -222,8 +222,10 @@ static struct platform_device mxc_ipu_device = {
 
 static void mxc_init_ipu(void)
 {
-	u32 base = IO_ADDRESS(MIPI_HSC_BASE_ADDR);
+	u32 reg_hsc_mcd = IO_ADDRESS(MIPI_HSC_BASE_ADDR);
+	u32 reg_hsc_mxt_conf = IO_ADDRESS(MIPI_HSC_BASE_ADDR + 0x800);
 	struct clk *clk;
+	uint32_t temp;
 
 	mxc_ipu_data.di_clk[1] = clk_get(NULL, "ipu_di_clk");
 	clk = clk_get(NULL, "tve_clk");
@@ -234,7 +236,14 @@ static void mxc_init_ipu(void)
 	clk = clk_get(NULL, "mipi_hsp_clk");
 	if (!IS_ERR(clk)) {
 		clk_enable(clk);
-		__raw_writel(0xF00, base);
+
+		/* Temporarily setup MIPI module to legacy mode */
+		__raw_writel(0xF00, reg_hsc_mcd);
+
+		/* CSI mode reserved*/
+		temp = __raw_readl(reg_hsc_mxt_conf);
+		__raw_writel(temp | 0x0FF, reg_hsc_mxt_conf);
+
 		clk_disable(clk);
 		clk_put(clk);
 	}

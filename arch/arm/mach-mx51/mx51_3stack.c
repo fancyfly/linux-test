@@ -309,7 +309,19 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 };
 #endif
 #if defined(CONFIG_I2C_MXC_HS) || defined(CONFIG_I2C_MXC_HS_MODULE)
+static struct mxc_camera_platform_data camera_data = {
+	.io_regulator = "SW4",
+	.analog_regulator = "VIOHI",
+	.mclk = 24000000,
+	.csi = 0,
+};
+
 static struct i2c_board_info mxc_i2c_hs_board_info[] __initdata = {
+	{
+		.type = "ov3640",
+		.addr = 0x3C,
+		.platform_data = (void *)&camera_data,
+	},
 };
 #endif
 

@@ -41,6 +41,35 @@ extern void propagate_rate(struct clk *tclk);
 extern void board_ref_clk_rate(unsigned long *ckil, unsigned long *osc,
 			       unsigned long *ckih, unsigned long *ckih2);
 
+static void __calc_pre_post_dividers(u32 div, u32 *pre, u32 *post)
+{
+	u32 min_pre, temp_pre, old_err, err;
+
+	if (div >= 512) {
+		*pre = 8;
+		*post = 64;
+	} else if (div >= 8) {
+		min_pre = (div - 1) / 64 + 1;
+		old_err = 8;
+		for (temp_pre = 8; temp_pre >= min_pre; temp_pre--) {
+			err = div % temp_pre;
+			if (err == 0) {
+				*pre = temp_pre;
+				break;
+			}
+			err = temp_pre - err;
+			if (err < old_err) {
+				old_err = err;
+				*pre = temp_pre;
+			}
+		}
+		*post = (div + *pre - 1) / *pre;
+	} else if (div < 8) {
+		*pre = div;
+		*post = 1;
+	}
+}
+
 static int _clk_enable(struct clk *clk)
 {
 	u32 reg;
@@ -600,6 +629,157 @@ static struct clk ipu_di_clk = {
 	.enable = _clk_enable,
 	.disable = _clk_disable,
 };
+
+static int _clk_csi0_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 reg, mux;
+
+	reg = __raw_readl(MXC_CCM_CSCMR2);
+	mux = _get_mux(parent, &pll1_sw_clk, &pll2_sw_clk, &pll3_sw_clk, NULL);
+	reg = (reg & ~MXC_CCM_CSCMR2_CSI_MCLK1_CLK_SEL_MASK) |
+		    (mux << MXC_CCM_CSCMR2_CSI_MCLK1_CLK_SEL_OFFSET);
+	__raw_writel(reg, MXC_CCM_CSCMR2);
+
+	return 0;
+}
+
+static void _clk_csi0_recalc(struct clk *clk)
+{
+	u32 reg, pred, podf;
+
+	reg = __raw_readl(MXC_CCM_CSCDR4);
+	pred = ((reg & MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PRED_MASK) >>
+			MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PRED_OFFSET) + 1;
+	podf = ((reg & MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PODF_MASK) >>
+			MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PODF_OFFSET) + 1;
+	clk->rate = clk->parent->rate / (pred * podf);
+}
+
+static unsigned long _clk_csi0_round_rate(struct clk *clk, unsigned long rate)
+{
+	u32 pre, post;
+	u32 div = clk->parent->rate / rate;
+	if (clk->parent->rate % rate)
+		div++;
+
+	__calc_pre_post_dividers(div, &pre, &post);
+
+	return clk->parent->rate / (pre * post);
+}
+
+static int _clk_csi0_set_rate(struct clk *clk, unsigned long rate)
+{
+	u32 reg;
+	u32 div;
+	u32 pre, post;
+
+	div = clk->parent->rate / rate;
+
+	if ((clk->parent->rate / div) != rate)
+		return -EINVAL;
+
+	__calc_pre_post_dividers(div, &pre, &post);
+
+	/* Set CSI clock divider */
+	reg = __raw_readl(MXC_CCM_CSCDR4) &
+	    ~(MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PRED_MASK |
+		MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PODF_MASK);
+	reg |= (post - 1) << MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PODF_OFFSET;
+	reg |= (pre - 1) << MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PRED_OFFSET;
+	__raw_writel(reg, MXC_CCM_CSCDR4);
+
+	clk->rate = rate;
+	return 0;
+}
+
+static struct clk csi0_clk = {
+	.name = "csi_mclk1",
+	.parent = &pll3_sw_clk,
+	.set_parent = _clk_csi0_set_parent,
+	.recalc = _clk_csi0_recalc,
+	.round_rate = _clk_csi0_round_rate,
+	.set_rate = _clk_csi0_set_rate,
+	.enable = _clk_enable,
+	.enable_reg = MXC_CCM_CCGR6,
+	.enable_shift = MXC_CCM_CCGR6_CG2_OFFSET,
+	.disable = _clk_disable,
+};
+
+static int _clk_csi1_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 reg, mux;
+
+	reg = __raw_readl(MXC_CCM_CSCMR2);
+	mux = _get_mux(parent, &pll1_sw_clk, &pll2_sw_clk, &pll3_sw_clk, NULL);
+	reg = (reg & ~MXC_CCM_CSCMR2_CSI_MCLK2_CLK_SEL_MASK) |
+		    (mux << MXC_CCM_CSCMR2_CSI_MCLK2_CLK_SEL_OFFSET);
+	__raw_writel(reg, MXC_CCM_CSCMR2);
+
+	return 0;
+}
+
+static void _clk_csi1_recalc(struct clk *clk)
+{
+	u32 reg, pred, podf;
+
+	reg = __raw_readl(MXC_CCM_CSCDR4);
+	pred = ((reg & MXC_CCM_CSCDR4_CSI_MCLK2_CLK_PRED_MASK) >>
+			MXC_CCM_CSCDR4_CSI_MCLK2_CLK_PRED_OFFSET) + 1;
+	podf = ((reg & MXC_CCM_CSCDR4_CSI_MCLK2_CLK_PODF_MASK) >>
+			MXC_CCM_CSCDR4_CSI_MCLK2_CLK_PODF_OFFSET) + 1;
+	clk->rate = clk->parent->rate / (pred * podf);
+}
+
+static unsigned long _clk_csi1_round_rate(struct clk *clk, unsigned long rate)
+{
+	u32 pre, post;
+	u32 div = clk->parent->rate / rate;
+	if (clk->parent->rate % rate)
+		div++;
+
+	__calc_pre_post_dividers(div, &pre, &post);
+
+	return clk->parent->rate / (pre * post);
+}
+
+static int _clk_csi1_set_rate(struct clk *clk, unsigned long rate)
+{
+	u32 reg;
+	u32 div;
+	u32 pre, post;
+
+	div = clk->parent->rate / rate;
+
+	if ((clk->parent->rate / div) != rate)
+		return -EINVAL;
+
+	__calc_pre_post_dividers(div, &pre, &post);
+
+	/* Set CSI clock divider */
+	reg = __raw_readl(MXC_CCM_CSCDR4) &
+	    ~(MXC_CCM_CSCDR4_CSI_MCLK2_CLK_PRED_MASK |
+		MXC_CCM_CSCDR4_CSI_MCLK2_CLK_PODF_MASK);
+	reg |= (post - 1) << MXC_CCM_CSCDR4_CSI_MCLK2_CLK_PODF_OFFSET;
+	reg |= (pre - 1) << MXC_CCM_CSCDR4_CSI_MCLK2_CLK_PRED_OFFSET;
+	__raw_writel(reg, MXC_CCM_CSCDR4);
+
+	clk->rate = rate;
+	return 0;
+}
+
+static struct clk csi1_clk = {
+	.name = "csi_mclk2",
+	.parent = &pll3_sw_clk,
+	.set_parent = _clk_csi1_set_parent,
+	.recalc = _clk_csi1_recalc,
+	.round_rate = _clk_csi1_round_rate,
+	.set_rate = _clk_csi1_set_rate,
+	.enable = _clk_enable,
+	.enable_reg = MXC_CCM_CCGR6,
+	.enable_shift = MXC_CCM_CCGR6_CG3_OFFSET,
+	.disable = _clk_disable,
+};
+
 
 static int _clk_hsc_enable(struct clk *clk)
 {
@@ -1884,6 +2064,8 @@ static struct clk *mxc_clks[] = {
 	&ipu_clk,
 	&ipu_di_clk,
 	&tve_clk,
+	&csi0_clk,
+	&csi1_clk,
 	&uart_main_clk,
 	&uart1_clk[0],
 	&uart1_clk[1],

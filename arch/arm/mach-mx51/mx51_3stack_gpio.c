@@ -709,9 +709,96 @@ void gpio_sensor_select(int sensor)
 /*!
  * Setup GPIO for sensor to be active
  *
+ * @param   csi    csi 0 or csi 1
+ *
  */
-void gpio_sensor_active(void)
+void gpio_sensor_active(unsigned int csi)
 {
+	switch (csi) {
+	case 0:
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D10, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D11, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D12, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D13, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D14, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D15, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D16, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D17, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D18, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_D19, PAD_CTL_HYS_NONE);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_PKE0, PAD_CTL_PKE_ENABLE);
+
+		mxc_request_iomux(MX51_PIN_CSI1_VSYNC, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_VSYNC, PAD_CTL_HYS_NONE |
+				PAD_CTL_SRE_SLOW);
+
+		mxc_request_iomux(MX51_PIN_CSI1_HSYNC, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_CSI1_HSYNC, PAD_CTL_HYS_NONE |
+				PAD_CTL_SRE_SLOW);
+
+		mxc_iomux_set_pad(MX51_PIN_CSI1_PIXCLK, PAD_CTL_HYS_NONE);
+
+		mxc_request_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT5);
+		mxc_iomux_set_input(
+			MUX_IN_HSC_MIPI_MIX_IPP_IND_SENS2_DATA_EN_SELECT_INPUT,
+			INPUT_CTL_PATH0);
+		mxc_iomux_set_pad(MX51_PIN_EIM_A26, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL);
+		break;
+	case 1:
+		mxc_iomux_set_pad(MX51_PIN_CSI2_PKE0, PAD_CTL_PKE_ENABLE);
+
+		mxc_request_iomux(MX51_PIN_CSI2_D12, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_CSI2_D12, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+				  PAD_CTL_SRE_SLOW);
+
+		mxc_request_iomux(MX51_PIN_CSI2_D13, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_CSI2_D13, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+				  PAD_CTL_SRE_SLOW);
+
+		mxc_request_iomux(MX51_PIN_CSI2_D18, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_CSI2_D18, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+				  PAD_CTL_SRE_SLOW);
+
+		mxc_request_iomux(MX51_PIN_CSI2_D19, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_CSI2_D19, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+				  PAD_CTL_SRE_SLOW);
+
+		mxc_request_iomux(MX51_PIN_CSI2_VSYNC, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_CSI2_VSYNC, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+				  PAD_CTL_SRE_SLOW);
+
+		mxc_request_iomux(MX51_PIN_CSI2_HSYNC, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_CSI2_HSYNC, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+				  PAD_CTL_SRE_SLOW);
+
+		mxc_request_iomux(MX51_PIN_CSI2_PIXCLK, IOMUX_CONFIG_ALT0);
+		mxc_iomux_set_pad(MX51_PIN_CSI2_PIXCLK, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+				  PAD_CTL_SRE_SLOW);
+
+		mxc_request_iomux(MX51_PIN_GPIO1_5, IOMUX_CONFIG_ALT6);
+		mxc_iomux_set_pad(MX51_PIN_GPIO1_5, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_DRV_LOW | PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_SRE_SLOW);
+
+		mxc_request_iomux(MX51_PIN_DI2_PIN4, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX51_PIN_DI2_PIN4, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+				  PAD_CTL_SRE_SLOW);
+		mxc_iomux_set_input(MUX_IN_FEC_FEC_COL_SELECT_INPUT,
+				    INPUT_CTL_PATH1);
+		break;
+	default:
+		break;
+	}
 }
 
 EXPORT_SYMBOL(gpio_sensor_active);
@@ -719,9 +806,22 @@ EXPORT_SYMBOL(gpio_sensor_active);
 /*!
  * Setup GPIO for sensor to be inactive
  *
+ * @param   csi    csi 0 or csi 1
+ *
  */
-void gpio_sensor_inactive(void)
+void gpio_sensor_inactive(unsigned int csi)
 {
+	switch (csi) {
+	case 0:
+		mxc_request_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT0);
+		break;
+	case 1:
+		mxc_request_iomux(MX51_PIN_GPIO1_5, IOMUX_CONFIG_ALT0);
+		mxc_request_iomux(MX51_PIN_DI2_PIN4, IOMUX_CONFIG_ALT0);
+		break;
+	default:
+		break;
+	}
 }
 
 EXPORT_SYMBOL(gpio_sensor_inactive);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -229,16 +229,19 @@ static int mxcfb_set_par(struct fb_info *fbi)
 				       IPU_PIX_FMT_BGR666 : IPU_PIX_FMT_RGB666,
 				       fbi->var.left_margin,
 				       fbi->var.hsync_len,
-				       fbi->var.right_margin +
-				       fbi->var.hsync_len,
+				       fbi->var.right_margin,
 				       fbi->var.upper_margin,
 				       fbi->var.vsync_len,
-				       fbi->var.lower_margin +
-				       fbi->var.vsync_len, sig_cfg) != 0) {
+				       fbi->var.lower_margin, sig_cfg) != 0) {
 			dev_err(fbi->device,
 				"mxcfb: Error initializing panel.\n");
 			return -EINVAL;
 		}
+
+		fbi->mode =
+			(struct fb_videomode *)fb_match_mode(&fbi->var,
+								&fbi->modelist);
+
 	}
 
 	ipu_sdc_set_window_pos(mxc_fbi->ipu_ch, 0, 0);

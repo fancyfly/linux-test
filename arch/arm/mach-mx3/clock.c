@@ -11,6 +11,8 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#define DEBUG
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
 #include <linux/delay.h>
@@ -1258,8 +1260,9 @@ static int cpu_clk_set_wp(int wp)
 {
 	struct cpu_wp *p;
 	u32 dvsup;
-	u32 pmcr0;
+	u32 pmcr0, pmcr1;
 	u32 pdr0;
+	u32 cgr2 = 0x80000000;
 	u32 vscnt = MXC_CCM_PMCR0_VSCNT_2;
 	u32 udsc = MXC_CCM_PMCR0_UDSC_DOWN;
 	u32 ipu_base = IO_ADDRESS(IPU_CTRL_BASE_ADDR);
@@ -1274,6 +1277,7 @@ static int cpu_clk_set_wp(int wp)
 	}
 
 	pmcr0 = __raw_readl(MXC_CCM_PMCR0);
+	pmcr1 = __raw_readl(MXC_CCM_PMCR1);
 	pdr0 = __raw_readl(MXC_CCM_PDR0);
 
 	if (!(pmcr0 & MXC_CCM_PMCR0_UPDTEN)) {
@@ -1291,6 +1295,19 @@ static int cpu_clk_set_wp(int wp)
 
 	p = &cpu_wp_tbl[wp];
 
+	dvsup = (cpu_wp_nr - 1 - wp) << MXC_CCM_PMCR0_DVSUP_OFFSET;
+
+	if ((mcu_main_clk.rate == 399000000) && (p->cpu_rate == 532000000)) {
+		cgr2 = __raw_readl(MXC_CCM_CGR2);
+		cgr2 &= 0x7fffffff;
+		vscnt = 0;
+		pmcr0 = (pmcr0 & ~MXC_PMCR0_DVFS_MASK) | dvsup | vscnt;
+		pr_debug("manul dvfs, dvsup = %x\n", dvsup);
+		__raw_writel(cgr2, MXC_CCM_CGR2);
+		__raw_writel(pmcr0, MXC_CCM_PMCR0);
+		udelay(100);
+	}
+
 	if (mcu_main_clk.rate == p->pll_rate) {
 		/* No pll switching and relocking needed */
 		pmcr0 |= MXC_CCM_PMCR0_DFSUP0_PDR;
@@ -1299,8 +1316,6 @@ static int cpu_clk_set_wp(int wp)
 		pmcr0 ^= MXC_CCM_PMCR0_DFSUP1;	/* flip MSB bit */
 		pmcr0 &= ~(MXC_CCM_PMCR0_DFSUP0);
 	}
-
-	dvsup = (cpu_wp_nr - 1 - wp) << MXC_CCM_PMCR0_DVSUP_OFFSET;
 
 	pmcr0 = (pmcr0 & ~MXC_PMCR0_DVFS_MASK) | dvsup | vscnt | udsc;
 	/* also enable DVFS hardware */
@@ -1319,6 +1334,9 @@ static int cpu_clk_set_wp(int wp)
 		     MXC_CCM_PDR0);
 
 	if ((pmcr0 & MXC_CCM_PMCR0_DFSUP0) == MXC_CCM_PMCR0_DFSUP0_PLL) {
+		/* prevent pll restart */
+		pmcr1 |= 0x80;
+		__raw_writel(pmcr1, MXC_CCM_PMCR1);
 		/* PLL and post divider update */
 		if ((pmcr0 & MXC_CCM_PMCR0_DFSUP1) == MXC_CCM_PMCR0_DFSUP1_SPLL) {
 			__raw_writel(p->pll_reg, MXC_CCM_SRPCTL);
@@ -1329,6 +1347,12 @@ static int cpu_clk_set_wp(int wp)
 			mcu_pll_clk.rate = p->pll_rate;
 			mcu_main_clk.parent = &mcu_pll_clk;
 		}
+	}
+
+	if ((cgr2 & 0x80000000) == 0x0) {
+		pr_debug("start auto dvfs\n");
+		cgr2 |= 0x80000000;
+		__raw_writel(cgr2, MXC_CCM_CGR2);
 	}
 
 	mcu_main_clk.rate = p->pll_rate;

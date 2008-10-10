@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -37,7 +37,7 @@
 static int prpvf_start(void *private)
 {
 	cam_data *cam = (cam_data *) private;
-	ipu_channel_params_t vf;
+	ipu_channel_params_t vf, params;
 	u32 format = IPU_PIX_FMT_RGB565;
 	u32 size = 2;
 	int err = 0;
@@ -54,10 +54,12 @@ static int prpvf_start(void *private)
 
 	memset(&vf, 0, sizeof(ipu_channel_params_t));
 	ipu_csi_get_window_size(&vf.csi_prp_vf_mem.in_width,
-				&vf.csi_prp_vf_mem.in_height);
-	vf.csi_prp_vf_mem.in_pixel_fmt = IPU_PIX_FMT_UYVY;
+				&vf.csi_prp_vf_mem.in_height,
+				cam->cam_sensor->csi);
+	vf.csi_prp_vf_mem.in_pixel_fmt = sensor_output_fmt;
 	vf.csi_prp_vf_mem.out_width = cam->win.w.width;
 	vf.csi_prp_vf_mem.out_height = cam->win.w.height;
+	vf.csi_prp_vf_mem.csi = cam->cam_sensor->csi;
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		vf.csi_prp_vf_mem.out_width = cam->win.w.height;
 		vf.csi_prp_vf_mem.out_height = cam->win.w.width;
@@ -69,7 +71,7 @@ static int prpvf_start(void *private)
 	if (err != 0)
 		goto out_4;
 
-	ipu_csi_enable_mclk(CSI_MCLK_VF, true, true);
+	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->cam_sensor->csi, true, true);
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -81,7 +83,7 @@ static int prpvf_start(void *private)
 				  cam->vf_bufs_vaddr[1],
 				  (dma_addr_t) cam->vf_bufs[1]);
 	}
-	cam->vf_bufs_size[0] = size;
+	cam->vf_bufs_size[0] = PAGE_ALIGN(size);
 	cam->vf_bufs_vaddr[0] = (void *)dma_alloc_coherent(0,
 							   cam->vf_bufs_size[0],
 							   (dma_addr_t *) &
@@ -93,7 +95,7 @@ static int prpvf_start(void *private)
 		err = -ENOMEM;
 		goto out_3;
 	}
-	cam->vf_bufs_size[1] = size;
+	cam->vf_bufs_size[1] = PAGE_ALIGN(size);
 	cam->vf_bufs_vaddr[1] = (void *)dma_alloc_coherent(0,
 							   cam->vf_bufs_size[1],
 							   (dma_addr_t *) &
@@ -203,14 +205,18 @@ static int prpvf_start(void *private)
 			       "Error link CSI_PRP_VF_MEM-MEM_ROT_VF_MEM\n");
 			goto out_2;
 		}
-		err = ipu_init_channel(MEM_SDC_FG, NULL);
+
+		memset(&params, 0, sizeof(ipu_channel_params_t));
+		params.mem_dp_fg_sync.in_pixel_fmt = format;
+		params.mem_dp_fg_sync.out_pixel_fmt = IPU_PIX_FMT_RGB24;
+		err = ipu_init_channel(MEM_FG_SYNC, &params);
 		if (err != 0)
 			goto out_2;
 
-		ipu_sdc_set_window_pos(MEM_SDC_FG, cam->win.w.left,
+		ipu_disp_set_window_pos(MEM_FG_SYNC, cam->win.w.left,
 				       cam->win.w.top);
 
-		err = ipu_init_channel_buffer(MEM_SDC_FG, IPU_INPUT_BUFFER,
+		err = ipu_init_channel_buffer(MEM_FG_SYNC, IPU_INPUT_BUFFER,
 					      format,
 					      vf.csi_prp_vf_mem.out_height,
 					      vf.csi_prp_vf_mem.out_width,
@@ -223,16 +229,16 @@ static int prpvf_start(void *private)
 			goto out_2;
 		}
 
-		err = ipu_link_channels(MEM_ROT_VF_MEM, MEM_SDC_FG);
+		err = ipu_link_channels(MEM_ROT_VF_MEM, MEM_FG_SYNC);
 		if (err < 0) {
 			printk(KERN_ERR
-			       "Error link MEM_ROT_VF_MEM-MEM_SDC_FG\n");
+			       "Error link MEM_ROT_VF_MEM-MEM_FG_SYNC\n");
 			goto out_1;
 		}
 
 		ipu_enable_channel(CSI_PRP_VF_MEM);
 		ipu_enable_channel(MEM_ROT_VF_MEM);
-		ipu_enable_channel(MEM_SDC_FG);
+		ipu_enable_channel(MEM_FG_SYNC);
 
 		ipu_select_buffer(CSI_PRP_VF_MEM, IPU_OUTPUT_BUFFER, 0);
 		ipu_select_buffer(CSI_PRP_VF_MEM, IPU_OUTPUT_BUFFER, 1);
@@ -249,13 +255,16 @@ static int prpvf_start(void *private)
 			printk(KERN_ERR "Error initializing CSI_PRP_VF_MEM\n");
 			goto out_4;
 		}
-		err = ipu_init_channel(MEM_SDC_FG, NULL);
+		memset(&params, 0, sizeof(ipu_channel_params_t));
+		params.mem_dp_fg_sync.in_pixel_fmt = format;
+		params.mem_dp_fg_sync.out_pixel_fmt = IPU_PIX_FMT_RGB24;
+		err = ipu_init_channel(MEM_FG_SYNC, &params);
 		if (err != 0)
 			goto out_3;
 
-		ipu_sdc_set_window_pos(MEM_SDC_FG, cam->win.w.left,
+		ipu_disp_set_window_pos(MEM_FG_SYNC, cam->win.w.left,
 				       cam->win.w.top);
-		err = ipu_init_channel_buffer(MEM_SDC_FG,
+		err = ipu_init_channel_buffer(MEM_FG_SYNC,
 					      IPU_INPUT_BUFFER, format,
 					      cam->win.w.width,
 					      cam->win.w.height,
@@ -267,14 +276,14 @@ static int prpvf_start(void *private)
 			goto out_1;
 		}
 
-		err = ipu_link_channels(CSI_PRP_VF_MEM, MEM_SDC_FG);
+		err = ipu_link_channels(CSI_PRP_VF_MEM, MEM_FG_SYNC);
 		if (err < 0) {
 			printk(KERN_ERR "Error linking ipu channels\n");
 			goto out_1;
 		}
 
 		ipu_enable_channel(CSI_PRP_VF_MEM);
-		ipu_enable_channel(MEM_SDC_FG);
+		ipu_enable_channel(MEM_FG_SYNC);
 
 		ipu_select_buffer(CSI_PRP_VF_MEM, IPU_OUTPUT_BUFFER, 0);
 		ipu_select_buffer(CSI_PRP_VF_MEM, IPU_OUTPUT_BUFFER, 1);
@@ -284,7 +293,7 @@ static int prpvf_start(void *private)
 	return err;
 
       out_1:
-	ipu_uninit_channel(MEM_SDC_FG);
+	ipu_uninit_channel(MEM_FG_SYNC);
       out_2:
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		ipu_uninit_channel(MEM_ROT_VF_MEM);
@@ -339,22 +348,22 @@ static int prpvf_stop(void *private)
 
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		ipu_unlink_channels(CSI_PRP_VF_MEM, MEM_ROT_VF_MEM);
-		ipu_unlink_channels(MEM_ROT_VF_MEM, MEM_SDC_FG);
+		ipu_unlink_channels(MEM_ROT_VF_MEM, MEM_FG_SYNC);
 	} else {
-		ipu_unlink_channels(CSI_PRP_VF_MEM, MEM_SDC_FG);
+		ipu_unlink_channels(CSI_PRP_VF_MEM, MEM_FG_SYNC);
 	}
 
-	ipu_disable_channel(MEM_SDC_FG, true);
+	ipu_disable_channel(MEM_FG_SYNC, true);
 	ipu_disable_channel(CSI_PRP_VF_MEM, true);
 
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		ipu_disable_channel(MEM_ROT_VF_MEM, true);
 		ipu_uninit_channel(MEM_ROT_VF_MEM);
 	}
-	ipu_uninit_channel(MEM_SDC_FG);
+	ipu_uninit_channel(MEM_FG_SYNC);
 	ipu_uninit_channel(CSI_PRP_VF_MEM);
 
-	ipu_csi_enable_mclk(CSI_MCLK_VF, false, false);
+	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->cam_sensor->csi, false, false);
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],

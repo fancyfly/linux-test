@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -83,7 +83,7 @@ static int prpvf_start(void *private)
 	ipu_channel_params_t vf;
 	u32 format;
 	u32 offset;
-	u32 size = 3;
+	u32 bpp, size = 3;
 	int err = 0;
 
 	if (!cam) {
@@ -98,13 +98,13 @@ static int prpvf_start(void *private)
 
 	format = cam->v4l2_fb.fmt.pixelformat;
 	if (cam->v4l2_fb.fmt.pixelformat == IPU_PIX_FMT_BGR24) {
-		size = 3;
+		bpp = 3, size = 3;
 		pr_info("BGR24\n");
 	} else if (cam->v4l2_fb.fmt.pixelformat == IPU_PIX_FMT_RGB565) {
-		size = 2;
+		bpp = 2, size = 2;
 		pr_info("RGB565\n");
 	} else if (cam->v4l2_fb.fmt.pixelformat == IPU_PIX_FMT_BGR32) {
-		size = 4;
+		bpp = 4, size = 4;
 		pr_info("BGR32\n");
 	} else {
 		printk(KERN_ERR
@@ -123,10 +123,12 @@ static int prpvf_start(void *private)
 
 	memset(&vf, 0, sizeof(ipu_channel_params_t));
 	ipu_csi_get_window_size(&vf.csi_prp_vf_mem.in_width,
-				&vf.csi_prp_vf_mem.in_height);
-	vf.csi_prp_vf_mem.in_pixel_fmt = IPU_PIX_FMT_UYVY;
+				&vf.csi_prp_vf_mem.in_height,
+				cam->cam_sensor->csi);
+	vf.csi_prp_vf_mem.in_pixel_fmt = sensor_output_fmt;
 	vf.csi_prp_vf_mem.out_width = cam->win.w.width;
 	vf.csi_prp_vf_mem.out_height = cam->win.w.height;
+	vf.csi_prp_vf_mem.csi = cam->cam_sensor->csi;
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		vf.csi_prp_vf_mem.out_width = cam->win.w.height;
 		vf.csi_prp_vf_mem.out_height = cam->win.w.width;
@@ -138,7 +140,7 @@ static int prpvf_start(void *private)
 	if (err != 0)
 		goto out_4;
 
-	ipu_csi_enable_mclk(CSI_MCLK_VF, true, true);
+	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->cam_sensor->csi, true, true);
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -203,7 +205,7 @@ static int prpvf_start(void *private)
 					      format,
 					      vf.csi_prp_vf_mem.out_height,
 					      vf.csi_prp_vf_mem.out_width,
-					      cam->overlay_fb->var.xres,
+					      cam->overlay_fb->var.xres * bpp,
 					      IPU_ROTATE_NONE, offset, 0, 0, 0);
 
 		if (err != 0) {
@@ -215,7 +217,7 @@ static int prpvf_start(void *private)
 					      format,
 					      vf.csi_prp_vf_mem.out_width,
 					      vf.csi_prp_vf_mem.out_height,
-					      cam->overlay_fb->var.xres,
+					      cam->overlay_fb->var.xres * bpp,
 					      IPU_ROTATE_NONE, offset, 0, 0, 0);
 		if (err != 0) {
 			printk(KERN_ERR "Error MEM_ROT_VF_MEM output buffer\n");
@@ -231,11 +233,11 @@ static int prpvf_start(void *private)
 		goto out_2;
 	}
 
-	err = ipu_request_irq(IPU_IRQ_SDC_BG_OUT_EOF, prpvf_sdc_vsync_callback,
+	err = ipu_request_irq(IPU_IRQ_BG_SF_END, prpvf_sdc_vsync_callback,
 			      0, "Mxc Camera", NULL);
 	if (err != 0) {
 		printk(KERN_ERR
-		       "Error registering IPU_IRQ_SDC_BG_OUT_EOF irq.\n");
+		       "Error registering IPU_IRQ_BG_SF_END irq.\n");
 		goto out_1;
 	}
 
@@ -298,14 +300,15 @@ static int prpvf_stop(void *private)
 	if (cam->overlay_active == false)
 		return 0;
 
-	ipu_free_irq(IPU_IRQ_SDC_BG_OUT_EOF, NULL);
+	ipu_free_irq(IPU_IRQ_BG_SF_END, NULL);
+
 	ipu_free_irq(IPU_IRQ_PRP_VF_OUT_EOF, cam);
 
 	ipu_disable_channel(CSI_PRP_VF_MEM, true);
 	ipu_disable_channel(MEM_ROT_VF_MEM, true);
 	ipu_uninit_channel(CSI_PRP_VF_MEM);
 	ipu_uninit_channel(MEM_ROT_VF_MEM);
-	ipu_csi_enable_mclk(CSI_MCLK_VF, false, false);
+	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->cam_sensor->csi, false, false);
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],

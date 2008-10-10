@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -59,7 +59,7 @@ static int prpvf_start(void *private)
 	memset(&vf, 0, sizeof(ipu_channel_params_t));
 	ipu_csi_get_window_size(&vf.csi_prp_vf_adc.in_width,
 				&vf.csi_prp_vf_adc.in_height);
-	vf.csi_prp_vf_adc.in_pixel_fmt = IPU_PIX_FMT_UYVY;
+	vf.csi_prp_vf_adc.in_pixel_fmt = sensor_output_fmt;
 	vf.csi_prp_vf_adc.out_width = cam->win.w.width;
 	vf.csi_prp_vf_adc.out_height = cam->win.w.height;
 	vf.csi_prp_vf_adc.graphics_combine_en = 0;
@@ -85,7 +85,8 @@ static int prpvf_start(void *private)
 		if (err != 0)
 			return err;
 
-		ipu_csi_enable_mclk(CSI_MCLK_VF, true, true);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
+			cam->cam_sensor->csi, true, true);
 
 		if (cam->vf_bufs_vaddr[0]) {
 			dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -281,7 +282,8 @@ static int prpvf_start(void *private)
 			       "initializing CSI_PRP_VF_ADC\n");
 			return err;
 		}
-		ipu_csi_enable_mclk(CSI_MCLK_VF, true, true);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
+			cam->cam_sensor->csi, true, true);
 		err = ipu_init_channel_buffer(CSI_PRP_VF_ADC, IPU_OUTPUT_BUFFER,
 					      format, cam->win.w.width,
 					      cam->win.w.height,
@@ -305,7 +307,8 @@ static int prpvf_start(void *private)
 			return err;
 		}
 
-		ipu_csi_enable_mclk(CSI_MCLK_VF, true, true);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
+			cam->cam_sensor->csi, true, true);
 
 		if (cam->vf_bufs[0]) {
 			dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -475,13 +478,15 @@ static int prpvf_stop(void *private)
 		ipu_uninit_channel(MEM_ROT_VF_MEM);
 		ipu_uninit_channel(ADC_SYS2);
 
-		ipu_csi_enable_mclk(CSI_MCLK_VF, false, false);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
+			cam->cam_sensor->csi, false, false);
 	}
 #ifndef CONFIG_MXC_IPU_PRP_VF_SDC
 	else if (cam->rotation == IPU_ROTATE_NONE) {
 		ipu_disable_channel(CSI_PRP_VF_ADC, false);
 		ipu_uninit_channel(CSI_PRP_VF_ADC);
-		ipu_csi_enable_mclk(CSI_MCLK_VF, false, false);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
+			cam->cam_sensor->csi, false, false);
 	}
 #endif
 	else {
@@ -493,7 +498,8 @@ static int prpvf_stop(void *private)
 		ipu_uninit_channel(CSI_PRP_VF_MEM);
 		ipu_uninit_channel(ADC_SYS2);
 
-		ipu_csi_enable_mclk(CSI_MCLK_VF, false, false);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
+			cam->cam_sensor->csi, false, false);
 	}
 
 	if (cam->vf_bufs_vaddr[0]) {

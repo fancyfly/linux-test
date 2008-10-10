@@ -37,6 +37,8 @@
 
 #define FRAME_NUM 3
 
+extern uint32_t sensor_output_fmt;
+
 /*!
  * v4l2 frame structure.
  */
@@ -60,6 +62,9 @@ typedef struct {
 	u8 pixclk_pol;
 	u8 data_pol;
 	u8 data_width;
+	u8 pack_tight;
+	u8 force_eof;
+	u8 data_en_pol;
 	u16 width;
 	u16 height;
 	u32 pixel_fmt;
@@ -80,6 +85,7 @@ struct camera_sensor {
 	sensor_interface *(*reset) (void);
 	void (*get_std) (v4l2_std_id *std);
 	void (*set_std) (v4l2_std_id std);
+	unsigned int csi;
 };
 
 /*!
@@ -177,5 +183,9 @@ typedef struct _cam_data {
 	struct camera_sensor *cam_sensor;
 } cam_data;
 
-void set_mclk_rate(uint32_t * p_mclk_freq);
+#ifdef CONFIG_MXC_IPU_V1
+void set_mclk_rate(uint32_t *p_mclk_freq);
+#else
+void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi);
+#endif
 #endif				/* __MXC_V4L2_CAPTURE_H__ */

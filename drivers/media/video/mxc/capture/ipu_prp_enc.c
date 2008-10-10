@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -68,11 +68,15 @@ static int prp_enc_setup(cam_data * cam)
 		return -ENXIO;
 	}
 
+	memset(&enc, 0, sizeof(ipu_channel_params_t));
+
 	ipu_csi_get_window_size(&enc.csi_prp_enc_mem.in_width,
-				&enc.csi_prp_enc_mem.in_height);
-	enc.csi_prp_enc_mem.in_pixel_fmt = IPU_PIX_FMT_UYVY;
+				&enc.csi_prp_enc_mem.in_height,
+				cam->cam_sensor->csi);
+	enc.csi_prp_enc_mem.in_pixel_fmt = sensor_output_fmt;
 	enc.csi_prp_enc_mem.out_width = cam->v2f.fmt.pix.width;
 	enc.csi_prp_enc_mem.out_height = cam->v2f.fmt.pix.height;
+	enc.csi_prp_enc_mem.csi = cam->cam_sensor->csi;
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		enc.csi_prp_enc_mem.out_width = cam->v2f.fmt.pix.height;
 		enc.csi_prp_enc_mem.out_height = cam->v2f.fmt.pix.width;
@@ -108,7 +112,8 @@ static int prp_enc_setup(cam_data * cam)
 		printk(KERN_ERR "ipu_init_channel %d\n", err);
 		return err;
 	}
-	ipu_csi_enable_mclk(CSI_MCLK_ENC, true, true);
+
+	ipu_csi_enable_mclk_if(CSI_MCLK_ENC, cam->cam_sensor->csi, true, true);
 
 	grotation = cam->rotation;
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
@@ -344,7 +349,8 @@ static int prp_enc_disabling_tasks(void *private)
 		ipu_uninit_channel(MEM_ROT_ENC_MEM);
 	}
 
-	ipu_csi_enable_mclk(CSI_MCLK_ENC, false, false);
+	ipu_csi_enable_mclk_if(CSI_MCLK_ENC,
+		cam->cam_sensor->csi, false, false);
 
 	return err;
 }

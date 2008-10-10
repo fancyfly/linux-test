@@ -24,6 +24,7 @@
 #include <linux/device.h>
 #include <linux/clk.h>
 
+#ifdef CONFIG_MXC_IPU_V1
 /*
  * set_mclk_rate
  *
@@ -45,6 +46,40 @@ void set_mclk_rate(uint32_t * p_mclk_freq)
 	clk_put(clk);
 	pr_debug("mclk frequency = %d\n", *p_mclk_freq);
 }
+#else
+/*
+ * set_mclk_rate
+ *
+ * @param       p_mclk_freq  mclk frequence
+ * @param	csi         csi 0 or csi 1
+ *
+ */
+void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi)
+{
+	struct clk *clk;
+	uint32_t freq = 0;
+	char *mclk;
+
+	if (csi == 0) {
+		mclk = "csi_mclk1";
+	} else if (csi == 1) {
+		mclk = "csi_mclk2";
+	} else {
+		pr_debug("invalid csi num %d\n", csi);
+		return;
+	}
+
+	clk = clk_get(NULL, mclk);
+
+	freq = clk_round_rate(clk, *p_mclk_freq);
+	clk_set_rate(clk, freq);
+
+	*p_mclk_freq = freq;
+
+	clk_put(clk);
+	pr_debug("%s frequency = %d\n", mclk, *p_mclk_freq);
+}
+#endif
 
 /* Exported symbols for modules. */
 EXPORT_SYMBOL(set_mclk_rate);

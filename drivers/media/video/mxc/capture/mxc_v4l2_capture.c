@@ -38,9 +38,12 @@
 #include "mxc_v4l2_capture.h"
 #include "ipu_prp_sw.h"
 
+#ifdef CONFIG_MXC_IPU_V1
 static int csi_mclk_flag_backup;
+#endif
 static int video_nr = -1;
 static cam_data *g_cam;
+uint32_t sensor_output_fmt;
 
 #define MXC_V4L2_CAPTURE_NUM_OUTPUTS        2
 static struct v4l2_output mxc_capture_outputs[MXC_V4L2_CAPTURE_NUM_OUTPUTS] = {
@@ -694,20 +697,27 @@ static int mxc_set_v42l_control(cam_data * cam, struct v4l2_control *c)
 		cam->red = c->value;
 	case V4L2_CID_BLUE_BALANCE:
 		cam->blue = c->value;
-		ipu_csi_enable_mclk(CSI_MCLK_I2C, true, true);
+		ipu_csi_enable_mclk_if(CSI_MCLK_I2C,
+			cam->cam_sensor->csi, true, true);
 		cam->cam_sensor->set_color(cam->bright, cam->saturation,
 					   cam->red, cam->green, cam->blue);
-		ipu_csi_enable_mclk(CSI_MCLK_I2C, false, false);
+		ipu_csi_enable_mclk_if(CSI_MCLK_I2C,
+			cam->cam_sensor->csi, false, false);
 		break;
 	case V4L2_CID_BLACK_LEVEL:
 		cam->ae_mode = c->value & 0x03;
-		ipu_csi_enable_mclk(CSI_MCLK_I2C, true, true);
+		ipu_csi_enable_mclk_if(CSI_MCLK_I2C,
+			cam->cam_sensor->csi, true, true);
 		if (cam->cam_sensor->set_ae_mode)
 			cam->cam_sensor->set_ae_mode(cam->ae_mode);
-		ipu_csi_enable_mclk(CSI_MCLK_I2C, false, false);
+
+		ipu_csi_enable_mclk_if(CSI_MCLK_I2C,
+			cam->cam_sensor->csi, false, false);
 		break;
 	case V4L2_CID_MXC_FLASH:
+#ifdef CONFIG_MXC_IPU_V1
 		ipu_csi_flash_strobe(true);
+#endif
 		break;
 	default:
 		return -EINVAL;
@@ -751,11 +761,15 @@ static int mxc_v4l2_s_param(cam_data * cam, struct v4l2_streamparm *parm)
 
 	cam->streamparm.parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
 
-	ipu_csi_enable_mclk(CSI_MCLK_I2C, true, true);
+	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->cam_sensor->csi, true, true);
+
 	param = cam->cam_sensor->config
 	    (&parm->parm.capture.timeperframe.denominator,
 	     parm->parm.capture.capturemode);
-	ipu_csi_enable_mclk(CSI_MCLK_I2C, false, false);
+
+	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->cam_sensor->csi,
+			false, false);
+
 	cam->streamparm.parm.capture.timeperframe =
 	    parm->parm.capture.timeperframe;
 
@@ -781,9 +795,18 @@ static int mxc_v4l2_s_param(cam_data * cam, struct v4l2_streamparm *parm)
 	csi_param.ext_vsync = param->ext_vsync;
 	csi_param.Vsync_pol = param->Vsync_pol;
 	csi_param.Hsync_pol = param->Hsync_pol;
+	csi_param.data_fmt = param->pixel_fmt;
+	csi_param.pack_tight = param->pack_tight;
+	csi_param.force_eof = param->force_eof;
+	csi_param.data_en_pol = param->data_en_pol;
+	csi_param.csi = cam->cam_sensor->csi;
 	ipu_csi_init_interface(param->width, param->height,
 			       param->pixel_fmt, csi_param);
-	ipu_csi_set_window_size(param->active_width, param->active_height);
+
+	sensor_output_fmt = param->pixel_fmt;
+
+	ipu_csi_set_window_size(param->active_width,
+		param->active_height, cam->cam_sensor->csi);
 
 	if (parm->parm.capture.capturemode != V4L2_MODE_HIGHQUALITY) {
 		cam->streamparm.parm.capture.capturemode = 0;
@@ -892,11 +915,13 @@ static int mxc_v4l_open(struct inode *inode, struct file *file)
 		INIT_LIST_HEAD(&cam->working_q);
 		INIT_LIST_HEAD(&cam->done_q);
 
-		ipu_csi_enable_mclk(CSI_MCLK_I2C, true, true);
+		ipu_csi_enable_mclk_if(CSI_MCLK_I2C,
+			cam->cam_sensor->csi, true, true);
 		param = cam->cam_sensor->reset();
 		if (param == NULL) {
 			cam->open_count--;
-			ipu_csi_enable_mclk(CSI_MCLK_I2C, false, false);
+			ipu_csi_enable_mclk_if(CSI_MCLK_I2C,
+				cam->cam_sensor->csi, false, false);
 			err = -ENODEV;
 			goto oops;
 		}
@@ -909,8 +934,14 @@ static int mxc_v4l_open(struct inode *inode, struct file *file)
 		csi_param.ext_vsync = param->ext_vsync;
 		csi_param.Vsync_pol = param->Vsync_pol;
 		csi_param.Hsync_pol = param->Hsync_pol;
+		csi_param.data_fmt = param->pixel_fmt;
+		csi_param.pack_tight = param->pack_tight;
+		csi_param.force_eof = param->force_eof;
+		csi_param.data_en_pol = param->data_en_pol;
+		csi_param.csi = cam->cam_sensor->csi;
 		ipu_csi_init_interface(param->width, param->height,
 				       param->pixel_fmt, csi_param);
+		sensor_output_fmt = param->pixel_fmt;
 
 		cam->cam_sensor->get_color(&cam->bright, &cam->saturation,
 					   &cam->red, &cam->green, &cam->blue);
@@ -920,7 +951,8 @@ static int mxc_v4l_open(struct inode *inode, struct file *file)
 		/* pr_info("mxc_v4l_open saturation %x ae_mode %x\n",
 		   cam->saturation, cam->ae_mode); */
 
-		ipu_csi_enable_mclk(CSI_MCLK_I2C, false, false);
+		ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->cam_sensor->csi,
+				false, false);
 	}
 
 	file->private_data = dev;
@@ -1327,9 +1359,11 @@ mxc_v4l_do_ioctl(struct inode *inode, struct file *file,
 			cam->crop_current = crop->c;
 
 			ipu_csi_set_window_size(cam->crop_current.width,
-						cam->crop_current.height);
+						cam->crop_current.height,
+						cam->cam_sensor->csi);
 			ipu_csi_set_window_pos(cam->crop_current.left,
-					       cam->crop_current.top);
+					       cam->crop_current.top,
+						cam->cam_sensor->csi);
 			break;
 		}
 
@@ -1657,6 +1691,8 @@ static void init_camera_struct(cam_data * cam)
 	init_waitqueue_head(&cam->enc_queue);
 	init_waitqueue_head(&cam->still_queue);
 
+	cam->cam_sensor = &camera_sensor_if;
+
 	/* setup cropping */
 	cam->crop_bounds.left = 0;
 	cam->crop_bounds.width = 640;
@@ -1664,8 +1700,9 @@ static void init_camera_struct(cam_data * cam)
 	cam->crop_bounds.height = 480;
 	cam->crop_current = cam->crop_defrect = cam->crop_bounds;
 	ipu_csi_set_window_size(cam->crop_current.width,
-				cam->crop_current.height);
-	ipu_csi_set_window_pos(cam->crop_current.left, cam->crop_current.top);
+				cam->crop_current.height, cam->cam_sensor->csi);
+	ipu_csi_set_window_pos(cam->crop_current.left,
+		cam->crop_current.top, cam->cam_sensor->csi);
 	cam->streamparm.parm.capture.capturemode = 0;
 
 	cam->standard.index = 0;
@@ -1691,34 +1728,51 @@ static void init_camera_struct(cam_data * cam)
 	cam->win.w.left = 0;
 	cam->win.w.top = 0;
 
-	cam->cam_sensor = &camera_sensor_if;
 	cam->enc_callback = camera_callback;
 	init_waitqueue_head(&cam->power_queue);
 	cam->int_lock = SPIN_LOCK_UNLOCKED;
 	spin_lock_init(&cam->int_lock);
 }
 
+#ifdef CONFIG_MXC_IPU_V1
 extern void gpio_sensor_active(void);
 extern void gpio_sensor_inactive(void);
+#else
+extern void gpio_sensor_active(unsigned int csi);
+extern void gpio_sensor_inactive(unsigned int csi);
+#endif
 
 /*!
  * camera_power function
  *    Turn Sensor power On/Off
  *
+ * @param       cam           cam data struct
  * @param       cameraOn      true to turn camera on, otherwise shut down
  *
  * @return status
  */
-static u8 camera_power(bool cameraOn)
+static u8 camera_power(cam_data *cam, bool cameraOn)
 {
+#ifdef CONFIG_MXC_IPU_V1
 	if (cameraOn == true) {
 		gpio_sensor_active();
-		ipu_csi_enable_mclk(csi_mclk_flag_backup, true, true);
+		ipu_csi_enable_mclk_if(csi_mclk_flag_backup,
+			cam->cam_sensor->csi, true, true);
 	} else {
 		csi_mclk_flag_backup = ipu_csi_read_mclk_flag();
-		ipu_csi_enable_mclk(csi_mclk_flag_backup, false, false);
+		ipu_csi_enable_mclk_if(csi_mclk_flag_backup,
+			cam->cam_sensor->csi, false, false);
 		gpio_sensor_inactive();
 	}
+#else
+	if (cameraOn == true) {
+		gpio_sensor_active(cam->cam_sensor->csi);
+		ipu_csi_enable_mclk_if(0, cam->cam_sensor->csi, true, true);
+	} else {
+		ipu_csi_enable_mclk_if(0, cam->cam_sensor->csi, false, false);
+		gpio_sensor_inactive(cam->cam_sensor->csi);
+	}
+#endif
 	return 0;
 }
 
@@ -1748,7 +1802,7 @@ static int mxc_v4l2_suspend(struct platform_device *pdev, pm_message_t state)
 	if ((cam->capture_on == true) && cam->enc_disable) {
 		cam->enc_disable(cam);
 	}
-	camera_power(false);
+	camera_power(cam, false);
 
 	return 0;
 }
@@ -1777,7 +1831,7 @@ static int mxc_v4l2_resume(struct platform_device *pdev)
 		start_preview(cam);
 	if (cam->capture_on == true)
 		mxc_streamon(cam);
-	camera_power(true);
+	camera_power(cam, true);
 
 	return 0;
 }

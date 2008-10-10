@@ -25,7 +25,7 @@ extern spinlock_t ipu_lock;
 extern bool g_ipu_clk_enabled;
 extern struct clk *g_ipu_clk;
 extern struct clk *g_di_clk[2];
-extern struct clk *g_ipu_csi_clk;
+extern struct clk *g_csi_clk[2];
 extern unsigned char g_dc_di_assignment[];
 
 #define IDMA_CHAN_INVALID	0xFF
@@ -74,6 +74,14 @@ void _ipu_ic_init_rotate_pp(ipu_channel_params_t *params);
 void _ipu_ic_uninit_rotate_pp(void);
 int _ipu_ic_idma_init(int dma_chan, uint16_t width, uint16_t height,
 		      int burst_size, ipu_rotate_mode_t rot);
+int _ipu_csi_init(ipu_channel_t channel, uint32_t csi);
+void ipu_csi_set_test_generator(bool active, uint32_t r_value,
+		uint32_t g_value, uint32_t b_value,
+		uint32_t pix_clk, uint32_t csi);
+void _ipu_csi_ccir_err_detection_enable(uint32_t csi);
+void _ipu_csi_ccir_err_detection_disable(uint32_t csi);
+void _ipu_smfc_init(ipu_channel_t channel, uint32_t mipi_id, uint32_t csi);
+void _ipu_smfc_set_burst_size(ipu_channel_t channel, uint32_t bs);
 void _ipu_dp_set_csc_coefficients(ipu_channel_t channel, int32_t param[][3]);
 
 #endif				/* __INCLUDE_IPU_PRV_H__ */

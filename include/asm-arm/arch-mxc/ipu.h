@@ -211,6 +211,16 @@ typedef enum {
 	DIRECT_ASYNC0 = _MAKE_CHAN(13, NO_DMA, NO_DMA, NO_DMA, NO_DMA),
 	DIRECT_ASYNC1 = _MAKE_CHAN(14, NO_DMA, NO_DMA, NO_DMA, NO_DMA),
 
+	CSI_MEM0 = _MAKE_CHAN(15, NO_DMA, NO_DMA, NO_DMA, 0),
+	CSI_MEM1 = _MAKE_CHAN(16, NO_DMA, NO_DMA, NO_DMA, 1),
+	CSI_MEM2 = _MAKE_CHAN(17, NO_DMA, NO_DMA, NO_DMA, 2),
+	CSI_MEM3 = _MAKE_CHAN(18, NO_DMA, NO_DMA, NO_DMA, 3),
+
+	CSI_MEM = CSI_MEM0,
+
+	CSI_PRP_ENC_MEM = _MAKE_CHAN(19, NO_DMA, NO_DMA, NO_DMA, 20),
+	CSI_PRP_VF_MEM = _MAKE_CHAN(20, NO_DMA, NO_DMA, NO_DMA, 21),
+
 	MEM_PP_ADC = CHAN_NONE,
 	ADC_SYS2 = CHAN_NONE,
 #endif
@@ -270,7 +280,9 @@ typedef enum {
  */
 typedef union {
 	struct {
-		uint32_t temp;
+		uint32_t csi;
+		bool mipi_en;
+		uint32_t mipi_id;
 	} csi_mem;
 	struct {
 		uint32_t in_width;
@@ -279,6 +291,7 @@ typedef union {
 		uint32_t out_width;
 		uint32_t out_height;
 		uint32_t out_pixel_fmt;
+		uint32_t csi;
 	} csi_prp_enc_mem;
 	struct {
 		uint32_t in_width;
@@ -306,6 +319,7 @@ typedef union {
 		bool graphics_combine_en;
 		bool global_alpha_en;
 		bool key_color_en;
+		uint32_t csi;
 	} csi_prp_vf_mem;
 	struct {
 		uint32_t in_width;
@@ -483,6 +497,7 @@ enum ipu_irq_line {
 
 	IPU_IRQ_BREAKRQ = 64,
 	IPU_IRQ_SDC_BG_OUT_EOF = 65,
+	IPU_IRQ_BG_SF_END = IPU_IRQ_SDC_BG_OUT_EOF,
 	IPU_IRQ_SDC_FG_OUT_EOF = 66,
 	IPU_IRQ_SDC_MASK_OUT_EOF = 67,
 	IPU_IRQ_ADC_SERIAL_DATA_OUT = 68,
@@ -546,6 +561,10 @@ enum ipu_irq_line {
 	IPU_IRQ_AHB_M1_ERR = 142,
 	IPU_IRQ_AHB_M12_ERR = 143,
 #else
+	IPU_IRQ_CSI0_OUT_EOF = 0,
+	IPU_IRQ_CSI1_OUT_EOF = 1,
+	IPU_IRQ_CSI2_OUT_EOF = 2,
+	IPU_IRQ_CSI3_OUT_EOF = 3,
 	IPU_IRQ_PP_IN_EOF = 11,
 	IPU_IRQ_PRP_IN_EOF = 12,
 	IPU_IRQ_PRP_GRAPH_IN_EOF = 14,
@@ -579,6 +598,7 @@ enum ipu_irq_line {
 
 	IPU_IRQ_DP_SF_START = 448 + 2,
 	IPU_IRQ_DP_SF_END = 448 + 3,
+	IPU_IRQ_BG_SF_END = IPU_IRQ_DP_SF_END,
 	IPU_IRQ_DC_FC_0 = 448 + 8,
 	IPU_IRQ_DC_FC_1 = 448 + 9,
 	IPU_IRQ_DC_FC_2 = 448 + 10,
@@ -612,15 +632,22 @@ typedef struct {
 /*!
  * Bitfield of CSI signal polarities and modes.
  */
+
 typedef struct {
-	unsigned data_width:3;
-	unsigned clk_mode:2;
+	unsigned data_width:4;
+	unsigned clk_mode:3;
 	unsigned ext_vsync:1;
 	unsigned Vsync_pol:1;
 	unsigned Hsync_pol:1;
 	unsigned pixclk_pol:1;
 	unsigned data_pol:1;
 	unsigned sens_clksrc:1;
+	unsigned pack_tight:1;
+	unsigned force_eof:1;
+	unsigned data_en_pol:1;
+	unsigned data_fmt;
+	unsigned csi;
+	unsigned mclk;
 } ipu_csi_signal_cfg_t;
 
 /*!
@@ -641,6 +668,17 @@ enum {
 	IPU_CSI_CLK_MODE_NONGATED_CLK,
 	IPU_CSI_CLK_MODE_CCIR656_PROGRESSIVE,
 	IPU_CSI_CLK_MODE_CCIR656_INTERLACED,
+	IPU_CSI_CLK_MODE_CCIR1120_PROGRESSIVE_DDR,
+	IPU_CSI_CLK_MODE_CCIR1120_PROGRESSIVE_SDR,
+	IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_DDR,
+	IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_SDR,
+};
+
+enum {
+	IPU_CSI_MIPI_DI0,
+	IPU_CSI_MIPI_DI1,
+	IPU_CSI_MIPI_DI2,
+	IPU_CSI_MIPI_DI3,
 };
 
 typedef enum {
@@ -834,8 +872,6 @@ int32_t ipu_sdc_init_panel(ipu_panel_t panel,
 			   uint16_t vSyncWidth, uint16_t vEndWidth,
 			   ipu_di_signal_cfg_t sig);
 
-int32_t ipu_sdc_set_window_pos(ipu_channel_t channel, int16_t x_pos,
-			       int16_t y_pos);
 int32_t ipu_sdc_set_global_alpha(bool enable, uint8_t alpha);
 int32_t ipu_sdc_set_color_key(ipu_channel_t channel, bool enable,
 			      uint32_t colorKey);
@@ -896,15 +932,25 @@ int32_t ipu_csi_init_interface(uint16_t width, uint16_t height,
 
 int32_t ipu_csi_enable_mclk(int src, bool flag, bool wait);
 
+static inline int32_t ipu_csi_enable_mclk_if(int src, uint32_t csi,
+		bool flag, bool wait)
+{
+#ifdef CONFIG_MXC_IPU_V1
+	return ipu_csi_enable_mclk(src, flag, wait);
+#else
+	return ipu_csi_enable_mclk(csi, flag, wait);
+#endif
+}
+
 int ipu_csi_read_mclk_flag(void);
 
 void ipu_csi_flash_strobe(bool flag);
 
-void ipu_csi_get_window_size(uint32_t * width, uint32_t * height);
+void ipu_csi_get_window_size(uint32_t *width, uint32_t *height, uint32_t csi);
 
-void ipu_csi_set_window_size(uint32_t width, uint32_t height);
+void ipu_csi_set_window_size(uint32_t width, uint32_t height, uint32_t csi);
 
-void ipu_csi_set_window_pos(uint32_t left, uint32_t top);
+void ipu_csi_set_window_pos(uint32_t left, uint32_t top, uint32_t csi);
 
 /* Post Filter functions */
 int32_t ipu_pf_set_pause_row(uint32_t pause_row);

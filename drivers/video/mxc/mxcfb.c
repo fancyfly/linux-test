@@ -246,7 +246,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 							 &fbi->modelist);
 	}
 
-	ipu_sdc_set_window_pos(mxc_fbi->ipu_ch, 0, 0);
+	ipu_disp_set_window_pos(mxc_fbi->ipu_ch, 0, 0);
 
 	mxc_fbi->cur_ipu_buf = 1;
 	sema_init(&mxc_fbi->flip_sem, 1);
@@ -655,7 +655,7 @@ static int mxcfb_ioctl_ovl(struct fb_info *fbi, unsigned int cmd,
 				retval = -EFAULT;
 				break;
 			}
-			retval = ipu_sdc_set_window_pos(mxc_fbi->ipu_ch,
+			retval = ipu_disp_set_window_pos(mxc_fbi->ipu_ch,
 							pos.x, pos.y);
 			break;
 		}

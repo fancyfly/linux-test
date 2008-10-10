@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -169,9 +169,11 @@ int ipu_csi_read_mclk_flag(void)
  *
  * @param       width        pointer to window width
  * @param       height       pointer to window height
+ * @param       dummy        dummy for IPUv1 to keep the same interface with IPUv3
  *
  */
-void ipu_csi_get_window_size(uint32_t * width, uint32_t * height)
+void ipu_csi_get_window_size(uint32_t *width, uint32_t *height,
+		uint32_t dummy)
 {
 	uint32_t reg;
 
@@ -185,9 +187,10 @@ void ipu_csi_get_window_size(uint32_t * width, uint32_t * height)
  *
  * @param       width        window width
  * @param       height       window height
+ * @param       dummy        dummy for IPUv1 to keep the same interface with IPUv3
  *
  */
-void ipu_csi_set_window_size(uint32_t width, uint32_t height)
+void ipu_csi_set_window_size(uint32_t width, uint32_t height, uint32_t dummy)
 {
 	__raw_writel((width - 1) | (height - 1) << 16, CSI_ACT_FRM_SIZE);
 }
@@ -197,9 +200,10 @@ void ipu_csi_set_window_size(uint32_t width, uint32_t height)
  *
  * @param       left        uint32 window x start
  * @param       top         uint32 window y start
+ * @param       dummy       dummy for IPUv1 to keep the same interface with IPUv3
  *
  */
-void ipu_csi_set_window_pos(uint32_t left, uint32_t top)
+void ipu_csi_set_window_pos(uint32_t left, uint32_t top, uint32_t dummy)
 {
 	uint32_t temp = __raw_readl(CSI_OUT_FRM_CTRL);
 	temp &= 0xffff0000;

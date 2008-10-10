@@ -510,28 +510,27 @@ int32_t ipu_init_channel_buffer(ipu_channel_t channel, ipu_buffer_t type,
 	unsigned long lock_flags;
 	uint32_t reg;
 	uint32_t dma_chan;
-	uint32_t stride_bytes;
 
 	dma_chan = channel_2_dma(channel, type);
-	stride_bytes = stride * bytes_per_pixel(pixel_fmt);
+
+	if (stride < width * bytes_per_pixel(pixel_fmt))
+		stride = width * bytes_per_pixel(pixel_fmt);
 
 	if (dma_chan == IDMA_CHAN_INVALID)
 		return -EINVAL;
 
-	if (stride_bytes % 4) {
+	if (stride % 4) {
 		dev_err(g_ipu_dev,
-			"Stride length must be 32-bit aligned, stride = %d, bytes = %d\n",
-			stride, stride_bytes);
+			"Stride must be 32-bit aligned, stride = %d\n", stride);
 		return -EINVAL;
 	}
-	/* IC channels' stride must be multiple of 8 pixels     */
-	if ((dma_chan <= 13) && (stride % 8)) {
-		dev_err(g_ipu_dev, "Stride must be 8 pixel multiple\n");
+	/* IC channels' width must be multiple of 8 pixels     */
+	if ((dma_chan <= 13) && (width % 8)) {
+		dev_err(g_ipu_dev, "width must be 8 pixel multiple\n");
 		return -EINVAL;
 	}
 	/* Build parameter memory data for DMA channel */
-	_ipu_ch_param_set_size(params, pixel_fmt, width, height, stride_bytes,
-			       u, v);
+	_ipu_ch_param_set_size(params, pixel_fmt, width, height, stride, u, v);
 	_ipu_ch_param_set_buffer(params, phyaddr_0, phyaddr_1);
 	_ipu_ch_param_set_rotation(params, rot_mode);
 	/* Some channels (rotation) have restriction on burst length */

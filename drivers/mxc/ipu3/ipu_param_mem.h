@@ -290,6 +290,11 @@ static inline int _ipu_ch_param_get_burst_size(uint32_t ch)
 	return ipu_ch_param_read_field(ipu_ch_param_addr(ch), 1, 78, 7) + 1;
 };
 
+static inline int _ipu_ch_param_get_bpp(uint32_t ch)
+{
+	return ipu_ch_param_read_field(ipu_ch_param_addr(ch), 0, 107, 3);
+};
+
 static inline void _ipu_ch_param_set_buffer(uint32_t ch, int bufNum,
 					    dma_addr_t phyaddr)
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -291,7 +291,7 @@ int32_t ipu_sdc_set_brightness(uint8_t value)
  *
  * @return      This function returns 0 on success or negative error code on fail
  */
-int32_t ipu_sdc_set_window_pos(ipu_channel_t channel, int16_t x_pos,
+int32_t ipu_disp_set_window_pos(ipu_channel_t channel, int16_t x_pos,
 			       int16_t y_pos)
 {
 	x_pos += g_h_start_width;
@@ -354,4 +354,4 @@ EXPORT_SYMBOL(ipu_sdc_init_panel);
 EXPORT_SYMBOL(ipu_sdc_set_global_alpha);
 EXPORT_SYMBOL(ipu_sdc_set_color_key);
 EXPORT_SYMBOL(ipu_sdc_set_brightness);
-EXPORT_SYMBOL(ipu_sdc_set_window_pos);
+EXPORT_SYMBOL(ipu_disp_set_window_pos);

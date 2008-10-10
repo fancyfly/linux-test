@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -321,7 +321,7 @@ static int mxc_ipu_ioctl(struct inode *inode, struct file *file,
 				return -EFAULT;
 			}
 			ret =
-			    ipu_sdc_set_window_pos(pos.channel, pos.x_pos,
+			    ipu_disp_set_window_pos(pos.channel, pos.x_pos,
 						   pos.y_pos);
 
 		}
@@ -508,7 +508,8 @@ static int mxc_ipu_ioctl(struct inode *inode, struct file *file,
 	case IPU_CSI_GET_WIN_SIZE:
 		{
 			ipu_csi_window_size w;
-			ipu_csi_get_window_size(&w.width, &w.height);
+			int dummy = 0;
+			ipu_csi_get_window_size(&w.width, &w.height, dummy);
 			if (copy_to_user
 			    ((ipu_csi_window_size *) arg, &w, sizeof(w)))
 				return -EFAULT;
@@ -517,19 +518,21 @@ static int mxc_ipu_ioctl(struct inode *inode, struct file *file,
 	case IPU_CSI_SET_WIN_SIZE:
 		{
 			ipu_csi_window_size w;
+			int dummy = 0;
 			if (copy_from_user
 			    (&w, (ipu_csi_window_size *) arg, sizeof(w)))
 				return -EFAULT;
-			ipu_csi_set_window_size(w.width, w.height);
+			ipu_csi_set_window_size(w.width, w.height, dummy);
 		}
 		break;
 	case IPU_CSI_SET_WINDOW:
 		{
 			ipu_csi_window p;
+			int dummy = 0;
 			if (copy_from_user
 			    (&p, (ipu_csi_window *) arg, sizeof(p)))
 				return -EFAULT;
-			ipu_csi_set_window_pos(p.left, p.top);
+			ipu_csi_set_window_pos(p.left, p.top, dummy);
 		}
 		break;
 	case IPU_PF_SET_PAUSE_ROW:

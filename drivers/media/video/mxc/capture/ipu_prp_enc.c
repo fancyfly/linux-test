@@ -73,7 +73,7 @@ static int prp_enc_setup(cam_data * cam)
 	ipu_csi_get_window_size(&enc.csi_prp_enc_mem.in_width,
 				&enc.csi_prp_enc_mem.in_height,
 				cam->cam_sensor->csi);
-	enc.csi_prp_enc_mem.in_pixel_fmt = sensor_output_fmt;
+	enc.csi_prp_enc_mem.in_pixel_fmt = IPU_PIX_FMT_UYVY;
 	enc.csi_prp_enc_mem.out_width = cam->v2f.fmt.pix.width;
 	enc.csi_prp_enc_mem.out_height = cam->v2f.fmt.pix.height;
 	enc.csi_prp_enc_mem.csi = cam->cam_sensor->csi;

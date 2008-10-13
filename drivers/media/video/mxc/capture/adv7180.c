@@ -189,19 +189,20 @@ static int adv7180_write_reg(u8 reg, u8 val)
  */
 static void adv7180_set_std(v4l2_std_id std)
 {
+	unsigned int dummy = 0;
 
 	dev_dbg(&adv7180_i2c_client->dev, "adv7180_set_std call \n");
 	down(&mutex);
 	if (std == V4L2_STD_PAL) {
 		video_idx = ADV7180_PAL;
-		ipu_csi_set_window_pos(0, 0);
+		ipu_csi_set_window_pos(0, 0, dummy);
 	} else if (std == V4L2_STD_NTSC) {
 		video_idx = ADV7180_NTSC;
 		/* Get rid of the white dot line in NTSC signal input */
-		ipu_csi_set_window_pos(0, 12);
+		ipu_csi_set_window_pos(0, 12, dummy);
 	} else {
 		video_idx = ADV7180_NOT_LOCKED;
-		ipu_csi_set_window_pos(0, 0);
+		ipu_csi_set_window_pos(0, 0, dummy);
 		dev_dbg(&adv7180_i2c_client->dev,
 			"adv7180 set non-recognized std!\n");
 	}

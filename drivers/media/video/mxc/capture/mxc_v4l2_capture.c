@@ -43,7 +43,6 @@ static int csi_mclk_flag_backup;
 #endif
 static int video_nr = -1;
 static cam_data *g_cam;
-uint32_t sensor_output_fmt;
 
 #define MXC_V4L2_CAPTURE_NUM_OUTPUTS        2
 static struct v4l2_output mxc_capture_outputs[MXC_V4L2_CAPTURE_NUM_OUTPUTS] = {
@@ -803,8 +802,6 @@ static int mxc_v4l2_s_param(cam_data * cam, struct v4l2_streamparm *parm)
 	ipu_csi_init_interface(param->width, param->height,
 			       param->pixel_fmt, csi_param);
 
-	sensor_output_fmt = param->pixel_fmt;
-
 	ipu_csi_set_window_size(param->active_width,
 		param->active_height, cam->cam_sensor->csi);
 
@@ -941,7 +938,6 @@ static int mxc_v4l_open(struct inode *inode, struct file *file)
 		csi_param.csi = cam->cam_sensor->csi;
 		ipu_csi_init_interface(param->width, param->height,
 				       param->pixel_fmt, csi_param);
-		sensor_output_fmt = param->pixel_fmt;
 
 		cam->cam_sensor->get_color(&cam->bright, &cam->saturation,
 					   &cam->red, &cam->green, &cam->blue);

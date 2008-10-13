@@ -54,7 +54,6 @@ struct ov3640_mode_info {
 	u32		height;
 	struct reg_value *init_data_ptr;
 	u32		init_data_size;
-	u32		fmt;
 };
 
 static struct reg_value ov3640_setting_QXGA_2048_1536[] = {
@@ -217,13 +216,13 @@ static struct reg_value ov3640_setting_QVGA_320_240[] = {
 
 static struct ov3640_mode_info ov3640_mode_info_data[] = {
 	{ov3640_mode_VGA_640_480,    640,  480,  ov3640_setting_VGA_640_480,
-	ARRAY_SIZE(ov3640_setting_VGA_640_480), IPU_PIX_FMT_UYVY},
+	ARRAY_SIZE(ov3640_setting_VGA_640_480)},
 	{ov3640_mode_QVGA_320_240,   320,  240,  ov3640_setting_QVGA_320_240,
-	ARRAY_SIZE(ov3640_setting_QVGA_320_240), IPU_PIX_FMT_UYVY},
+	ARRAY_SIZE(ov3640_setting_QVGA_320_240)},
 	{ov3640_mode_QXGA_2048_1536, 2048, 1536, ov3640_setting_QXGA_2048_1536,
-	ARRAY_SIZE(ov3640_setting_QXGA_2048_1536), IPU_PIX_FMT_UYVY},
+	ARRAY_SIZE(ov3640_setting_QXGA_2048_1536)},
 	{ov3640_mode_XGA_1024_768,   1024, 768,  ov3640_setting_XGA_1024_768,
-	ARRAY_SIZE(ov3640_setting_XGA_1024_768), IPU_PIX_FMT_UYVY},
+	ARRAY_SIZE(ov3640_setting_XGA_1024_768)},
 };
 
 static s32 s32csi_index;
@@ -247,6 +246,7 @@ static s32 ov3640_write_reg(u16 reg, u8 val);
 
 static const struct i2c_device_id ov3640_id[] = {
 	{"ov3640", 0},
+	{},
 };
 MODULE_DEVICE_TABLE(i2c, ov3640_id);
 
@@ -438,6 +438,7 @@ static void ov3640_interface(sensor_interface *param, u32 width, u32 height)
 
 	param->data_width = IPU_CSI_DATA_WIDTH_8;
 	param->clk_mode = IPU_CSI_CLK_MODE_GATED_CLK;  /* gated */
+	param->pixel_fmt = IPU_PIX_FMT_UYVY;
 	param->ext_vsync = 1;
 	param->Vsync_pol = 0;
 	param->Hsync_pol = 0;
@@ -562,7 +563,6 @@ static sensor_interface *ov3640_config(int *frame_rate, int mode)
 	u32OutHeight = ov3640_mode_info_data[mode].height;
 
 	ov3640_interface(interface_param, u32OutWidth, u32OutHeight);
-	interface_param->pixel_fmt = ov3640_mode_info_data[mode].fmt;
 	set_mclk_rate(&interface_param->mclk, s32csi_index);
 
 	ov3640_init_mode(mode);

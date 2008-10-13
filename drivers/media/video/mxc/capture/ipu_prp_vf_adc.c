@@ -59,7 +59,7 @@ static int prpvf_start(void *private)
 	memset(&vf, 0, sizeof(ipu_channel_params_t));
 	ipu_csi_get_window_size(&vf.csi_prp_vf_adc.in_width,
 				&vf.csi_prp_vf_adc.in_height);
-	vf.csi_prp_vf_adc.in_pixel_fmt = sensor_output_fmt;
+	vf.csi_prp_vf_adc.in_pixel_fmt = IPU_PIX_FMT_UYVY;
 	vf.csi_prp_vf_adc.out_width = cam->win.w.width;
 	vf.csi_prp_vf_adc.out_height = cam->win.w.height;
 	vf.csi_prp_vf_adc.graphics_combine_en = 0;

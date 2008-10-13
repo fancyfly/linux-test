@@ -37,8 +37,6 @@
 
 #define FRAME_NUM 3
 
-extern uint32_t sensor_output_fmt;
-
 /*!
  * v4l2 frame structure.
  */

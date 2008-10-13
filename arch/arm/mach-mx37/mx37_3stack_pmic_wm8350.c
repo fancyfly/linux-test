@@ -23,6 +23,7 @@
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
 #include <linux/err.h>
+#include <linux/regulator/regulator.h>
 #include <linux/regulator/regulator-platform.h>
 #include <linux/regulator/wm8350/wm8350.h>
 #include <linux/regulator/wm8350/wm8350-pmic.h>
@@ -38,6 +39,26 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/mxc.h>
 #include "board-mx37_3stack.h"
+
+static void wm8350_regulator_init(void)
+{
+	int i = 0;
+	struct regulator *regulator;
+	char *wm8350_global_regulator[] = {
+		"DCDC1",
+		"DCDC3",
+		"DCDC4",
+		"DCDC6",
+		"LDO3",
+	};
+
+	while (!IS_ERR_VALUE((unsigned long)(regulator = regulator_get(NULL,
+		wm8350_global_regulator[i])))) {
+		regulator_enable(regulator);
+		i++;
+	}
+}
+late_initcall(wm8350_regulator_init);
 
 /*
  * Set to 1 when testing battery that is connected otherwise spuriuos debug

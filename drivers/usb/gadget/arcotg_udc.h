@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -29,7 +29,8 @@
 
 /* Iram patch */
 #ifdef CONFIG_USB_STATIC_IRAM_PPH
-#define IRAM_TD_PPH_SIZE	1024	/* size of 1 qTD's buffer */
+/* size of 1 qTD's buffer,one is for BULK IN and other is BULK OUT */
+#define IRAM_TD_PPH_SIZE	(USB_IRAM_SIZE / 2)
 #define IRAM_PPH_NTD	2	/* number of TDs in IRAM  */
 #else
 #define IRAM_TD_PPH_SIZE	0

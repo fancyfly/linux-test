@@ -234,6 +234,12 @@ static int init_dvfs_controller(void)
 	reg |= MXC_CCM_PMCR0_DVFIS | MXC_CCM_PMCR0_LBMI;
 	__raw_writel(reg, MXC_CCM_PMCR0);
 
+	/* configuring EMI Handshake and PLL relock disable */
+	reg = __raw_readl(MXC_CCM_PMCR1);
+	reg |= MXC_CCM_PMCR1_PLLRDIS;
+	reg |= MXC_CCM_PMCR1_EMIRQ_EN;
+	__raw_writel(reg, MXC_CCM_PMCR1);
+
 	return 0;
 }
 
@@ -399,8 +405,49 @@ static ssize_t dvfs_status_store(struct sys_device *dev, const char *buf,
 	return size;
 }
 
+static ssize_t dvfs_debug_show(struct sys_device *dev, char *buf)
+{
+	int size = 0;
+	u32 curr_ahb, curr_cpu;
+
+	curr_ahb = clk_get_rate(ahb_clk);
+	curr_cpu = clk_get_rate(cpu_clk);
+
+	pr_debug("ahb %d, cpu %d\n", curr_ahb, curr_cpu);
+
+	return size;
+}
+
+static ssize_t dvfs_debug_store(struct sys_device *dev, const char *buf,
+				size_t size)
+{
+	u32 curr_ahb, curr_cpu, rate = 0;
+
+	curr_ahb = clk_get_rate(ahb_clk);
+	curr_cpu = clk_get_rate(cpu_clk);
+
+	if (strstr(buf, "inc") != NULL) {
+		rate = 4 * curr_ahb;
+		pr_debug("inc to %d\n", rate);
+	}
+
+	if (strstr(buf, "dec") != NULL) {
+		rate = ((curr_cpu / curr_ahb) - 1) * curr_ahb;
+		if ((cpu_is_mx31_rev(CHIP_REV_2_0) < 0) &&
+		    ((curr_cpu / curr_ahb) == 4))
+			rate = ((curr_cpu / curr_ahb) - 2) * curr_ahb;
+
+		pr_debug("dec to %d\n", rate);
+	}
+
+	clk_set_rate(cpu_clk, rate);
+
+	return size;
+}
+
 static SYSDEV_ATTR(enable, 0200, NULL, dvfs_enable_store);
 static SYSDEV_ATTR(status, 0644, dvfs_status_show, dvfs_status_store);
+static SYSDEV_ATTR(debug, 0644, dvfs_debug_show, dvfs_debug_store);
 
 static struct sysdev_class dvfs_sysclass = {
 	.name = "dvfs",
@@ -421,6 +468,7 @@ static int dvfs_sysdev_ctrl_init(void)
 	if (!err) {
 		err = sysdev_create_file(&dvfs_device, &attr_enable);
 		err = sysdev_create_file(&dvfs_device, &attr_status);
+		err = sysdev_create_file(&dvfs_device, &attr_debug);
 	}
 
 	return err;

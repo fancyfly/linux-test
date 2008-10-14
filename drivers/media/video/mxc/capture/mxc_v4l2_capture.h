@@ -181,7 +181,7 @@ typedef struct _cam_data {
 	struct camera_sensor *cam_sensor;
 } cam_data;
 
-#ifdef CONFIG_MXC_IPU_V1
+#if defined(CONFIG_MXC_IPU_V1) || defined(CONFIG_VIDEO_MXC_EMMA_CAMERA)
 void set_mclk_rate(uint32_t *p_mclk_freq);
 #else
 void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi);

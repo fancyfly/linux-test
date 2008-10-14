@@ -296,7 +296,6 @@ static void mt9v111_rate_cal(int *frame_rate, int mclk)
 sensor_interface *mt9v111_config(int *frame_rate, int high_quality)
 {
 	u32 out_width, out_height;
-	unsigned int dummy = 0;
 
 	if (interface_param == NULL)
 		return NULL;
@@ -337,7 +336,7 @@ sensor_interface *mt9v111_config(int *frame_rate, int high_quality)
 	mt9v111_device.ifpReg->VSize = out_height;
 
 	mt9v111_interface(interface_param, out_width, out_height);
-	set_mclk_rate(&interface_param->mclk, dummy);
+	set_mclk_rate(&interface_param->mclk);
 	mt9v111_rate_cal(frame_rate, interface_param->mclk);
 	mt9v111_sensor_lib(mt9v111_device.coreReg, mt9v111_device.ifpReg);
 
@@ -575,11 +574,10 @@ static int mt9v111_attach(struct i2c_adapter *adap)
 	uint32_t mclk = 27000000;
 	struct clk *clk;
 	int err;
-	unsigned int dummy = 0;
 
 	clk = clk_get(NULL, "csi_clk");
 	clk_enable(clk);
-	set_mclk_rate(&mclk, dummy);
+	set_mclk_rate(&mclk);
 
 	err = i2c_probe(adap, &addr_data, &mt9v111_detect_client);
 

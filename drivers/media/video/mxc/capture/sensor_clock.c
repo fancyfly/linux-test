@@ -24,7 +24,7 @@
 #include <linux/device.h>
 #include <linux/clk.h>
 
-#ifdef CONFIG_MXC_IPU_V1
+#if defined(CONFIG_MXC_IPU_V1) || defined(CONFIG_VIDEO_MXC_EMMA_CAMERA)
 /*
  * set_mclk_rate
  *

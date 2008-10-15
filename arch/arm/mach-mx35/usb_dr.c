@@ -32,6 +32,8 @@ static struct fsl_usb2_platform_data __maybe_unused dr_utmi_config = {
 	.gpio_usb_active   = gpio_usbotg_utmi_active,
 	.gpio_usb_inactive = gpio_usbotg_utmi_inactive,
 	.transceiver       = "utmi",
+	.change_ahb_burst = 1, /* defaultly i.MX35 is in INCR8 mode */
+	.ahb_burst_mode = 0, /* i.MX35 should be in INCR mode */
 };
 
 

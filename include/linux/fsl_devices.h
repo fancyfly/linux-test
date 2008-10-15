@@ -122,6 +122,8 @@ struct fsl_usb2_platform_data {
 	unsigned			es : 1;	/* need USBMODE:ES */
 	unsigned			have_sysif_regs : 1;
 	unsigned			le_setup_buf : 1;
+	unsigned change_ahb_burst:1;
+	unsigned ahb_burst_mode:3;
 };
 
 /* Flags in fsl_usb2_mph_platform_data */

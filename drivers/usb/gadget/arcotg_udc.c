@@ -315,10 +315,10 @@ static int dr_controller_setup(struct fsl_udc *udc)
 	}
 	fsl_writel(portctrl, &dr_regs->portsc1);
 
-	if (cpu_is_mx35()) {
-		/* AHB burst INCR mode if imx35 */
+	if (pdata->change_ahb_burst) {
+		/* if usb should not work in default INCRx mode */
 		tmp = fsl_readl(&dr_regs->sbuscfg);
-		tmp &= ~0x07;
+		tmp = (tmp & ~0x07) | pdata->ahb_burst_mode;
 		fsl_writel(tmp, &dr_regs->sbuscfg);
 	}
 

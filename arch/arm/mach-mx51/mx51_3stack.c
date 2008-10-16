@@ -34,6 +34,7 @@
 #include <asm/mach/flash.h>
 #endif
 
+#include <linux/regulator/regulator.h>
 #include <asm/hardware.h>
 #include <asm/arch/spba.h>
 #include <asm/irq.h>
@@ -61,6 +62,63 @@ extern struct sys_timer mxc_timer;
 extern void mxc_cpu_common_init(void);
 extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
+
+static void mc13892_reg_int(void)
+{
+	int i = 0;
+	struct regulator *regulator;
+	char *reg_name[] = {
+		"SW1",
+		"SW2",
+		"SW3",
+		"SW4",
+		"SW1_STBY",
+		"SW2_STBY",
+		"SW3_STBY",
+		"SW4_STBY",
+		"SW1_DVS",
+		"SW2_DVS",
+		"SWBST",
+		"VIOHI",
+		"VPLL",
+		"VDIG",
+		"VSD",
+		"VUSB2",
+		"VVIDEO",
+		"VAUDIO",
+		"VCAM",
+		"VGEN1",
+		"VGEN2",
+		"VGEN3",
+		"USB",
+		"GPO1",
+		"GPO2",
+		"GPO3",
+		"GPO4",
+	};
+
+	for (i = 0; i < ARRAY_SIZE(reg_name); i++) {
+		regulator = regulator_get(NULL, reg_name[i]);
+		if (regulator != ERR_PTR(-ENOENT)) {
+			regulator_enable(regulator);
+			regulator_put(regulator, NULL);
+		}
+	}
+	for (i = 0; i < ARRAY_SIZE(reg_name); i++) {
+		if ((strcmp(reg_name[i], "VIOHI") == 0) ||
+			(strcmp(reg_name[i], "VPLL") == 0) ||
+			(strcmp(reg_name[i], "VDIG") == 0) ||
+			(strcmp(reg_name[i], "VGEN2") == 0))
+			continue;
+		regulator = regulator_get(NULL, reg_name[i]);
+		if (regulator != ERR_PTR(-ENOENT)) {
+			regulator_disable(regulator);
+			regulator_put(regulator, NULL);
+		}
+	}
+}
+
+late_initcall(mc13892_reg_int);
 
 static void mxc_nop_release(struct device *dev)
 {

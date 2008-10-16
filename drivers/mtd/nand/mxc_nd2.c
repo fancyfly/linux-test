@@ -283,9 +283,9 @@ static void auto_cmd_interleave(struct mtd_info *mtd, u16 cmd)
 			dbuf += dlen;
 			obuf += olen;
 		} else if (cmd == NAND_CMD_ERASE2) {
-			if (!i && j > 1) {
+			if (!i) {
 				page_addr = addr_low;
-				page_addr *= j;
+				page_addr *= (j > 1 ? j : this->numchips);
 			}
 			mxc_do_addr_cycle(mtd, -1, page_addr++);
 			raw_write(NFC_AUTO_ERASE, REG_NFC_OPS);

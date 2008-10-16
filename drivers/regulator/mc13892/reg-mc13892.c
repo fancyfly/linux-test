@@ -1818,7 +1818,6 @@ int reg_mc13892_probe(void)
 {
 	int ret11 = 0;
 	int i = 0;
-	struct regulator reg;
 
 	for (i = 0; i < ARRAY_SIZE(reg_mc13892); i++) {
 		ret11 = regulator_register(&reg_mc13892[i].regulator);
@@ -1827,17 +1826,6 @@ int reg_mc13892_probe(void)
 						   reg_mc13892[i].regulator.
 						   constraints);
 
-		reg.id = reg_mc13892[i].regulator.id;
-
-		if (reg_mc13892[i].regulator.ops->enable == NULL ||
-		    reg.id == MC13892_VIOHI ||
-		    reg.id == MC13892_VGEN2 || reg.id == MC13892_VPLL) {
-			reg_mc13892[i].regulator.use_count = 1;
-		} else {
-			/*default set all regulator off */
-			reg_mc13892[i].regulator.use_count = 0;
-			reg_mc13892[i].regulator.ops->disable(&reg);
-		}
 		if (ret11 < 0) {
 			printk(KERN_ERR "%s: failed to register %s err %d\n",
 			       __func__, reg_mc13892[i].regulator.name, ret11);

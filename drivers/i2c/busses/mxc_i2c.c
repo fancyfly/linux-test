@@ -511,7 +511,7 @@ static int mxc_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	 * Decrease by 1 as we do not want Start message to be included in
 	 * the count
 	 */
-	return (i - 1);
+	return (i < 0 ? ret : i);
 }
 
 /*!
@@ -705,7 +705,7 @@ static int mxci2c_probe(struct platform_device *pdev)
 	/*
 	 * Set the adapter information
 	 */
-	strcpy(mxc_i2c->adap.name, pdev->name);
+	strlcpy(mxc_i2c->adap.name, pdev->name, 48);
 	mxc_i2c->adap.id = mxc_i2c->adap.nr = id;
 	mxc_i2c->adap.algo = &mxc_i2c_algorithm;
 	mxc_i2c->adap.timeout = 1;

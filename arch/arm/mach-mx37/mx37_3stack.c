@@ -25,6 +25,7 @@
 #include <linux/spi/spi.h>
 #include <linux/i2c.h>
 #include <linux/ata.h>
+#include <linux/regulator/regulator.h>
 #if defined(CONFIG_MTD) || defined(CONFIG_MTD_MODULE)
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
@@ -85,6 +86,63 @@ struct cpu_wp *get_cpu_wp(int *wp)
 	*wp = 2;
 	return cpu_wp_auto;
 }
+
+static void mc13892_reg_int(void)
+{
+	int i = 0;
+	struct regulator *regulator;
+	char *reg_name[] = {
+		"SW1",
+		"SW2",
+		"SW3",
+		"SW4",
+		"SW1_STBY",
+		"SW2_STBY",
+		"SW3_STBY",
+		"SW4_STBY",
+		"SW1_DVS",
+		"SW2_DVS",
+		"SWBST",
+		"VIOHI",
+		"VPLL",
+		"VDIG",
+		"VSD",
+		"VUSB2",
+		"VVIDEO",
+		"VAUDIO",
+		"VCAM",
+		"VGEN1",
+		"VGEN2",
+		"VGEN3",
+		"USB",
+		"GPO1",
+		"GPO2",
+		"GPO3",
+		"GPO4",
+	};
+
+	for (i = 0; i < ARRAY_SIZE(reg_name); i++) {
+		regulator = regulator_get(NULL, reg_name[i]);
+		if (regulator != ERR_PTR(-ENOENT)) {
+			regulator_enable(regulator);
+			regulator_put(regulator, NULL);
+		}
+	}
+	for (i = 0; i < ARRAY_SIZE(reg_name); i++) {
+		if ((strcmp(reg_name[i], "VIOHI") == 0) ||
+			(strcmp(reg_name[i], "VPLL") == 0) ||
+			(strcmp(reg_name[i], "VDIG") == 0) ||
+			(strcmp(reg_name[i], "VGEN2") == 0))
+			continue;
+		regulator = regulator_get(NULL, reg_name[i]);
+		if (regulator != ERR_PTR(-ENOENT)) {
+			regulator_disable(regulator);
+			regulator_put(regulator, NULL);
+		}
+	}
+}
+
+late_initcall(mc13892_reg_int);
 
 static void mxc_nop_release(struct device *dev)
 {
@@ -222,6 +280,15 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	 .irq = IOMUX_TO_IRQ(MX37_PIN_GPIO1_3),
 	 },
 };
+static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
+	{
+	 .type = "mc13892",
+	 .addr = 0x08,
+	 .platform_data = (void *)MX37_PIN_GPIO1_4,
+	 },
+};
+
+
 static struct spi_board_info mxc_spi_board_info[] __initdata = {
 	{
 	 .modalias = "cpld_spi",
@@ -277,6 +344,15 @@ static inline void mxc_init_fb(void)
 {
 }
 #endif
+
+static struct platform_device mxcbl_device = {
+	.name = "mxc_mc13892_bl",
+};
+
+static inline void mxc_init_bl(void)
+{
+	platform_device_register(&mxcbl_device);
+}
 
 #if defined(CONFIG_TOUCHSCREEN_TSC2007) || defined(CONFIG_TOUCHSCREEN_TSC2007_MODULE)
 
@@ -531,12 +607,16 @@ static void __init mxc_board_init(void)
 	i2c_register_board_info(0, mxc_i2c0_board_info,
 				ARRAY_SIZE(mxc_i2c0_board_info));
 
+	i2c_register_board_info(1, mxc_i2c1_board_info,
+				ARRAY_SIZE(mxc_i2c1_board_info));
+
 	spi_register_board_info(mxc_spi_board_info,
 				ARRAY_SIZE(mxc_spi_board_info));
 	mxc_init_nand_mtd();
 	mxc_init_mmc();
 	mxc_init_pata();
 	mxc_init_fb();
+	mxc_init_bl();
 	mxc_init_touchscreen();
 	mxc_init_bluetooth();
 }

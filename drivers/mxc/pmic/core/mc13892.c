@@ -30,6 +30,7 @@
 #include <linux/spi/spi.h>
 #include <linux/i2c.h>
 
+#include <asm/mach-types.h>
 #include <asm/uaccess.h>
 #include <asm/arch/gpio.h>
 #include <asm/arch/pmic_external.h>
@@ -97,7 +98,8 @@ int pmic_init_registers(void)
 	CHECK_ERROR(pmic_write(REG_INT_STATUS0, 0xFFFFFF));
 	CHECK_ERROR(pmic_write(REG_INT_STATUS1, 0xFFFFFF));
 	/* disable auto charge */
-	CHECK_ERROR(pmic_write(REG_CHARGE, 0xB40003));
+	if (machine_is_mx51_3ds())
+		CHECK_ERROR(pmic_write(REG_CHARGE, 0xB40003));
 
 	return PMIC_SUCCESS;
 }

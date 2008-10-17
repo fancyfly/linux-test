@@ -100,12 +100,15 @@ static int wm8350_read_i2c_device(struct wm8350 *wm8350, char reg,
 	ret = i2c_master_send(wm8350->i2c_client, &reg, 1);
 	if (ret < 0)
 		return ret;
-	return i2c_master_recv(wm8350->i2c_client, dest, bytes);
+	ret = i2c_master_recv(wm8350->i2c_client, dest, bytes);
+	return ret < 0 ? ret : 0;
 }
 
 static int wm8350_write_i2c_device(struct wm8350 *wm8350, char reg,
 	int bytes, char *src)
 {
+	int ret;
+
 	/* we add 1 byte for device register */
 	u8 msg[(WM8350_MAX_REGISTER << 1) + 1];
 
@@ -114,7 +117,8 @@ static int wm8350_write_i2c_device(struct wm8350 *wm8350, char reg,
 
 	msg[0] = reg;
 	memcpy(&msg[1], src, bytes);
-	return i2c_master_send(wm8350->i2c_client, msg, bytes + 1);
+	ret = i2c_master_send(wm8350->i2c_client, msg, bytes + 1);
+	return ret < 0 ? ret : 0;
 }
 #endif
 

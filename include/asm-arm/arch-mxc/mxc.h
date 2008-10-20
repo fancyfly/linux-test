@@ -112,6 +112,11 @@ struct mxc_bt_platform_data {
 	void (*bt_reset) (void);
 };
 
+struct mxc_lightsensor_platform_data {
+	char *vdd_reg;
+	int rext;
+};
+
 struct mxc_lcd_platform_data {
 	char *io_reg;
 	char *core_reg;

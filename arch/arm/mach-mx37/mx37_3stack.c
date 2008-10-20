@@ -267,6 +267,10 @@ static struct mxc_keyp_platform_data keypad_data = {
 	.active = gpio_keypad_active,
 	.inactive = gpio_keypad_inactive,
 };
+static struct mxc_lightsensor_platform_data ls_data = {
+	.vdd_reg = "DCDC3",
+	.rext = 100,
+};
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 	 .type = "tsc2007",
@@ -278,6 +282,11 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	 .addr = 0x5D,
 	 .platform_data = &keypad_data,
 	 .irq = IOMUX_TO_IRQ(MX37_PIN_GPIO1_3),
+	 },
+	{
+	 .type = "isl29003",
+	 .addr = 0x44,
+	 .platform_data = &ls_data,
 	 },
 };
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {

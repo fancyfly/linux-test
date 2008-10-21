@@ -1426,6 +1426,12 @@ static struct regulator_ops mc13892_sw_ops = {
 	.get_voltage = mc13892_sw_get_voltage,
 };
 
+struct regulation_constraints sw1_constraints = {
+	.min_uV = mV_to_uV(600),
+	.max_uV = mV_to_uV(1375),
+	.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+};
+
 struct regulation_constraints sw_constraints = {
 	.min_uV = mV_to_uV(1100),
 	.max_uV = mV_to_uV(1850),
@@ -1608,7 +1614,7 @@ static struct mc13892_regulator reg_mc13892[] = {
 		       .name = "SW1",
 		       .id = MC13892_SW1,
 		       .ops = &mc13892_sw_ops,
-		       .constraints = &sw_constraints,
+		       .constraints = &sw1_constraints,
 		       },
 	 },
 	{

@@ -206,7 +206,7 @@ static int __init mxc_init_enet(void)
 	return 0;
 }
 #else
-static int _init mxc_init_enet(void)
+static int __init mxc_init_enet(void)
 {
 	return 0;
 }
@@ -215,7 +215,7 @@ static int _init mxc_init_enet(void)
 late_initcall(mxc_init_enet);
 
 #if defined(CONFIG_FEC) || defined(CONFIG_FEC_MODULE)
-unsigned int expio_intr_fec;
+unsigned int expio_intr_fec = MXC_INT_POWER_FAIL;
 EXPORT_SYMBOL(expio_intr_fec);
 #endif
 

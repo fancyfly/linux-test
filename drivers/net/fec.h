@@ -56,6 +56,10 @@ typedef struct fec {
 	unsigned long	fec_r_des_start;	/* Receive descriptor ring */
 	unsigned long	fec_x_des_start;	/* Transmit descriptor ring */
 	unsigned long	fec_r_buff_size;	/* Maximum receive buff size */
+	unsigned long	fec_reserved12[93];
+	unsigned long	fec_miigsk_cfgr;	/* MIIGSK config register */
+	unsigned long	fec_reserved13;
+	unsigned long	fec_miigsk_enr;		/* MIIGSK enable register */
 } fec_t;
 
 #else

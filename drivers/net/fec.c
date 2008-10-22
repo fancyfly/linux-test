@@ -1438,7 +1438,7 @@ static void __inline__ fec_phy_ack_intr(void)
 	*icrp = 0x0d000000;
 }
 
-static void __inline__ fec_localhw_setup(void)
+static void __inline__ fec_localhw_setup(struct net_device *dev)
 {
 }
 
@@ -1641,7 +1641,7 @@ static void __inline__ fec_phy_ack_intr(void)
 {
 }
 
-static void __inline__ fec_localhw_setup(void)
+static void __inline__ fec_localhw_setup(struct net_device *dev)
 {
 }
 /*
@@ -1800,7 +1800,7 @@ static void __inline__ fec_phy_ack_intr(void)
 {
 }
 
-static void __inline__ fec_localhw_setup(void)
+static void __inline__ fec_localhw_setup(struct net_device *dev)
 {
 }
 
@@ -1985,7 +1985,7 @@ static void __inline__ fec_phy_ack_intr(void)
 {
 }
 
-static void __inline__ fec_localhw_setup(void)
+static void __inline__ fec_localhw_setup(struct net_device *dev)
 {
 }
 
@@ -2175,9 +2175,45 @@ static void __inline__ fec_phy_ack_intr(void)
 		disable_irq(expio_intr_fec);
 }
 
-static void __inline__ fec_localhw_setup(void)
+#ifdef CONFIG_ARCH_MX25
+/*
+ * i.MX25 allows RMII mode to be configured via a gasket
+ */
+#define FEC_MIIGSK_CFGR_FRCONT (1 << 6)
+#define FEC_MIIGSK_CFGR_LBMODE (1 << 4)
+#define FEC_MIIGSK_CFGR_EMODE (1 << 3)
+#define FEC_MIIGSK_CFGR_IF_MODE_MASK (3 << 0)
+#define FEC_MIIGSK_CFGR_IF_MODE_MII (0 << 0)
+#define FEC_MIIGSK_CFGR_IF_MODE_RMII (1 << 0)
+
+#define FEC_MIIGSK_ENR_READY (1 << 2)
+#define FEC_MIIGSK_ENR_EN (1 << 1)
+
+static void __inline__ fec_localhw_setup(struct net_device *dev)
+{
+	struct fec_enet_private *fep = netdev_priv(dev);
+	volatile fec_t *fecp = fep->hwp;
+	/*
+	 * Set up the MII gasket for RMII mode
+	 */
+	printk("%s: enable RMII gasket\n", dev->name);
+
+	/* disable the gasket and wait */
+	fecp->fec_miigsk_enr = 0;
+	while (fecp->fec_miigsk_enr & FEC_MIIGSK_ENR_READY)
+		udelay(1);
+
+	/* configure the gasket for RMII, 50 MHz, no loopback, no echo */
+	fecp->fec_miigsk_cfgr = FEC_MIIGSK_CFGR_IF_MODE_RMII;
+
+	/* re-enable the gasket */
+	fecp->fec_miigsk_enr = FEC_MIIGSK_ENR_EN;
+}
+#else
+static void __inline__ fec_localhw_setup(struct net_device *dev)
 {
 }
+#endif
 
 /*
  * invalidate dcache related with the virtual memory range(start, end)
@@ -2325,7 +2361,7 @@ static void __inline__ fec_phy_ack_intr(void)
 {
 }
 
-static void __inline__ fec_localhw_setup(void)
+static void __inline__ fec_localhw_setup(struct net_device *dev)
 {
 	volatile fec_t *fecp;
 
@@ -2988,7 +3024,7 @@ fec_restart(struct net_device *dev, int duplex)
 	*/
 	fecp->fec_r_buff_size = PKT_MAXBLR_SIZE;
 
-	fec_localhw_setup();
+	fec_localhw_setup(dev);
 
 	/* Set receive and transmit descriptor base.
 	*/

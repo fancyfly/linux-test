@@ -116,6 +116,62 @@ static uart_mxc_port mxc_ports[] = {
 	       .rxd_mux = MXC_UART_RXDMUX,
 	       },
 #endif
+#if UART4_ENABLED == 1
+	[3] = {
+	       .port = {
+			.membase = (void *)IO_ADDRESS(UART4_BASE_ADDR),
+			.mapbase = UART4_BASE_ADDR,
+			.iotype = SERIAL_IO_MEM,
+			.irq = UART4_INT1,
+			.fifosize = 32,
+			.flags = ASYNC_BOOT_AUTOCONF,
+			.line = 3,
+			},
+	       .ints_muxed = UART4_MUX_INTS,
+	       .irqs = {UART4_INT2, UART4_INT3},
+	       .mode = UART4_MODE,
+	       .ir_mode = UART4_IR,
+	       .enabled = UART4_ENABLED,
+	       .hardware_flow = UART4_HW_FLOW,
+	       .cts_threshold = UART4_UCR4_CTSTL,
+	       .dma_enabled = UART4_DMA_ENABLE,
+	       .dma_rxbuf_size = UART4_DMA_RXBUFSIZE,
+	       .rx_threshold = UART4_UFCR_RXTL,
+	       .tx_threshold = UART4_UFCR_TXTL,
+	       .shared = UART4_SHARED_PERI,
+	       .dma_tx_id = MXC_DMA_UART4_TX,
+	       .dma_rx_id = MXC_DMA_UART4_RX,
+	       .rxd_mux = MXC_UART_RXDMUX,
+	       },
+#endif
+#if UART5_ENABLED == 1
+	[4] = {
+	       .port = {
+			.membase = (void *)IO_ADDRESS(UART5_BASE_ADDR),
+			.mapbase = UART5_BASE_ADDR,
+			.iotype = SERIAL_IO_MEM,
+			.irq = UART5_INT1,
+			.fifosize = 32,
+			.flags = ASYNC_BOOT_AUTOCONF,
+			.line = 4,
+			},
+	       .ints_muxed = UART5_MUX_INTS,
+	       .irqs = {UART5_INT2, UART5_INT3},
+	       .mode = UART5_MODE,
+	       .ir_mode = UART5_IR,
+	       .enabled = UART5_ENABLED,
+	       .hardware_flow = UART5_HW_FLOW,
+	       .cts_threshold = UART5_UCR4_CTSTL,
+	       .dma_enabled = UART5_DMA_ENABLE,
+	       .dma_rxbuf_size = UART5_DMA_RXBUFSIZE,
+	       .rx_threshold = UART5_UFCR_RXTL,
+	       .tx_threshold = UART5_UFCR_TXTL,
+	       .shared = UART5_SHARED_PERI,
+	       .dma_tx_id = MXC_DMA_UART5_TX,
+	       .dma_rx_id = MXC_DMA_UART5_RX,
+	       .rxd_mux = MXC_UART_RXDMUX,
+	       },
+#endif
 };
 
 static struct platform_device mxc_uart_device1 = {
@@ -143,6 +199,24 @@ static struct platform_device mxc_uart_device3 = {
 		},
 };
 #endif
+#if UART4_ENABLED == 1
+static struct platform_device mxc_uart_device4 = {
+	.name = "mxcintuart",
+	.id = 3,
+	.dev = {
+		.platform_data = &mxc_ports[3],
+		},
+};
+#endif
+#if UART5_ENABLED == 1
+static struct platform_device mxc_uart_device5 = {
+	.name = "mxcintuart",
+	.id = 4,
+	.dev = {
+		.platform_data = &mxc_ports[4],
+		},
+};
+#endif
 
 static int __init mxc_init_uart(void)
 {
@@ -159,6 +233,22 @@ static int __init mxc_init_uart(void)
 #endif				/* UART3_DMA_ENABLE */
 	platform_device_register(&mxc_uart_device3);
 #endif				/* UART3_ENABLED */
+#if UART4_ENABLED == 1
+#if UART4_DMA_ENABLE == 1
+	spba_take_ownership(UART4_SHARED_PERI, (SPBA_MASTER_A | SPBA_MASTER_C));
+#else
+	spba_take_ownership(UART4_SHARED_PERI, SPBA_MASTER_A);
+#endif				/* UARTr_DMA_ENABLE */
+	platform_device_register(&mxc_uart_device4);
+#endif				/* UART4_ENABLED */
+#if UART5_ENABLED == 1
+#if UART5_DMA_ENABLE == 1
+	spba_take_ownership(UART5_SHARED_PERI, (SPBA_MASTER_A | SPBA_MASTER_C));
+#else
+	spba_take_ownership(UART5_SHARED_PERI, SPBA_MASTER_A);
+#endif				/* UART5_DMA_ENABLE */
+	platform_device_register(&mxc_uart_device5);
+#endif				/* UART5_ENABLED */
 
 	return 0;
 }

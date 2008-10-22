@@ -73,6 +73,20 @@
 #define UART3_DMA_RXBUFSIZE     1024
 #define UART3_UFCR_RXTL         16
 #define UART3_UFCR_TXTL         16
+/* UART 4 configuration */
+#define UART4_HW_FLOW           1
+#define UART4_UCR4_CTSTL        16
+#define UART4_DMA_ENABLE        0
+#define UART4_DMA_RXBUFSIZE     1024
+#define UART4_UFCR_RXTL         16
+#define UART4_UFCR_TXTL         16
+/* UART 5 configuration */
+#define UART5_HW_FLOW           1
+#define UART5_UCR4_CTSTL        16
+#define UART5_DMA_ENABLE        0
+#define UART5_DMA_RXBUFSIZE     1024
+#define UART5_UFCR_RXTL         16
+#define UART5_UFCR_TXTL         16
 
 /*
  * UART Chip level Configuration that a user may not have to edit. These
@@ -128,5 +142,17 @@
 #define UART3_INT2              (-1)
 #define UART3_INT3              (-1)
 #define UART3_SHARED_PERI       SPBA_UART3
+/* UART 4 configuration */
+#define UART4_MUX_INTS          INTS_MUXED
+#define UART4_INT1              MXC_INT_UART4
+#define UART4_INT2              (-1)
+#define UART4_INT3              (-1)
+#define UART4_SHARED_PERI       SPBA_UART4
+/* UART 5 configuration */
+#define UART5_MUX_INTS          INTS_MUXED
+#define UART5_INT1              MXC_INT_UART5
+#define UART5_INT2              (-1)
+#define UART5_INT3              (-1)
+#define UART5_SHARED_PERI       SPBA_UART5
 
 #endif				/* __ARCH_ARM_MACH_MX25_SERIAL_H__ */

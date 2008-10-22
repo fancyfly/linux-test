@@ -30,6 +30,8 @@
 #define CHIP_REV_3_1		0x31
 #define CHIP_REV_3_2		0x32
 
+#define BOARD_REV_2		0x100
+
 #ifndef __ASSEMBLY__
 extern unsigned int system_rev;
 #endif
@@ -69,6 +71,7 @@ static inline int type## _rev (int rev)		\
 #ifdef CONFIG_ARCH_MX37
 #include <asm/arch/mx37.h>
 #define cpu_is_mx37()   (1)
+#define board_is_mx37(rev)   ((system_rev & rev) ? 1 : 0)
 #else
 #define cpu_is_mx37()   (0)
 #endif

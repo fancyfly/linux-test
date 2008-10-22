@@ -121,6 +121,10 @@ static void mc13892_reg_int(void)
 		"GPO4",
 	};
 
+	/* for board v1.1 do nothing*/
+	if (!board_is_mx37(BOARD_REV_2))
+		return;
+
 	for (i = 0; i < ARRAY_SIZE(reg_name); i++) {
 		regulator = regulator_get(NULL, reg_name[i]);
 		if (regulator != ERR_PTR(-ENOENT)) {
@@ -293,7 +297,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 	 .type = "mc13892",
 	 .addr = 0x08,
-	 .platform_data = (void *)MX37_PIN_GPIO1_4,
+	 .platform_data = (void *)MX37_PIN_OWIRE_LINE,
 	 },
 };
 
@@ -604,11 +608,23 @@ static void mxc_init_bluetooth(void)
 	(void)platform_device_register(&mxc_bt_device);
 }
 
+
+/*!
+ * fixup for mx37 3stack board v1.1(wm8350)
+ */
+static void mx37_3stack_fixup_for_board_v1(void)
+{
+}
+
+
 /*!
  * Board specific initialization.
  */
 static void __init mxc_board_init(void)
 {
+	if (!board_is_mx37(BOARD_REV_2))
+		mx37_3stack_fixup_for_board_v1();
+
 	mxc_cpu_common_init();
 	mxc_clocks_init();
 	mxc_gpio_init();

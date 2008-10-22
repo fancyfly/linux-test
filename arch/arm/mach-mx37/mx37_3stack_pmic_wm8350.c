@@ -52,6 +52,9 @@ static void wm8350_regulator_init(void)
 		"LDO3",
 	};
 
+	/* for board v2.0 later, do nothing here*/
+	if (board_is_mx37(BOARD_REV_2))
+		return;
 	while (!IS_ERR_VALUE((unsigned long)(regulator = regulator_get(NULL,
 		wm8350_global_regulator[i])))) {
 		regulator_enable(regulator);

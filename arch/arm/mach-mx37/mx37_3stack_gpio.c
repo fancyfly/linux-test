@@ -763,15 +763,14 @@ EXPORT_SYMBOL(gpio_spdif_inactive);
 
 void gpio_pmic_active(void)
 {
-	mxc_request_iomux(MX37_PIN_GPIO1_4, IOMUX_CONFIG_GPIO
-			  | IOMUX_CONFIG_SION);
-	mxc_iomux_set_pad(MX37_PIN_GPIO1_4, PAD_CTL_SRE_SLOW |
+	mxc_request_iomux(MX37_PIN_OWIRE_LINE, IOMUX_CONFIG_GPIO);
+	mxc_iomux_set_pad(MX37_PIN_OWIRE_LINE, PAD_CTL_SRE_SLOW |
 			  PAD_CTL_ODE_OPENDRAIN_NONE |
 			  PAD_CTL_DRV_MEDIUM |
 			  PAD_CTL_100K_PU |
 			  PAD_CTL_HYS_ENABLE |
 			  PAD_CTL_DRV_VOT_HIGH | PAD_CTL_DDR_INPUT_CMOS);
-	mxc_set_gpio_direction(MX37_PIN_GPIO1_4, 1);
+	mxc_set_gpio_direction(MX37_PIN_OWIRE_LINE, 1);
 }
 
 EXPORT_SYMBOL(gpio_pmic_active);

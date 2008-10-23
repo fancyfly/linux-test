@@ -241,14 +241,14 @@ static void lcd_reset(void)
 }
 
 static struct mxc_lcd_platform_data lcd_data = {
-	.core_reg = "LDO1",
-	.io_reg = "DCDC6",
+	.core_reg = "WIDEO",
+	.io_reg = "SW4",
 	.reset = lcd_reset,
 };
 
 static struct mxc_dvfs_platform_data dvfs_data = {
-	.vddgp_reg = "DCDC1",
-	.vcclp_reg = "DCDC4",
+	.vddgp_reg = "SW1",
+	.vcclp_reg = "SW2",
 };
 
 #if defined(CONFIG_KEYBOARD_MPR084) || defined(CONFIG_KEYBOARD_MPR084_MODULE)
@@ -272,7 +272,7 @@ static struct mxc_keyp_platform_data keypad_data = {
 	.inactive = gpio_keypad_inactive,
 };
 static struct mxc_lightsensor_platform_data ls_data = {
-	.vdd_reg = "DCDC3",
+	.vdd_reg = "VGEN2",
 	.rext = 100,
 };
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
@@ -587,9 +587,9 @@ static void bt_reset(void)
 }
 
 static struct mxc_bt_platform_data mxc_bt_data = {
-	.bt_vdd = "DCDC3",
+	.bt_vdd = "VGEN2",
 	.bt_vdd_parent = NULL,
-	.bt_vusb = "DCDC6",
+	.bt_vusb = "SW4",
 	.bt_vusb_parent = NULL,
 	.bt_reset = bt_reset,
 };
@@ -614,6 +614,13 @@ static void mxc_init_bluetooth(void)
  */
 static void mx37_3stack_fixup_for_board_v1(void)
 {
+	lcd_data.core_reg = "LDO1";
+	lcd_data.io_reg = "DCDC6";
+	dvfs_data.vddgp_reg = "DCDC1";
+	dvfs_data.vcclp_reg = "DCDC4";
+	ls_data.vdd_reg = "DCDC3";
+	mxc_bt_data.bt_vdd = "DCDC3";
+	mxc_bt_data.bt_vusb = "DCDC6";
 }
 
 

@@ -419,14 +419,22 @@ static int __init mx37_cpufreq_driver_init(struct cpufreq_policy *policy)
 		return PTR_ERR(osc);
 	}
 
-	gp_regulator = regulator_get(NULL, "DCDC1");
+	if (!board_is_mx37(BOARD_REV_2))
+		gp_regulator = regulator_get(NULL, "DCDC1");
+	else
+		gp_regulator = regulator_get(NULL, "SW1");
+
 	if (IS_ERR(gp_regulator)) {
 		clk_put(cpu_clk);
 		printk(KERN_ERR "%s: failed to get gp regulator\n", __func__);
 		return PTR_ERR(gp_regulator);
 	}
 
-	lp_regulator = regulator_get(NULL, "DCDC4");
+	if (!board_is_mx37(BOARD_REV_2))
+		lp_regulator = regulator_get(NULL, "DCDC4");
+	else
+		lp_regulator = regulator_get(NULL, "SW2");
+
 	if (IS_ERR(lp_regulator)) {
 		clk_put(ahb_clk);
 		printk(KERN_ERR "%s: failed to get lp regulator\n", __func__);

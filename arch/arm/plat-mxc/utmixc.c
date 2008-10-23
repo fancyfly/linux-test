@@ -48,7 +48,10 @@ static void set_power(struct fsl_xcvr_ops *this,
 
 	pr_debug("real %s(on=%d) pdata=0x%p\n", __func__, on, pdata);
 	if (machine_is_mx37_3ds()) {
-		usbotg_regux = regulator_get(dev, "DCDC2");
+		if (!board_is_mx37(BOARD_REV_2))
+			usbotg_regux = regulator_get(dev, "DCDC2");
+		else
+			usbotg_regux = regulator_get(dev, "SWBST");
 		if (on) {
 			regulator_enable(usbotg_regux);
 		} else {

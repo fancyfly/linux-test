@@ -107,7 +107,10 @@ void enter_lp_video_mode(void)
 
 	/* Set the voltage to 0.8v for the GP domain. */
 
-	gp_core = regulator_get(NULL, "DCDC1");
+	if (!board_is_mx37(BOARD_REV_2))
+		gp_core = regulator_get(NULL, "DCDC1");
+	else
+		gp_core = regulator_get(NULL, "SW1");
 
 	ret = regulator_set_voltage(gp_core, GP_LPM_VOLTAGE);
 	if (ret < 0)
@@ -123,7 +126,10 @@ void exit_lp_video_mode(void)
 	struct regulator *gp_core;
 
 	/*Set the voltage to 0.8v for the GP domain. */
-	gp_core = regulator_get(NULL, "DCDC1");
+	if (!board_is_mx37(BOARD_REV_2))
+		gp_core = regulator_get(NULL, "DCDC1");
+	else
+		gp_core = regulator_get(NULL, "SW1");
 
 	ret = regulator_set_voltage(gp_core, GP_NORMAL_VOLTAGE);
 	if (ret < 0)
@@ -209,7 +215,10 @@ void enter_lp_audio_mode(void)
 		clk_disable(tclk);
 
 	/* Set the voltage to 1.0v for the LP domain. */
-	lp_core = regulator_get(NULL, "DCDC4");
+	if (!board_is_mx37(BOARD_REV_2))
+		lp_core = regulator_get(NULL, "DCDC4");
+	else
+		lp_core = regulator_get(NULL, "SW2");
 
 	if (lp_core != NULL) {
 		ret = regulator_set_voltage(lp_core, LP_LPM_VOLTAGE);
@@ -225,7 +234,10 @@ void enter_lp_audio_mode(void)
 		printk(KERN_DEBUG "cannot set CPU clock rate\n");
 
 	/* Set the voltage to 0.8v for the GP domain. */
-	gp_core = regulator_get(NULL, "DCDC1");
+	if (!board_is_mx37(BOARD_REV_2))
+		gp_core = regulator_get(NULL, "DCDC1");
+	else
+		gp_core = regulator_get(NULL, "SW1");
 
 	if (gp_core != NULL) {
 		ret = regulator_set_voltage(gp_core, GP_LPM_VOLTAGE);
@@ -246,7 +258,10 @@ void exit_lp_audio_mode(void)
 
 	lp_audio_mode = 0;
 	/* Set the voltage to 1.2v for the LP domain. */
-	lp_core = regulator_get(NULL, "DCDC4");
+	if (!board_is_mx37(BOARD_REV_2))
+		lp_core = regulator_get(NULL, "DCDC4");
+	else
+		lp_core = regulator_get(NULL, "SW2");
 
 	if (lp_core != NULL) {
 		ret = regulator_set_voltage(lp_core, LP_NORMAL_VOLTAGE);
@@ -255,7 +270,10 @@ void exit_lp_audio_mode(void)
 	}
 
 	/* Set the voltage to 1.0v for the GP domain. */
-	gp_core = regulator_get(NULL, "DCDC1");
+	if (!board_is_mx37(BOARD_REV_2))
+		gp_core = regulator_get(NULL, "DCDC1");
+	else
+		gp_core = regulator_get(NULL, "SW1");
 
 	ret = regulator_set_voltage(gp_core, GP_NORMAL_VOLTAGE);
 	if (ret < 0)

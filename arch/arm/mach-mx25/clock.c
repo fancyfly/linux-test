@@ -1114,7 +1114,7 @@ struct clk scc_clk = {
 
 struct clk sdma_clk[] = {
 	{
-	 .name = "sdma_clk",
+	 .name = "sdma_ipg_clk",
 	 .id = 0,
 	 .parent = &ipg_clk,
 	 .enable = _clk_enable,

@@ -23,6 +23,57 @@
 #include <asm/arch/sdma.h>
 
 #include "iomux.h"
+#include "sdma_script_code.h"
+
+void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
+{
+	sdma_script_addr->mxc_sdma_ap_2_ap_addr = ap_2_ap_ADDR;
+	sdma_script_addr->mxc_sdma_ap_2_bp_addr = -1;
+	sdma_script_addr->mxc_sdma_bp_2_ap_addr = -1;
+	sdma_script_addr->mxc_sdma_loopback_on_dsp_side_addr = -1;
+	sdma_script_addr->mxc_sdma_mcu_interrupt_only_addr = -1;
+
+	sdma_script_addr->mxc_sdma_firi_2_per_addr = -1;
+	sdma_script_addr->mxc_sdma_firi_2_mcu_addr = -1;
+	sdma_script_addr->mxc_sdma_per_2_firi_addr = -1;
+	sdma_script_addr->mxc_sdma_mcu_2_firi_addr = -1;
+
+	sdma_script_addr->mxc_sdma_uart_2_per_addr = uart_2_per_ADDR;
+	sdma_script_addr->mxc_sdma_uart_2_mcu_addr = uart_2_mcu_ADDR;
+	sdma_script_addr->mxc_sdma_per_2_app_addr = per_2_app_ADDR;
+	sdma_script_addr->mxc_sdma_mcu_2_app_addr = mcu_2_app_ADDR;
+
+	sdma_script_addr->mxc_sdma_per_2_per_addr = -1;
+
+	sdma_script_addr->mxc_sdma_uartsh_2_per_addr = uartsh_2_per_ADDR;
+	sdma_script_addr->mxc_sdma_uartsh_2_mcu_addr = uartsh_2_mcu_ADDR;
+	sdma_script_addr->mxc_sdma_per_2_shp_addr = per_2_shp_ADDR;
+	sdma_script_addr->mxc_sdma_mcu_2_shp_addr = mcu_2_shp_ADDR;
+
+	sdma_script_addr->mxc_sdma_ata_2_mcu_addr = ata_2_mcu_ADDR;
+	sdma_script_addr->mxc_sdma_mcu_2_ata_addr = mcu_2_ata_ADDR;
+
+	sdma_script_addr->mxc_sdma_app_2_per_addr = app_2_per_ADDR;
+	sdma_script_addr->mxc_sdma_app_2_mcu_addr = app_2_mcu_ADDR;
+	sdma_script_addr->mxc_sdma_shp_2_per_addr = shp_2_per_ADDR;
+	sdma_script_addr->mxc_sdma_shp_2_mcu_addr = shp_2_mcu_ADDR;
+
+	sdma_script_addr->mxc_sdma_mshc_2_mcu_addr = -1;
+	sdma_script_addr->mxc_sdma_mcu_2_mshc_addr = -1;
+
+	sdma_script_addr->mxc_sdma_spdif_2_mcu_addr = -1;
+	sdma_script_addr->mxc_sdma_mcu_2_spdif_addr = -1;
+
+	sdma_script_addr->mxc_sdma_asrc_2_mcu_addr = -1;
+
+	sdma_script_addr->mxc_sdma_dptc_dvfs_addr = -1;
+	sdma_script_addr->mxc_sdma_ext_mem_2_ipu_addr = ext_mem__ipu_ram_ADDR;
+	sdma_script_addr->mxc_sdma_descrambler_addr = -1;
+
+	sdma_script_addr->mxc_sdma_start_addr = (unsigned short *)sdma_code;
+	sdma_script_addr->mxc_sdma_ram_code_size = RAM_CODE_SIZE;
+	sdma_script_addr->mxc_sdma_ram_code_start_addr = RAM_CODE_START_ADDR;
+}
 
 static void mxc_nop_release(struct device *dev)
 {
@@ -136,6 +187,14 @@ static struct platform_device mxcspi2_device = {
 
 static inline void mxc_init_spi(void)
 {
+#ifdef CONFIG_SPI_MXC_DMA
+	spba_take_ownership(SPBA_CSPI2, SPBA_MASTER_A | SPBA_MASTER_C);
+	spba_take_ownership(SPBA_CSPI3, SPBA_MASTER_A | SPBA_MASTER_C);
+#else
+	spba_take_ownership(SPBA_CSPI2, SPBA_MASTER_A);
+	spba_take_ownership(SPBA_CSPI3, SPBA_MASTER_A);
+#endif
+
 #ifdef CONFIG_SPI_MXC_SELECT1
 	if (platform_device_register(&mxcspi1_device) < 0)
 		printk(KERN_ERR "Error: Registering the SPI Controller_1\n");
@@ -303,6 +362,13 @@ struct mxc_gpio_port mxc_gpio_ports[GPIO_PORT_NUM] = {
 	 },
 };
 
+static inline void mxc_init_ssi(void)
+{
+	/* SPBA configuration for SSI - SDMA and MCU are set */
+	spba_take_ownership(SPBA_SSI1, SPBA_MASTER_A | SPBA_MASTER_C);
+	spba_take_ownership(SPBA_SSI2, SPBA_MASTER_A | SPBA_MASTER_C);
+}
+
 static struct platform_device mxc_dma_device = {
 	.name = "mxc_dma",
 	.id = 0,
@@ -322,6 +388,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_spi();
 	mxc_init_i2c();
 	mxc_init_dma();
+	mxc_init_ssi();
 
 	return 0;
 }

@@ -107,4 +107,5 @@ extern int sdhc_write_protect(struct device *dev);
 extern int sdhc_init_card_det(int id);
 extern struct tve_platform_data tve_data;
 
+extern int headphone_det_status(void);
 #endif				/* __ASM_ARCH_MXC_BOARD_MX37_3STACK_H__ */

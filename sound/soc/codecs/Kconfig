@@ -60,3 +60,7 @@ config SND_SOC_AK4647
 config SND_SOC_WM8580
         tristate
         depends on SND_SOC
+
+config SND_SOC_SGTL5000
+	tristate
+	depends on SND_SOC

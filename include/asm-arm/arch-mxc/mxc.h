@@ -229,6 +229,22 @@ struct tve_platform_data {
 	char *dig_reg;
 };
 
+struct mxc_sgtl5000_platform_data {
+	int ssi_num;
+	int src_port;
+	int ext_port;
+	int hp_irq;
+	int (*hp_status)(void);
+
+	char *vddio_reg;
+	char *vdda_reg;
+	char *amp_gpo;
+	int vddio;	/* voltage of VDDIO (uv) */
+	int vdda;	/* voltage of vdda (uv) */
+	int vddd;	/* voldtage of vddd (uv), zero if not connected */
+	int sysclk;
+};
+
 extern void mxc_wd_reset(void);
 unsigned long board_get_ckih_rate(void);
 

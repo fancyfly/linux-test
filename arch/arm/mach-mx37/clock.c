@@ -2485,6 +2485,104 @@ static struct clk scc_clk = {
 	.secondary = &ahb_clk,
 };
 
+static void cko1_recalc(struct clk *clk)
+{
+	unsigned long rate;
+	u32 reg;
+
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg &= MXC_CCM_CCOSR_CKOL_DIV_MASK;
+	reg = reg >> MXC_CCM_CCOSR_CKOL_DIV_OFFSET;
+	rate = clk->parent->rate;
+	clk->rate = rate / (reg + 1);
+}
+
+static int cko1_enable(struct clk *clk)
+{
+	u32 reg;
+
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg |= MXC_CCM_CCOSR_CKOL_EN;
+	__raw_writel(reg, MXC_CCM_CCOSR);
+	return 0;
+}
+
+static void cko1_disable(struct clk *clk)
+{
+	u32 reg;
+
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg &= ~MXC_CCM_CCOSR_CKOL_EN;
+	__raw_writel(reg, MXC_CCM_CCOSR);
+}
+
+static int cko1_set_rate(struct clk *clk, unsigned long rate)
+{
+	u32 reg, div;
+
+	div = (clk->parent->rate/rate - 1) & 0x7;
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg &= ~MXC_CCM_CCOSR_CKOL_DIV_MASK;
+	reg |= div << MXC_CCM_CCOSR_CKOL_DIV_OFFSET;
+	__raw_writel(reg, MXC_CCM_CCOSR);
+	return 0;
+}
+
+static unsigned long cko1_round_rate(struct clk *clk, unsigned long rate)
+{
+	u32 div;
+
+	div = clk->parent->rate / rate;
+	div = div < 1 ? 1 : div;
+	div = div > 8 ? 8 : div;
+	return clk->parent->rate / div;
+}
+
+static int cko1_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 sel, reg;
+
+	if (parent == &cpu_clk)
+		sel = 0;
+	else if (parent == &pll1_sw_clk)
+		sel = 1;
+	else if (parent == &pll2_sw_clk)
+		sel = 2;
+	else if (parent == &pll3_sw_clk)
+		sel = 3;
+	else if (parent == &emi_core_clk)
+		sel = 4;
+	else if (parent == &nfc_clk)
+		sel = 6;
+	else if (parent == &vpu_clk[1])
+		sel = 7;
+	else if (parent == &ipu_di_clk)
+		sel = 8;
+	else if (parent == &ahb_clk)
+		sel = 11;
+	else if (parent == &ipg_clk)
+		sel = 12;
+	else if (parent == &ipg_perclk)
+		sel = 13;
+	else
+		return -EINVAL;
+
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg &= ~MXC_CCM_CCOSR_CKOL_SEL_MASK;
+	reg |= sel << MXC_CCM_CCOSR_CKOL_SEL_OFFSET;
+	__raw_writel(reg, MXC_CCM_CCOSR);
+	return 0;
+}
+static struct clk cko1_clk = {
+	.name = "cko1_clk",
+	.recalc = cko1_recalc,
+	.enable = cko1_enable,
+	.disable = cko1_disable,
+	.set_rate = cko1_set_rate,
+	.round_rate = cko1_round_rate,
+	.set_parent = cko1_set_parent,
+};
+
 static struct clk *mxc_clks[] = {
 	&osc_clk,
 	&ckih_clk,
@@ -2580,6 +2678,7 @@ static struct clk *mxc_clks[] = {
 	&ata_clk,
 	&rng_clk,
 	&scc_clk,
+	&cko1_clk,
 };
 
 static void clk_tree_init(void)
@@ -2754,6 +2853,8 @@ int __init mxc_clocks_init(void)
 	clk_set_parent(&arm_axi_clk, &emi_core_clk);
 	clk_set_parent(&vpu_clk[0], &emi_core_clk);
 	clk_set_parent(&vpu_clk[1], &emi_core_clk);
+
+	clk_set_parent(&cko1_clk, &ipg_perclk);
 
 	/* Set the current working point. */
 	cpu_wp_tbl = get_cpu_wp(&cpu_wp_nr);

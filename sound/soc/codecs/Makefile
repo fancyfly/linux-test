@@ -10,6 +10,7 @@ snd-soc-cs4270-objs := cs4270.o
 snd-soc-ak4647-objs := ak4647.o
 snd-soc-tlv320aic3x-objs := tlv320aic3x.o
 snd-soc-wm8580-objs := wm8580.o
+snd-soc-sgtl5000-objs := sgtl5000.o
 
 obj-$(CONFIG_SND_SOC_AC97_CODEC)	+= snd-soc-ac97.o
 obj-$(CONFIG_SND_SOC_WM8350)	+= snd-soc-wm8350.o
@@ -23,3 +24,4 @@ obj-$(CONFIG_SND_SOC_CS4270)	+= snd-soc-cs4270.o
 obj-$(CONFIG_SND_SOC_AK4647)	+= snd-soc-ak4647.o
 obj-$(CONFIG_SND_SOC_TLV320AIC3X)	+= snd-soc-tlv320aic3x.o
 obj-$(CONFIG_SND_SOC_WM8580)    += snd-soc-wm8580.o
+obj-$(CONFIG_SND_SOC_SGTL5000)	+= snd-soc-sgtl5000.o

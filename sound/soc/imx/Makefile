@@ -16,3 +16,5 @@ snd-soc-imx-3stack-wm8580-objs := imx-3stack-wm8580.o
 obj-$(CONFIG_SND_SOC_IMX_3STACK_WM8580) += snd-soc-imx-3stack-wm8580.o
 snd-soc-imx-3stack-wm8903-objs := imx-3stack-wm8903.o
 obj-$(CONFIG_SND_SOC_IMX_3STACK_WM8903) += snd-soc-imx-3stack-wm8903.o
+snd-soc-imx-3stack-sgtl5000-objs := imx-3stack-sgtl5000.o
+obj-$(CONFIG_SND_SOC_IMX_3STACK_SGTL5000) += snd-soc-imx-3stack-sgtl5000.o

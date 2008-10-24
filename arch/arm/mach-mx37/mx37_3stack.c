@@ -300,14 +300,18 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	 .platform_data = &ls_data,
 	 },
 };
+
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 	 .type = "mc13892",
 	 .addr = 0x08,
 	 .platform_data = (void *)MX37_PIN_OWIRE_LINE,
 	 },
+	{
+	 .type = "sgtl5000-i2c",
+	 .addr = 0x0a,
+	 },
 };
-
 
 static struct spi_board_info mxc_spi_board_info[] __initdata = {
 	{
@@ -715,6 +719,80 @@ static void mxc_init_bluetooth(void)
 	(void)platform_device_register(&mxc_bt_device);
 }
 
+#if defined(CONFIG_SND_SOC_IMX_3STACK_SGTL5000) \
+    || defined(CONFIG_SND_SOC_IMX_3STACK_SGTL5000_MODULE)
+static struct mxc_sgtl5000_platform_data sgtl5000_data = {
+	.ssi_num = 1,
+	.src_port = 2,
+	.ext_port = 5,
+	.hp_irq = IOMUX_TO_IRQ(MX37_PIN_AUD5_RXFS),
+	.hp_status = headphone_det_status,
+	.vddio_reg = "SW3",
+	.vdda_reg = "VAUDIO",
+	.amp_gpo = "GPO2",
+	.vddio = 1850000,
+	.vdda = 2775000,
+	.vddd = 0,
+	.sysclk = 8300000,
+};
+
+static struct platform_device sgtl5000_device = {
+	.name = "sgtl5000-imx",
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &sgtl5000_data,
+		},
+};
+
+static void mxc_sgtl5000_init(void)
+{
+	int err, pin;
+	struct clk *cko1, *parent;
+	unsigned long rate;
+
+	/* for board v1.1 do nothing*/
+	if (!board_is_mx37(BOARD_REV_2))
+		return;
+
+	pin = MX37_PIN_AUD5_RXFS;
+	err = mxc_request_iomux(pin, IOMUX_CONFIG_GPIO);
+	if (err) {
+		sgtl5000_data.hp_irq = -1;
+		printk(KERN_ERR "Error: sgtl5000_init request gpio failed!\n");
+		return;
+	}
+	mxc_iomux_set_pad(pin, PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU);
+	mxc_set_gpio_direction(pin, 1);
+
+	/* cko1 clock */
+	mxc_request_iomux(MX37_PIN_GPIO1_6, IOMUX_CONFIG_ALT2);
+
+	cko1 = clk_get(NULL, "cko1_clk");
+	if (IS_ERR(cko1))
+		return;
+	parent = clk_get(NULL, "ipg_perclk");
+	if (IS_ERR(parent))
+		return;
+	clk_set_parent(cko1, parent);
+	rate = clk_round_rate(cko1, 13000000);
+	if (rate < 8000000 || rate > 27000000) {
+		printk(KERN_ERR "Error: SGTL5000 mclk freq %d out of range!\n",
+			rate);
+		clk_put(parent);
+		clk_put(cko1);
+		return;
+	}
+	clk_set_rate(cko1, rate);
+	clk_enable(cko1);
+	sgtl5000_data.sysclk = rate;
+	platform_device_register(&sgtl5000_device);
+}
+#else
+static inline void mxc_sgtl5000_init(void)
+{
+}
+#endif
+
 /*!
  * fixup for mx37 3stack board v1.1(wm8350)
  */
@@ -774,7 +852,6 @@ static void __init mxc_board_init(void)
 		mx37_3stack_fixup_for_board_v1();
 	i2c_register_board_info(0, mxc_i2c0_board_info,
 				ARRAY_SIZE(mxc_i2c0_board_info));
-
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 				ARRAY_SIZE(mxc_i2c1_board_info));
 
@@ -787,6 +864,7 @@ static void __init mxc_board_init(void)
 	mxc_init_bl();
 	mxc_init_bluetooth();
 	mxc_init_gps();
+	mxc_sgtl5000_init();
 }
 
 /*

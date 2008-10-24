@@ -987,3 +987,10 @@ void gpio_gps_inactive(void)
 }
 
 EXPORT_SYMBOL(gpio_gps_inactive);
+
+int headphone_det_status(void)
+{
+	return mxc_get_gpio_datain(MX37_PIN_AUD5_RXFS);
+}
+
+EXPORT_SYMBOL(headphone_det_status);

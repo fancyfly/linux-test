@@ -397,6 +397,10 @@ static struct mxc_camera_platform_data camera_data = {
 	.mclk = 24000000,
 	.csi = 0,
 };
+static struct mxc_lightsensor_platform_data ls_data = {
+	.vdd_reg = NULL,
+	.rext = 100,
+};
 
 static struct i2c_board_info mxc_i2c_hs_board_info[] __initdata = {
 	{
@@ -404,6 +408,11 @@ static struct i2c_board_info mxc_i2c_hs_board_info[] __initdata = {
 		.addr = 0x3C,
 		.platform_data = (void *)&camera_data,
 	},
+	{
+	 .type = "isl29003",
+	 .addr = 0x44,
+	 .platform_data = &ls_data,
+	 },
 };
 #endif
 

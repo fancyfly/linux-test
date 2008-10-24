@@ -385,7 +385,10 @@ int sdhc_get_card_det_status(struct device *dev)
 	int ret;
 
 	if (to_platform_device(dev)->id == 0) {
-		ret = mxc_get_gpio_datain(MX37_PIN_OWIRE_LINE);
+		if (board_is_mx37(BOARD_REV_2))
+			ret = mxc_get_gpio_datain(MX37_PIN_GPIO1_4);
+		else
+			ret = mxc_get_gpio_datain(MX37_PIN_OWIRE_LINE);
 		return ret;
 	} else {		/* config the det pin for SDHC2 */
 		return 0;
@@ -400,12 +403,26 @@ EXPORT_SYMBOL(sdhc_get_card_det_status);
 int sdhc_init_card_det(int id)
 {
 	if (id == 0) {
-		mxc_request_iomux(MX37_PIN_OWIRE_LINE, IOMUX_CONFIG_ALT4);
-		mxc_iomux_set_pad(MX37_PIN_OWIRE_LINE, PAD_CTL_DRV_HIGH |
-				  PAD_CTL_HYS_NONE | PAD_CTL_ODE_OPENDRAIN_NONE
-				  | PAD_CTL_PKE_NONE | PAD_CTL_SRE_FAST);
-		mxc_set_gpio_direction(MX37_PIN_OWIRE_LINE, 1);
-		return IOMUX_TO_IRQ(MX37_PIN_OWIRE_LINE);
+		if (board_is_mx37(BOARD_REV_2)) {
+			mxc_request_iomux(MX37_PIN_GPIO1_4, IOMUX_CONFIG_ALT0);
+			mxc_iomux_set_pad(MX37_PIN_GPIO1_4,
+					  PAD_CTL_DRV_HIGH |
+					  PAD_CTL_HYS_NONE |
+					  PAD_CTL_ODE_OPENDRAIN_NONE |
+					  PAD_CTL_PKE_NONE | PAD_CTL_SRE_FAST);
+			mxc_set_gpio_direction(MX37_PIN_GPIO1_4, 1);
+			return IOMUX_TO_IRQ(MX37_PIN_GPIO1_4);
+		} else {
+			mxc_request_iomux(MX37_PIN_OWIRE_LINE,
+					  IOMUX_CONFIG_ALT4);
+			mxc_iomux_set_pad(MX37_PIN_OWIRE_LINE,
+					  PAD_CTL_DRV_HIGH |
+					  PAD_CTL_HYS_NONE |
+					  PAD_CTL_ODE_OPENDRAIN_NONE |
+					  PAD_CTL_PKE_NONE | PAD_CTL_SRE_FAST);
+			mxc_set_gpio_direction(MX37_PIN_OWIRE_LINE, 1);
+			return IOMUX_TO_IRQ(MX37_PIN_OWIRE_LINE);
+		}
 	} else {		/* config the det pin for SDHC2 */
 		return 0;
 

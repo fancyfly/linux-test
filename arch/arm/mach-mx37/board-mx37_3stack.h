@@ -105,5 +105,6 @@
 extern unsigned int sdhc_get_card_det_status(struct device *dev);
 extern int sdhc_write_protect(struct device *dev);
 extern int sdhc_init_card_det(int id);
+extern struct tve_platform_data tve_data;
 
 #endif				/* __ASM_ARCH_MXC_BOARD_MX37_3STACK_H__ */

@@ -74,6 +74,7 @@ static inline int type## _rev (int rev)		\
 #define board_is_mx37(rev)   ((system_rev & rev) ? 1 : 0)
 #else
 #define cpu_is_mx37()   (0)
+#define board_is_mx37(rev)   (0)
 #endif
 
 #ifdef CONFIG_ARCH_MX51

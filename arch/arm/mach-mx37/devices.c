@@ -553,7 +553,10 @@ static inline void mxc_init_i2c(void)
 }
 #endif
 
-static struct tve_platform_data tve_data;
+struct tve_platform_data tve_data = {
+	.dac_reg = "VVIDEO",
+	.dig_reg = "VDIG",
+};
 
 static struct resource tve_resources[] = {
 	{

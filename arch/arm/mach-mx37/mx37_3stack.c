@@ -241,7 +241,7 @@ static void lcd_reset(void)
 }
 
 static struct mxc_lcd_platform_data lcd_data = {
-	.core_reg = "WIDEO",
+	.core_reg = "VVIDEO",
 	.io_reg = "SW4",
 	.reset = lcd_reset,
 };
@@ -614,6 +614,8 @@ static void mxc_init_bluetooth(void)
  */
 static void mx37_3stack_fixup_for_board_v1(void)
 {
+	tve_data.dac_reg = "LDO2";
+	tve_data.dig_reg = "LDO3";
 	lcd_data.core_reg = "LDO1";
 	lcd_data.io_reg = "DCDC6";
 	dvfs_data.vddgp_reg = "DCDC1";

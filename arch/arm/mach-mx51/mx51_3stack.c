@@ -63,6 +63,30 @@ extern void mxc_cpu_common_init(void);
 extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
 
+/* working point(wp): 0 - 665MHz; 1 - 200MHz; */
+static struct cpu_wp cpu_wp_auto[] = {
+	{
+	 .pll_rate = 665000000,
+	 .cpu_rate = 665000000,
+	 .pdf = 0,
+	 .mfi = 6,
+	 .mfd = 95,
+	 .mfn = 89,},
+	{
+	 .pll_rate = 200000000,
+	 .cpu_rate = 200000000,
+	 .pdf = 3,
+	 .mfi = 8,
+	 .mfd = 2,
+	 .mfn = 1,},
+};
+
+struct cpu_wp *get_cpu_wp(int *wp)
+{
+	*wp = 2;
+	return cpu_wp_auto;
+}
+
 static void mc13892_reg_int(void)
 {
 	int i = 0;

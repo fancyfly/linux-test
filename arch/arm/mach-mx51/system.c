@@ -31,6 +31,7 @@
  */
 
 extern int mxc_jtag_enabled;
+static struct clk *gpc_dvfs_clk;
 
 void mxc_pg_enable(struct platform_device *pdev)
 {
@@ -48,8 +49,14 @@ EXPORT_SYMBOL(mxc_pg_disable);
  */
 void arch_idle(void)
 {
-	if (likely(!mxc_jtag_enabled))
+	if (likely(!mxc_jtag_enabled)) {
+		if (gpc_dvfs_clk == NULL)
+			gpc_dvfs_clk = clk_get(NULL, "gpc_dvfs_clk");
+		/* gpc clock is needed for SRPG */
+		clk_enable(gpc_dvfs_clk);
 		cpu_do_idle();
+		clk_disable(gpc_dvfs_clk);
+	}
 
 }
 

@@ -165,6 +165,8 @@ static int prp_still_stop(void *private)
 	cam_data *cam = (cam_data *) private;
 	int err = 0;
 
+	callback_eof_flag = 0;
+
 #ifdef CONFIG_MXC_IPU_V1
 	ipu_free_irq(IPU_IRQ_SENSOR_EOF, NULL);
 	ipu_free_irq(IPU_IRQ_SENSOR_OUT_EOF, cam);

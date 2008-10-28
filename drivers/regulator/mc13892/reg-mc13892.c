@@ -255,6 +255,11 @@ enum {
 #define GPO4_EN_ENABLE	1
 #define GPO4_EN_DISABLE	0
 
+#define GPO4_ADIN_LSH	21
+#define GPO4_ADIN_WID	1
+#define GPO4_ADIN_ENABLE	1
+#define GPO4_ADIN_DISABLE	0
+
 static int mc13892_get_sw_hi_bit(int sw)
 {
 	unsigned int register_val = 0;
@@ -1377,8 +1382,9 @@ static int mc13892_gpo_enable(struct regulator *reg)
 		register_mask = BITFMASK(GPO3_EN);
 		break;
 	case MC13892_GPO4:
-		register_val = BITFVAL(GPO4_EN, GPO4_EN_ENABLE);
-		register_mask = BITFMASK(GPO4_EN);
+		register_val = BITFVAL(GPO4_EN, GPO4_EN_ENABLE) +
+		    BITFVAL(GPO4_ADIN, GPO4_ADIN_DISABLE);
+		register_mask = BITFMASK(GPO4_EN) + BITFMASK(GPO4_ADIN);
 		break;
 	default:
 		return -EINVAL;

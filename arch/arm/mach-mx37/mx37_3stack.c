@@ -581,9 +581,17 @@ static inline void mxc_init_mmc(void)
 
 static void bt_reset(void)
 {
-	mxc_request_iomux(MX37_PIN_AUD5_RXC, IOMUX_CONFIG_GPIO);
-	mxc_set_gpio_dataout(MX37_PIN_AUD5_RXC, 1);
-	mxc_set_gpio_direction(MX37_PIN_AUD5_RXC, 0);
+	struct regulator *gpo4;
+	if (board_is_mx37(BOARD_REV_2)) {
+		gpo4 = regulator_get(NULL, "GPO4");
+		if (!IS_ERR(gpo4))
+			regulator_enable(gpo4);
+		regulator_put(gpo4, NULL);
+	} else {
+		mxc_request_iomux(MX37_PIN_AUD5_RXC, IOMUX_CONFIG_GPIO);
+		mxc_set_gpio_dataout(MX37_PIN_AUD5_RXC, 1);
+		mxc_set_gpio_direction(MX37_PIN_AUD5_RXC, 0);
+	}
 }
 
 static struct mxc_bt_platform_data mxc_bt_data = {

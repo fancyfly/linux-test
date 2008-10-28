@@ -631,6 +631,7 @@ static void mx37_3stack_fixup_for_board_v1(void)
 	ls_data.vdd_reg = "DCDC3";
 	mxc_bt_data.bt_vdd = "DCDC3";
 	mxc_bt_data.bt_vusb = "DCDC6";
+	mxc_init_touchscreen();
 }
 
 
@@ -659,7 +660,6 @@ static void __init mxc_board_init(void)
 	mxc_init_pata();
 	mxc_init_fb();
 	mxc_init_bl();
-	mxc_init_touchscreen();
 	mxc_init_bluetooth();
 }
 

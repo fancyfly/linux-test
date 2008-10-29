@@ -2055,6 +2055,8 @@ static int snd_card_mxc_spdif_pcm(struct mxc_spdif_device *mxc_spdif)
 	return 0;
 }
 
+extern void gpio_spdif_active(void);
+
 /*!
   * This function initializes the driver in terms of memory of the soundcard
   * and some basic HW clock settings.
@@ -2153,6 +2155,7 @@ static int mxc_alsa_spdif_probe(struct platform_device
 	if (err == 0) {
 		pr_info("MXC spdif support initialized\n");
 		platform_set_drvdata(pdev, card);
+		gpio_spdif_active();
 		return 0;
 	}
 
@@ -2160,6 +2163,8 @@ static int mxc_alsa_spdif_probe(struct platform_device
 	snd_card_free(card);
 	return err;
 }
+
+extern void gpio_spdif_inactive(void);
 
 /*!
   * This function releases the sound card and unmap the io address
@@ -2184,6 +2189,7 @@ static int mxc_alsa_spdif_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
 	clk_disable(plat_data->spdif_core_clk);
+	gpio_spdif_inactive();
 
 	return 0;
 }

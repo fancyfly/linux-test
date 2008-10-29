@@ -26,8 +26,6 @@
 #include "sdma_script_code.h"
 #include "board-mx35_3stack.h"
 
-extern void gpio_spdif_active(void);
-
 void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
 {
 	sdma_script_addr->mxc_sdma_ap_2_ap_addr = ap_2_ap_ADDR;
@@ -495,7 +493,6 @@ static inline void mxc_init_spdif(void)
 	clk_put(mxc_spdif_data.spdif_clk);
 	mxc_spdif_data.spdif_core_clk = clk_get(NULL, "spdif_clk");
 	clk_put(mxc_spdif_data.spdif_core_clk);
-	gpio_spdif_active();
 	platform_device_register(&mxc_alsa_spdif_device);
 }
 

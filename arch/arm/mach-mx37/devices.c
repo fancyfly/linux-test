@@ -29,7 +29,6 @@
 
 extern struct dptc_wp dptc_gp_wp_allfreq[DPTC_GP_WP_SUPPORTED];
 extern struct dptc_wp dptc_lp_wp_allfreq[DPTC_LP_WP_SUPPORTED];
-extern void gpio_spdif_active(void);
 
 void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
 {
@@ -719,7 +718,6 @@ static inline void mxc_init_spdif(void)
 	clk_set_parent(mxc_spdif_data.spdif_core_clk, ckih_clk);
 	clk_put(ckih_clk);
 	clk_put(mxc_spdif_data.spdif_core_clk);
-	gpio_spdif_active();
 	platform_device_register(&mxc_alsa_spdif_device);
 }
 

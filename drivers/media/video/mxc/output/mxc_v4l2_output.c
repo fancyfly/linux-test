@@ -323,7 +323,6 @@ static irqreturn_t mxc_v4l2out_pp_in_irq_handler(int irq, void *dev_id)
 	unsigned long timeout;
 	unsigned long lock_flags = 0;
 	vout_data *vout = dev_id;
-	int param[5][3];
 
 	spin_lock_irqsave(&g_lock, lock_flags);
 
@@ -339,12 +338,6 @@ static irqreturn_t mxc_v4l2out_pp_in_irq_handler(int irq, void *dev_id)
 		wake_up_interruptible(&vout->v4l_bufq);
 		/* printk("pp_irq: buf %d done\n", vout->next_done_ipu_buf); */
 		vout->next_done_ipu_buf = !vout->next_done_ipu_buf;
-		if (vout->v4l2_bufs[last_buf].reserved)
-			if (!copy_from_user(&param[0][0],
-					    (void *)vout->v4l2_bufs[last_buf]
-					    .reserved, sizeof(param)))
-				ipu_set_csc_coefficients(vout->display_ch,
-							 param);
 	}
 
 	if (vout->state == STATE_STREAM_STOPPING) {
@@ -1258,6 +1251,7 @@ mxc_v4l2out_do_ioctl(struct inode *inode, struct file *file,
 			struct v4l2_buffer *buf = arg;
 			int index = buf->index;
 			unsigned long lock_flags;
+			int param[5][3];
 
 			if ((buf->type != V4L2_BUF_TYPE_VIDEO_OUTPUT) ||
 			    (index >= vout->buffer_cnt)) {
@@ -1279,6 +1273,14 @@ mxc_v4l2out_do_ioctl(struct inode *inode, struct file *file,
 			vout->v4l2_bufs[index].flags |= V4L2_BUF_FLAG_QUEUED;
 
 			g_buf_q_cnt++;
+			if (vout->v4l2_bufs[index].reserved)
+				if (!copy_from_user(&param[0][0],
+						    (void *)vout->
+						    v4l2_bufs[index]
+						    .reserved, sizeof(param)))
+					ipu_set_csc_coefficients(vout->
+								 display_ch,
+								 param);
 			queue_buf(&vout->ready_q, index);
 			if (vout->state == STATE_STREAM_PAUSED) {
 				unsigned long timeout;

@@ -29,8 +29,6 @@
 #include "sdma_script_code.h"
 #include <asm/arch/mxc_scc2_driver.h>
 
-extern void gpio_spdif_active(void);
-
 void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
 {
 	/* AP<->BP */
@@ -829,7 +827,6 @@ static struct platform_device mxc_alsa_spdif_device = {
 
 static inline void mxc_init_spdif(void)
 {
-	gpio_spdif_active();
 	mxc_spdif_data.spdif_core_clk = clk_get(NULL, "spdif_xtal_clk");
 	clk_put(mxc_spdif_data.spdif_core_clk);
 	platform_device_register(&mxc_alsa_spdif_device);

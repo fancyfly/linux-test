@@ -623,7 +623,6 @@ static void mxc_init_bluetooth(void)
 	(void)platform_device_register(&mxc_bt_device);
 }
 
-
 /*!
  * fixup for mx37 3stack board v1.1(wm8350)
  */
@@ -641,6 +640,29 @@ static void mx37_3stack_fixup_for_board_v1(void)
 	mxc_init_touchscreen();
 }
 
+#if defined(CONFIG_GPS_IOCTRL) || defined(CONFIG_GPS_IOCTRL_MODULE)
+static struct mxc_gps_platform_data gps_data = {
+	.core_reg = "VIOHI",
+	.analog_reg = "SW3",
+};
+
+static struct platform_device mxc_gps_device = {
+	.name = "gps_ioctrl",
+	.id = 0,
+	.dev = {
+		.platform_data = &gps_data,
+		},
+};
+
+static void __init mxc_init_gps(void)
+{
+	(void)platform_device_register(&mxc_gps_device);
+}
+#else
+static void __init mxc_init_gps(void)
+{
+}
+#endif
 
 /*!
  * Board specific initialization.
@@ -667,6 +689,7 @@ static void __init mxc_board_init(void)
 	mxc_init_fb();
 	mxc_init_bl();
 	mxc_init_bluetooth();
+	mxc_init_gps();
 }
 
 /*

@@ -192,16 +192,24 @@ static int __init gps_ioctrl_probe(struct platform_device *pdev)
 	if (mxc_gps_ioctrl_data->core_reg != NULL) {
 		gps_regu =
 		    regulator_get(&(pdev->dev), mxc_gps_ioctrl_data->core_reg);
-		regulator_enable(gps_regu);
-		regulator_put(gps_regu, &(pdev->dev));
+		if (!IS_ERR_VALUE((u32)gps_regu)) {
+			regulator_enable(gps_regu);
+			regulator_put(gps_regu, &(pdev->dev));
+		} else {
+			return -1;
+		}
 	}
 	/* open GPS GPO1 2v8 for GL gps support */
 	if (mxc_gps_ioctrl_data->analog_reg != NULL) {
 		gps_regu =
 		    regulator_get(&(pdev->dev),
 				  mxc_gps_ioctrl_data->analog_reg);
-		regulator_enable(gps_regu);
-		regulator_put(gps_regu, &(pdev->dev));
+		if (!IS_ERR_VALUE((u32)gps_regu)) {
+			regulator_enable(gps_regu);
+			regulator_put(gps_regu, &(pdev->dev));
+		} else {
+			return -1;
+		}
 	}
 	gpio_gps_active();
 

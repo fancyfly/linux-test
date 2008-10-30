@@ -87,6 +87,24 @@ void gpio_uart_active(int port, int no_irda)
 				  PAD_CTL_DRV_HIGH);
 		break;
 	case 2:
+		mxc_request_iomux(MX37_PIN_AUD3_BB_TXD, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX37_PIN_AUD3_BB_TXD, PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_input(MUX_IN_UART3_UART_RXD_MUX, INPUT_CTL_PATH0);
+		mxc_request_iomux(MX37_PIN_AUD3_BB_RXD, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX37_PIN_AUD3_BB_RXD, PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
+		mxc_request_iomux(MX37_PIN_AUD3_BB_CK, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX37_PIN_AUD3_BB_CK, PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH);
+		mxc_iomux_set_input(MUX_IN_UART3_UART_RTS_B, INPUT_CTL_PATH0);
+		mxc_request_iomux(MX37_PIN_AUD3_BB_FS, IOMUX_CONFIG_ALT3);
+		mxc_iomux_set_pad(MX37_PIN_AUD3_BB_FS, PAD_CTL_HYS_ENABLE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_DRV_HIGH);
 		break;
 	default:
 		break;
@@ -101,7 +119,25 @@ void gpio_uart_active(int port, int no_irda)
  */
 void gpio_uart_inactive(int port, int no_irda)
 {
-
+	/*
+	 * Configure the IOMUX control registers for the UART signals
+	 * and disable the UART transceivers
+	 */
+	switch (port) {
+		/* UART 3 IOMUX Configs */
+	case 2:
+		mxc_request_iomux(MX37_PIN_AUD3_BB_TXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_AUD3_BB_TXD, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX37_PIN_AUD3_BB_RXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_AUD3_BB_RXD, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX37_PIN_AUD3_BB_CK, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_AUD3_BB_CK, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX37_PIN_AUD3_BB_FS, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_AUD3_BB_FS, IOMUX_CONFIG_GPIO);
+		break;
+	default:
+		break;
+	}
 }
 
 /*!
@@ -792,3 +828,55 @@ void gpio_pmic_active(void)
 
 EXPORT_SYMBOL(gpio_pmic_active);
 
+void gpio_gps_active(void)
+{
+	/* PWR_EN */
+	mxc_request_iomux(MX37_PIN_EIM_OE, IOMUX_CONFIG_GPIO);
+	mxc_iomux_set_pad(MX37_PIN_EIM_OE, PAD_CTL_100K_PU |
+			  PAD_CTL_DRV_HIGH | PAD_CTL_HYS_NONE |
+			  PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+	mxc_set_gpio_direction(MX37_PIN_EIM_OE, 0);
+
+	/* RESET */
+	mxc_request_iomux(MX37_PIN_EIM_BCLK, IOMUX_CONFIG_GPIO);
+	mxc_iomux_set_pad(MX37_PIN_EIM_BCLK, PAD_CTL_DRV_HIGH |
+			  PAD_CTL_HYS_NONE | PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+	mxc_set_gpio_direction(MX37_PIN_EIM_BCLK, 0);
+
+	mxc_set_gpio_dataout(MX37_PIN_EIM_OE, 0);
+	mxc_set_gpio_dataout(MX37_PIN_EIM_BCLK, 0);
+
+	msleep(5);
+	mxc_set_gpio_dataout(MX37_PIN_EIM_BCLK, 1);
+
+	msleep(5);
+}
+
+EXPORT_SYMBOL(gpio_gps_active);
+
+int gpio_gps_access(int para)
+{
+	iomux_pin_name_t pin;
+	pin = (para & 0x1) ? MX37_PIN_EIM_OE : MX37_PIN_EIM_BCLK;
+
+	if (para & 0x4)
+		return mxc_get_gpio_datain(pin);
+	else if (para & 0x2)
+		mxc_set_gpio_dataout(pin, 1);
+	else
+		mxc_set_gpio_dataout(pin, 0);
+
+	return 0;
+}
+
+EXPORT_SYMBOL(gpio_gps_access);
+
+void gpio_gps_inactive(void)
+{
+	mxc_free_iomux(MX37_PIN_EIM_BCLK, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX37_PIN_EIM_OE, IOMUX_CONFIG_GPIO);
+}
+
+EXPORT_SYMBOL(gpio_gps_inactive);

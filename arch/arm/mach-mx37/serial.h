@@ -65,7 +65,7 @@
 /* UART 3 configuration */
 #define UART3_HW_FLOW           1
 #define UART3_UCR4_CTSTL        16
-#define UART3_DMA_ENABLE        1
+#define UART3_DMA_ENABLE        0
 #define UART3_DMA_RXBUFSIZE     1024
 #define UART3_UFCR_RXTL         16
 #define UART3_UFCR_TXTL         16

@@ -99,8 +99,15 @@ static void mxc_nop_release(struct device *dev)
 }
 
 #if defined(CONFIG_W1_MASTER_MXC) || defined(CONFIG_W1_MASTER_MXC_MODULE)
+static struct resource w1_resources[] = {
+	{
+	 .start = MXC_INT_OWIRE,
+	 .flags = IORESOURCE_IRQ,
+	 }
+};
+
 static struct mxc_w1_config mxc_w1_data = {
-	.search_rom_accelerator = 0,
+	.search_rom_accelerator = 1,
 };
 
 static struct platform_device mxc_w1_devices = {
@@ -109,6 +116,8 @@ static struct platform_device mxc_w1_devices = {
 		.release = mxc_nop_release,
 		.platform_data = &mxc_w1_data,
 		},
+	.num_resources = ARRAY_SIZE(w1_resources),
+	.resource = w1_resources,
 	.id = 0
 };
 

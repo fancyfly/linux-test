@@ -326,7 +326,10 @@ EXPORT_SYMBOL(gpio_spi_inactive);
  */
 void gpio_owire_active(void)
 {
-
+	mxc_request_iomux(MX51_PIN_OWIRE_LINE, IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX51_PIN_OWIRE_LINE, PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_PKE_ENABLE | PAD_CTL_ODE_OPENDRAIN_ENABLE |
+			  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
 }
 
 EXPORT_SYMBOL(gpio_owire_active);
@@ -336,7 +339,7 @@ EXPORT_SYMBOL(gpio_owire_active);
  */
 void gpio_owire_inactive(void)
 {
-
+	mxc_free_iomux(MX51_PIN_OWIRE_LINE, IOMUX_CONFIG_ALT0);
 }
 
 EXPORT_SYMBOL(gpio_owire_inactive);

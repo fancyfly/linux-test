@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -63,7 +63,7 @@ typedef enum
    SAH_STATE_IGNORED
 } sah_Queue_Status;
 
-/* any of these conditions being true indictes the descriptor's processing
+/* any of these conditions being true indicates the descriptor's processing
  * is complete */
 #define SAH_DESC_PROCESSED(status)                             \
                         (((status) == SAH_STATE_COMPLETE) ||   \
@@ -78,6 +78,10 @@ extern uint32_t done1done2_count;
 extern uint32_t done1busy2_count;
 extern uint32_t done1_count;
 
+#ifdef FSL_HAVE_SCC2
+extern void *lookup_user_partition(fsl_shw_uco_t * user_ctx,
+				   uint32_t user_base);
+#endif
 
 int sah_get_results_pointers(fsl_shw_uco_t* user_ctx, uint32_t arg);
 fsl_shw_return_t sah_get_results_from_pool(volatile fsl_shw_uco_t* user_ctx,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -25,6 +25,14 @@
 
 #ifndef SAHARA2_API_H
 #define SAHARA2_API_H
+
+/* Sahara Debug Flags */
+#if 0
+#define DIAG_DRV_IF
+#define DIAG_SECURITY_FUNC
+#define DIAG_ADAPTOR
+#define DO_DBG
+#endif
 
 #ifdef DIAG_SECURITY_FUNC
 #include <diagnostic.h>
@@ -117,7 +125,14 @@
 * intact chain.
 ******************************************************************************/
 #define SAH_LINK_INSERTED_LINK 0x80
-/*! @} */
+
+/*! 
+*******************************************************************************
+* The Data field points to the location of the key, which is in a secure
+* partition held by the user.  The memory address needs to be converted to
+* kernel space manually, by looking through the partitions that the user holds.
+******************************************************************************/
+#define SAH_IN_USER_KEYSTORE       0x100
 
 /*!
 *******************************************************************************
@@ -177,32 +192,39 @@ typedef struct sah_Queue {
 /*!
  * Flags for the state of the User Context Object (#fsl_shw_uco_t).
  */
-typedef enum fsl_shw_user_ctx_flags {
+typedef enum fsl_shw_user_ctx_flags_t {
 	/*!
 	 * API will block the caller until operation completes.  The result will be
 	 * available in the return code.  If this is not set, user will have to get
 	 * results using #fsl_shw_get_results().
 	 */
-	FSL_UCO_BLOCKING_MODE = 1,
+	FSL_UCO_BLOCKING_MODE = 0x01,
 	/*!
 	 * User wants callback (at the function specified with
 	 * #fsl_shw_uco_set_callback()) when the operation completes.  This flag is
 	 * valid only if #FSL_UCO_BLOCKING_MODE is not set.
 	 */
-	FSL_UCO_CALLBACK_MODE = 2,
+	FSL_UCO_CALLBACK_MODE = 0x02,
 	/*! Do not free descriptor chain after driver (adaptor) finishes */
-	FSL_UCO_SAVE_DESC_CHAIN = 4,
+	FSL_UCO_SAVE_DESC_CHAIN = 0x04,
 	/*!
 	 * User has made at least one request with callbacks requested, so API is
 	 * ready to handle others.
 	 */
-	FSL_UCO_CALLBACK_SETUP_COMPLETE = 8,
+	FSL_UCO_CALLBACK_SETUP_COMPLETE = 0x08,
 	/*!
 	 * (virtual) pointer to descriptor chain is completely linked with physical
 	 * (DMA) addresses, ready for the hardware.  This flag should not be used
 	 * by FSL SHW API programs.
 	 */
-	FSL_UCO_CHAIN_PREPHYSICALIZED = 16,
+	FSL_UCO_CHAIN_PREPHYSICALIZED = 0x10,
+	/*!
+	 * The user has changed the context but the changes have not been copied to
+	 * the kernel driver.
+	 */
+	FSL_UCO_CONTEXT_CHANGED = 0x20,
+	/*! Internal Use.  This context belongs to a user-mode API user. */
+	FSL_UCO_USERMODE_USER = 0x40,
 } fsl_shw_user_ctx_flags_t;
 
 /*!
@@ -256,7 +278,16 @@ typedef enum fsl_shw_return_t {
 	/*! Candidate is not Prime */
 	FSL_RETURN_NOT_PRIME_S,
 	/*! N register loaded improperly with even value */
-	FSL_RETURN_EVEN_MODULUS_S,
+	FSL_RETURN_EVEN_MODULUS_ERROR_S,
+	/*! Divisor is zero. */
+	FSL_RETURN_DIVIDE_BY_ZERO_ERROR_S,
+	/*! Bad Exponent or Scalar value for Point Multiply */
+	FSL_RETURN_BAD_EXPONENT_ERROR_S,
+	/*! RNG hardware problem. */
+	FSL_RETURN_OSCILLATOR_ERROR_S,
+	/*! RNG hardware problem. */
+	FSL_RETURN_STATISTICS_ERROR_S,
+	
 } fsl_shw_return_t;
 
 /*!
@@ -351,7 +382,7 @@ typedef enum fsl_shw_sym_mode_t {
  * Context is the same size as the digest (resulting hash), unless otherwise
  * specified.
  */
-typedef enum fsl_shw_hash_alg {
+typedef enum fsl_shw_hash_alg_t {
 	/*! MD5 algorithm.  Digest is 16 octets. */
 	FSL_HASH_ALG_MD5,
 	/*! SHA-1 (aka SHA or SHA-160) algorithm. Digest is 20 octets. */
@@ -385,25 +416,25 @@ typedef enum fsl_shw_acc_mode_t {
 /*!
  * Flags which control a Hash operation.
  */
-typedef enum fsl_shw_hash_ctx_flags {
+typedef enum fsl_shw_hash_ctx_flags_t {
 	/*!
 	 * Context is empty.  Hash is started from scratch, with a
 	 * message-processed count of zero.
 	 */
-	FSL_HASH_FLAGS_INIT = 1,
+	FSL_HASH_FLAGS_INIT = 0x01,
 	/*!
 	 *  Retrieve context from hardware after hashing.  If used with the
 	 *  #FSL_HASH_FLAGS_FINALIZE flag, the final digest value will be saved in
 	 *  the object.
 	 */
-	FSL_HASH_FLAGS_SAVE = 2,
+	FSL_HASH_FLAGS_SAVE = 0x02,
 	/*! Place context into hardware before hashing. */
-	FSL_HASH_FLAGS_LOAD = 4,
+	FSL_HASH_FLAGS_LOAD = 0x04,
 	/*!
 	 * PAD message and perform final digest operation.  If user message is
 	 * pre-padded, this flag should not be used.
 	 */
-	FSL_HASH_FLAGS_FINALIZE = 8,
+	FSL_HASH_FLAGS_FINALIZE = 0x08,
 } fsl_shw_hash_ctx_flags_t;
 
 /*!
@@ -536,7 +567,7 @@ typedef enum fsl_shw_key_wrap_t {
  * The incrementing of the Counter value may be modified by a modulus.  If no
  * modulus is needed or desired for AES, use #FSL_CTR_MOD_128.
  */
-typedef enum fsl_shw_ctr_mod {
+typedef enum fsl_shw_ctr_mod_t {
 	FSL_CTR_MOD_8,		/*!< Run counter with modulus of 2^8. */
 	FSL_CTR_MOD_16,		/*!< Run counter with modulus of 2^16. */
 	FSL_CTR_MOD_24,		/*!< Run counter with modulus of 2^24. */
@@ -554,6 +585,39 @@ typedef enum fsl_shw_ctr_mod {
 	FSL_CTR_MOD_120,	/*!< Run counter with modulus of 2^120. */
 	FSL_CTR_MOD_128		/*!< Run counter with modulus of 2^128. */
 } fsl_shw_ctr_mod_t;
+
+/*!
+ * Permissions flags for Secure Partitions
+ */
+typedef enum fsl_shw_permission_t {
+/*! SCM Access Permission: Do not zeroize/deallocate partition on SMN Fail state */
+	FSL_PERM_NO_ZEROIZE = 0x80000000,
+/*! SCM Access Permission: Enforce trusted key read in  */
+	FSL_PERM_TRUSTED_KEY_READ = 0x40000000,
+/*! SCM Access Permission: Ignore Supervisor/User mode in permission determination */
+	FSL_PERM_HD_S = 0x00000800,
+/*! SCM Access Permission: Allow Read Access to  Host Domain */
+	FSL_PERM_HD_R = 0x00000400,
+/*! SCM Access Permission: Allow Write Access to  Host Domain */
+	FSL_PERM_HD_W = 0x00000200,
+/*! SCM Access Permission: Allow Execute Access to  Host Domain */
+	FSL_PERM_HD_X = 0x00000100,
+/*! SCM Access Permission: Allow Read Access to Trusted Host Domain */
+	FSL_PERM_TH_R = 0x00000040,
+/*! SCM Access Permission: Allow Write Access to Trusted Host Domain */
+	FSL_PERM_TH_W = 0x00000020,
+/*! SCM Access Permission: Allow Read Access to Other/World Domain */
+	FSL_PERM_OT_R = 0x00000004,
+/*! SCM Access Permission: Allow Write Access to Other/World Domain */
+	FSL_PERM_OT_W = 0x00000002,
+/*! SCM Access Permission: Allow Execute Access to Other/World Domain */
+	FSL_PERM_OT_X = 0x00000001,
+} fsl_shw_permission_t;
+
+typedef enum fsl_shw_cypher_mode_t {
+	FSL_SHW_CYPHER_MODE_ECB = 1,	/*!< ECB mode */
+	FSL_SHW_CYPHER_MODE_CBC = 2,	/*!< CBC mode */
+} fsl_shw_cypher_mode_t;
 
 /******************************************************************************
  * Data Structures
@@ -622,7 +686,7 @@ typedef struct sah_Head_Desc {
 	uint32_t status;	/*!<  Status of queue entry */
 	uint32_t error_status;	/*!< If error, register from Sahara */
 	uint32_t fault_address;	/*!< If error, register from Sahara */
-	uint32_t current_dar;	/*!< If error, register from Sahara */
+	uint32_t op_status;	/*!< If error, register from Sahara */
 	fsl_shw_return_t result;	/*!< Result of running descriptor  */
 	struct sah_Head_Desc *next;	/*!< Next in queue  */
 	struct sah_Head_Desc *prev;	/*!< previous in queue  */
@@ -701,7 +765,7 @@ typedef struct sah_Link {
 /*!
  * Initialization Object
  */
-typedef struct fsl_sho_ibo {
+typedef struct fsl_sho_ibo_t {
 } fsl_sho_ibo_t;
 
 /* Imported from Sahara1 driver -- is it needed forever? */
@@ -748,6 +812,20 @@ typedef struct sah_Mem_Util {
 	void *(*mu_memset) (void *ref, void *ptr, int ch, size_t n);
 } sah_Mem_Util;
 
+/*!
+ * Secure Partition information
+ *
+ * This holds the context to a single secure partition owned by the user.  It
+ * is only available in the kernel version of the User Context Object.
+ */
+typedef struct fsl_shw_spo_t {
+	uint32_t user_base;	/*!< Base address (user virtual) */
+	void *kernel_base;	/*!< Base address (kernel virtual) */
+	struct fsl_shw_spo_t *next;	/*!< Pointer to the next partition
+					   owned by the user.  NULL if this
+					   is the last partition. */
+} fsl_shw_spo_t;
+
 /* REQ-S2LRD-PINTFC-COA-UCO-001 */
 /*!
  * User Context Object
@@ -762,6 +840,8 @@ typedef struct fsl_shw_uco_t {
 #ifdef __KERNEL__
 	sah_Queue result_pool;	/*!< where non-blocking results go */
 	os_process_handle_t process;	/*!< remember for signalling User mode */
+	fsl_shw_spo_t *partition;	/*!< chain of secure partitions owned by
+					   the user */
 #else
 	struct fsl_shw_uco_t *next;	/*!< To allow user-mode chaining of contexts,
 					   for signalling.  */
@@ -780,6 +860,32 @@ typedef struct fsl_shw_result_t {
 	sah_Head_Desc *user_desc;
 } fsl_shw_result_t;
 
+/*!
+ * Keystore Object
+ */
+typedef struct fsl_shw_kso_t {
+#ifdef __KERNEL__
+	os_lock_t lock;		/*!< Pointer to lock that controls access to
+				   the keystore. */
+#endif
+	void *user_data;	/*!< Pointer to user structure that handles
+				   the internals of the keystore. */
+	 fsl_shw_return_t(*data_init) (fsl_shw_uco_t * user_ctx,
+				       void **user_data);
+	void (*data_cleanup) (fsl_shw_uco_t * user_ctx, void **user_data);
+	 fsl_shw_return_t(*slot_verify_access) (void *user_data,
+						uint64_t owner_id,
+						uint32_t slot);
+	 fsl_shw_return_t(*slot_alloc) (void *user_data, uint32_t size_bytes,
+					uint64_t owner_id, uint32_t * slot);
+	 fsl_shw_return_t(*slot_dealloc) (void *user_data, uint64_t owner_id,
+					  uint32_t slot);
+	void *(*slot_get_address) (void *user_data, uint32_t slot);
+	 uint32_t(*slot_get_base) (void *user_data, uint32_t slot);
+	 uint32_t(*slot_get_offset) (void *user_data, uint32_t slot);
+	 uint32_t(*slot_get_slot_size) (void *user_data, uint32_t slot);
+} fsl_shw_kso_t;
+
 /* REQ-S2LRD-PINTFC-COA-SKO-001 */
 /*!
  * Secret Key Context Object
@@ -791,6 +897,7 @@ typedef struct fsl_shw_sko_t {
 	uint32_t handle;
 	uint16_t key_length;
 	uint8_t key[64];
+	struct fsl_shw_kso_t *keystore;	/*!< If present, key is in keystore */
 } fsl_shw_sko_t;
 
 /* REQ-S2LRD-PINTFC-COA-CO-001 */
@@ -806,6 +913,22 @@ typedef struct fsl_shw_pco_t {	/* Consider turning these constants into symbols 
 	fsl_shw_sym_mode_t sym_modes[4];
 	fsl_shw_hash_alg_t hash_algorithms[4];
 	uint8_t sym_support[5][4];	/* indexed by key alg then mode */
+	int scc_driver_major;
+	int scc_driver_minor;
+	int scm_version;	/*!< Version from SCM Configuration register */
+	int smn_version;	/*!< Version from SMN Status register */
+	int block_size_bytes;	/*!< Number of bytes per block of RAM; also
+				   block size of the crypto algorithm. */
+	union {
+		struct {
+			int black_ram_size_blocks;	/*!< Number of blocks of Black RAM */
+			int red_ram_size_blocks;	/*!< Number of blocks of Red RAM */
+		} scc_info;
+		struct {
+			int partition_size_bytes;	/*!< Number of bytes in each partition */
+			int partition_count;	/*!< Number of partitions on this platform */
+		} scc2_info;
+	};
 } fsl_shw_pco_t;
 
 /* REQ-S2LRD-PINTFC-COA-HCO-001 */
@@ -875,354 +998,6 @@ typedef struct fsl_shw_acco_t {
 	uint8_t unencrypted_mac[16];	/*!< max block size... */
 } fsl_shw_acco_t;
 
-typedef struct fsl_shw_dsa_cmn_t {
-	unsigned p_size;	/*!< byte count of P (prime modulus) and G (generator) */
-	unsigned q_size;	/*!< byte count of Q (divisor) */
-	uint8_t data[];		/*!< P, Q, G  */
-} fsl_shw_dsa_cmn_t;
-
-/*! Get size in bytes of P field from pointer to struct fsl_shw_dsa_cmn_t */
-#define DSA_CMN_GET_P_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_dsa_cmn_t* parmp = (parm);                           \
-                                                                        \
-    parmp->p_size;                                                      \
-})
-
-/*! Get pointer to P field from pointer to struct fsl_shw_dsa_cmn_t */
-#define DSA_CMN_GET_P(parm)                                             \
-({                                                                      \
-    struct fsl_shw_dsa_cmn_t* parmp = (parm);                           \
-                                                                        \
-    parmp->data;                                                        \
-})
-
-/*! Get size in bytes of Q field from pointer to struct fsl_shw_dsa_cmn_t */
-#define DSA_CMN_GET_Q_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_dsa_cmn_t* parmp = (parm);                           \
-                                                                        \
-    parmp->q_size;                                                      \
-})
-
-/*! Get pointer to Q field from pointer to struct fsl_shw_dsa_cmn_t */
-#define DSA_CMN_GET_Q(parm)                                             \
-({                                                                      \
-    struct fsl_shw_dsa_cmn_t* parmp = (parm);                           \
-                                                                        \
-    parmp->data + parmp->p_size;                                        \
-})
-
-/*! Get size in bytes of G field from pointer to struct fsl_shw_dsa_cmn_t */
-#define DSA_CMN_GET_G_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_dsa_cmn_t* parmp = (parm);                           \
-                                                                        \
-    parmp->p_size;                                                      \
-})
-
-/*! Get pointer to G field from pointer to struct fsl_shw_dsa_cmn_t */
-#define DSA_CMN_GET_G(parm)                                             \
-({                                                                      \
-    struct fsl_shw_dsa_cmn_t* parmp = (parm);                           \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->q_size;                        \
-})
-
-typedef struct fsl_shw_dsa_pub_t {
-	unsigned y_size;	/*!< byte count of y field */
-	uint8_t data[];		/*!< y  */
-} fsl_shw_dsa_pub_t;
-
-/*! Get size in bytes of Y field from pointer to struct fsl_shw_dsa_pub_t */
-#define DSA_PUB_GET_Y_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_dsa_pub_t* parmp = (parm);                           \
-                                                                        \
-    parmp->y_size;                                                      \
-})
-
-/*! Get pointer to P field from pointer to struct fsl_shw_dsa_pub_t */
-#define DSA_PUB_GET_Y(parm)                                             \
-({                                                                      \
-    struct fsl_shw_dsa_pub_t* parmp = (parm);                           \
-                                                                        \
-    parmp->data;                                                        \
-})
-
-typedef struct fsl_shw_curve_fp_t {
-	unsigned p_size;	/*!< byte count of mod */
-	unsigned r_size;	/*!< byte count of r */
-	unsigned a_size;	/*!< byte count of a */
-	unsigned b_size;	/*!< byte count of b */
-	unsigned c_size;	/*!< byte count of c */
-	unsigned Gx_size;	/*!< byte count of Gx */
-	unsigned Gy_size;	/*!< byte count of Gy */
-	uint8_t data[];		/*!< p, r, a, b , Gx, Gy, (k),(SEED, c) */
-} fsl_shw_curve_fp_t;
-
-/*! Get size in bytes of P field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_P_SIZE(parm)                                         \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->p_size;                                                      \
-})
-
-/*! Get pointer to P field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_P(parm)                                              \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->data;                                                        \
-})
-
-/*! Get size in bytes of R field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_R_SIZE(parm)                                         \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->r_size;                                                      \
-})
-
-/*! Get pointer to R field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_R(parm)                                              \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->data + parmp->p_size;                                        \
-})
-
-/*! Get size in bytes of A field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_A_SIZE(parm)                                         \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->a_size;                                                      \
-})
-
-/*! Get pointer to A field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_A(parm)                                              \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->r_size;                        \
-})
-
-/*! Get size in bytes of B field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_B_SIZE(parm)                                         \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->b_size;                                                      \
-})
-
-/*! Get pointer to B field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_B(parm)                                              \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->r_size + parmp->a_size;        \
-})
-
-/*! Get size in bytes of Gx field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_GX_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->Gx_size;                                                     \
-})
-
-/*! Get pointer to Gx field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_GX(parm)                                             \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->r_size + parmp->a_size         \
-    + parmp->b_size;                                                    \
-})
-
-/*! Get size in bytes of Gy field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_GY_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->Gx_size;                                                     \
-})
-
-/*! Get pointer to Gy field from pointer to struct fsl_shw_curve_fp_t */
-#define FP_CRV_GET_GY(parm)                                             \
-({                                                                      \
-    struct fsl_shw_curve_fp_t* parmp = (parm);                          \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->r_size + parmp->a_size         \
-    + parmp->b_size + parmp->Gx_size;                                   \
-})
-
-typedef struct fsl_shw_curve_f2m_t {
-	unsigned p_size;	/*!< byte count of polynomial */
-	unsigned r_size;	/*!< byte count of r */
-	unsigned a_size;	/*!< byte count of a */
-	unsigned c_size;	/*!< byte count of c */
-	unsigned Gx_size;	/*!< byte count of Gx */
-	unsigned Gy_size;	/*!< byte count of Gy */
-	unsigned b_size;	/*!< byte count of b */
-	uint8_t data[];		/* poly, r, a, b, Gx, Gy, b */
-} fsl_shw_curve_f2m_t;
-
-/*! Get size in bytes of P field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_P_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->p_size;                                                      \
-})
-
-/*! Get pointer to P field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_P(parm)                                             \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->data;                                                        \
-})
-
-/*! Get size in bytes of R field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_R_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->r_size;                                                      \
-})
-
-/*! Get pointer to R field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_R(parm)                                             \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->data + parmp->p_size;                                        \
-})
-
-/*! Get size in bytes of A field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_A_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->a_size;                                                      \
-})
-
-/*! Get pointer to A field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_A(parm)                                             \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->r_size;                        \
-})
-
-/*! Get size in bytes of C field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_C_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->c_size;                                                      \
-})
-
-/*! Get pointer to C field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_C(parm)                                             \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->r_size + parmp->a_size;        \
-})
-
-/*! Get size in bytes of Gx field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_GX_SIZE(parm)                                       \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->Gx_size;                                                     \
-})
-
-/*! Get pointer to Gx field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_GX(parm)                                            \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->r_size + parmp->a_size         \
-    + parmp->c_size;                                                    \
-})
-
-/*! Get size in bytes of Gy field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_GY_SIZE(parm)                                       \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->Gy_size;                                                     \
-})
-
-/*! Get pointer to Gy field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_GY(parm)                                            \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->r_size + parmp->a_size         \
-    + parmp->c_size + parmp->Gx_size;                                   \
-})
-
-/*! Get size in bytes of b field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_B_SIZE(parm)                                        \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->b_size;                                                      \
-})
-
-/*! Get pointer to b field from pointer to struct fsl_shw_curve_f2m_t */
-#define F2M_CRV_GET_B(parm)                                             \
-({                                                                      \
-    struct fsl_shw_curve_f2m_t* parmp = (parm);                         \
-                                                                        \
-    parmp->data + parmp->p_size + parmp->r_size + parmp->a_size         \
-    + parmp->c_size + parmp->Gx_size + parmp->Gy_size;                  \
-})
-
-typedef struct fsl_shw_ecc_point_t {
-	unsigned x_size;
-	unsigned y_size;
-	uint8_t data[];		/* x, y */
-} fsl_shw_ecc_point_t;
-
-/*! Get pointer to x field from pointer to struct fsl_shw_ecc_point_t */
-#define POINT_GET_X(parm)                                               \
-({                                                                      \
-    struct fsl_shw_ecc_point_t* parmp = (parm);                         \
-                                                                        \
-    parmp->data;                                                        \
-})
-
-/*! Get pointer to x field from pointer to struct fsl_shw_ecc_point_t */
-#define POINT_GET_X_SIZE(parm)                                          \
-({                                                                      \
-    struct fsl_shw_ecc_point_t* parmp = (parm);                         \
-                                                                        \
-    parmp->x_size;                                                      \
-})
-
-/*! Get pointer to y field from pointer to struct fsl_shw_ecc_point_t */
-#define POINT_GET_Y(parm)                                               \
-({                                                                      \
-    struct fsl_shw_ecc_point_t* parmp = (parm);                         \
-                                                                        \
-    parmp->data + parmp->y_size;                                        \
-})
-
-/*! Get pointer to x field from pointer to struct fsl_shw_ecc_point_t */
-#define POINT_GET_Y_SIZE(parm)                                          \
-({                                                                      \
-    struct fsl_shw_ecc_point_t* parmp = (parm);                         \
-                                                                        \
-    parmp->y_size;                                                      \
-})
-
 /*!
  *  Used by Sahara API to retrieve completed non-blocking results.
  */
@@ -1231,6 +1006,19 @@ typedef struct sah_results {
 	unsigned *actual;	/*!< number of results obtained */
 	fsl_shw_result_t *results;	/*!< pointer to memory to hold results */
 } sah_results;
+
+/*!
+ * @typedef scc_partition_status_t
+ */
+/*! Partition status information. */
+typedef enum fsl_shw_partition_status_t {
+	FSL_PART_S_UNUSABLE,	/*!< Partition not implemented */
+	FSL_PART_S_UNAVAILABLE,	/*!< Partition owned by other host */
+	FSL_PART_S_AVAILABLE,	/*!< Partition available */
+	FSL_PART_S_ALLOCATED,	/*!< Partition owned by host but not engaged
+				 */
+	FSL_PART_S_ENGAGED,	/*!< Partition owned by host and engaged */
+} fsl_shw_partition_status_t;
 
 /******************************************************************************
  * Access Macros for Objects
@@ -1345,6 +1133,102 @@ typedef struct sah_results {
     1
 
 /*!
+ * Get FSL SHW SCC driver version
+  *
+  * @param		pcobject  The Platform Capabilities Object to query.
+  * @param[out] pcmajor   A pointer to where the major version
+  * 					  of the SCC driver is to be stored.
+  * @param[out] pcminor   A pointer to where the minor version
+  * 					  of the SCC driver is to be stored.
+  */
+#define fsl_shw_pco_get_scc_driver_version(pcobject, pcmajor, pcminor)        \
+ {																			   \
+	 *(pcmajor) = (pcobject)->scc_driver_major; 							   \
+	 *(pcminor) = (pcobject)->scc_driver_minor; 							   \
+ }
+ 
+ /*!
+  * Get SCM hardware version
+  *
+  * @param		pcobject  The Platform Capabilities Object to query.
+  * @return 			  The SCM hardware version
+  */
+#define fsl_shw_pco_get_scm_version(pcobject)                                 \
+	 ((pcobject)->scm_version)
+ 
+ /*!
+  * Get SMN hardware version
+  *
+  * @param		pcobject  The Platform Capabilities Object to query.
+  * @return 			  The SMN hardware version
+  */
+#define fsl_shw_pco_get_smn_version(pcobject)                                 \
+	 ((pcobject)->smn_version)
+ 
+ /*!
+  * Get the size of an SCM block, in bytes
+  *
+  * @param		pcobject  The Platform Capabilities Object to query.
+  * @return 			  The size of an SCM block, in bytes.
+  */
+#define fsl_shw_pco_get_scm_block_size(pcobject)                              \
+	 ((pcobject)->block_size_bytes)
+ 
+ /*!
+  * Get size of Black and Red RAM memory
+  *
+  * @param		pcobject	The Platform Capabilities Object to query.
+  * @param[out] black_size	A pointer to where the size of the Black RAM, in
+  * 						blocks, is to be placed.
+  * @param[out] red_size	A pointer to where the size of the Red RAM, in 
+  * 						blocks, is to be placed.
+  */
+#define fsl_shw_pco_get_smn_size(pcobject, black_size, red_size)              \
+ {																			   \
+	 if ((pcobject)->scm_version == 1) {									   \
+		 *(black_size) = (pcobject)->scc_info.black_ram_size_blocks;		   \
+		 *(red_size)   = (pcobject)->scc_info.red_ram_size_blocks;			   \
+	 } else {																   \
+		 *(black_size) = 0; 												   \
+		 *(red_size)   = 0; 												   \
+	 }																		   \
+ }
+ 
+ /*!
+  * Determine whether Secure Partitions are supported
+  *
+  * @param pcobject   The Platform Capabilities Object to query.
+  *
+  * @return 0 if secure partitions are not supported, non-zero if supported.
+  */
+#define fsl_shw_pco_check_spo_supported(pcobject)                           \
+	 ((pcobject)->scm_version == 2)
+ 
+ /*!
+  * Get the size of a Secure Partitions
+  *
+  * @param pcobject   The Platform Capabilities Object to query.
+  * 
+  * @return Partition size, in bytes.  0 if Secure Partitions not supported.
+  */
+#define fsl_shw_pco_get_spo_size_bytes(pcobject)                            \
+	 (((pcobject)->scm_version == 2) ?										 \
+		 ((pcobject)->scc2_info.partition_size_bytes) : 0 )
+ 
+ /*!
+  * Get the number of Secure Partitions on this platform
+  *
+  * @param pcobject   The Platform Capabilities Object to query.
+  * 
+  * @return Number of partitions. 0 if Secure Paritions not supported.	Note
+  * 		that this returns the total number of partitions, not all may be
+  * 		available to the user.
+  */
+#define fsl_shw_pco_get_spo_count(pcobject)                                 \
+	 (((pcobject)->scm_version == 2) ?										 \
+		 ((pcobject)->scc2_info.partition_count) : 0 )
+ 
+/*!
  * Initialize a User Context Object.
  *
  * This function must be called before performing any other operation with the
@@ -1364,6 +1248,17 @@ typedef struct sah_results {
  * @param usize        The maximum number of operations which can be
  *                     outstanding.
  */
+#ifdef __KERNEL__
+#define fsl_shw_uco_init(ucontext, usize)                                     \
+{                                                                             \
+      (ucontext)->pool_size = usize;                                          \
+      (ucontext)->flags = FSL_UCO_BLOCKING_MODE;                              \
+      (ucontext)->sahara_openfd = -1;                                         \
+      (ucontext)->mem_util = NULL;                                            \
+      (ucontext)->partition = NULL;                                           \
+      (ucontext)->callback = NULL;                                            \
+}
+#else 
 #define fsl_shw_uco_init(ucontext, usize)                                     \
 {                                                                             \
       (ucontext)->pool_size = usize;                                          \
@@ -1372,6 +1267,7 @@ typedef struct sah_results {
       (ucontext)->mem_util = NULL;                                            \
       (ucontext)->callback = NULL;                                            \
 }
+#endif
 
 /*!
  * Set the User Reference for the User Context.
@@ -1448,6 +1344,7 @@ typedef struct sah_results {
 {                                                                            \
        (skobject)->algorithm = skalgorithm;                                  \
        (skobject)->flags = 0;                                                \
+       (skobject)->keystore = NULL;                                          \
 }
 
 /*!
@@ -1496,6 +1393,12 @@ typedef struct sah_results {
        (skobject)->userid = (skuserid)
 
 /*!
+ * Establish a user Keystore to hold the key.
+ */
+#define fsl_shw_sko_set_keystore(skobject, user_keystore)                     \
+       (skobject)->keystore = (user_keystore)
+
+/*!
  * Set the establish key handle into a key object.
  *
  * The @a userid field will be used to validate the access to the unwrapped
@@ -1537,6 +1440,25 @@ typedef struct sah_results {
  */
 #define fsl_shw_sko_get_algorithm(skobject, skalgorithm)                      \
        *(skalgorithm) = (skobject)->algorithm
+
+/*!
+ * Retrieve the cleartext key from a key object that is stored in a user
+ * keystore.
+ *
+ * @param      skobject     The Key Object to be queried.
+ * @param[out] skkey        A pointer to the location to store the key.  NULL
+ *                          if the key is not stored in a user keystore.
+ */
+#define fsl_shw_sko_get_key(skobject, skkey)                                  \
+{                                                                             \
+    fsl_shw_kso_t* keystore = (skobject)->keystore;                           \
+    if (keystore != NULL) {                                                   \
+        *(skkey) = keystore->slot_get_address(keystore->user_data,            \
+                                              (skobject)->handle);            \
+    } else {                                                                  \
+        *(skkey) = NULL;                                                      \
+    }                                                                         \
+}
 
 /*!
  * Determine the size of a wrapped key based upon the cleartext key's length.
@@ -2075,6 +1997,72 @@ extern fsl_shw_return_t fsl_shw_extract_key(fsl_shw_uco_t * user_ctx,
 extern fsl_shw_return_t fsl_shw_release_key(fsl_shw_uco_t * user_ctx,
 					    fsl_shw_sko_t * key_info);
 
+extern void *fsl_shw_smalloc(fsl_shw_uco_t * user_ctx,
+			     uint32_t size,
+			     const uint8_t * UMID, uint32_t permissions);
+
+extern fsl_shw_return_t fsl_shw_sfree(fsl_shw_uco_t * user_ctx, void *address);
+
+extern fsl_shw_return_t fsl_shw_sstatus(fsl_shw_uco_t * user_ctx,
+					void *address,
+					fsl_shw_partition_status_t * status);
+
+extern fsl_shw_return_t fsl_shw_diminish_perms(fsl_shw_uco_t * user_ctx,
+					       void *address,
+					       uint32_t permissions);
+
+extern fsl_shw_return_t do_scc_engage_partition(fsl_shw_uco_t * user_ctx,
+						void *address,
+						const uint8_t * UMID,
+						uint32_t permissions);
+
+extern fsl_shw_return_t do_system_keystore_slot_alloc(fsl_shw_uco_t * user_ctx,
+						      uint32_t key_lenth,
+						      uint64_t ownerid,
+						      uint32_t * slot);
+
+extern fsl_shw_return_t do_system_keystore_slot_dealloc(fsl_shw_uco_t *
+							user_ctx,
+							uint64_t ownerid,
+							uint32_t slot);
+
+extern fsl_shw_return_t do_system_keystore_slot_load(fsl_shw_uco_t * user_ctx,
+						     uint64_t ownerid,
+						     uint32_t slot,
+						     const uint8_t * key,
+						     uint32_t key_length);
+
+extern fsl_shw_return_t do_system_keystore_slot_encrypt(fsl_shw_uco_t *
+							user_ctx,
+							uint64_t ownerid,
+							uint32_t slot,
+							uint32_t key_length,
+							uint8_t * black_data);
+
+extern fsl_shw_return_t do_system_keystore_slot_decrypt(fsl_shw_uco_t *
+							user_ctx,
+							uint64_t ownerid,
+							uint32_t slot,
+							uint32_t key_length,
+							const uint8_t *
+							black_data);
+
+extern fsl_shw_return_t
+do_scc_encrypt_region(fsl_shw_uco_t * user_ctx,
+		      void *partition_base, uint32_t offset_bytes,
+		      uint32_t byte_count, uint8_t * black_data,
+		      uint32_t * IV, fsl_shw_cypher_mode_t cypher_mode);
+
+extern fsl_shw_return_t
+do_scc_decrypt_region(fsl_shw_uco_t * user_ctx,
+		      void *partition_base, uint32_t offset_bytes,
+		      uint32_t byte_count, const uint8_t * black_data,
+		      uint32_t * IV, fsl_shw_cypher_mode_t cypher_mode);
+
+extern fsl_shw_return_t
+system_keystore_get_slot_info(uint64_t owner_id, uint32_t slot,
+			      uint32_t * address, uint32_t * slot_size_bytes);
+
 /* REQ-S2LRD-PINTFC-API-BASIC-SYM-002 */
 /* PINTFC-API-BASIC-SYM-ARC4-001 */
 /* PINTFC-API-BASIC-SYM-ARC4-002 */
@@ -2143,9 +2131,6 @@ extern fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t * user_ctx,
 					     const uint8_t * auth_value,
 					     uint8_t * payload);
 
-#if 0
-sah_Test_Status sah_Check_Test_Mode(void);
-#endif
 
 fsl_shw_return_t sah_Append_Desc(const sah_Mem_Util * mu,
 				 sah_Head_Desc ** desc_head,

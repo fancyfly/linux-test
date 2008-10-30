@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -91,25 +91,25 @@ unsigned long sah_Handle_Interrupt(sah_Execute_Status hw_status)
 	os_lock_context_t lock_flags;
 
 	/* HW status at time of interrupt */
-	hw_status &= SAH_EXEC_STATE_MASK;
+	sah_Execute_Status state = hw_status & SAH_EXEC_STATE_MASK;
 
 	do {
 		sah_Head_Desc *current_entry;
 		uint32_t dar;
 
 #ifdef DIAG_INT_COUNT
-		if (hw_status == SAH_EXEC_DONE1) {
+		if (state == SAH_EXEC_DONE1) {
 			done1_count++;
-		} else if (hw_status == SAH_EXEC_DONE1_BUSY2) {
+		} else if (state == SAH_EXEC_DONE1_BUSY2) {
 			done1busy2_count++;
-		} else if (hw_status == SAH_EXEC_DONE1_DONE2) {
+		} else if (state == SAH_EXEC_DONE1_DONE2) {
 			done1done2_count++;
 		}
 #endif
 
 		/* if the first entry on sahara has completed... */
-		if ((hw_status & SAH_EXEC_DONE1_BIT) ||
-		    (hw_status == SAH_EXEC_ERROR1)) {
+		if ((state & SAH_EXEC_DONE1_BIT) ||
+		    (state == SAH_EXEC_ERROR1)) {
 			/* lock queue while searching */
 			os_lock_save_context(desc_queue_lock, lock_flags);
 			current_entry =
@@ -118,8 +118,8 @@ unsigned long sah_Handle_Interrupt(sah_Execute_Status hw_status)
 
 			/* an active descriptor was not found */
 			if (current_entry == NULL) {
-				/* change hw_status to avoid an infinite loop (possible if
-				 * hw_status is SAH_EXEC_DONE1_BUSY2 first time into loop) */
+				/* change state to avoid an infinite loop (possible if
+				 * state is SAH_EXEC_DONE1_BUSY2 first time into loop) */
 				hw_status = SAH_EXEC_IDLE;
 #if defined(DIAG_DRV_INTERRUPT) && defined(DIAG_DURING_INTERRUPT)
 				LOG_KDIAG
@@ -129,24 +129,32 @@ unsigned long sah_Handle_Interrupt(sah_Execute_Status hw_status)
 				/* SAHARA has completed its work on this descriptor chain */
 				current_entry->status = SAH_STATE_OFF_SAHARA;
 
-				/* SAHARA is reporting an error with descriptor chain 1 */
-				if (hw_status == SAH_EXEC_ERROR1) {
-					/* Gather extra diagnostic information */
-					current_entry->fault_address =
+				if (state == SAH_EXEC_ERROR1) {
+				   if (hw_status & STATUS_ERROR) {
+					  /* Gather extra diagnostic information */
+					  current_entry->fault_address =
 					    sah_HW_Read_Fault_Address();
-					current_entry->current_dar =
-					    sah_HW_Read_CDAR();
-					/* Read this last - it clears the error */
-					current_entry->error_status =
+					  /* Read this last - it clears the error */
+					  current_entry->error_status =
 					    sah_HW_Read_Error_Status();
+					  current_entry->op_status = 0;
+#ifdef FSL_HAVE_SAHARA4
+				   } else {
+					  current_entry->op_status =
+							sah_HW_Read_Op_Status();
+					  current_entry->error_status = 0;
+#endif
+				   }
+
 				} else {
 					/* indicate that no errors were found with descriptor
 					 * chain 1 */
 					current_entry->error_status = 0;
+					current_entry->op_status = 0;
 
 					/* is there a second, successfully, completed descriptor
 					 * chain? (done1/error2 processing is handled later) */
-					if (hw_status == SAH_EXEC_DONE1_DONE2) {
+					if (state == SAH_EXEC_DONE1_DONE2) {
 						os_lock_save_context
 						    (desc_queue_lock,
 						     lock_flags);
@@ -230,7 +238,7 @@ unsigned long sah_Handle_Interrupt(sah_Execute_Status hw_status)
 			}	/* sah_device_power_manager */
 #endif
 		} else {
-			if (hw_status == SAH_EXEC_FAULT) {
+			if (state == SAH_EXEC_FAULT) {
 				sah_Head_Desc *previous_entry;	/* point to chain 1 */
 				/* Address of request when fault occured */
 				uint32_t bad_dar = sah_HW_Read_IDAR();
@@ -296,11 +304,11 @@ unsigned long sah_Handle_Interrupt(sah_Execute_Status hw_status)
 #if defined(DIAG_DRV_INTERRUPT) && defined(DIAG_DURING_INTERRUPT)
 			} else {
 				/* shouldn't ever get here */
-				if (hw_status == SAH_EXEC_BUSY) {
+				if (state == SAH_EXEC_BUSY) {
 					LOG_KDIAG
 					    ("Got Sahara interrupt in Busy state");
 				} else {
-					if (hw_status == SAH_EXEC_IDLE) {
+					if (state == SAH_EXEC_IDLE) {
 						LOG_KDIAG
 						    ("Got Sahara interrupt in Idle state");
 					} else {
@@ -314,11 +322,11 @@ unsigned long sah_Handle_Interrupt(sah_Execute_Status hw_status)
 
 		/* haven't handled the done1/error2 (the error 2 part), so setup to
 		 * do that now. Otherwise, exit loop */
-		hw_status = (hw_status == SAH_EXEC_DONE1_ERROR2) ?
+		state = (state == SAH_EXEC_DONE1_ERROR2) ?
 		    SAH_EXEC_ERROR1 : SAH_EXEC_IDLE;
 
 		/* Keep going while further status is available. */
-	} while (hw_status == SAH_EXEC_ERROR1);
+	} while (state == SAH_EXEC_ERROR1);
 
 	return reset_flag;
 }
@@ -352,7 +360,7 @@ unsigned long sah_Handle_Poll(sah_Head_Desc * entry)
 		/* return that request failed to be processed */
 		entry->result = FSL_RETURN_ERROR_S;
 		entry->fault_address = 0xBAD;
-		entry->current_dar = 0xBAD;
+		entry->op_status= 0xBAD;
 		entry->error_status = 0xBAD;
 	} else {
 #endif				/* SAHARA_POWER_MANAGEMENT */
@@ -382,26 +390,44 @@ unsigned long sah_Handle_Poll(sah_Head_Desc * entry)
 				/* Gather extra diagnostic information */
 				entry->fault_address =
 				    sah_HW_Read_Fault_Address();
-				entry->current_dar = sah_HW_Read_CDAR();
 				/* Read this register last - it clears the error */
 				entry->error_status =
 				    sah_HW_Read_Error_Status();
+				entry->op_status = 0;
 				/* translate from SAHARA error status to fsl_shw return values */
 				entry->result =
 				    sah_convert_error_status(entry->
 							     error_status);
 #ifdef DIAG_DRV_STATUS
-				sah_Log_Error(entry->current_dar,
+				sah_Log_Error(entry->op_status,
 					      entry->error_status,
 					      entry->fault_address);
 #endif
 			} else if (hw_status == SAH_EXEC_OPSTAT1) {
-				uint32_t op_status = sah_HW_Read_Op_Status();
+				entry->op_status = sah_HW_Read_Op_Status();
+				entry->error_status = 0;
 				entry->result =
 				    sah_convert_op_status(op_status);
 			} else {
 				/* SAHARA entered FAULT state (or something bazaar has
 				 * happened) */
+				pr_debug
+					("Sahara: hw_status = 0x%x; Stat: 0x%08x; IDAR: 0x%08x; "
+					 "CDAR: 0x%08x; FltAdr: 0x%08x; Estat: 0x%08x\n",
+					 hw_status, sah_HW_Read_Status(),
+					 sah_HW_Read_IDAR(), sah_HW_Read_CDAR(),
+					 sah_HW_Read_Fault_Address(),
+					 sah_HW_Read_Error_Status());
+#ifdef DIAG_DRV_IF
+				{
+					int old_level = console_loglevel;
+					console_loglevel = 8;
+					sah_Dump_Chain(&(entry->desc),
+							   entry->desc.dma_addr);
+					console_loglevel = old_level;
+				}
+#endif
+				 
 				entry->error_status = -1;
 				entry->result = FSL_RETURN_ERROR_S;
 				sah_HW_Reset();

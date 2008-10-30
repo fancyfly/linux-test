@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -87,6 +87,12 @@ void        sah_HW_Write_Command(uint32_t command);
 void        sah_HW_Write_Control(uint32_t control);
 void        sah_HW_Write_DAR(uint32_t pointer);
 void        sah_HW_Write_Config(uint32_t configuration);
+
+#if defined DIAG_DRV_IF || defined(DO_DBG)
+
+void sah_Dump_Words(const char *prefix, const unsigned *data, dma_addr_t addr,
+		    unsigned length);
+#endif
 
 #endif  /* SAH_HARDWARE_INTERFACE_H */
 

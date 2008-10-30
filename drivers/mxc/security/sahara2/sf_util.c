@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -418,8 +418,7 @@ fsl_shw_return_t sah_Descriptor_Chain_Execute(
 {
     fsl_shw_return_t status;
 
-
-    /* Check for null pointer or non-multiple-of-four value */
+	/* Check for null pointer or non-multiple-of-four value */
     if ((head == NULL) || ((uint32_t)head & 0x3)) {
         status = FSL_RETURN_ERROR_S;
         goto out;
@@ -438,6 +437,13 @@ fsl_shw_return_t sah_Descriptor_Chain_Execute(
     head->next = NULL; /* driver will use this to link chain heads */
 
     status = adaptor_Exec_Descriptor_Chain(head, user_ctx);
+
+#ifdef DIAG_SECURITY_FUNC
+	 if (status == FSL_RETURN_OK_S)
+		 LOG_DIAG("after exec desc chain: status is ok\n");
+	 else
+		 LOG_DIAG("after exec desc chain: status is not ok\n");
+#endif
 
  out:
     return status;
@@ -469,7 +475,9 @@ fsl_shw_return_t sah_Create_Link(
     const size_t length,
     const sah_Link_Flags flags)
 {
-#ifdef DIAG_SECURITY_FUNC_UGLY
+
+#ifdef DIAG_SECURITY_FUNC
+
     char diag[50];
 #endif /*DIAG_SECURITY_FUNC_UGLY*/
     fsl_shw_return_t status = FSL_RETURN_NO_RESOURCE_S;
@@ -485,7 +493,8 @@ fsl_shw_return_t sah_Create_Link(
         (*link)->flags = flags;
         status = FSL_RETURN_OK_S;
 
-#ifdef DIAG_SECURITY_FUNC_UGLY
+#ifdef DIAG_SECURITY_FUNC
+
         LOG_DIAG("Created Link");
         LOG_DIAG("------------");
         sprintf(diag," address       = 0x%x", (int) *link);
@@ -552,11 +561,35 @@ fsl_shw_return_t sah_Create_Key_Link(
             status = FSL_RETURN_OK_S;
         } else {
             if (key_info->flags & FSL_SKO_KEY_ESTABLISHED) {
-                (*link)->slot = key_info->handle;
-                (*link)->ownerid = key_info->userid;
-                (*link)->data = 0;
-                flags |= SAH_STORED_KEY_INFO;
-                status = FSL_RETURN_OK_S;
+				
+				if (key_info->keystore == NULL) {
+					/* System Keystore */
+                	(*link)->slot = key_info->handle;
+                	(*link)->ownerid = key_info->userid;
+                	(*link)->data = 0;
+                	flags |= SAH_STORED_KEY_INFO;
+                	status = FSL_RETURN_OK_S;
+				} else {
+#ifdef FSL_HAVE_SCC2
+					/* User Keystore */
+					fsl_shw_kso_t *keystore = key_info->keystore;
+					/* Note: the key data is stored here, but the address has to
+					 * be converted to a partition and offset in the kernel.
+					 * This will be calculated in kernel space, based on the
+					 * list of partitions held by the users context.
+					 */
+					(*link)->data =	
+						keystore->slot_get_address(keystore->user_data,
+												 key_info->handle);
+				
+					flags |= SAH_IN_USER_KEYSTORE;
+					status = FSL_RETURN_OK_S;
+#else
+					/* User keystores only supported in SCC2 */
+					status = FSL_RETURN_BAD_FLAG_S;
+#endif				/* FSL_HAVE_SCC2 */
+				
+				}
             } else {
                 /* the flag is bad. Should never get here */
                 status = FSL_RETURN_BAD_FLAG_S;
@@ -806,6 +839,7 @@ fsl_shw_return_t sah_add_two_in_desc(uint32_t header,
     sah_Link* link1 = NULL;
     sah_Link* link2 = NULL;
 
+	printk("Entering sah_add_two_in_desc \n");
 
     if (in1 != NULL) {
         status = sah_Create_Link(mu, &link1,
@@ -833,6 +867,58 @@ fsl_shw_return_t sah_add_two_in_desc(uint32_t header,
     return status;
 }
 
+/*!
+ * Add descriptor where neither link needs sync
+ *
+ * @param         header     The Sahara header value for the descriptor.
+ * @param         in1        The first input buffer (or NULL)
+ * @param         in1_length Size of @a in1
+ * @param[out]    in2        The second input buffer (or NULL)
+ * @param         in2_length Size of @a in2
+ * @param         mu         Memory functions
+ * @param[in,out] desc_chain Chain to start or append to
+ *
+ * @return    A return code of type #fsl_shw_return_t.
+ */
+fsl_shw_return_t sah_add_two_d_desc(uint32_t header,
+				    const uint8_t * in1,
+				    uint32_t in1_length,
+				    const uint8_t * in2,
+				    uint32_t in2_length,
+				    const sah_Mem_Util * mu,
+				    sah_Head_Desc ** desc_chain)
+{
+	fsl_shw_return_t status = FSL_RETURN_OK_S;
+	sah_Link *link1 = NULL;
+	sah_Link *link2 = NULL;
+
+	printk("Entering sah_add_two_d_desc \n");
+
+	if (in1 != NULL) {
+		status = sah_Create_Link(mu, &link1,
+					 (sah_Oct_Str) in1, in1_length,
+					 SAH_USES_LINK_DATA);
+	}
+
+	if ((in2 != NULL) && (status == FSL_RETURN_OK_S)) {
+		status = sah_Create_Link(mu, &link2,
+					 (sah_Oct_Str) in2, in2_length,
+					 SAH_USES_LINK_DATA);
+	}
+
+	if (status != FSL_RETURN_OK_S) {
+		if (link1 != NULL) {
+			sah_Destroy_Link(mu, link1);
+		}
+		if (link2 != NULL) {
+			sah_Destroy_Link(mu, link2);
+		}
+	} else {
+		status = sah_Append_Desc(mu, desc_chain, header, link1, link2);
+	}
+
+	return status;
+}				/* sah_add_two_d_desc() */
 
 /**
  * Add descriptor where both links are inputs, the second one being a key.
@@ -858,17 +944,26 @@ fsl_shw_return_t sah_add_in_key_desc(uint32_t header,
     sah_Link         *link1 = NULL;
     sah_Link         *link2 = NULL;
 
-
-    if (in1 != NULL) {
+	if (in1 != NULL) {
         status = sah_Create_Link(mu, &link1,
                                  (sah_Oct_Str) in1, in1_length,
                                  SAH_USES_LINK_DATA);
     }
 
-    if (status == FSL_RETURN_OK_S) {
-        status = sah_Create_Key_Link(mu, &link2, key_info);
-    }
+	if (status != FSL_RETURN_OK_S) {
+		goto out;
+	}
 
+    status = sah_Create_Key_Link(mu, &link2, key_info);
+
+	
+	if (status != FSL_RETURN_OK_S) {
+		goto out;
+	}
+
+	status = sah_Append_Desc(mu, desc_chain, header, link1, link2);
+	
+out:
     if (status != FSL_RETURN_OK_S) {
         if (link1 != NULL) {
             sah_Destroy_Link(mu, link1);
@@ -876,8 +971,6 @@ fsl_shw_return_t sah_add_in_key_desc(uint32_t header,
         if (link2 != NULL) {
             sah_Destroy_Link(mu, link2);
         }
-    } else {
-        status = sah_Append_Desc(mu, desc_chain, header, link1, link2);
     }
 
     return status;
@@ -952,16 +1045,26 @@ fsl_shw_return_t sah_add_in_keyout_desc(uint32_t header,
     sah_Link         *link1 = NULL;
     sah_Link         *link2 = NULL;
 
-
-    if (in1 != NULL) {
+	if (in1 != NULL) {
         status = sah_Create_Link(mu, &link1,
                                  (sah_Oct_Str) in1, in1_length,
                                  SAH_USES_LINK_DATA);
     }
 
-    if (status == FSL_RETURN_OK_S) {
-        status = sah_Create_Key_Link(mu, &link2, key_info);
-    }
+    if (status != FSL_RETURN_OK_S) {
+		goto out;
+    }	
+
+	status = sah_Create_Key_Link(mu, &link2, key_info);
+    
+	if (status != FSL_RETURN_OK_S) {
+		goto out;
+	}   
+
+link2->flags |= SAH_OUTPUT_LINK;	/* mark key for output */
+status = sah_Append_Desc(mu, desc_chain, header, link1, link2);
+	
+out:
 
     if (status != FSL_RETURN_OK_S) {
         if (link1 != NULL) {
@@ -970,11 +1073,7 @@ fsl_shw_return_t sah_add_in_keyout_desc(uint32_t header,
         if (link2 != NULL) {
             sah_Destroy_Link(mu, link2);
         }
-    } else {
-        link2->flags |= SAH_OUTPUT_LINK;
-
-        status = sah_Append_Desc(mu, desc_chain, header, link1, link2);
-    }
+    } 
 
     return status;
 }
@@ -1004,6 +1103,8 @@ fsl_shw_return_t sah_add_two_out_desc(uint32_t header,
     sah_Link         *link1 = NULL;
     sah_Link         *link2 = NULL;
 
+
+	printk("Entering sah_add_two_out_desc \n");
 
     if (out1 != NULL) {
         status = sah_Create_Link(mu, &link1,
@@ -1111,8 +1212,7 @@ fsl_shw_return_t sah_add_in_out_desc(uint32_t header,
     sah_Link         *link1 = NULL;
     sah_Link         *link2 = NULL;
 
-
-    if (in != NULL) {
+	if (in != NULL) {
         status = sah_Create_Link(mu, &link1,
                                  (sah_Oct_Str) in, in_length,
                                  SAH_USES_LINK_DATA);
@@ -1152,7 +1252,8 @@ fsl_shw_return_t sah_add_in_out_desc(uint32_t header,
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-fsl_shw_return_t sah_add_key_out_desc(uint32_t header, fsl_shw_sko_t *key_info,
+fsl_shw_return_t sah_add_key_out_desc(uint32_t header,
+								  const fsl_shw_sko_t *key_info,
                                   uint8_t* out, uint32_t out_length,
                                   const sah_Mem_Util *mu,
                                   sah_Head_Desc **desc_chain)
@@ -1161,16 +1262,24 @@ fsl_shw_return_t sah_add_key_out_desc(uint32_t header, fsl_shw_sko_t *key_info,
     sah_Link         *link1 = NULL;
     sah_Link         *link2 = NULL;
 
+	status = sah_Create_Key_Link(mu, &link1, (fsl_shw_sko_t *) key_info);
+	if (status != FSL_RETURN_OK_S) {
+		goto out;
+	}
+    
 
-    status = sah_Create_Key_Link(mu, &link1, key_info);
-
-    if ((status == FSL_RETURN_OK_S) && (out != NULL))  {
+    if (out != NULL)  {
         status = sah_Create_Link(mu, &link2,
                                  (sah_Oct_Str) out, out_length,
                                  SAH_OUTPUT_LINK |
                                  SAH_USES_LINK_DATA);
+		if (status != FSL_RETURN_OK_S) {
+			goto out;
+	   }
     }
-
+status = sah_Append_Desc(mu, desc_chain, header, link1, link2);
+	
+out:
     if (status != FSL_RETURN_OK_S) {
         if (link1 != NULL) {
             sah_Destroy_Link(mu, link1);
@@ -1178,8 +1287,6 @@ fsl_shw_return_t sah_add_key_out_desc(uint32_t header, fsl_shw_sko_t *key_info,
         if (link2 != NULL) {
             sah_Destroy_Link(mu, link2);
         }
-    } else {
-        status = sah_Append_Desc(mu, desc_chain, header, link1, link2);
     }
 
     return status;
@@ -1286,4 +1393,4 @@ void sah_Postprocess_Results(fsl_shw_uco_t* user_ctx, sah_results* result_info)
 }
 
 
-/* End of sah_util.c */
+/* End of sf_util.c */

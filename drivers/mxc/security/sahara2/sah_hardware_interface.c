@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -32,8 +32,6 @@
 
 static void sah_Dump_Link(const char *prefix, const sah_Link * link,
 			  dma_addr_t addr);
-void sah_Dump_Words(const char *prefix, const unsigned *data, dma_addr_t addr,
-		    unsigned length);
 
 /* This is for sprintf() to use when constructing output. */
 #define DIAG_MSG_SIZE   1024
@@ -273,23 +271,16 @@ int sah_HW_Reset(void)
 			random_desc->desc.header = 0xB18C0000;	/* LLO get random number */
 			random_desc->desc.len1 =
 			    rnd_cnt * sizeof(*random_data_ptr);
-#ifdef USE_OLD_PTRS
 			random_desc->desc.ptr1 = (void *)rand_dma;
 			random_desc->desc.original_ptr1 =
 			    (void *)random_data_ptr;
-#else
-			random_desc->desc.hw_ptr1 = rand_dma;
-			random_desc->desc.ptr1 = (void *)random_data_ptr;
-#endif
+
 			random_desc->desc.len2 = 0;	/* not used */
 			random_desc->desc.ptr2 = 0;	/* not used */
-#ifdef USE_OLD_PTRS
+
 			random_desc->desc.next = 0;	/* chain terminates here */
 			random_desc->desc.original_next = 0;	/* chain terminates here */
-#else
-			random_desc->desc.hw_next = 0;	/* chain terminates here */
-			random_desc->desc.next = 0;	/* chain terminates here */
-#endif
+
 			desc_dma = random_desc->desc.dma_addr;
 
 			/* Force in-cache data out to RAM */
@@ -855,6 +846,7 @@ void sah_Dump_Words(const char *prefix, const unsigned *data, dma_addr_t addr,
 	}
 
 	pr_debug("%s\n", Diag_msg);
+	
 }
 
 #endif				/* DIAG_DRV_IF */

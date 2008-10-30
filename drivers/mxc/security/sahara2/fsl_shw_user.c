@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -28,43 +28,17 @@ EXPORT_SYMBOL(fsl_shw_deregister_user);
 EXPORT_SYMBOL(fsl_shw_get_results);
 #endif				/* __KERNEL__ */
 
-/*! This matches Sahara2 capabilities... */
-fsl_shw_pco_t sahara2_capabilities = {
-	1, 1,			/* api version number - major & minor */
-	1, 2,			/* driver version number - major & minor */
-	{
-	 FSL_KEY_ALG_AES,
-	 FSL_KEY_ALG_DES,
-	 FSL_KEY_ALG_TDES,
-	 FSL_KEY_ALG_ARC4}
-	,
-	{
-	 FSL_SYM_MODE_STREAM,
-	 FSL_SYM_MODE_ECB,
-	 FSL_SYM_MODE_CBC,
-	 FSL_SYM_MODE_CTR}
-	,
-	{
-	 FSL_HASH_ALG_MD5,
-	 FSL_HASH_ALG_SHA1,
-	 FSL_HASH_ALG_SHA224,
-	 FSL_HASH_ALG_SHA256}
-	,
-	/*
-	 * The following table must be set to handle all values of key algorithm
-	 * and sym mode, and be in the correct order..
-	 */
-	{			/* Stream, ECB, CBC, CTR */
-	 {0, 0, 0, 0}
-	 ,			/* HMAC */
-	 {0, 1, 1, 1}
-	 ,			/* AES  */
-	 {0, 1, 1, 0}
-	 ,			/* DES */
-	 {0, 1, 1, 0}
-	 ,			/* 3DES */
-	 {1, 0, 0, 0}		/* ARC4 */
-	 }
+struct cap_t {
+	unsigned populated;
+	union {
+		uint32_t buffer[sizeof(fsl_shw_pco_t)];
+		fsl_shw_pco_t pco;
+	};
+};
+
+static struct cap_t cap = {
+	0,
+	{}
 };
 
 /* REQ-S2LRD-PINTFC-API-GEN-003 */
@@ -80,12 +54,17 @@ fsl_shw_pco_t sahara2_capabilities = {
  */
 fsl_shw_pco_t *fsl_shw_get_capabilities(fsl_shw_uco_t * user_ctx)
 {
-	/*
-	 * Need to get the driver/hardware versions populated...
-	 * which is why the user_ctx is here.
-	 */
-	user_ctx = 0;
-	return &sahara2_capabilities;
+	fsl_shw_pco_t *retval = NULL;
+
+	if (cap.populated) {
+		retval = &cap.pco;
+	} else {
+		if (get_capabilities(user_ctx, &cap.pco) == FSL_RETURN_OK_S) {
+			cap.populated = 1;
+			retval = &cap.pco;
+		}
+	}
+	return retval;
 }
 
 /* REQ-S2LRD-PINTFC-API-GEN-004 */

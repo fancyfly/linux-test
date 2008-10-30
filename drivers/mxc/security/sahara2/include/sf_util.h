@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -19,6 +19,7 @@
 #ifndef SF_UTIL_H
 #define SF_UTIL_H
 
+#include <fsl_platform.h>
 #include <sahara.h>
 
 /*! Header value for Sahara Descriptor  1 */
@@ -123,6 +124,16 @@ do {                                                                        \
     }                                                                       \
 }
 
+/*! Add Descriptor with two vectors */
+#define DESC_D_D(hdr, len1, ptr1, len2, ptr2)                               \
+{                                                                           \
+    ret = sah_add_two_d_desc(hdr, ptr1, len1, ptr2, len2,                   \
+                              user_ctx->mem_util, &desc_chain);             \
+    if (ret != FSL_RETURN_OK_S) {                                           \
+        goto out;                                                           \
+    }                                                                       \
+}
+
 /*! Add Descriptor with input and a key */
 #define DESC_IN_KEY(hdr, len1, ptr1, key2)                                  \
 {                                                                           \
@@ -195,6 +206,14 @@ do {                                                                        \
 }
 #else
 #define DBG_DESC(hdr, len1, ptr1, len2, ptr2)
+#endif
+
+#ifdef __KERNEL__
+#define DESC_DBG_ON  ({console_loglevel = 8;})
+#define DESC_DBG_OFF ({console_loglevel = 7;})
+#else
+#define DESC_DBG_ON  system("echo 8 > /proc/sys/kernel/printk")
+#define DESC_DBG_OFF system("echo 7 > /proc/sys/kernel/printk")
 #endif
 
 #define DESC_TEMP_ALLOC(size)                                               \
@@ -301,12 +320,21 @@ extern const uint32_t sah_insert_skha_modulus[];
 #define sah_insert_skha_algorithm_tdes 0x80000002
 #define sah_insert_skha_algorithm_des  0x80000001
 #define sah_insert_skha_algorithm_aes  0x00000000
+#define sah_insert_skha_aux0           0x80000020
 #define sah_insert_skha_mode_ctr       0x00000018
 #define sah_insert_skha_mode_ccm       0x80000010
 #define sah_insert_skha_mode_cbc       0x80000008
 #define sah_insert_skha_mode_ecb       0x00000000
 #define sah_insert_skha_encrypt        0x80000004
 #define sah_insert_skha_decrypt        0x00000000
+/*! @} */
+
+/*! @defgroup rngflags RNG Mode Register Values
+ *
+ */
+/*! */
+#define sah_insert_rng_gen_seed        0x80000001
+
 /*! @} */
 
 /*! @defgroup pkhaflags PKHA Mode Register Values
@@ -321,15 +349,15 @@ extern const uint32_t sah_insert_skha_modulus[];
 #define sah_insert_pkha_rtn_mod_exp            0x00000003
 #define sah_insert_pkha_rtn_mod_r2modn         0x80000004
 #define sah_insert_pkha_rtn_mod_rrmodp         0x00000005
-#define sah_insert_pkha_rtn_ec_fp_aff_ptmult   0x00000006
-#define sah_insert_pkha_rtn_ec_f2m_aff_ptmult  0x80000007
-#define sah_insert_pkha_rtn_ec_fp_proj_ptmult  0x80000008
-#define sah_insert_pkha_rtn_ec_f2m_proj_ptmult 0x00000009
+#define sah_insert_pkha_rtn_ec_fp_aff_ptmul    0x00000006
+#define sah_insert_pkha_rtn_ec_f2m_aff_ptmul   0x80000007
+#define sah_insert_pkha_rtn_ec_fp_proj_ptmul   0x80000008
+#define sah_insert_pkha_rtn_ec_f2m_proj_ptmul  0x00000009
 #define sah_insert_pkha_rtn_ec_fp_add          0x0000000A
 #define sah_insert_pkha_rtn_ec_fp_double       0x8000000B
 #define sah_insert_pkha_rtn_ec_f2m_add         0x0000000C
 #define sah_insert_pkha_rtn_ec_f2m_double      0x8000000D
-#define sah_insert_pkha_rtn_f2m_r2             0x8000000E
+#define sah_insert_pkha_rtn_f2m_r2modn         0x8000000E
 #define sah_insert_pkha_rtn_f2m_inv            0x0000000F
 #define sah_insert_pkha_rtn_mod_inv            0x80000010
 #define sah_insert_pkha_rtn_rsa_sstep          0x00000011
@@ -366,6 +394,15 @@ fsl_shw_return_t sah_add_two_in_desc(uint32_t header,
 				     uint32_t in2_length,
 				     const sah_Mem_Util * mu,
 				     sah_Head_Desc ** desc_chain);
+
+/*! Add a descriptor with two 'data' pointers */
+fsl_shw_return_t sah_add_two_d_desc(uint32_t header,
+				    const uint8_t * in1,
+				    uint32_t in1_length,
+				    const uint8_t * in2,
+				    uint32_t in2_length,
+				    const sah_Mem_Util * mu,
+				    sah_Head_Desc ** desc_chain);
 
 /*! Add a descriptor with an input and key pointer */
 fsl_shw_return_t sah_add_in_key_desc(uint32_t header,
@@ -406,7 +443,8 @@ fsl_shw_return_t sah_add_in_keyout_desc(uint32_t header,
 					sah_Head_Desc ** desc_chain);
 
 /*! Add a descriptor with a key and an output pointer */
-fsl_shw_return_t sah_add_key_out_desc(uint32_t header, fsl_shw_sko_t * key_info,
+fsl_shw_return_t sah_add_key_out_desc(uint32_t header,
+					  const fsl_shw_sko_t * key_info,
 				      uint8_t * out, uint32_t out_length,
 				      const sah_Mem_Util * mu,
 				      sah_Head_Desc ** desc_chain);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -39,14 +39,15 @@
 #include <sah_kernel.h>
 #include <sah_queue_manager.h>
 #include <sah_memory_mapper.h>
-#ifdef FSL_HAVE_SCC
-#include <asm/arch/mxc_scc_driver.h>
-#else
+#ifdef FSL_HAVE_SCC2
 #include <asm/arch/mxc_scc2_driver.h>
+#else
+#include <asm/arch/mxc_scc_driver.h>
 #endif
 
 #if defined(DIAG_DRV_IF) || defined(DIAG_MEM) || defined(DO_DBG)
 #include <diagnostic.h>
+#include <sah_hardware_interface.h>
 #endif
 
 #include <linux/mm.h>		/* get_user_pages() */
@@ -78,8 +79,19 @@ EXPORT_SYMBOL(sah_Physicalise_Descriptors);
 EXPORT_SYMBOL(sah_DePhysicalise_Descriptors);
 #endif
 
+/* Determine if L2 cache support should be built in. */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,21))
+#ifdef CONFIG_OUTER_CACHE
+#define HAS_L2_CACHE
+#endif
+#else
+#ifdef CONFIG_CPU_CACHE_L210
+#define HAS_L2_CACHE
+#endif
+#endif
+
 /* Number of bytes the hardware uses out of sah_Link and sah_*Desc structs */
-#define SAH_HW_LINK_LEN  12
+#define SAH_HW_LINK_LEN  1
 #define SAH_HW_DESC_LEN  24
 
 /* Macros for Descriptors */
@@ -183,6 +195,187 @@ static void sah_Append_Block(Mem_Block * block);
 static void sah_Append_Big_Block(Mem_Big_Block * block);
 #endif				/* SELF_MANAGED_POOL */
 
+/* Page context structure.  Used by wire_user_memory and unwire_user_memory */
+typedef struct page_ctx_t {
+	uint32_t count;
+	struct page **local_pages;
+} page_ctx_t;
+
+/*!
+*******************************************************************************
+* Map and wire down a region of user memory.
+*
+*
+* @param    address     Userspace address of the memory to wire
+* @param    length      Length of the memory region to wire
+* @param    page_ctx    Page context, to be passed to unwire_user_memory
+*
+* @return   (if successful) Kernel virtual address of the wired pages
+*/
+void *wire_user_memory(void *address, uint32_t length, void **page_ctx)
+{
+	void *kernel_black_addr = NULL;
+	int result = -1;
+	int page_index = 0;
+	page_ctx_t *page_context;
+	int nr_pages = 0;
+	unsigned long start_page;
+	fsl_shw_return_t status;
+
+	/* Determine the number of pages being used for this link */
+	nr_pages = (((unsigned long)(address) & ~PAGE_MASK)
+		    + length + ~PAGE_MASK) >> PAGE_SHIFT;
+
+	start_page = (unsigned long)(address) & PAGE_MASK;
+
+	/* Allocate some memory to keep track of the wired user pages, so that
+	 * they can be deallocated later.  The block of memory will contain both
+	 * the structure and the array of pages.
+	 */
+	page_context = kmalloc(sizeof(page_ctx_t)
+			       + nr_pages * sizeof(struct page *), GFP_KERNEL);
+
+	if (page_context == NULL) {
+		status = FSL_RETURN_NO_RESOURCE_S;	/* no memory! */
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("kmalloc() failed.");
+#endif
+		return NULL;
+	}
+
+	/* Set the page pointer to point to the allocated region of memory */
+	page_context->local_pages = (void *)page_context + sizeof(page_ctx_t);
+
+#ifdef DIAG_DRV_IF
+	LOG_KDIAG_ARGS("page_context at: %p, local_pages at: %p",
+		       (void *)page_context,
+		       (void *)(page_context->local_pages));
+#endif
+
+	/* Wire down the pages from user space */
+	down_read(&current->mm->mmap_sem);
+	result = get_user_pages(current, current->mm,
+				start_page, nr_pages, WRITE, 0 /* noforce */ ,
+				(page_context->local_pages), NULL);
+	up_read(&current->mm->mmap_sem);
+
+	if (result < nr_pages) {
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("get_user_pages() failed.");
+#endif
+		if (result > 0) {
+			for (page_index = 0; page_index < result; page_index++) {
+				page_cache_release((page_context->
+						    local_pages[page_index]));
+			}
+
+			kfree(page_context);
+		}
+		return NULL;
+	}
+
+	kernel_black_addr = page_address(page_context->local_pages[0]) +
+	    ((unsigned long)address & ~PAGE_MASK);
+
+	page_context->count = nr_pages;
+	*page_ctx = page_context;
+
+	return kernel_black_addr;
+}
+
+/*!
+*******************************************************************************
+* Release and unmap a region of user memory.
+*
+* @param    page_ctx    Page context from wire_user_memory
+*/
+void unwire_user_memory(void **page_ctx)
+{
+	int page_index = 0;
+	struct page_ctx_t *page_context = *page_ctx;
+
+#ifdef DIAG_DRV_IF
+	LOG_KDIAG_ARGS("page_context at: %p, first page at:%p, count: %i",
+		       (void *)page_context,
+		       (void *)(page_context->local_pages),
+		       page_context->count);
+#endif
+
+	if ((page_context != NULL) && (page_context->local_pages != NULL)) {
+		for (page_index = 0; page_index < page_context->count;
+		     page_index++) {
+			page_cache_release(page_context->
+					   local_pages[page_index]);
+		}
+
+		kfree(page_context);
+		*page_ctx = NULL;
+	}
+}
+
+/*!
+*******************************************************************************
+* Map some physical memory into a users memory space
+*
+* @param    vma             Memory structure to map to
+* @param    physical_addr   Physical address of the memory to be mapped in
+* @param    size            Size of the memory to map (bytes)
+*
+* @return 
+*/
+os_error_code
+map_user_memory(struct vm_area_struct *vma, uint32_t physical_addr,
+		uint32_t size)
+{
+	os_error_code retval;
+
+	/* Map the acquired partition into the user's memory space */
+	vma->vm_end = vma->vm_start + size;
+
+	/* set cache policy to uncached so that each write of the UMID and
+	 * permissions get directly to the SCC2 in order to engage it
+	 * properly.  Once the permissions have been written, it may be
+	 * useful to provide a service for the user to request a different
+	 * cache policy
+	 */
+	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
+	/* Make sure that the user cannot fork() a child which will inherit
+	 * this mapping, as it creates a security hole.  Likewise, do not
+	 * allow the user to 'expand' his mapping beyond this partition.
+	 */
+	vma->vm_flags |= VM_IO | VM_RESERVED | VM_DONTCOPY | VM_DONTEXPAND;
+
+	retval = remap_pfn_range(vma,
+				 vma->vm_start,
+				 __phys_to_pfn(physical_addr),
+				 size, vma->vm_page_prot);
+
+	return retval;
+}
+
+/*!
+*******************************************************************************
+* Remove some memory from a user's memory space
+*
+* @param    user_addr       Userspace address of the memory to be unmapped
+* @param    size            Size of the memory to map (bytes)
+*
+* @return 
+*/
+os_error_code unmap_user_memory(uint32_t user_addr, uint32_t size)
+{
+	os_error_code retval;
+	struct mm_struct *mm = current->mm;
+
+	/* Unmap the memory region (see sys_munmap in mmap.c) */
+	down_write(&mm->mmap_sem);
+	retval = do_munmap(mm, (unsigned long)user_addr, size);
+	up_write(&mm->mmap_sem);
+
+	return retval;
+}
+
 /*!
 *******************************************************************************
 * Free descriptor back to free pool
@@ -243,6 +436,7 @@ void sah_Free_Link(sah_Link * link)
 *
 * @brief Kernel Descriptor Chain Copier
 *
+* @param    fsl_shw_uco_t  The user context to act under
 * @param    user_head_desc A Head Descriptor pointer from user-space.
 *
 * @return   sah_Head_Desc *  - A virtual address of the first descriptor in the
@@ -250,7 +444,8 @@ void sah_Free_Link(sah_Link * link)
 * @return   NULL        - If there was some error.
 *
 */
-sah_Head_Desc *sah_Copy_Descriptors(sah_Head_Desc * user_head_desc)
+sah_Head_Desc *sah_Copy_Descriptors(fsl_shw_uco_t * user_ctx,
+				sah_Head_Desc * user_head_desc)
 {
 	sah_Desc *curr_desc = NULL;
 	sah_Desc *prev_desc = NULL;
@@ -353,11 +548,10 @@ sah_Head_Desc *sah_Copy_Descriptors(sah_Head_Desc * user_head_desc)
 					    (uint32_t) head_desc->desc.
 					    original_ptr1;
 #ifdef DIAG_DRV_IF
-					sprintf(Diag_msg,
+					LOG_KDIAG_ARGS(
 						"User flags: %x; User Reference: %x",
 						head_desc->uco_flags,
 						head_desc->user_ref);
-					LOG_KDIAG(Diag_msg);
 #endif
 					/* These values were destroyed by the copy. */
 					head_desc->desc.virt_addr = virt_addr;
@@ -376,9 +570,8 @@ sah_Head_Desc *sah_Copy_Descriptors(sah_Head_Desc * user_head_desc)
 		} else {	/* not head */
 			curr_desc = sah_Alloc_Descriptor();
 #ifdef DIAG_MEM
-			sprintf(Diag_msg, "Alloc_Descriptor returned %p\n",
+			LOG_KDIAG_ARGS("Alloc_Descriptor returned %p\n",
 				curr_desc);
-			LOG_KDIAG(Diag_msg);
 #endif
 			if (curr_desc == NULL) {
 #ifdef DIAG_DRV_IF
@@ -431,7 +624,7 @@ sah_Head_Desc *sah_Copy_Descriptors(sah_Head_Desc * user_head_desc)
 				} else {
 					/* pointer fields point to sah_Link structures */
 					curr_desc->original_ptr1 =
-					    sah_Copy_Links(curr_desc->ptr1);
+					    sah_Copy_Links(user_ctx, curr_desc->ptr1);
 					if (curr_desc->original_ptr1 == NULL) {
 						/* This descriptor and any links created successfully
 						 * are cleaned-up at the bottom of this function. */
@@ -457,8 +650,7 @@ sah_Head_Desc *sah_Copy_Descriptors(sah_Head_Desc * user_head_desc)
 					} else {
 						/* pointer fields point to sah_Link structures */
 						curr_desc->original_ptr2 =
-						    sah_Copy_Links(curr_desc->
-								   ptr2);
+						    sah_Copy_Links(user_ctx, curr_desc->ptr2);
 						if (curr_desc->original_ptr2 ==
 						    NULL) {
 							/* This descriptor and any links created
@@ -560,27 +752,64 @@ sah_Link *sah_Physicalise_Links(sah_Link * first_link)
 	sah_Link *link = first_link;
 
 	while (link != NULL) {
-
 #ifdef DO_DBG
-		sah_Dump_Words("Link", (unsigned *)link, 3);
+		sah_Dump_Words("Link", (unsigned *)link, link->dma_addr, 3);
 #endif
 		link->vm_info = NULL;
 
-		/* need to retrieve sorted key? */
+		/* need to retrieve stored key? */
 		if (link->flags & SAH_STORED_KEY_INFO) {
 			uint32_t max_len = 0;	/* max slot length */
-			scc_return_t scc_status;
+			fsl_shw_return_t ret_status;
 
 			/* get length and physical address of stored key */
-			scc_status = scc_get_slot_info(link->ownerid, link->slot, (uint32_t *) & link->data,	/* RED key address */
-						       NULL,	/* key length */
+			ret_status = system_keystore_get_slot_info(link->ownerid, link->slot, (uint32_t *) & link->data,	/* RED key address */
 						       &max_len);
-			if ((scc_status != SCC_RET_OK) || (link->len > max_len)) {
+			if ((ret_status != FSL_RETURN_OK_S) || (link->len > max_len)) {
 				/* trying to illegally/incorrectly access a key. Cause the
 				 * error status register to show a Link Length Error by
 				 * putting a zero in the links length. */
 				link->len = 0;	/* Cause error.  Somebody is up to no good. */
 			}
+		} else if (link->flags & SAH_IN_USER_KEYSTORE) {
+
+#ifdef FSL_HAVE_SCC2
+			/* The data field points to the virtual address of the key.  Convert
+			 * this to a physical address by modifying the address based
+			 * on where the secure memory was mapped to the kernel.  Note: In
+			 * kernel mode, no attempt is made to track or control who owns what
+			 * memory partition.
+			 */
+			link->data = (uint8_t *) scc_virt_to_phys(link->data);
+
+			/* Do bounds checking to ensure that the user is not overstepping
+			 * the bounds of their partition.  This is a simple implementation
+			 * that assumes the user only owns one partition.  It only checks
+			 * to see if the address of the last byte of data steps over a
+			 * page boundary.
+			 */
+
+#ifdef DO_DBG
+			LOG_KDIAG_ARGS("start page: %08x, end page: %08x"
+				       "first addr: %p, last addr: %p, len; %i",
+				       ((uint32_t) (link->data) >> PAGE_SHIFT),
+				       (((uint32_t) link->data +
+					 link->len) >> PAGE_SHIFT), link->data,
+				       link->data + link->len, link->len);
+#endif
+
+			if ((((uint32_t) link->data +
+			      link->len) >> PAGE_SHIFT) !=
+			    ((uint32_t) link->data >> PAGE_SHIFT)) {
+				link->len = 0;	/* Cause error.  Somebody is up to no good. */
+			}
+#else				/* FSL_HAVE_SCC2 */
+
+			/* User keystores are not valid on non-SCC2 platforms */
+			link->len = 0;	/* Cause error.  Somebody is up to no good. */
+
+#endif				/* FSL_HAVE_SCC2 */
+
 		} else {
 			if (!(link->flags & SAH_PREPHYS_DATA)) {
 				link->original_data = link->data;
@@ -600,8 +829,7 @@ sah_Link *sah_Physicalise_Links(sah_Link * first_link)
 							     original_data,
 							     link->len);
 				} else {
-					os_cache_clean_range(link->
-							     original_data,
+					os_cache_clean_range(link->original_data,
 							     link->len);
 				}
 			}	/* not prephys */
@@ -639,7 +867,7 @@ sah_Link *sah_Physicalise_Links(sah_Link * first_link)
 			link->next = (sah_Link *) link->next->dma_addr;
 		}
 #ifdef DO_DBG
-		sah_Dump_Words("Linc", link, 3);
+		sah_Dump_Words("Link", link, link->dma_addr, 3);
 #endif
 
 		link = link->original_next;
@@ -668,7 +896,8 @@ sah_Head_Desc *sah_Physicalise_Descriptors(sah_Head_Desc * first_desc)
 			sah_Desc *next_desc;
 
 #ifdef DO_DBG
-			sah_Dump_Words("Desc", (unsigned *)desc, 6);
+
+			sah_Dump_Words("Desc", (unsigned *)desc, desc->dma_addr, 6);
 #endif
 
 			desc->original_ptr1 = desc->ptr1;
@@ -738,12 +967,13 @@ sah_Link *sah_DePhysicalise_Links(sah_Link * first_link)
 	while (link != NULL) {
 
 #ifdef DO_DBG
-		sah_Dump_Words("Link", (unsigned *)link, 3);
+		sah_Dump_Words("Link", (unsigned *)link, link->dma_addr, 3);
 #endif
 
 		/* if this references stored keys, don't want to dephysicalize them */
 		if (!(link->flags & SAH_STORED_KEY_INFO)
-		    && !(link->flags & SAH_PREPHYS_DATA)) {
+		    && !(link->flags & SAH_PREPHYS_DATA)
+		    && !(link->flags & SAH_IN_USER_KEYSTORE)) {
 
 			/* */
 			if (link->flags & SAH_OUTPUT_LINK) {
@@ -813,7 +1043,7 @@ sah_Head_Desc *sah_DePhysicalise_Descriptors(sah_Head_Desc * first_desc)
 	if (!(first_desc->uco_flags & FSL_UCO_CHAIN_PREPHYSICALIZED)) {
 		while (desc != NULL) {
 #ifdef DO_DBG
-			sah_Dump_Words("Desc", (unsigned *)desc, 6);
+			sah_Dump_Words("Desc", (unsigned *)desc, desc->dma_addr, 6);
 #endif
 
 			if (desc->ptr1 != NULL) {
@@ -945,7 +1175,7 @@ void sah_Free_Chained_Links(sah_Link * link)
 *                         chain.
 * @return   NULL        - If there was some error.
 */
-sah_Link *sah_Copy_Links(sah_Link * ptr)
+sah_Link *sah_Copy_Links(fsl_shw_uco_t * user_ctx, sah_Link * ptr)
 {
 	sah_Link *head_link = NULL;
 	sah_Link *new_head_link = NULL;
@@ -994,7 +1224,7 @@ sah_Link *sah_Copy_Links(sah_Link * ptr)
 			 * in the chain. This will return a new head and tail link. */
 			link_data_length = link_data_length + link_copy.len;
 			new_head_link =
-			    sah_Make_Links(&link_copy, &new_tail_link);
+			    sah_Make_Links(user_ctx, &link_copy, &new_tail_link);
 
 			if (new_head_link == NULL) {
 				/* If we ran out of memory or a user pointer was invalid */
@@ -1065,7 +1295,8 @@ sah_Link *sah_Copy_Links(sah_Link * ptr)
 * @return   NULL        - If there was some error.
 *
 */
-sah_Link *sah_Make_Links(sah_Link * ptr, sah_Link ** tail)
+sah_Link *sah_Make_Links(fsl_shw_uco_t * user_ctx, 
+							sah_Link * ptr, sah_Link ** tail)
 {
 	int result = -1;
 	int page_index = 0;
@@ -1083,7 +1314,7 @@ sah_Link *sah_Make_Links(sah_Link * ptr, sah_Link ** tail)
 
 	/* need to retrieve stored key? */
 	if (ptr->flags & SAH_STORED_KEY_INFO) {
-		scc_return_t scc_status;
+		fsl_shw_return_t ret_status;
 
 		/* allocate space for this link */
 		link = sah_Alloc_Link();
@@ -1103,17 +1334,24 @@ sah_Link *sah_Make_Links(sah_Link * ptr, sah_Link ** tail)
 			uint32_t max_len = 0;	/* max slot length */
 
 			/* get length and physical address of stored key */
-			scc_status = scc_get_slot_info(ptr->ownerid, ptr->slot, (uint32_t *) & link->data,	/* RED key address */
-						       NULL, &max_len);
+			ret_status = system_keystore_get_slot_info(ptr->ownerid, ptr->slot, (uint32_t *) & link->data,	/* RED key address */
+						      &max_len);
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG_ARGS
+			("ret_status==SCC_RET_OK? %s.  slot: %i. data: %p"
+			 ". len: %i, key length: %i",
+		 	(ret_status == FSL_RETURN_OK_S ? "yes" : "no"),
+			 ptr->slot, link->data, max_len, ptr->len);
+#endif
 
-			if ((scc_status == SCC_RET_OK) && (ptr->len <= max_len)) {
+			if ((ret_status == FSL_RETURN_OK_S) && (ptr->len <= max_len)) {
 				/* finish populating the link */
 				link->len = ptr->len;
 				link->flags = ptr->flags & ~SAH_PREPHYS_DATA;
 				*tail = link;
 			} else {
 #ifdef DIAG_DRV_IF
-				if (scc_status == SCC_RET_OK) {
+				if (ret_status == FSL_RETURN_OK_S) {
 					LOG_KDIAG
 					    ("SCC sah_Link key slot reference is too long");
 				} else {
@@ -1127,8 +1365,78 @@ sah_Link *sah_Make_Links(sah_Link * ptr, sah_Link ** tail)
 			}
 			return link;
 		}
+	}	else if (ptr->flags & SAH_IN_USER_KEYSTORE) {
+
+#ifdef FSL_HAVE_SCC2
+
+		void *kernel_base;
+
+		/* allocate space for this link */
+		link = sah_Alloc_Link();
+#ifdef DIAG_MEM
+		sprintf(Diag_msg, "Alloc_Link returned %p/%p\n", link,
+			(void *)link->dma_addr);
+		LOG_KDIAG(Diag_msg);
+#endif				/* DIAG_MEM */
+
+		if (link == NULL) {
+			status = FSL_RETURN_NO_RESOURCE_S;
+#ifdef DIAG_DRV_IF
+			LOG_KDIAG("sah_Alloc_Link() failed!");
+#endif
+			return link;
+		} else {
+			/* link->data points to the virtual address of the key data, however
+			 * this memory does not need to be locked down.
+			 */
+			kernel_base = lookup_user_partition(user_ctx,
+							    (uint32_t) ptr->
+							    data & PAGE_MASK);
+
+			link->data = (uint8_t *) scc_virt_to_phys(kernel_base +
+								  ((unsigned
+								    long)ptr->
+								   data &
+								   ~PAGE_MASK));
+
+			/* Do bounds checking to ensure that the user is not overstepping
+			 * the bounds of their partition.  This is a simple implementation
+			 * that assumes the user only owns one partition.  It only checks
+			 * to see if the address of the last byte of data steps over a
+			 * page boundary.
+			 */
+			if ((kernel_base != NULL) &&
+			    ((((uint32_t) link->data +
+			       link->len) >> PAGE_SHIFT) ==
+			     ((uint32_t) link->data >> PAGE_SHIFT))) {
+				/* finish populating the link */
+				link->len = ptr->len;
+				link->flags = ptr->flags & ~SAH_PREPHYS_DATA;
+				*tail = link;
+			} else {
+#ifdef DIAG_DRV_IF
+				if (kernel_base != NULL) {
+					LOG_KDIAG
+					    ("SCC sah_Link key slot reference is too long");
+				} else {
+					LOG_KDIAG
+					    ("SCC sah_Link slot slot reference is invalid");
+				}
+#endif
+				sah_Free_Link(link);
+				status = FSL_RETURN_INTERNAL_ERROR_S;
+				return NULL;
+			}
+			return link;
+		}
+
+#else				/* FSL_HAVE_SCC2 */
+
+		return NULL;
+
+#endif				/* FSL_HAVE_SCC2 */
 	}
-	/* stored-key support */
+	
 	if (ptr->data == NULL) {
 		/* The user buffer must not be NULL because map_user_kiobuf() cannot
 		 * handle NULL pointer input.
@@ -1186,7 +1494,7 @@ sah_Link *sah_Make_Links(sah_Link * ptr, sah_Link ** tail)
 	/* Now we can walk through the list of pages in the buffer */
 	if (status == FSL_RETURN_OK_S) {
 
-#if defined(FLUSH_SPECIFIC_DATA_ONLY) && !defined(CONFIG_OUTER_CACHE)
+#if defined(FLUSH_SPECIFIC_DATA_ONLY) && !defined(HAS_L2_CACHE)
 		/*
 		 * Now that pages are wired, clear user data from cache lines.  When
 		 * there is just an L1 cache, clean based on user virtual for ARM.
@@ -1268,7 +1576,7 @@ sah_Link *sah_Make_Links(sah_Link * ptr, sah_Link ** tail)
 					     sah_Link_Get_Data(ptr) &
 					     ~PAGE_MASK);
 				}
-#if defined(FLUSH_SPECIFIC_DATA_ONLY) && defined(CONFIG_OUTER_CACHE)
+#if defined(FLUSH_SPECIFIC_DATA_ONLY) && defined(HAS_L2_CACHE)
 				/*
 				 * When there is an L2 cache, clean based on kernel
 				 * virtual..
@@ -1284,7 +1592,7 @@ sah_Link *sah_Make_Links(sah_Link * ptr, sah_Link ** tail)
 
 				/* Fill in link information */
 				link->len = buffer_length;
-#if !defined(CONFIG_OUTER_CACHE)
+#if !defined(HAS_L2_CACHE)
 				/* use original virtual */
 				link->original_data = ptr->data;
 #else
@@ -1324,7 +1632,7 @@ sah_Link *sah_Make_Links(sah_Link * ptr, sah_Link ** tail)
 					buffer_length -= prev_link->len;
 					buffer_start += prev_link->len;
 
-#if !defined(CONFIG_OUTER_CACHE)
+#if !defined(HAS_L2_CACHE)
 					/* use original virtual */
 					link->original_data = ptr->data;
 #else

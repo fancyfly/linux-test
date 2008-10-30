@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -26,6 +26,7 @@
 #include <sah_status_manager.h>
 #include <sah_interrupt_handler.h>
 #include <sah_hardware_interface.h>
+#include <fsl_shw_keystore.h>
 #include <adaptor.h>
 #ifdef FSL_HAVE_SCC
 #include <asm/arch/mxc_scc_driver.h>
@@ -68,13 +69,36 @@ OS_DEV_SHUTDOWN_DCL(sah_cleanup);
 OS_DEV_OPEN_DCL(sah_open);
 OS_DEV_CLOSE_DCL(sah_release);
 OS_DEV_IOCTL_DCL(sah_ioctl);
+OS_DEV_MMAP_DCL(sah_mmap);
 
-static void sah_user_callback(fsl_shw_uco_t * uco);
-static os_error_code sah_handle_scc_slot_alloc(uint32_t info);
-static os_error_code sah_handle_scc_slot_dealloc(uint32_t info);
-static os_error_code sah_handle_scc_slot_load(uint32_t info);
-static os_error_code sah_handle_scc_slot_decrypt(uint32_t info);
-static os_error_code sah_handle_scc_slot_encrypt(uint32_t info);
+static os_error_code sah_handle_get_capabilities(fsl_shw_uco_t* user_ctx,
+                                                 uint32_t info);
+
+static void sah_user_callback(fsl_shw_uco_t * user_ctx);
+static os_error_code sah_handle_scc_sfree(fsl_shw_uco_t* user_ctx,
+                                          uint32_t info);
+static os_error_code sah_handle_scc_sstatus(fsl_shw_uco_t* user_ctx,
+                                          uint32_t info);
+static os_error_code sah_handle_scc_drop_perms(fsl_shw_uco_t* user_ctx,
+                                               uint32_t info);
+static os_error_code sah_handle_scc_encrypt(fsl_shw_uco_t* user_ctx,
+                                            uint32_t info);
+static os_error_code sah_handle_scc_decrypt(fsl_shw_uco_t* user_ctx,
+                                            uint32_t info);
+
+#ifdef FSL_HAVE_SCC2
+static fsl_shw_return_t register_user_partition(fsl_shw_uco_t* user_ctx,
+                                                uint32_t user_base,
+                                                void* kernel_base);
+static fsl_shw_return_t deregister_user_partition(fsl_shw_uco_t* user_ctx,
+                                                  uint32_t user_base);
+#endif
+
+static os_error_code sah_handle_sk_slot_alloc(uint32_t info);
+static os_error_code sah_handle_sk_slot_dealloc(uint32_t info);
+static os_error_code sah_handle_sk_slot_load(uint32_t info);
+static os_error_code sah_handle_sk_slot_decrypt(uint32_t info);
+static os_error_code sah_handle_sk_slot_encrypt(uint32_t info);
 
 /*! Boolean flag for whether interrupt handler needs to be released on exit */
 static unsigned interrupt_registered;
@@ -116,6 +140,9 @@ DECLARE_WAIT_QUEUE_HEAD(Wait_queue);
 static int Device_in_use = 0;
 #endif
 
+/* This is the system keystore object */
+fsl_shw_kso_t system_keystore;
+
 /*!
  * OS-dependent handle used for registering user interface of a driver.
  */
@@ -143,13 +170,11 @@ OS_DEV_INIT(sah_init)
 {
 	/* Status variable */
 	int os_error_code = 0;
-#ifdef DIAG_DRV_IF
-	char err_string[200];
-#endif
 
 	interrupt_registered = 0;
 
 	/* Enable the SAHARA Clocks */
+	printk("Sahara base address: 0x%08x\n", IO_ADDRESS(SAHA_BASE_ADDR));
 #ifdef DIAG_DRV_IF
 	LOG_KDIAG("SAHARA : Enabling the IPG and AHB clocks\n")
 #endif				/*DIAG_DRV_IF */
@@ -175,22 +200,22 @@ OS_DEV_INIT(sah_init)
 	}
 #endif				/* SPBA */
 
-	if (os_error_code == 0) {
+	if (os_error_code == OS_ERROR_OK_S) {
 		sah_hw_version = sah_HW_Read_Version();
-		printk("Sahara HW Version is 0x%08x\n", sah_hw_version);
+		os_printk("Sahara HW Version is 0x%08x\n", sah_hw_version);
 
 		/* verify code and hardware are version compatible */
 		if ((sah_hw_version != SAHARA_VERSION2)
 		    && (sah_hw_version != SAHARA_VERSION3)) {
 			if (((sah_hw_version >> 8) & 0xff) != SAHARA_VERSION4) {
-				printk
+				os_printk
 				    ("Sahara HW Version was not expected value.\n");
 				os_error_code = OS_ERROR_FAIL_S;
 			}
 		}
 	}
 
-	if (os_error_code == 0) {
+	if (os_error_code == OS_ERROR_OK_S) {
 #ifdef DIAG_DRV_IF
 		LOG_KDIAG("Calling sah_Init_Mem_Map to initialise "
 			  "memory subsystem.");
@@ -199,7 +224,7 @@ OS_DEV_INIT(sah_init)
 		os_error_code = sah_Init_Mem_Map();
 	}
 
-	if (os_error_code == 0) {
+	if (os_error_code == OS_ERROR_OK_S) {
 #ifdef DIAG_DRV_IF
 		LOG_KDIAG("Calling sah_HW_Reset() to Initialise the Hardware.");
 #endif
@@ -212,7 +237,7 @@ OS_DEV_INIT(sah_init)
 
 	}
 
-	if (os_error_code == 0) {
+	if (os_error_code == OS_ERROR_OK_S) {
 #if defined(CONFIG_DEVFS_FS) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
 		/* Register the DEVFS entry */
 		Sahara_devfs_handle = devfs_register(NULL,
@@ -232,7 +257,8 @@ OS_DEV_INIT(sah_init)
 		/* Create the PROCFS entry. This is used to report the assigned device
 		 * major number back to user-space. */
 #if 1
-		Sahara_procfs_handle = create_proc_entry(SAHARA_DEVICE_SHORT, 0700,	/* default mode */
+		Sahara_procfs_handle = create_proc_entry(
+		SAHARA_DEVICE_SHORT, 0700,	/* default mode */
 							 NULL);	/* parent dir */
 		if (Sahara_procfs_handle == NULL) {
 #ifdef DIAG_DRV_IF
@@ -248,7 +274,7 @@ OS_DEV_INIT(sah_init)
 #endif				/* #if 1 */
 	}
 
-	if (os_error_code == 0) {
+	if (os_error_code == OS_ERROR_OK_S) {
 #ifdef DIAG_DRV_IF
 		LOG_KDIAG
 		    ("Calling sah_Queue_Manager_Init() to Initialise the Queue "
@@ -260,7 +286,7 @@ OS_DEV_INIT(sah_init)
 		}
 	}
 #ifndef SAHARA_POLL_MODE
-	if (os_error_code == 0) {
+	if (os_error_code == OS_ERROR_OK_S) {
 #ifdef DIAG_DRV_IF
 		LOG_KDIAG("Calling sah_Intr_Init() to Initialise the Interrupt "
 			  "Handler.");
@@ -274,13 +300,13 @@ OS_DEV_INIT(sah_init)
 #endif				/* ifndef SAHARA_POLL_MODE */
 
 #ifdef SAHARA_POWER_MANAGEMENT
-	if (os_error_code == 0) {
+	if (os_error_code == OS_ERROR_OK_S) {
 		/* set up dynamic power management (dmp) */
 		os_error_code = sah_dpm_init();
 	}
 #endif
 
-	if (os_error_code == 0) {
+	if (os_error_code == OS_ERROR_OK_S) {
 		os_driver_init_registration(reg_handle);
 		os_driver_add_registration(reg_handle, OS_FN_OPEN,
 					   OS_DEV_OPEN_REF(sah_open));
@@ -288,11 +314,13 @@ OS_DEV_INIT(sah_init)
 					   OS_DEV_IOCTL_REF(sah_ioctl));
 		os_driver_add_registration(reg_handle, OS_FN_CLOSE,
 					   OS_DEV_CLOSE_REF(sah_release));
+		os_driver_add_registration(reg_handle, OS_FN_MMAP,
+                                   OS_DEV_MMAP_REF(sah_mmap));
 		os_error_code =
 		    os_driver_complete_registration(reg_handle, Major,
 						    "sahara");
 
-		if (os_error_code < 0) {
+		if (os_error_code < OS_ERROR_OK_S) {
 #ifdef DIAG_DRV_IF
 			snprintf(Diag_msg, DIAG_MSG_SIZE,
 				 "Registering the regular "
@@ -304,7 +332,28 @@ OS_DEV_INIT(sah_init)
 	}
 #endif				/* CONFIG_DEVFS_FS */
 
-	if (os_error_code != 0) {
+	if (os_error_code == OS_ERROR_OK_S) {
+		/* set up the system keystore, using the default keystore handler */
+		fsl_shw_init_keystore_default(&system_keystore);
+	
+		if (fsl_shw_establish_keystore(NULL, &system_keystore)
+				== FSL_RETURN_OK_S) {
+			os_error_code = OS_ERROR_OK_S;
+		} else {
+			os_error_code = OS_ERROR_FAIL_S;
+		}
+	
+		if (os_error_code < OS_ERROR_OK_S) {
+#ifdef DIAG_DRV_IF
+			snprintf(Diag_msg, DIAG_MSG_SIZE, "Registering the system keystore "
+					 "failed with error code: %d\n",
+					 os_error_code);
+			LOG_KDIAG(Diag_msg);
+#endif
+		}
+	}
+
+	if (os_error_code != OS_ERROR_OK_S) {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
 		cleanup_module();
 #else
@@ -313,8 +362,7 @@ OS_DEV_INIT(sah_init)
 	}
 #ifdef DIAG_DRV_IF
 	else {
-		sprintf(err_string, "Sahara major node is %d\n", Major);
-		LOG_KDIAG(err_string);
+		LOG_KDIAG_ARGS( "Sahara major node is %d\n", Major);
 	}
 #endif
 
@@ -332,12 +380,18 @@ OS_DEV_INIT(sah_init)
 */
 OS_DEV_SHUTDOWN(sah_cleanup)
 {
+
+	int ret_val = 0;
+	
+	printk(KERN_ALERT "Sahara going into cleanup\n");
+	
+	/* clear out the system keystore */
+	fsl_shw_release_keystore(NULL, &system_keystore);
+
 	/* Unregister the device */
 #if defined(CONFIG_DEVFS_FS) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
 	devfs_unregister(Sahara_devfs_handle);
 #else
-	int ret_val = 0;
-
 	if (Sahara_procfs_handle != NULL) {
 		remove_proc_entry(SAHARA_DEVICE_SHORT, NULL);
 	}
@@ -612,33 +666,114 @@ OS_DEV_IOCTL(sah_ioctl)
 		}
 		break;
 
-	case SAHARA_SCC_ALLOC:
+    case SAHARA_SCC_DROP_PERMS:
 #ifdef DIAG_DRV_IF
-		LOG_KDIAG("SAHARA_SCC_ALLOC IOCTL.");
-#endif				/* DIAG_DRV_IF */
-		status = sah_handle_scc_slot_alloc(os_dev_get_ioctl_arg());
+		LOG_KDIAG("SAHARA_SCC_DROP_PERMS IOCTL.");
+#endif /* DIAG_DRV_IF */
+		{
+			/* drop permissions on the specified partition */
+			fsl_shw_uco_t* user_ctx = os_dev_get_user_private();
+	
+			status = sah_handle_scc_drop_perms(user_ctx, os_dev_get_ioctl_arg());
+		}
 		break;
-
-	case SAHARA_SCC_DEALLOC:
+	
+	case SAHARA_SCC_SFREE:
+		/* Unmap the specified partition from the users space, and then
+		 * free it for use by someone else.
+		 */ 
 #ifdef DIAG_DRV_IF
-		LOG_KDIAG("SAHARA_SCC_DEALLOC IOCTL.");
-#endif				/* DIAG_DRV_IF */
-		status = sah_handle_scc_slot_dealloc(os_dev_get_ioctl_arg());
+		LOG_KDIAG("SAHARA_SCC_SFREE IOCTL.");
+#endif /* DIAG_DRV_IF */
+		{
+			fsl_shw_uco_t* user_ctx = os_dev_get_user_private();
+	
+			status = sah_handle_scc_sfree(user_ctx, os_dev_get_ioctl_arg());
+		}
 		break;
 
-	case SAHARA_SCC_LOAD:
+	case SAHARA_SCC_SSTATUS:
+			/* Unmap the specified partition from the users space, and then
+			 * free it for use by someone else.
+			 */
 #ifdef DIAG_DRV_IF
-		LOG_KDIAG("SAHARA_SCC_LOAD IOCTL.");
+			LOG_KDIAG("SAHARA_SCC_SSTATUS IOCTL.");
 #endif				/* DIAG_DRV_IF */
-		status = sah_handle_scc_slot_load(os_dev_get_ioctl_arg());
+			{
+				fsl_shw_uco_t *user_ctx = os_dev_get_user_private();
+	
+				status =
+					sah_handle_scc_sstatus(user_ctx,
+							   os_dev_get_ioctl_arg());
+			}
+			break;
+	
+	case SAHARA_SCC_ENCRYPT:
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("SAHARA_SCC_ENCRYPT IOCTL.");
+#endif /* DIAG_DRV_IF */
+		{
+			fsl_shw_uco_t* user_ctx = os_dev_get_user_private();
+	
+			status = sah_handle_scc_encrypt(user_ctx, os_dev_get_ioctl_arg());
+		}
+		break;
+	
+	case SAHARA_SCC_DECRYPT:
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("SAHARA_SCC_DECRYPT IOCTL.");
+#endif /* DIAG_DRV_IF */
+		{
+			fsl_shw_uco_t* user_ctx = os_dev_get_user_private();
+	
+			status = sah_handle_scc_decrypt(user_ctx, os_dev_get_ioctl_arg());
+		}
+		break;
+	
+	case SAHARA_SK_ALLOC:
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("SAHARA_SK_ALLOC IOCTL.");
+#endif /* DIAG_DRV_IF */
+		status = sah_handle_sk_slot_alloc(os_dev_get_ioctl_arg());
+		break;
+	case SAHARA_SK_DEALLOC:
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("SAHARA_SK_DEALLOC IOCTL.");
+#endif /* DIAG_DRV_IF */
+		status = sah_handle_sk_slot_dealloc(os_dev_get_ioctl_arg());
 		break;
 
-	case SAHARA_SCC_SLOT_DEC:
-		status = sah_handle_scc_slot_decrypt(os_dev_get_ioctl_arg());
+	case SAHARA_SK_LOAD:
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("SAHARA_SK_LOAD IOCTL.");
+#endif	/* DIAG_DRV_IF */
+		status = sah_handle_sk_slot_load(os_dev_get_ioctl_arg());
 		break;
 
-	case SAHARA_SCC_SLOT_ENC:
-		status = sah_handle_scc_slot_encrypt(os_dev_get_ioctl_arg());
+	case SAHARA_SK_SLOT_DEC:
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("SAHARA_SK_SLOT_DECRYPT IOCTL.");
+#endif	/* DIAG_DRV_IF */
+		status = sah_handle_sk_slot_decrypt(os_dev_get_ioctl_arg());
+		break;
+
+	case SAHARA_SK_SLOT_ENC:
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("SAHARA_SK_LOAD_ENCRYPT IOCTL.");
+#endif	/* DIAG_DRV_IF */
+		status = sah_handle_sk_slot_encrypt(os_dev_get_ioctl_arg());
+		break;
+
+	case SAHARA_GET_CAPS:
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG("SAHARA_GET_CAPS IOCTL.");
+#endif /* DIAG_DRV_IF */
+		{
+			fsl_shw_uco_t* user_ctx = os_dev_get_user_private();
+		
+			status = sah_handle_get_capabilities(user_ctx, os_dev_get_ioctl_arg());
+		}
+
 		break;
 
 	default:
@@ -651,6 +786,583 @@ OS_DEV_IOCTL(sah_ioctl)
 	os_dev_ioctl_return(status);
 }
 
+/* Fill in the user's capabilities structure */
+static os_error_code sah_handle_get_capabilities(fsl_shw_uco_t* user_ctx, uint32_t info)
+{
+    os_error_code status = OS_ERROR_FAIL_S;
+    fsl_shw_pco_t capabilities;
+
+    status = os_copy_from_user(&capabilities, (void*)info,
+                               sizeof(fsl_shw_pco_t));
+
+    if (status != OS_ERROR_OK_S) {
+        goto out;
+    }
+
+    if (get_capabilities(user_ctx, &capabilities) == FSL_RETURN_OK_S) {
+        status = os_copy_to_user((void*)info, &capabilities,
+                                 sizeof(fsl_shw_pco_t));
+    }
+
+out:
+    return status;
+}
+
+#ifdef FSL_HAVE_SCC2
+
+
+/* Find the kernel-mode address of the partition.
+ * This can then be passed to the SCC functions.
+ */
+void* lookup_user_partition(fsl_shw_uco_t* user_ctx, uint32_t user_base)
+{
+    /* search through the partition chain to find one that matches the user base
+     * address.
+     */
+    fsl_shw_spo_t* curr = (fsl_shw_spo_t*)user_ctx->partition;
+
+    while(curr != NULL) {
+        if (curr->user_base == user_base) {
+            return curr->kernel_base;
+        }
+        curr = (fsl_shw_spo_t*)curr->next;
+    }
+    return NULL;
+}
+
+/* user_base: userspace base address of the partition
+ * kernel_base: kernel mode base address of the partition
+ */
+static fsl_shw_return_t register_user_partition(
+                            fsl_shw_uco_t* user_ctx,
+                            uint32_t user_base,
+                            void* kernel_base) {
+    fsl_shw_spo_t* partition_info;
+    fsl_shw_return_t ret = FSL_RETURN_ERROR_S;
+
+    if (user_ctx == NULL) {
+        goto out;
+    }
+
+    partition_info = os_alloc_memory(sizeof(fsl_shw_spo_t), GFP_KERNEL);
+
+    if (partition_info == NULL) {
+        goto out;
+    }
+
+    /* stuff the partition info, then put it at the front of the chain */
+    partition_info->user_base = user_base;
+    partition_info->kernel_base = kernel_base;
+    partition_info->next = user_ctx->partition;
+
+    user_ctx->partition = (struct fsl_shw_spo_t*)partition_info;
+
+#ifdef DIAG_DRV_IF
+    LOG_KDIAG_ARGS("partition with user_base=%p, kernel_base=%p registered.",
+                   (void*)user_base, kernel_base);
+#endif
+
+    ret = FSL_RETURN_OK_S;
+
+out: 
+
+    return ret;
+}
+
+/* if the partition is in the users list, remove it */
+static fsl_shw_return_t deregister_user_partition(fsl_shw_uco_t* user_ctx,
+                                                  uint32_t user_base) {
+    fsl_shw_spo_t* curr = (fsl_shw_spo_t*)user_ctx->partition;
+    fsl_shw_spo_t* last = (fsl_shw_spo_t*)user_ctx->partition;
+
+    while(curr != NULL) {
+        if (curr->user_base == user_base) {
+        
+#ifdef DIAG_DRV_IF
+            LOG_KDIAG_ARGS("deregister_user_partition: partition with "
+                           "user_base=%p, kernel_base=%p deregistered.\n",
+                           (void*)curr->user_base, curr->kernel_base);
+#endif
+
+            if (last == curr) {
+                user_ctx->partition = curr->next;
+                os_free_memory(curr); 
+                return FSL_RETURN_OK_S; 
+            }
+            else {
+                last->next = curr->next;
+                os_free_memory(curr); 
+                return FSL_RETURN_OK_S;
+            }
+        }
+        last = curr;
+        curr = (fsl_shw_spo_t*)curr->next;
+    }
+
+    return FSL_RETURN_ERROR_S;
+}
+
+#endif /* FSL_HAVE_SCC2 */
+
+static os_error_code sah_handle_scc_drop_perms(fsl_shw_uco_t* user_ctx,
+                                               uint32_t info)
+{
+    os_error_code status = OS_ERROR_NO_MEMORY_S;
+#ifdef FSL_HAVE_SCC2
+    scc_return_t scc_ret;
+    scc_partition_info_t partition_info;
+    void* kernel_base;
+
+    status = os_copy_from_user(&partition_info, (void*)info, sizeof(partition_info));
+
+    if (status != OS_ERROR_OK_S) {
+        goto out;
+    }
+
+    /* validate that the user owns this partition, and look up its handle */
+    kernel_base = lookup_user_partition(user_ctx, partition_info.user_base);
+
+    if (kernel_base == NULL) {
+        status = OS_ERROR_FAIL_S;
+#ifdef DIAG_DRV_IF
+        LOG_KDIAG("_scc_drop_perms(): failed to find partition\n");
+#endif
+        goto out;
+    }
+
+    /* call scc driver to perform the drop */
+    scc_ret = scc_diminish_permissions(kernel_base,
+                                       partition_info.permissions);
+    if (scc_ret == SCC_RET_OK) {
+        status = OS_ERROR_OK_S;
+    } else {
+        status = OS_ERROR_FAIL_S;
+    }
+
+out:
+#endif /* FSL_HAVE_SCC2 */
+    return status;
+}
+
+static os_error_code sah_handle_scc_sfree(fsl_shw_uco_t* user_ctx, uint32_t info)
+{
+    os_error_code status = OS_ERROR_NO_MEMORY_S;
+#ifdef FSL_HAVE_SCC2
+    {
+        scc_partition_info_t partition_info;
+        void* kernel_base;
+        int ret;
+
+        status = os_copy_from_user(&partition_info, (void*)info, sizeof(partition_info));
+
+        /* check that the copy was successful */
+        if (status != OS_ERROR_OK_S) {
+            goto out;
+        }
+
+        /* validate that the user owns this partition, and look up its handle */
+        kernel_base = lookup_user_partition(user_ctx, partition_info.user_base);
+
+        if (kernel_base == NULL) {
+            status = OS_ERROR_FAIL_S;
+#ifdef DIAG_DRV_IF
+            LOG_KDIAG("failed to find partition\n");
+#endif /*DIAG_DRV_IF */
+            goto out;
+        }
+
+        /* Unmap the memory region (see sys_munmap in mmap.c) */
+        ret = unmap_user_memory(partition_info.user_base, 8192);
+
+        /* If the memory was successfully released */
+        if (ret == OS_ERROR_OK_S) {
+
+            /* release the partition */
+            scc_release_partition(kernel_base);
+
+            /* and remove it from the users context */
+            deregister_user_partition(user_ctx, partition_info.user_base);
+
+            status = OS_ERROR_OK_S;
+        }
+    }
+out:
+#endif /* FSL_HAVE_SCC2 */
+    return status;
+}
+
+static os_error_code sah_handle_scc_sstatus(fsl_shw_uco_t* user_ctx, uint32_t info)
+{
+    os_error_code status = OS_ERROR_NO_MEMORY_S;
+	
+#ifdef FSL_HAVE_SCC2
+	{
+		scc_partition_info_t partition_info;
+		void *kernel_base;
+		status =
+			os_copy_from_user(&partition_info, (void *)info,
+					  sizeof(partition_info));
+	
+		/* check that the copy was successful */
+		if (status != OS_ERROR_OK_S) {
+			goto out;
+		}
+	
+		/* validate that the user owns this partition, and look up its handle */
+		kernel_base =
+			lookup_user_partition(user_ctx, partition_info.user_base);
+	
+		if (kernel_base == NULL) {
+			status = OS_ERROR_FAIL_S;
+#ifdef DIAG_DRV_IF
+			LOG_KDIAG("failed to find partition\n");
+#endif			/*DIAG_DRV_IF */
+			goto out;
+		}
+	
+		partition_info.status = scc_partition_status(kernel_base);
+	
+		status =
+			os_copy_to_user((void *)info, &partition_info,
+					sizeof(partition_info));
+	}
+out:
+#endif				/* FSL_HAVE_SCC2 */
+	return status;
+
+}
+
+static os_error_code sah_handle_scc_encrypt(fsl_shw_uco_t* user_ctx, uint32_t info)
+{
+    os_error_code os_err = OS_ERROR_FAIL_S;
+#ifdef FSL_HAVE_SCC2
+    {
+        fsl_shw_return_t retval;
+        scc_region_t region_info;
+        void* page_ctx = NULL;
+        void* black_addr = NULL;
+        void* partition_base = NULL;
+        scc_config_t*   scc_configuration;
+
+        os_err = os_copy_from_user(&region_info, (void*)info, sizeof(region_info));
+
+        if (os_err != OS_ERROR_OK_S) {
+            goto out;
+        }
+
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG_ARGS
+		("partition_base: %p, offset: %i, length: %i, black data: %p",
+		 (void *)region_info.partition_base, region_info.offset,
+		 region_info.length, (void *)region_info.black_data);
+#endif
+
+        /* validate that the user owns this partition, and look up its handle */
+        partition_base = lookup_user_partition(user_ctx,
+                                               region_info.partition_base);
+
+        if (partition_base == NULL) {
+            os_err = OS_ERROR_FAIL_S;
+#ifdef DIAG_DRV_IF
+            LOG_KDIAG("failed to find secure partition\n");
+#endif
+            goto out;
+        }
+
+        /* Check that the memory size requested is correct */
+        scc_configuration = scc_get_configuration();
+        if (region_info.offset + region_info.length > 
+                scc_configuration->partition_size_bytes) {
+            retval= FSL_RETURN_ERROR_S;
+            goto out;
+        }
+
+        /* wire down black data */
+        black_addr = wire_user_memory(region_info.black_data,
+                                      region_info.length,
+                                      &page_ctx);
+
+        if (black_addr == NULL) {
+            retval= FSL_RETURN_ERROR_S;
+            goto out;
+        }
+
+        retval = do_scc_encrypt_region(NULL, partition_base, region_info.offset,
+                                       region_info.length, black_addr,
+                                       region_info.IV,
+                                       region_info.cypher_mode);
+
+        /* release black data */
+        unwire_user_memory(&page_ctx);
+
+out:
+		if (os_err == OS_ERROR_OK_S) {
+			/* Return error code */
+			region_info.code = retval;
+			os_err =
+				os_copy_to_user((void *)info, &region_info,
+						sizeof(region_info));
+		}
+    }
+
+#endif
+    return os_err;
+}
+
+static os_error_code sah_handle_scc_decrypt(fsl_shw_uco_t* user_ctx, uint32_t info)
+{
+    os_error_code os_err = OS_ERROR_FAIL_S;
+#ifdef FSL_HAVE_SCC2
+    {
+        fsl_shw_return_t retval;
+        scc_region_t region_info;
+        void* page_ctx = NULL;
+        void* black_addr;
+        void* partition_base;
+        scc_config_t* scc_configuration;
+
+        os_err = os_copy_from_user(&region_info, (void*)info, sizeof(region_info));
+
+#ifdef DIAG_DRV_IF
+        LOG_KDIAG_ARGS("partition_base: %p, offset: %i, length: %i, black data: %p",
+                       (void*)region_info.partition_base,
+                       region_info.offset,
+                       region_info.length,
+                       (void*)region_info.black_data);
+#endif
+
+        if (os_err != OS_ERROR_OK_S) {
+            goto out;
+        }
+#ifdef DIAG_DRV_IF
+			LOG_KDIAG_ARGS
+				("partition_base: %p, offset: %i, length: %i, black data: %p",
+				 (void *)region_info.partition_base, region_info.offset,
+				 region_info.length, (void *)region_info.black_data);
+#endif
+
+        /* validate that the user owns this partition, and look up its handle */
+        partition_base = lookup_user_partition(user_ctx,
+                                               region_info.partition_base);
+
+        if (partition_base == NULL) {
+            retval = FSL_RETURN_ERROR_S;
+#ifdef DIAG_DRV_IF
+            LOG_KDIAG("failed to find partition\n");
+#endif
+            goto out;
+        }
+
+        /* Check that the memory size requested is correct */
+        scc_configuration = scc_get_configuration();
+        if (region_info.offset + region_info.length > 
+                scc_configuration->partition_size_bytes) {
+            retval = FSL_RETURN_ERROR_S;
+            goto out;
+        }
+
+        /* wire down black data */
+        black_addr = wire_user_memory(region_info.black_data,
+                                      region_info.length,
+                                      &page_ctx);
+
+        if (black_addr == NULL) {
+            retval = FSL_RETURN_ERROR_S;
+            goto out;
+        }
+
+        retval = do_scc_decrypt_region(NULL, partition_base, region_info.offset,
+                                       region_info.length, black_addr,
+                                       region_info.IV,
+                                       region_info.cypher_mode);
+
+        /* release black data */
+        unwire_user_memory(&page_ctx);
+
+out:
+	    if (os_err == OS_ERROR_OK_S) {
+			/* Return error code */
+			region_info.code = retval;
+			os_err =
+				os_copy_to_user((void *)info, &region_info,
+						sizeof(region_info));
+		}
+
+    }
+
+#endif /* FSL_HAVE_SCC2 */
+    return os_err;
+}
+
+/*****************************************************************************/
+/* fn get_user_smid()                                                        */
+/*****************************************************************************/
+uint32_t get_user_smid(void* proc)
+{
+    /*
+     * A real implementation would have some way to handle signed applications
+     * which wouild be assigned distinct SMIDs.  For the reference
+     * implementation, we show where this would be determined (here), but
+     * always provide a fixed answer, thus not separating users at all.
+     */
+
+    return 0x42eaae42;
+}
+/*
+* This function implements the smalloc() function for userspace programs, by
+* making a call to the SCC2 mmap() function that acquires a region of secure
+* memory on behalf of the user, and then maps it into the users memory space.
+* Currently, the only memory size supported is that of a single SCC2 partition.
+* Requests for other sized memory regions will fail.
+*/
+//static os_error_code sah_handle_scc_slot_alloc(uint32_t info)
+OS_DEV_MMAP(sah_mmap)
+{
+    os_error_code status = OS_ERROR_NO_MEMORY_S;
+
+#ifdef FSL_HAVE_SCC2
+    {   scc_return_t scc_ret;
+        fsl_shw_return_t fsl_ret;
+        uint32_t partition_registered = FALSE;
+
+        uint32_t user_base;
+        void* partition_base;
+        uint32_t smid;
+        scc_config_t* scc_configuration;
+
+        int part_no = -1;
+        uint32_t part_phys;
+
+        fsl_shw_uco_t* user_ctx = (fsl_shw_uco_t*)os_dev_get_user_private();
+
+        /* Make sure that the user context is valid */
+        if (user_ctx == NULL) {
+            user_ctx = os_alloc_memory(sizeof(*user_ctx), GFP_KERNEL);
+
+            if (user_ctx == NULL) {
+                status = OS_ERROR_NO_MEMORY_S;
+                goto out;
+            }
+                                        
+            sah_handle_registration(user_ctx);
+            os_dev_set_user_private(user_ctx);
+        }
+
+        /* Determine the size of a secure partition */
+        scc_configuration = scc_get_configuration();
+
+        /* Check that the memory size requested is equal to the partition
+         * size, and that the requested destination is on a page boundary.
+         */
+        if (((os_mmap_user_base() % PAGE_SIZE) != 0) || 
+            (os_mmap_memory_size() != scc_configuration->partition_size_bytes))
+        {
+            status = OS_ERROR_BAD_ARG_S;
+            goto out;
+        }
+
+        /* Retrieve the SMID associated with the user */
+        smid = get_user_smid(user_ctx->process);
+
+        /* Attempt to allocate a secure partition */
+        scc_ret = scc_allocate_partition(smid, &part_no, &partition_base, &part_phys);
+        if (scc_ret != SCC_RET_OK) {
+            pr_debug("SCC mmap() request failed to allocate partition;"
+                     " error %d\n", status);
+            status = OS_ERROR_FAIL_S;
+            goto out;
+        }
+
+        pr_debug("scc_mmap() acquired partition %d at %08x\n",
+                 part_no, part_phys);
+
+
+        /* Record partition info in the user context */
+        user_base = os_mmap_user_base();
+        fsl_ret = register_user_partition(user_ctx, user_base, partition_base);
+
+        if (fsl_ret != FSL_RETURN_OK_S) {
+            pr_debug("SCC mmap() request failed to register partition with user"
+                     " context, error: %d\n", fsl_ret);
+            status = OS_ERROR_FAIL_S;
+        }
+
+        partition_registered = TRUE;
+
+        status = map_user_memory(os_mmap_memory_ctx(), part_phys,
+                                 os_mmap_memory_size());
+
+#ifdef SHW_DEBUG
+        if (status == OS_ERROR_OK_S) {
+            LOG_KDIAG_ARGS("Partition allocated: user_base=%p, partition_base=%p.",
+                           (void*)user_base, partition_base);
+        }
+#endif
+
+out:
+        /* If there is an error it has to be handled here */
+        if (status != OS_ERROR_OK_S) {
+            /* if the partition was registered with the user, unregister it. */
+            if (partition_registered == TRUE) {
+                deregister_user_partition(user_ctx, user_base);
+            }
+
+            /* if the partition was allocated, deallocate it */
+            if (partition_base != NULL) {
+                scc_release_partition(partition_base);
+            }
+        }
+    }
+#endif /* FSL_HAVE_SCC2 */
+
+ return status;
+}
+
+/* Find the physical address of a key stored in the system keystore */
+fsl_shw_return_t
+system_keystore_get_slot_info(uint64_t owner_id, uint32_t slot, uint32_t* address,
+                              uint32_t* slot_size_bytes)
+{
+    fsl_shw_return_t retval;
+    void* kernel_address;
+
+    /* First verify that the key access is valid */
+    retval = system_keystore.slot_verify_access(system_keystore.user_data,
+                                                owner_id, slot);
+
+    if (retval != FSL_RETURN_OK_S) {
+#ifdef DIAG_DRV_IF
+        LOG_KDIAG("verification failed");
+#endif
+        return retval;
+    }
+
+    if (address != NULL) {
+#ifdef FSL_HAVE_SCC2
+        kernel_address =
+            system_keystore.slot_get_address(system_keystore.user_data, slot);
+        (*address) = scc_virt_to_phys(kernel_address);
+#else
+        kernel_address =
+            system_keystore.slot_get_address((void*)&owner_id, slot);
+        (*address) = (uint32_t)kernel_address;
+#endif
+    }
+
+    if (slot_size_bytes != NULL) {
+#ifdef FSL_HAVE_SCC2
+        *slot_size_bytes =
+           system_keystore.slot_get_slot_size(system_keystore.user_data, slot);
+#else
+        *slot_size_bytes =
+           system_keystore.slot_get_slot_size((void*)&owner_id, slot);
+#endif
+    }
+
+    return retval;
+}
+
+
 /*!
 *******************************************************************************
 * Allocates a slot in the SCC
@@ -661,7 +1373,7 @@ OS_DEV_IOCTL(sah_ioctl)
 *
 * @return   0 if pass; non-zero on error
 */
-static os_error_code sah_handle_scc_slot_alloc(uint32_t info)
+static os_error_code sah_handle_sk_slot_alloc(uint32_t info)
 {
 	scc_slot_t slot_info;
 	os_error_code os_err;
@@ -669,8 +1381,8 @@ static os_error_code sah_handle_scc_slot_alloc(uint32_t info)
 
 	os_err = os_copy_from_user(&slot_info, (void *)info, sizeof(slot_info));
 	if (os_err == OS_ERROR_OK_S) {
-		scc_ret =
-		    scc_alloc_slot(slot_info.key_length, slot_info.ownerid,
+		scc_ret = keystore_slot_alloc(&system_keystore,
+		    slot_info.key_length, slot_info.ownerid,
 				   &slot_info.slot);
 		if (scc_ret == SCC_RET_OK) {
 			slot_info.code = FSL_RETURN_OK_S;
@@ -680,13 +1392,19 @@ static os_error_code sah_handle_scc_slot_alloc(uint32_t info)
 			slot_info.code = FSL_RETURN_ERROR_S;
 		}
 
+		
+#ifdef DIAG_DRV_IF
+			LOG_KDIAG_ARGS("key length: %i, handle: %i\n", slot_info.key_length,
+							   slot_info.slot);
+#endif
+
 		/* Return error code and slot info */
 		os_err =
 		    os_copy_to_user((void *)info, &slot_info,
 				    sizeof(slot_info));
 
 		if (os_err != OS_ERROR_OK_S) {
-			(void)scc_dealloc_slot(slot_info.ownerid,
+			(void)keystore_slot_dealloc(&system_keystore,slot_info.ownerid,
 					       slot_info.slot);
 		}
 	}
@@ -695,15 +1413,15 @@ static os_error_code sah_handle_scc_slot_alloc(uint32_t info)
 }
 
 /*!
- * Deallocate a slot in the SCC
+ * Deallocate a slot in the SK
  *
- * @brief Deallocate a slot in the SCC
+ * @brief Deallocate a slot in the SK
  *
  * @param    info   slot information
  *
  * @return   0 if pass; non-zero on error
  */
-static os_error_code sah_handle_scc_slot_dealloc(uint32_t info)
+static os_error_code sah_handle_sk_slot_dealloc(uint32_t info)
 {
 	fsl_shw_return_t ret = FSL_RETURN_INTERNAL_ERROR_S;
 	scc_slot_t slot_info;
@@ -712,7 +1430,8 @@ static os_error_code sah_handle_scc_slot_dealloc(uint32_t info)
 
 	os_err = os_copy_from_user(&slot_info, (void *)info, sizeof(slot_info));
 	if (os_err == OS_ERROR_OK_S) {
-		scc_ret = scc_dealloc_slot(slot_info.ownerid, slot_info.slot);
+		scc_ret = keystore_slot_dealloc(&system_keystore,
+			slot_info.ownerid, slot_info.slot);
 
 		if (scc_ret == SCC_RET_OK) {
 			ret = FSL_RETURN_OK_S;
@@ -729,20 +1448,19 @@ static os_error_code sah_handle_scc_slot_dealloc(uint32_t info)
 }
 
 /*!
- * Populate a slot in the SCC
+ * Populate a slot in the SK
  *
- * @brief Populate a slot in the SCC
+ * @brief Populate a slot in the SK
  *
  * @param    info   slot information
  *
  * @return   0 if pass; non-zero on error
  */
-static os_error_code sah_handle_scc_slot_load(uint32_t info)
+static os_error_code sah_handle_sk_slot_load(uint32_t info)
 {
 	fsl_shw_return_t ret = FSL_RETURN_INTERNAL_ERROR_S;
 	scc_slot_t slot_info;
 	os_error_code os_err;
-	scc_return_t scc_ret;
 	uint8_t *key = NULL;
 
 	os_err = os_copy_from_user(&slot_info, (void *)info, sizeof(slot_info));
@@ -767,14 +1485,8 @@ static os_error_code sah_handle_scc_slot_load(uint32_t info)
 		if ((key_length & 3) != 0) {
 			key_length += 4 - (key_length & 3);
 		}
-		scc_ret = scc_load_slot(slot_info.ownerid, slot_info.slot, key,
-					key_length);
-		if (scc_ret == SCC_RET_OK) {
-			ret = FSL_RETURN_OK_S;
-		} else {
-			ret = FSL_RETURN_ERROR_S;
-		}
-
+		ret = keystore_load_slot(&system_keystore, slot_info.ownerid,
+			slot_info.slot, key, key_length);
 		slot_info.code = ret;
 		os_err =
 		    os_copy_to_user((void *)info, &slot_info,
@@ -790,68 +1502,15 @@ static os_error_code sah_handle_scc_slot_load(uint32_t info)
 }
 
 /*!
- * Decrypt data into a slot in the SCC
+ * Encrypt data into a slot in the SCC
  *
- * @brief Decrypt data into a slot in the SCC
+ * @brief Encrypt data into a slot in the SCC
  *
  * @param    info   user-space ptr to slot and data information
  *
  * @return   0 if pass; non-zero on error
  */
-static os_error_code sah_handle_scc_slot_decrypt(uint32_t info)
-{
-	fsl_shw_return_t ret = FSL_RETURN_INTERNAL_ERROR_S;
-	scc_slot_t slot_info;	/*!< decrypt request fields */
-	os_error_code os_err;
-	scc_return_t scc_ret;
-	uint8_t *key = NULL;
-
-	os_err = os_copy_from_user(&slot_info, (void *)info, sizeof(slot_info));
-
-	if (os_err == OS_ERROR_OK_S) {
-		key = os_alloc_memory(slot_info.key_length, GFP_KERNEL);
-		if (key == NULL) {
-			ret = FSL_RETURN_NO_RESOURCE_S;
-			os_err = OS_ERROR_OK_S;
-		} else {
-			os_err = os_copy_from_user(key, slot_info.key,
-						   slot_info.key_length);
-		}
-	}
-
-	if (os_err == OS_ERROR_OK_S) {
-		scc_ret = scc_decrypt_slot(slot_info.ownerid, slot_info.slot,
-					   slot_info.key_length, key);
-		if (scc_ret == SCC_RET_OK) {
-			ret = FSL_RETURN_OK_S;
-		} else {
-			ret = FSL_RETURN_ERROR_S;
-		}
-
-		slot_info.code = ret;
-		os_err =
-		    os_copy_to_user((void *)info, &slot_info,
-				    sizeof(slot_info));
-	}
-
-	if (key != NULL) {
-		memset(key, 0, slot_info.key_length);
-		os_free_memory(key);
-	}
-
-	return os_err;
-}
-
-/*!
- * Encrypt data in a slot in the SCC
- *
- * @brief Encrypt data in a slot in the SCC
- *
- * @param    info   slot data and target location information
- *
- * @return   0 if pass; non-zero on error
- */
-static os_error_code sah_handle_scc_slot_encrypt(uint32_t info)
+static os_error_code sah_handle_sk_slot_encrypt(uint32_t info)
 {
 	fsl_shw_return_t ret = FSL_RETURN_INTERNAL_ERROR_S;
 	scc_slot_t slot_info;
@@ -868,28 +1527,79 @@ static os_error_code sah_handle_scc_slot_encrypt(uint32_t info)
 		}
 	}
 
-	if (key != NULL) {
-		scc_ret = scc_encrypt_slot(slot_info.ownerid, slot_info.slot,
-					   slot_info.key_length, key);
-
+	if (key != NULL)
+	{
+		scc_ret = keystore_slot_encrypt(NULL, &system_keystore,
+			slot_info.ownerid, slot_info.slot,
+			slot_info.key_length, key);
 		if (scc_ret != SCC_RET_OK) {
 			ret = FSL_RETURN_ERROR_S;
-		} else {
-			os_err =
-			    os_copy_to_user(slot_info.key, key,
-					    slot_info.key_length);
-			if (os_err != OS_ERROR_OK_S) {
-				ret = FSL_RETURN_INTERNAL_ERROR_S;
-			} else {
-				ret = FSL_RETURN_OK_S;
-			}
 		}
+		else {
+		  os_err = os_copy_to_user(slot_info.key, key, slot_info.key_length);
+		  if (os_err != OS_ERROR_OK_S)
+		      ret = FSL_RETURN_INTERNAL_ERROR_S;
+		  else
+		      ret = FSL_RETURN_OK_S;
+		  
+	    }
+		slot_info.code = ret;
+		os_err =
+		    os_copy_to_user((void *)info, &slot_info,
+				    sizeof(slot_info));
+		memset(key, 0, slot_info.key_length);
+		os_free_memory(key);
+	}
+
+	return os_err;
+}
+
+/*!
+ * Decrypt data in a slot in the SCC
+ *
+ * @brief Decrypt data in a slot in the SCC
+ *
+ * @param    info   slot data and target location information
+ *
+ * @return   0 if pass; non-zero on error
+ */
+static os_error_code sah_handle_sk_slot_decrypt(uint32_t info)
+{
+	fsl_shw_return_t ret = FSL_RETURN_INTERNAL_ERROR_S;
+	scc_slot_t slot_info; /*!< decrypt request fields */
+	os_error_code os_err;
+	scc_return_t scc_ret;
+	uint8_t *key = NULL;
+
+	os_err = os_copy_from_user(&slot_info, (void *)info, sizeof(slot_info));
+
+	if (os_err == OS_ERROR_OK_S) {
+		key = os_alloc_memory(slot_info.key_length, GFP_KERNEL);
+		if (key == NULL) {
+			ret = FSL_RETURN_NO_RESOURCE_S;
+			os_err = OS_ERROR_OK_S;
+        } else {
+            os_err = os_copy_from_user(key, slot_info.key,
+                                       slot_info.key_length);
+		}
+	}
+
+	if (os_err == OS_ERROR_OK_S) {
+			scc_ret = keystore_slot_decrypt(NULL, &system_keystore,
+				slot_info.ownerid, slot_info.slot,
+				slot_info.key_length, key);
+
+		if (scc_ret == SCC_RET_OK)
+			ret = FSL_RETURN_OK_S;
+		else
+			ret = FSL_RETURN_ERROR_S;
 
 		slot_info.code = ret;
 		os_err =
 		    os_copy_to_user((void *)info, &slot_info,
 				    sizeof(slot_info));
-
+	}
+	if (key != NULL) {
 		memset(key, 0, slot_info.key_length);
 		os_free_memory(key);
 	}
@@ -913,6 +1623,9 @@ fsl_shw_return_t sah_handle_registration(fsl_shw_uco_t * user_ctx)
 	user_ctx->result_pool.tail = NULL;
 	user_ctx->result_pool.count = 0;
 
+	/* initialize the user's partition chain */
+	user_ctx->partition = NULL;
+
 	return FSL_RETURN_OK_S;
 }
 
@@ -928,7 +1641,66 @@ fsl_shw_return_t sah_handle_registration(fsl_shw_uco_t * user_ctx)
 fsl_shw_return_t sah_handle_deregistration(fsl_shw_uco_t * user_ctx)
 {
 
-	return FSL_RETURN_OK_S;
+	
+	/* NOTE:
+	 * This will release any secure partitions that are held by the user.
+	 * Encryption keys that were placed in the system keystore by the user
+	 * should not be removed here, because they might have been shared with
+	 * another process.  The user must be careful to release any that are no
+	 * longer in use.
+	 */
+	fsl_shw_return_t ret = FSL_RETURN_OK_S;
+	
+
+#ifdef FSL_HAVE_SCC2
+	fsl_shw_spo_t* partition;
+	struct mm_struct *mm = current->mm;
+	
+	while((user_ctx->partition != NULL) && (ret == FSL_RETURN_OK_S)) {
+	
+		partition = user_ctx->partition;
+	
+#ifdef DIAG_DRV_IF
+		LOG_KDIAG_ARGS("Found an abandoned secure partition at %p, releasing",
+					   partition);
+#endif
+	
+			/* It appears that current->mm is not valid if this is called from a
+			 * close routine (perhaps only if the program raised an exception that
+			 * caused it to close?)  If that is the case, then still free the 
+			 * partition, but do not remove it from the memory space (dangerous?)
+			 */
+			
+			if (mm == NULL) {
+#ifdef DIAG_DRV_IF
+				LOG_KDIAG("Warning: no mm structure found, not unmapping "
+						  "partition from user memory\n");
+#endif
+			} else {
+				/* Unmap the memory region (see sys_munmap in mmap.c) */
+				/* Note that this assumes a single memory partition */
+				unmap_user_memory(partition->user_base, 8192);
+			 }
+	
+			/* If the memory was successfully released */
+			if (ret == OS_ERROR_OK_S) {
+				/* release the partition */
+				scc_release_partition(partition->kernel_base);
+	
+				/* and remove it from the users context */
+				deregister_user_partition(user_ctx, partition->user_base);
+	
+				ret = FSL_RETURN_OK_S;
+			} else {
+				ret = FSL_RETURN_ERROR_S;
+	
+				goto out;
+			}
+		}
+		out:
+#endif /* FSL_HAVE_SCC2 */
+	
+		return ret;
 }
 
 /*!
@@ -1050,8 +1822,7 @@ fsl_shw_return_t sah_get_results_from_pool(volatile fsl_shw_uco_t * user_ctx,
 			arg->results[loop].code = finished_request->result;
 			arg->results[loop].detail1 =
 			    finished_request->fault_address;
-			arg->results[loop].detail2 =
-			    finished_request->current_dar;
+			arg->results[loop].detail2 = 0;
 			arg->results[loop].user_desc = finished_request;
 
 			loop++;
@@ -1090,7 +1861,7 @@ static int handle_sah_ioctl_dar(fsl_shw_uco_t * user_ctx,
 	 * DMA on it.
 	 */
 	desc_chain_head =
-	    sah_Copy_Descriptors((sah_Head_Desc *) user_space_desc);
+	    sah_Copy_Descriptors(user_ctx,(sah_Head_Desc *) user_space_desc);
 
 	if (desc_chain_head == NULL) {
 		/* We may have failed due to a -EFAULT as well, but we will return
@@ -1148,9 +1919,9 @@ static int handle_sah_ioctl_dar(fsl_shw_uco_t * user_ctx,
 	return os_error_code;
 }
 
-static void sah_user_callback(fsl_shw_uco_t * uco)
+static void sah_user_callback(fsl_shw_uco_t * user_ctx)
 {
-	os_send_signal(uco->process, SIGUSR2);
+	os_send_signal(user_ctx->process, SIGUSR2);
 }
 
 /*!
@@ -1252,7 +2023,7 @@ int sah_blocking_mode(sah_Head_Desc * entry)
 	int os_error_code = 0;
 	sah_Queue_Status status;
 
-	/* queue entry, put someting in the DAR, if nothing is there currently */
+	/* queue entry, put something in the DAR, if nothing is there currently */
 	sah_Queue_Manager_Append_Entry(entry);
 
 	/* get this descriptor chain's current status */

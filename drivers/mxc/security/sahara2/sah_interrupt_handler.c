@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -38,6 +38,11 @@
 #include <sah_status_manager.h>
 #include <sah_hardware_interface.h>
 #include <sah_queue_manager.h>
+
+/*Enable this flag for debugging*/
+#if 0
+#define DIAG_DRV_INTERRUPT
+#endif
 
 #ifdef DIAG_DRV_INTERRUPT
 #include <diagnostic.h>

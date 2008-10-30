@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -23,6 +23,13 @@
 #ifndef __KERNEL__		/* linux flag */
 #include <stdio.h>
 #endif
+#include "fsl_platform.h"
+
+#if defined(FSL_HAVE_SAHARA2) || defined(FSL_HAVE_SAHARA4)
+#define DEV_NAME "sahara"
+#elif defined(FSL_HAVE_RNGA) || defined(FSL_HAVE_RNGC)
+#define DEV_NAME "shw"
+#endif
 
 /*!
 ********************************************************************
@@ -36,15 +43,37 @@
 #if defined DIAG_SECURITY_FUNC || defined DIAG_ADAPTOR
 #define LOG_DIAG(diag)                                              \
 ({                                                                  \
-    char* fname = strrchr(__FILE__, '/');                           \
+    const char* fname = strrchr(__FILE__, '/');                           \
                                                                     \
      sah_Log_Diag (fname ? fname+1 : __FILE__, __LINE__, diag);     \
+})
+
+#ifdef __KERNEL__
+
+#define LOG_DIAG_ARGS(fmt, ...)                                               \
+({                                                                            \
+    const char* fname = strrchr(__FILE__, '/');                               \
+    os_printk(KERN_ALERT "%s:%i: " fmt "\n",                                  \
+              fname ? fname+1 : __FILE__,                                     \
+              __LINE__,                                                       \
+              __VA_ARGS__);                                                   \
+})
+
+#else
+
+#define LOG_DIAG_ARGS(fmt, ...)                                               \
+({                                                                            \
+    const char* fname = strrchr(__FILE__, '/');                               \
+    printf("%s:%i: " fmt "\n",                                                \
+           fname ? fname+1 : __FILE__,                                        \
+           __LINE__,                                                          \
+           __VA_ARGS__);                                                      \
 })
 
 #ifndef __KERNEL__
 void sah_Log_Diag(char *source_name, int source_line, char *diag);
 #endif
-#endif
+#endif /* if define DIAG_SECURITY_FUNC ... */
 
 #ifdef __KERNEL__
 /*!
@@ -56,10 +85,19 @@ void sah_Log_Diag(char *source_name, int source_line, char *diag);
 *
 * @return  As for printf()
 */
-
+#if 0
 #if defined(DIAG_DRV_IF) || defined(DIAG_DRV_QUEUE) ||                        \
   defined(DIAG_DRV_STATUS) || defined(DIAG_DRV_INTERRUPT) ||                  \
    defined(DIAG_MEM) || defined(DIAG_SECURITY_FUNC) || defined(DIAG_ADAPTOR)
+#endif
+#endif
+
+#define LOG_KDIAG_ARGS(fmt, ...)                                              \
+({                                                                            \
+    os_printk (KERN_ALERT "%s (%s:%i): " fmt "\n",                            \
+               DEV_NAME, strrchr(__FILE__, '/')+1, __LINE__, __VA_ARGS__);              \
+})
+
 #define LOG_KDIAG(diag)                                                       \
     os_printk (KERN_ALERT "sahara (%s:%i): %s\n",                             \
                strrchr(__FILE__, '/')+1, __LINE__, diag);
@@ -67,7 +105,6 @@ void sah_Log_Diag(char *source_name, int source_line, char *diag);
 #define sah_Log_Diag(n, l, d)                                                 \
     os_printk("%s:%i: %s\n", n, l, d)
 #endif
-
 #else				/* not KERNEL */
 
 #define sah_Log_Diag(n, l, d)                                                 \

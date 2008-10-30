@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -22,9 +22,10 @@
 #include <sf_util.h>
 #include <sah_queue_manager.h>
 #include <sah_memory_mapper.h>
+#include <fsl_shw_keystore.h>
 #ifdef FSL_HAVE_SCC
 #include <asm/arch/mxc_scc_driver.h>
-#else
+#elif defined (FSL_HAVE_SCC2)
 #include <asm/arch/mxc_scc2_driver.h>
 #endif
 
@@ -33,11 +34,18 @@ EXPORT_SYMBOL(adaptor_Exec_Descriptor_Chain);
 EXPORT_SYMBOL(sah_register);
 EXPORT_SYMBOL(sah_deregister);
 EXPORT_SYMBOL(sah_get_results);
-EXPORT_SYMBOL(do_scc_slot_alloc);
-EXPORT_SYMBOL(do_scc_slot_dealloc);
-EXPORT_SYMBOL(do_scc_slot_load_slot);
-EXPORT_SYMBOL(do_scc_slot_encrypt);
-EXPORT_SYMBOL(do_scc_slot_decrypt);
+EXPORT_SYMBOL(fsl_shw_smalloc);
+EXPORT_SYMBOL(fsl_shw_sfree);
+EXPORT_SYMBOL(fsl_shw_sstatus);
+EXPORT_SYMBOL(fsl_shw_diminish_perms);
+EXPORT_SYMBOL(do_scc_encrypt_region);
+EXPORT_SYMBOL(do_scc_decrypt_region);
+EXPORT_SYMBOL(do_system_keystore_slot_alloc);
+EXPORT_SYMBOL(do_system_keystore_slot_dealloc);
+EXPORT_SYMBOL(do_system_keystore_slot_load);
+EXPORT_SYMBOL(do_system_keystore_slot_encrypt);
+EXPORT_SYMBOL(do_system_keystore_slot_decrypt);
+
 
 #if defined(DIAG_DRV_IF) || defined(DIAG_MEM) || defined(DIAG_ADAPTOR)
 #include <diagnostic.h>
@@ -52,6 +60,41 @@ static char Diag_msg[DIAG_MSG_SIZE];
 
 /* This is the wait queue to this mode of driver */
 DECLARE_WAIT_QUEUE_HEAD(Wait_queue_km);
+
+/*! This matches Sahara2 capabilities... */
+fsl_shw_pco_t sahara2_capabilities = {
+	1, 2,			/* api version number - major & minor */
+	1, 4,			/* driver version number - major & minor */
+	{
+	 FSL_KEY_ALG_AES,
+	 FSL_KEY_ALG_DES,
+	 FSL_KEY_ALG_TDES,
+	 FSL_KEY_ALG_ARC4},
+	{
+	 FSL_SYM_MODE_STREAM,
+	 FSL_SYM_MODE_ECB,
+	 FSL_SYM_MODE_CBC,
+	 FSL_SYM_MODE_CTR},
+	{
+	 FSL_HASH_ALG_MD5,
+	 FSL_HASH_ALG_SHA1,
+	 FSL_HASH_ALG_SHA224,
+	 FSL_HASH_ALG_SHA256},
+	/*
+	 * The following table must be set to handle all values of key algorithm
+	 * and sym mode, and be in the correct order..
+	 */
+	{			/* Stream, ECB, CBC, CTR */
+	 {0, 0, 0, 0},		/* HMAC */
+	 {0, 1, 1, 1},		/* AES  */
+	 {0, 1, 1, 0},		/* DES */
+	 {0, 1, 1, 0},		/* 3DES */
+	 {1, 0, 0, 0}		/* ARC4 */
+	 },
+	0, 0,
+	0, 0, 0,
+	{{0, 0}}
+};
 
 #ifdef DIAG_ADAPTOR
 void km_Dump_Chain(const sah_Desc * chain);
@@ -215,6 +258,37 @@ static sah_Mem_Util std_kernelmode_mem_util = {
 	.mu_memset = my_memset
 };
 
+fsl_shw_return_t get_capabilities(fsl_shw_uco_t * user_ctx,
+				  fsl_shw_pco_t * capabilities)
+{
+	scc_config_t *scc_capabilities;
+
+	/* Fill in the Sahara2 capabilities. */
+	memcpy(capabilities, &sahara2_capabilities, sizeof(fsl_shw_pco_t));
+
+	/* Fill in the SCC portion of the capabilities object */
+	scc_capabilities = scc_get_configuration();
+	capabilities->scc_driver_major = scc_capabilities->driver_major_version;
+	capabilities->scc_driver_minor = scc_capabilities->driver_minor_version;
+	capabilities->scm_version = scc_capabilities->scm_version;
+	capabilities->smn_version = scc_capabilities->smn_version;
+	capabilities->block_size_bytes = scc_capabilities->block_size_bytes;
+
+#ifdef FSL_HAVE_SCC
+	capabilities->scc_info.black_ram_size_blocks =
+	    scc_capabilities->black_ram_size_blocks;
+	capabilities->scc_info.red_ram_size_blocks =
+	    scc_capabilities->red_ram_size_blocks;
+#elif defined(FSL_HAVE_SCC2)
+	capabilities->scc2_info.partition_size_bytes =
+	    scc_capabilities->partition_size_bytes;
+	capabilities->scc2_info.partition_count =
+	    scc_capabilities->partition_count;
+#endif
+
+	return FSL_RETURN_OK_S;
+}
+
 /*!
  * Sends a request to register this user
  *
@@ -353,127 +427,260 @@ fsl_shw_return_t adaptor_Exec_Descriptor_Chain(sah_Head_Desc * dar,
 	return code;
 }
 
-/*!
- * Allocates a slot in the SCC
- *
- * @brief    Allocates a slot in the SCC
- *
- * @param    user_ctx
- * @param    key_len
- * @param    ownerid
- * @param    slot
- *
- * @return    A return code of type #fsl_shw_return_t.
- */
-fsl_shw_return_t do_scc_slot_alloc(fsl_shw_uco_t * user_ctx,
-				   uint32_t key_len,
-				   uint64_t ownerid, uint32_t * slot)
-{
-	scc_return_t scc_status = scc_alloc_slot(key_len, ownerid, slot);
-	fsl_shw_return_t ret;
 
-	if (scc_status == SCC_RET_OK) {
-		ret = FSL_RETURN_OK_S;
-	} else {
-		ret = FSL_RETURN_NO_RESOURCE_S;
+/* System keystore context, defined in sah_driver_interface.c */
+extern fsl_shw_kso_t system_keystore;
+
+fsl_shw_return_t do_system_keystore_slot_alloc(fsl_shw_uco_t * user_ctx,
+					       uint32_t key_length,
+					       uint64_t ownerid,
+					       uint32_t * slot)
+{
+	(void)user_ctx;
+	return keystore_slot_alloc(&system_keystore, key_length, ownerid, slot);
+}
+
+fsl_shw_return_t do_system_keystore_slot_dealloc(fsl_shw_uco_t * user_ctx,
+						 uint64_t ownerid,
+						 uint32_t slot)
+{
+	(void)user_ctx;
+	return keystore_slot_dealloc(&system_keystore, ownerid, slot);
+}
+
+fsl_shw_return_t do_system_keystore_slot_load(fsl_shw_uco_t * user_ctx,
+					      uint64_t ownerid,
+					      uint32_t slot,
+					      const uint8_t * key,
+					      uint32_t key_length)
+{
+	(void)user_ctx;
+	return keystore_load_slot(&system_keystore, ownerid, slot,
+				  (void *)key, key_length);
+}
+
+fsl_shw_return_t do_system_keystore_slot_encrypt(fsl_shw_uco_t * user_ctx,
+						 uint64_t ownerid,
+						 uint32_t slot,
+						 uint32_t key_length,
+						 uint8_t * black_data)
+{
+	(void)user_ctx;
+	return keystore_slot_encrypt(NULL, &system_keystore, ownerid,
+				     slot, key_length, black_data);
+}
+
+fsl_shw_return_t do_system_keystore_slot_decrypt(fsl_shw_uco_t * user_ctx,
+						 uint64_t ownerid,
+						 uint32_t slot,
+						 uint32_t key_length,
+						 const uint8_t * black_data)
+{
+	(void)user_ctx;
+	return keystore_slot_decrypt(NULL, &system_keystore, ownerid,
+				     slot, key_length, black_data);
+}
+
+void *fsl_shw_smalloc(fsl_shw_uco_t * user_ctx,
+		      uint32_t size, const uint8_t * UMID, uint32_t permissions)
+{
+#ifdef FSL_HAVE_SCC2
+	int part_no;
+	void *part_base;
+	uint32_t part_phys;
+	scc_config_t *scc_configuration;
+
+	/* Check that the memory size requested is correct */
+	scc_configuration = scc_get_configuration();
+	if (size != scc_configuration->partition_size_bytes) {
+		return NULL;
 	}
 
-	user_ctx = NULL;
-	return ret;
+	/* Attempt to grab a partition. */
+	if (scc_allocate_partition(0, &part_no, &part_base, &part_phys)
+	    != SCC_RET_OK) {
+		return NULL;
+	}
+	printk(KERN_ALERT "In fsh_shw_smalloc (km): partition_base:%p "
+	       "partition_base_phys: %p\n", part_base, (void *)part_phys);
+
+	/* these bits should be in a separate function */
+	printk(KERN_ALERT "writing UMID and MAP to secure the partition\n");
+
+	scc_engage_partition(part_base, UMID, permissions);
+
+	(void)user_ctx;		/* unused param warning */
+
+	return part_base;
+#else				/* FSL_HAVE_SCC2 */
+	(void)user_ctx;
+	(void)size;
+	(void)UMID;
+	(void)permissions;
+	return NULL;
+#endif				/* FSL_HAVE_SCC2 */
+
+}
+
+fsl_shw_return_t fsl_shw_sfree(fsl_shw_uco_t * user_ctx, void *address)
+{
+	(void)user_ctx;
+
+#ifdef FSL_HAVE_SCC2
+	if (scc_release_partition(address) == SCC_RET_OK) {
+		return FSL_RETURN_OK_S;
+	}
+#endif
+
+	return FSL_RETURN_ERROR_S;
+}
+
+fsl_shw_return_t fsl_shw_sstatus(fsl_shw_uco_t * user_ctx,
+				 void *address,
+				 fsl_shw_partition_status_t * status)
+{
+	(void)user_ctx;
+
+#ifdef FSL_HAVE_SCC2
+	*status = scc_partition_status(address);
+	return FSL_RETURN_OK_S;
+#endif
+
+	return FSL_RETURN_ERROR_S;
+}
+
+/* Diminish permissions on some secure memory */
+fsl_shw_return_t fsl_shw_diminish_perms(fsl_shw_uco_t * user_ctx,
+					void *address, uint32_t permissions)
+{
+
+	(void)user_ctx;		/* unused parameter warning */
+
+#ifdef FSL_HAVE_SCC2
+	if (scc_diminish_permissions(address, permissions) == SCC_RET_OK) {
+		return FSL_RETURN_OK_S;
+	}
+#endif
+	return FSL_RETURN_ERROR_S;
+}
+
+/*
+ * partition_base - physical address of the partition
+ * offset - offset, in blocks, of the data from the start of the partition
+ * length - length, in bytes, of the data to be encrypted (multiple of 4)
+ * black_data - virtual address that the encrypted data should be stored at
+ * Note that this virtual address must be translatable using the __virt_to_phys
+ * macro; ie, it can't be a specially mapped address.  To do encryption with those
+ * addresses, use the scc_encrypt_region function directly.  This is to make
+ * this function compatible with the user mode declaration, which does not know
+ * the physical addresses of the data it is using.
+ */
+fsl_shw_return_t
+do_scc_encrypt_region(fsl_shw_uco_t * user_ctx,
+		      void *partition_base, uint32_t offset_bytes,
+		      uint32_t byte_count, uint8_t * black_data,
+		      uint32_t * IV, fsl_shw_cypher_mode_t cypher_mode)
+{
+	scc_return_t scc_ret;
+	fsl_shw_return_t retval = FSL_RETURN_ERROR_S;
+
+#ifdef FSL_HAVE_SCC2
+
+#ifdef DIAG_ADAPTOR
+	//uint32_t *owner_32 = (uint32_t *) & (owner_id);
+
+	LOG_KDIAG_ARGS
+	    ("partition base: %p, offset: %i, count: %i, black data: %p\n",
+	     partition_base, offset_bytes, byte_count, (void *)black_data);
+#endif
+	(void)user_ctx;
+
+	os_cache_flush_range(black_data, byte_count);
+
+	scc_ret =
+	    scc_encrypt_region((uint32_t) partition_base, offset_bytes,
+			       byte_count, __virt_to_phys(black_data), IV,
+			       cypher_mode);
+
+	if (scc_ret == SCC_RET_OK) {
+		retval = FSL_RETURN_OK_S;
+	} else {
+		retval = FSL_RETURN_ERROR_S;
+	}
+
+	/* The SCC2 DMA engine should have written to the black ram, so we need to
+	 * invalidate that region of memory.  Note that the red ram is not an
+	 * because it is mapped with the cache disabled.
+	 */
+	os_cache_inv_range(black_data, byte_count);
+
+#else
+	(void)scc_ret;
+#endif				/* FSL_HAVE_SCC2 */
+
+	return retval;
 }
 
 /*!
- * Deallocates a slot in the SCC
+ * Call the proper function to decrypt a region of encrypted secure memory
  *
- * @brief    Deallocates a slot in the SCC
+ * @brief 
  *
- * @param    user_ctx
- * @param    ownerid
- * @param    slot
+ * @param   user_ctx        User context of the partition owner (NULL in kernel)
+ * @param   partition_base  Base address (physical) of the partition
+ * @param   offset_bytes    Offset from base address that the decrypted data
+ *                          shall be placed
+ * @param   byte_count      Length of the message (bytes)
+ * @param   black_data      Pointer to where the encrypted data is stored
+ * @param   owner_id    
  *
- * @return    A return code of type #fsl_shw_return_t.
+ * @return  status
  */
-fsl_shw_return_t do_scc_slot_dealloc(fsl_shw_uco_t * user_ctx,
-				     uint64_t ownerid, uint32_t slot)
+
+fsl_shw_return_t
+do_scc_decrypt_region(fsl_shw_uco_t * user_ctx,
+		      void *partition_base, uint32_t offset_bytes,
+		      uint32_t byte_count, const uint8_t * black_data,
+		      uint32_t * IV, fsl_shw_cypher_mode_t cypher_mode)
 {
-	scc_return_t scc_status = scc_dealloc_slot(ownerid, slot);
-	user_ctx = NULL;
-	return (scc_status ==
-		SCC_RET_OK) ? FSL_RETURN_OK_S : FSL_RETURN_ERROR_S;
-}
+	scc_return_t scc_ret;
+	fsl_shw_return_t retval = FSL_RETURN_ERROR_S;
 
-/*!
- * Populate a slot in the SCC
- *
- * @brief    Deallocates a slot in the SCC
- *
- * @param   user_ctx
- * @param   uint32_t slot
- * @param   key
- * @param   key_length
- *
- * @return    A return code of type #fsl_shw_return_t.
- */
-fsl_shw_return_t do_scc_slot_load_slot(fsl_shw_uco_t * user_ctx,
-				       uint64_t ownerid, uint32_t slot,
-				       const uint8_t * key, uint32_t key_length)
-{
-	scc_return_t scc_status = scc_load_slot(ownerid, slot, (void *)key,
-						key_length);
-	user_ctx = NULL;
-	return (scc_status ==
-		SCC_RET_OK) ? FSL_RETURN_OK_S : FSL_RETURN_ERROR_S;
-}
+#ifdef FSL_HAVE_SCC2
 
-/*!
- * Encrypt what's in a slot on the SCC
- *
- * @brief    Encrypt what's in a slot on the SCC
- *
- * @param    user_ctx
- * @param    ownerid
- * @param    slot
- * @param    key_length
- * @param    black_data
- *
- * @return    A return code of type #fsl_shw_return_t.
- */
-fsl_shw_return_t do_scc_slot_encrypt(fsl_shw_uco_t * user_ctx,
-				     uint64_t ownerid,
-				     uint32_t slot,
-				     uint32_t key_length, uint8_t * black_data)
-{
-	scc_return_t scc_code;
+#ifdef DIAG_ADAPTOR
+	//uint32_t *owner_32 = (uint32_t *) & (owner_id);
 
-	user_ctx = NULL;	/* for unused-param warning */
-	scc_code = scc_encrypt_slot(ownerid, slot, key_length, black_data);
-	return (scc_code == SCC_RET_OK) ? FSL_RETURN_OK_S : FSL_RETURN_ERROR_S;
-}
+	LOG_KDIAG_ARGS
+	    ("partition base: %p, offset: %i, count: %i, black data: %p\n",
+	     partition_base, offset_bytes, byte_count, (void *)black_data);
+#endif
 
-/*!
- * Deallocates a slot in the SCC
- *
- * @brief    Deallocates a slot in the SCC
- *
- * @param    user_ctx
- * @param    ownerid
- * @param    slot
- * @param    key_length
- * @param    black_data
- *
- * @return    A return code of type #fsl_shw_return_t.
- */
-fsl_shw_return_t do_scc_slot_decrypt(fsl_shw_uco_t * user_ctx,
-				     uint64_t ownerid,
-				     uint32_t slot,
-				     uint32_t key_length,
-				     const uint8_t * black_data)
-{
-	scc_return_t scc_code;
+	(void)user_ctx;
 
-	user_ctx = NULL;	/* for unused-param warning */
-	scc_code = scc_decrypt_slot(ownerid, slot, key_length, black_data);
-	return (scc_code == SCC_RET_OK) ? FSL_RETURN_OK_S : FSL_RETURN_ERROR_S;
+	/* The SCC2 DMA engine will be reading from the black ram, so we need to
+	 * make sure that the data is pushed out of the cache.  Note that the red
+	 * ram is not an issue because it is mapped with the cache disabled.
+	 */
+	os_cache_flush_range(black_data, byte_count);
+
+	scc_ret =
+	    scc_decrypt_region((uint32_t) partition_base, offset_bytes,
+			       byte_count,
+			       (uint8_t *) __virt_to_phys(black_data), IV,
+			       cypher_mode);
+
+	if (scc_ret == SCC_RET_OK) {
+		retval = FSL_RETURN_OK_S;
+	} else {
+		retval = FSL_RETURN_ERROR_S;
+	}
+
+#else
+	(void)scc_ret;
+#endif				/* FSL_HAVE_SCC2 */
+
+	return retval;
 }
 
 #ifdef DIAG_ADAPTOR

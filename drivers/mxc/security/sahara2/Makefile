@@ -4,7 +4,7 @@
 
 # Need to augment this to support optionally building user-mode support
 API_SOURCES = fsl_shw_sym.c  fsl_shw_user.c  fsl_shw_hash.c  fsl_shw_auth.c \
-              fsl_shw_hmac.c  fsl_shw_rand.c  sf_util.c  km_adaptor.c       \
+              fsl_shw_hmac.c  fsl_shw_rand.c  sf_util.c  km_adaptor.c  fsl_shw_keystore.c  \
               fsl_shw_wrap.c \
 
 

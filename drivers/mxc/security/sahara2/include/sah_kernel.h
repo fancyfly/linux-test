@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -27,10 +27,11 @@
 #if defined(__KERNEL__)
 
 #if defined(CONFIG_ARCH_MXC91321) || defined(CONFIG_ARCH_MXC91231)     \
-    || defined(CONFIG_ARCH_MX27)  || defined(CONFIG_ARCH_MXC92323)
+    || defined(CONFIG_ARCH_MX27)  || defined(CONFIG_ARCH_MXC92323)	   \
+    || defined(CONFIG_ARCH_MX51)
 #include <asm/arch/hardware.h>
 #define SAHA_BASE_ADDR SAHARA_BASE_ADDR
-#define SAHARA_IRQ     MXC_INT_SAHARA
+#define SAHARA_IRQ     MXC_INT_SAHARA_H0
 #else
 #include <asm/arch/mx2.h>
 #endif
@@ -40,6 +41,9 @@
 /* IO Controls */
 /* The magic number 'k' is reserved for the SPARC architecture. (See <kernel
  * source root>/Documentation/ioctl-number.txt.
+ *
+ * Note: Numbers 8-13 were used in a previous version of the API and should
+ *       be avoided.
  */
 #define SAH_IOC_MAGIC        'k'
 #define SAHARA_HWRESET       _IO(SAH_IOC_MAGIC, 0)
@@ -50,12 +54,29 @@
 #define SAHARA_REGISTER      _IO(SAH_IOC_MAGIC, 5)
 #define SAHARA_DEREGISTER    _IO(SAH_IOC_MAGIC, 6)
 /*                                              7 */
-#define SAHARA_SCC_ALLOC     _IOWR(SAH_IOC_MAGIC, 8, scc_slot_t)
-#define SAHARA_SCC_DEALLOC   _IOWR(SAH_IOC_MAGIC, 9, scc_slot_t)
-#define SAHARA_SCC_LOAD      _IOWR(SAH_IOC_MAGIC, 10, scc_slot_t)
-#define SAHARA_SCC_UNLOAD    _IOWR(SAH_IOC_MAGIC, 11, scc_slot_t)
-#define SAHARA_SCC_SLOT_ENC  _IOWR(SAH_IOC_MAGIC, 12, scc_slot_t)
-#define SAHARA_SCC_SLOT_DEC  _IOWR(SAH_IOC_MAGIC, 13, scc_slot_t)
+/*                                              8 */
+/*                                              9 */
+/*                                             10 */
+/*                                             11 */
+/*                                             12 */
+/*                                             13 */
+
+#define SAHARA_SCC_DROP_PERMS _IOWR(SAH_IOC_MAGIC, 14, scc_partition_info_t)
+#define SAHARA_SCC_SFREE     _IOWR(SAH_IOC_MAGIC, 15, scc_partition_info_t)
+
+#define SAHARA_SK_ALLOC     _IOWR(SAH_IOC_MAGIC, 16, scc_slot_t)
+#define SAHARA_SK_DEALLOC   _IOWR(SAH_IOC_MAGIC, 17, scc_slot_t)
+#define SAHARA_SK_LOAD      _IOWR(SAH_IOC_MAGIC, 18, scc_slot_t)
+#define SAHARA_SK_UNLOAD    _IOWR(SAH_IOC_MAGIC, 19, scc_slot_t)
+#define SAHARA_SK_SLOT_ENC  _IOWR(SAH_IOC_MAGIC, 20, scc_slot_t)
+#define SAHARA_SK_SLOT_DEC  _IOWR(SAH_IOC_MAGIC, 21, scc_slot_t)
+
+#define SAHARA_SCC_ENCRYPT  _IOWR(SAH_IOC_MAGIC, 22, scc_region_t)
+#define SAHARA_SCC_DECRYPT  _IOWR(SAH_IOC_MAGIC, 23, scc_region_t)
+#define SAHARA_GET_CAPS     _IOWR(SAH_IOC_MAGIC, 24, fsl_shw_pco_t)
+
+#define SAHARA_SCC_SSTATUS  _IOWR(SAH_IOC_MAGIC, 25, scc_partition_info_t)
+
 
 /*! This is the name that will appear in /proc/interrupts */
 #define SAHARA_NAME         "SAHARA"

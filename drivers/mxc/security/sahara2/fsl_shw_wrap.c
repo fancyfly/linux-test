@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -66,6 +66,7 @@
 
 #include "sahara.h"
 #include "fsl_platform.h"
+#include "fsl_shw_keystore.h"
 
 #include "sf_util.h"
 #include "adaptor.h"
@@ -249,11 +250,25 @@ static fsl_shw_return_t unwrap(fsl_shw_uco_t * user_ctx,
 	t_key_info.handle = key_info->handle;
 	t_key_info.flags = key_info->flags;
 	t_key_info.key_length = T_LENGTH;
+	t_key_info.keystore = key_info->keystore;
 
 	/* Compute T = SLID_decrypt(T'); leave in RED slot */
-	ret = do_scc_slot_decrypt(user_ctx, key_info->userid,
-				  t_key_info.handle,
-				  T_LENGTH, black_key + T_PRIME_OFFSET);
+	if (key_info->keystore == NULL) {
+		/* Key goes in system keystore */
+		ret = do_system_keystore_slot_decrypt(user_ctx,
+					key_info->userid,
+				    t_key_info.handle,
+				    T_LENGTH, black_key + T_PRIME_OFFSET);
+	
+	} else {
+			/* Key goes in user keystore */
+			ret = keystore_slot_decrypt(user_ctx,
+							key_info->keystore,
+							key_info->userid,
+							t_key_info.handle,
+							T_LENGTH,
+					   	    black_key + T_PRIME_OFFSET);
+	}
 	if (ret != FSL_RETURN_OK_S) {
 		goto out;
 	}
@@ -280,6 +295,25 @@ static fsl_shw_return_t unwrap(fsl_shw_uco_t * user_ctx,
 	/* Check computed ICV against value in Black Key */
 	for (i = 0; i < ICV_LENGTH; i++) {
 		if (black_key[ICV_OFFSET + i] != hmac[i]) {
+#ifdef DIAG_SECURITY_FUNC
+			LOG_DIAG_ARGS("computed ICV fails at offset %i\n", i);
+
+			{
+				char buff[300];
+				int a;
+				for (a = 0; a < ICV_LENGTH; a++)
+					sprintf(&(buff[a * 2]), "%02x",
+						black_key[ICV_OFFSET + a]);
+				buff[a * 2 + 1] = 0;
+				LOG_DIAG_ARGS("black key: %s", buff);
+
+				for (a = 0; a < ICV_LENGTH; a++)
+					sprintf(&(buff[a * 2]), "%02x",
+						hmac[a]);
+				buff[a * 2 + 1] = 0;
+				LOG_DIAG_ARGS("hmac:      %s", buff);
+			}
+#endif
 			ret = FSL_RETURN_AUTH_FAILED_S;
 			goto out;
 		}
@@ -387,20 +421,49 @@ static fsl_shw_return_t wrap(fsl_shw_uco_t * user_ctx,
 	memcpy(&KEK_key_info, &T_key_info, sizeof(KEK_key_info));
 	KEK_key_info.algorithm = FSL_KEY_ALG_AES;
 
-	ret = do_scc_slot_alloc(user_ctx, T_LENGTH, key_info->userid,
-				&T_key_info.handle);
+	if (key_info->keystore == NULL) {
+		/* Key goes in system keystore */
+		ret = do_system_keystore_slot_alloc(user_ctx,
+				T_LENGTH, key_info->userid,
+			    &T_key_info.handle);
+	
+	} else {
+		/* Key goes in user keystore */
+		ret = keystore_slot_alloc(key_info->keystore,
+				  T_LENGTH,
+				  key_info->userid, &T_key_info.handle);
+	}
 	if (ret != FSL_RETURN_OK_S) {
 		goto out;
 	}
 
-	ret = do_scc_slot_alloc(user_ctx, KEK_LENGTH, key_info->userid,
+	if (key_info->keystore == NULL) {
+		/* Key goes in system keystore */
+		ret = do_system_keystore_slot_alloc(user_ctx,
+				KEK_LENGTH, key_info->userid,
 				&KEK_key_info.handle);
+		
+	} else {
+		/* Key goes in user keystore */
+		ret = keystore_slot_alloc(key_info->keystore,
+			  KEK_LENGTH,  key_info->userid, 
+			  &KEK_key_info.handle);
+	}
+
 	if (ret != FSL_RETURN_OK_S) {
 #ifdef DIAG_SECURITY_FUNC
 		LOG_DIAG("do_scc_slot_alloc() failed");
 #endif
-		(void)do_scc_slot_dealloc(user_ctx, key_info->userid,
-					  T_key_info.handle);
+		if (key_info->keystore == NULL) {
+			/* Key goes in system keystore */
+			ret = do_system_keystore_slot_dealloc(user_ctx,
+				key_info->userid, T_key_info.handle);
+	
+		} else {
+			/* Key goes in user keystore */
+			ret = keystore_slot_dealloc(key_info->keystore,
+				  	key_info->userid, T_key_info.handle);
+		}
 	} else {
 		slots_allocated = 1;
 	}
@@ -411,9 +474,20 @@ static fsl_shw_return_t wrap(fsl_shw_uco_t * user_ctx,
 	header = SAH_HDR_RNG_GENERATE;	/* Desc. #18 */
 	DESC_KEY_OUT(header, &T_key_info, 0, NULL);
 #else
-	ret = do_scc_slot_load_slot(user_ctx, T_key_info.userid,
-				    T_key_info.handle, T_block,
-				    T_key_info.key_length);
+	if (key_info->keystore == NULL) {
+		/* Key goes in system keystore */
+		ret = do_system_keystore_load_slot(user_ctx,
+			   T_key_info.userid,
+			   T_key_info.handle, T_block,
+			   T_key_info.key_length);
+	} else {
+		/* Key goes in user keystore */
+		ret = keystore_load_slot(key_info->keystore,
+				 T_key_info.userid,
+				 T_key_info.handle,
+				 T_block, T_key_info.key_length);
+	}
+
 	if (ret != FSL_RETURN_OK_S) {
 		goto out;
 	}
@@ -489,9 +563,21 @@ static fsl_shw_return_t wrap(fsl_shw_uco_t * user_ctx,
 	}
 
 	/* Compute T' = SLID_encrypt(T); Result goes to Black Key */
-	ret = do_scc_slot_encrypt(user_ctx, T_key_info.userid,
-				  T_key_info.handle,
-				  T_LENGTH, black_key + T_PRIME_OFFSET);
+	if (key_info->keystore == NULL) {
+		/* Key goes in system keystore */
+		ret = do_system_keystore_slot_encrypt(user_ctx,
+					T_key_info.userid,  T_key_info.handle,
+					T_LENGTH, black_key + T_PRIME_OFFSET);
+	} else {
+		/* Key goes in user keystore */
+		ret = keystore_slot_encrypt(user_ctx,
+					    key_info->keystore,
+					    T_key_info.userid,
+					    T_key_info.handle,
+					    T_LENGTH,
+				  	    black_key + T_PRIME_OFFSET);
+	}
+
 	if (ret != FSL_RETURN_OK_S) {
 #ifdef DIAG_SECURITY_FUNC
 		LOG_DIAG("do_scc_slot_encrypt() failed");
@@ -504,11 +590,26 @@ static fsl_shw_return_t wrap(fsl_shw_uco_t * user_ctx,
 
 	SAH_SF_DESC_CLEAN();
 	if (slots_allocated) {
-		do_scc_slot_dealloc(user_ctx, key_info->userid,
+		if (key_info->keystore == NULL) {
+			/* Key goes in system keystore */
+			(void)do_system_keystore_slot_dealloc(user_ctx,
+							      key_info->userid,
+							      T_key_info.
+							      handle);
+			(void)do_system_keystore_slot_dealloc(user_ctx,
+							      key_info->userid,
+							      KEK_key_info.
+							      handle);
+		} else {
+			/* Key goes in user keystore */
+			(void)keystore_slot_dealloc(key_info->keystore,
+						    key_info->userid,
 				    T_key_info.handle);
-		do_scc_slot_dealloc(user_ctx, key_info->userid,
+			(void)keystore_slot_dealloc(key_info->keystore,
+				    key_info->userid,
 				    KEK_key_info.handle);
-	}
+	    }
+	}	
 
 	return ret;
 }				/* wrap */
@@ -562,7 +663,7 @@ fsl_shw_return_t fsl_shw_establish_key(fsl_shw_uco_t * user_ctx,
 
 	header = SAH_HDR_RNG_GENERATE;	/* Desc. #18 for rand */
 
-	/* THIS STILL NEEDS TO BE REFACTORED */
+	/* TODO: THIS STILL NEEDS TO BE REFACTORED */
 
 	/* Write operations into SCC memory require word-multiple number of
 	 * bytes.  For ACCEPT and CREATE functions, the key length may need
@@ -576,10 +677,30 @@ fsl_shw_return_t fsl_shw_establish_key(fsl_shw_uco_t * user_ctx,
 
 	SAH_SF_USER_CHECK();
 
-	ret =
-	    do_scc_slot_alloc(user_ctx, key_info->key_length, key_info->userid,
-			      &key_info->handle);
+	if (key_info->keystore == NULL) {
+		/* Key goes in system keystore */
+		ret = do_system_keystore_slot_alloc(user_ctx,
+						    key_info->key_length,
+						    key_info->userid,
+						    &(key_info->handle));
+#ifdef DIAG_SECURITY_FUNC
+		LOG_DIAG_ARGS
+		    ("key length: %i, handle: %i, rounded key length: %i",
+		     key_info->key_length, key_info->handle,
+		     rounded_key_length);
+#endif
+
+	} else {
+		/* Key goes in user keystore */
+		ret = keystore_slot_alloc(key_info->keystore,
+					  key_info->key_length,
+					  key_info->userid,
+					  &(key_info->handle));
+	}
 	if (ret != FSL_RETURN_OK_S) {
+#ifdef DIAG_SECURITY_FUNC
+		LOG_DIAG("Slot allocation failed\n");
+#endif
 		goto out;
 	}
 	slot_allocated = 1;
@@ -587,6 +708,9 @@ fsl_shw_return_t fsl_shw_establish_key(fsl_shw_uco_t * user_ctx,
 	key_info->flags |= FSL_SKO_KEY_ESTABLISHED;
 	switch (establish_type) {
 	case FSL_KEY_WRAP_CREATE:
+#ifdef DIAG_SECURITY_FUNC
+		LOG_DIAG("Creating random key\n");
+#endif
 		/* Use safe version of key length */
 		key_info->key_length = rounded_key_length;
 		/* Generate descriptor to put random value into */
@@ -596,15 +720,22 @@ fsl_shw_return_t fsl_shw_establish_key(fsl_shw_uco_t * user_ctx,
 
 		old_flags = user_ctx->flags;
 		/* Now put random value into key */
-#ifdef DIAG_SECURITY_FUNC
-		LOG_DIAG("Creating random key");
-#endif
 		SAH_SF_EXECUTE();
 		/* Restore user's old flag value */
 		user_ctx->flags = old_flags;
+#ifdef DIAG_SECURITY_FUNC
+		if (ret == FSL_RETURN_OK_S) {
+			LOG_DIAG("ret is ok");
+		} else {
+			LOG_DIAG("ret is not ok");
+		}
+#endif
 		break;
 
 	case FSL_KEY_WRAP_ACCEPT:
+#ifdef DIAG_SECURITY_FUNC
+		LOG_DIAG("Accepting plaintext key\n");
+#endif
 		if (key == NULL) {
 #ifdef DIAG_SECURITY_FUNC
 			LOG_DIAG("ACCEPT:  Red Key is NULL");
@@ -613,12 +744,25 @@ fsl_shw_return_t fsl_shw_establish_key(fsl_shw_uco_t * user_ctx,
 			goto out;
 		}
 		/* Copy in safe number of bytes of Red key */
-		ret = do_scc_slot_load_slot(user_ctx, key_info->userid,
-					    key_info->handle, key,
-					    rounded_key_length);
+		if (key_info->keystore == NULL) {
+			/* Key goes in system keystore */
+			ret = do_system_keystore_slot_load(user_ctx,
+						   key_info->userid,
+						   key_info->handle, key,
+						   rounded_key_length);
+		} else {
+			/* Key goes in user keystore */
+			ret = keystore_load_slot(key_info->keystore,
+								 key_info->userid,
+								 key_info->handle, key,
+								 key_info->key_length);
+		}
 		break;
 
 	case FSL_KEY_WRAP_UNWRAP:
+#ifdef DIAG_SECURITY_FUNC
+		LOG_DIAG("Unwrapping wrapped key\n");
+#endif
 		/* For now, disallow non-blocking calls. */
 		if (!(user_ctx->flags & FSL_UCO_BLOCKING_MODE)) {
 			ret = FSL_RETURN_BAD_FLAG_S;
@@ -637,8 +781,18 @@ fsl_shw_return_t fsl_shw_establish_key(fsl_shw_uco_t * user_ctx,
       out:
 	if (slot_allocated && (ret != FSL_RETURN_OK_S)) {
 		fsl_shw_return_t scc_err;
-		scc_err = do_scc_slot_dealloc(user_ctx, key_info->userid,
-					      key_info->handle);
+		
+		if (key_info->keystore == NULL) {
+			/* Key goes in system keystore */
+			scc_err = do_system_keystore_slot_dealloc(user_ctx,
+						  key_info->userid,
+						  key_info->handle);
+		} else {
+			/* Key goes in user keystore */
+			scc_err = keystore_slot_dealloc(key_info->keystore,
+						key_info->userid,  key_info->handle);
+		}
+		
 		key_info->flags &= ~FSL_SKO_KEY_ESTABLISHED;
 	}
 
@@ -684,15 +838,22 @@ fsl_shw_return_t fsl_shw_extract_key(fsl_shw_uco_t * user_ctx,
 			}
 
 			/* Need to deallocate on successful extraction */
-			do_scc_slot_dealloc(user_ctx, key_info->userid,
-					    key_info->handle);
+			if (key_info->keystore == NULL) {
+				/* Key goes in system keystore */
+				ret = do_system_keystore_slot_dealloc(user_ctx,
+						key_info->userid, key_info->handle);
+			} else {
+				/* Key goes in user keystore */
+				ret = keystore_slot_dealloc(key_info->keystore,
+						key_info->userid, key_info->handle);
+			}	
 			/* Mark key not available in the flags */
 			key_info->flags &=
 			    ~(FSL_SKO_KEY_ESTABLISHED | FSL_SKO_KEY_PRESENT);
 		}
 	}
 
-      out:
+out:
 	SAH_SF_DESC_CLEAN();
 
 	return ret;
@@ -719,13 +880,22 @@ fsl_shw_return_t fsl_shw_release_key(fsl_shw_uco_t * user_ctx,
 	SAH_SF_USER_CHECK();
 
 	if (key_info->flags & FSL_SKO_KEY_ESTABLISHED) {
-		ret = do_scc_slot_dealloc(user_ctx, key_info->userid,
-					  key_info->handle);
+		if (key_info->keystore == NULL) {
+			/* Key goes in system keystore */
+			do_system_keystore_slot_dealloc(user_ctx,
+							key_info->userid,
+							key_info->handle);
+		} else {
+			/* Key goes in user keystore */
+			keystore_slot_dealloc(key_info->keystore,
+						key_info->userid,
+					  	key_info->handle);
+		}	
 		key_info->flags &= ~(FSL_SKO_KEY_ESTABLISHED |
 				     FSL_SKO_KEY_PRESENT);
 	}
 
-      out:
+out:
 	SAH_SF_DESC_CLEAN();
 
 	return ret;

@@ -2402,6 +2402,16 @@ static struct clk fec_clk = {
 	.disable = _clk_disable,
 };
 
+static struct clk sahara_clk = {
+	 .name = "sahara_clk",
+	 .parent = &ahb_clk,
+	 .secondary = &ipg_clk,
+	 .enable_reg = MXC_CCM_CCGR4,
+	 .enable_shift = MXC_CCM_CCGR4_CG7_OFFSET,
+	 .enable = _clk_enable,
+	 .disable = _clk_disable,
+};
+
 static struct clk *mxc_clks[] = {
 	&osc_clk,
 	&ckih_clk,
@@ -2508,6 +2518,7 @@ static struct clk *mxc_clks[] = {
 	&mipi_hsc2_clk,
 	&mipi_esc_clk,
 	&mipi_hsp_clk,
+	&sahara_clk,
 };
 
 static void clk_tree_init(void)

@@ -1435,13 +1435,16 @@ CONFIG_MXC_MC13892_POWER=y
 # MXC Security Drivers
 #
 # CONFIG_MXC_SECURITY_SCC is not set
-# CONFIG_MXC_SECURITY_SCC2 is not set
+CONFIG_MXC_SECURITY_SCC2=y
+CONFIG_SCC_DEBUG=y
 # CONFIG_MXC_SECURITY_RNG is not set
 
 #
-# SAHARA2 Security Hardware Support
+# SAHARA4 Security Hardware Support
 #
-# CONFIG_MXC_SAHARA is not set
+CONFIG_MXC_SAHARA=y
+CONFIG_MXC_SAHARA_USER_MODE=y
+# CONFIG_MXC_SAHARA_POLL_MODE is not set
 
 #
 # MXC MPEG4 Encoder Kernel module support

@@ -1100,9 +1100,6 @@ static int mxc_nand_scan_bbt(struct mtd_info *mtd)
 
 static void mxc_nfc_init(void)
 {
-	/* Resetting  NFC */
-	raw_write((raw_read(REG_NFC_RST) | NFC_RST), REG_NFC_RST);
-
 	/* Disable interrupt */
 	raw_write((raw_read(REG_NFC_INTRRUPT) | NFC_INT_MSK), REG_NFC_INTRRUPT);
 

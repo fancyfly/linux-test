@@ -738,6 +738,14 @@ void gpio_sensor_active(unsigned int csi)
 
 		mxc_iomux_set_pad(MX51_PIN_CSI1_PIXCLK, PAD_CTL_HYS_NONE);
 
+		mxc_request_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_ALT1);
+		mxc_iomux_set_pad(MX51_PIN_EIM_EB2, PAD_CTL_HYS_NONE |
+				PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				PAD_CTL_100K_PD | PAD_CTL_ODE_OPENDRAIN_NONE |
+				PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW);
+		mxc_set_gpio_direction(MX51_PIN_EIM_EB2, 0);
+		mxc_set_gpio_dataout(MX51_PIN_EIM_EB2, 0);
+
 		mxc_request_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT5);
 		mxc_iomux_set_input(
 			MUX_IN_HSC_MIPI_MIX_IPP_IND_SENS2_DATA_EN_SELECT_INPUT,
@@ -813,6 +821,8 @@ void gpio_sensor_inactive(unsigned int csi)
 {
 	switch (csi) {
 	case 0:
+		mxc_free_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_ALT0);
 		mxc_request_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT0);
 		break;
 	case 1:

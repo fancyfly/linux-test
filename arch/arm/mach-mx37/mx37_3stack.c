@@ -640,13 +640,12 @@ static void mx37_3stack_fixup_for_board_v1(void)
  */
 static void __init mxc_board_init(void)
 {
-	if (!board_is_mx37(BOARD_REV_2))
-		mx37_3stack_fixup_for_board_v1();
-
 	mxc_cpu_common_init();
 	mxc_clocks_init();
 	mxc_gpio_init();
 	early_console_setup(saved_command_line);
+	if (!board_is_mx37(BOARD_REV_2))
+		mx37_3stack_fixup_for_board_v1();
 	i2c_register_board_info(0, mxc_i2c0_board_info,
 				ARRAY_SIZE(mxc_i2c0_board_info));
 

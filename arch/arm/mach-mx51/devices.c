@@ -18,16 +18,16 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
-
 #include <linux/spi/spi.h>
-
 #include <asm/hardware.h>
-
 #include <asm/arch/spba.h>
 #include "iomux.h"
 #include <asm/arch/sdma.h>
 #include "sdma_script_code.h"
 #include <asm/arch/mxc_scc2_driver.h>
+
+/* Flag used to indicate when IRAM has been initialized */
+int iram_ready;
 
 void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
 {
@@ -384,7 +384,7 @@ static inline void mxc_init_scc(void)
 	iounmap(scm_ram_base);
 	iounmap(scc_base);
 	printk(KERN_INFO "IRAM READY\n");
-
+	iram_ready = 1;
 }
 #endif
 

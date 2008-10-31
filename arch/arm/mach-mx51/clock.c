@@ -97,7 +97,6 @@ static int _clk_enable(struct clk *clk)
 static void _clk_disable(struct clk *clk)
 {
 	u32 reg;
-
 	reg = __raw_readl(clk->enable_reg);
 	reg &= ~(MXC_CCM_CCGR_CG_MASK << clk->enable_shift);
 	__raw_writel(reg, clk->enable_reg);
@@ -368,14 +367,6 @@ static struct clk pll3_sw_clk = {
 	.flags = RATE_PROPAGATES,
 };
 
-static struct clk gpc_dvfs_clk = {
-	.name = "gpc_dvfs_clk",
-	.enable_reg = MXC_CCM_CCGR5,
-	.enable_shift = MXC_CCM_CCGR5_CG12_OFFSET,
-	.enable = _clk_enable,
-	.disable = _clk_disable,
-};
-
 static int _clk_lp_apm_set_parent(struct clk *clk, struct clk *parent)
 {
 	u32 reg;
@@ -566,13 +557,41 @@ static struct clk ahb_clk = {
 	.flags = RATE_PROPAGATES,
 };
 
+static int _clk_max_enable(struct clk *clk)
+{
+	u32 reg;
+
+	_clk_enable(clk);
+
+	/* Handshake with MAX when LPM is entered. */
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg &= ~MXC_CCM_CLPCR_BYPASS_MAX_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
+
+	return 0;
+}
+
+
+static void _clk_max_disable(struct clk *clk)
+{
+	u32 reg;
+
+	_clk_disable_inwait(clk);
+
+	/* No Handshake with MAX when LPM is entered as its disabled. */
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg |= MXC_CCM_CLPCR_BYPASS_MAX_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
+}
+
+
 static struct clk ahb_max_clk = {
 	.name = "max_clk",
 	.parent = &ahb_clk,
 	.enable_reg = MXC_CCM_CCGR0,
 	.enable_shift = MXC_CCM_CCGR0_CG14_OFFSET,
-	.enable = _clk_enable,
-	.disable = _clk_disable_inwait,
+	.enable = _clk_max_enable,
+	.disable = _clk_max_disable,
 };
 
 static int _clk_emi_slow_set_parent(struct clk *clk, struct clk *parent)
@@ -788,6 +807,41 @@ static struct clk aips_tz2_clk = {
 	.disable = _clk_disable_inwait,
 };
 
+static struct clk gpc_dvfs_clk = {
+	.name = "gpc_dvfs_clk",
+	.parent = &aips_tz1_clk,
+	.enable_reg = MXC_CCM_CCGR5,
+	.enable_shift = MXC_CCM_CCGR5_CG12_OFFSET,
+	.enable = _clk_enable,
+	.disable = _clk_disable,
+};
+
+static int _clk_sdma_enable(struct clk *clk)
+{
+	u32 reg;
+
+	_clk_enable(clk);
+
+	/* Handshake with SDMA when LPM is entered. */
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg &= ~MXC_CCM_CLPCR_BYPASS_SDMA_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
+
+	return 0;
+}
+
+static void _clk_sdma_disable(struct clk *clk)
+{
+	u32 reg;
+
+	_clk_disable(clk);
+	/* No handshake with SDMA as its not enabled. */
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg |= MXC_CCM_CLPCR_BYPASS_SDMA_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
+}
+
+
 static struct clk sdma_clk[] = {
 	{
 	 .name = "sdma_ahb_clk",
@@ -799,8 +853,8 @@ static struct clk sdma_clk[] = {
 #endif
 	 .enable_reg = MXC_CCM_CCGR4,
 	 .enable_shift = MXC_CCM_CCGR4_CG15_OFFSET,
-	 .enable = _clk_enable,
-	 .disable = _clk_disable,
+	 .enable = _clk_sdma_enable,
+	 .disable = _clk_sdma_disable,
 	 },
 	{
 	 .name = "sdma_ipg_clk",
@@ -818,6 +872,12 @@ static int _clk_ipu_enable(struct clk *clk)
 	reg &= ~MXC_CCM_CCDR_IPU_HS_MASK;
 	__raw_writel(reg, MXC_CCM_CCDR);
 
+	/* Handshake with IPU when LPM is entered as its enabled. */
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg &= ~MXC_CCM_CLPCR_BYPASS_IPU_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
+
+
 	return 0;
 }
 
@@ -826,10 +886,17 @@ static void _clk_ipu_disable(struct clk *clk)
 	u32 reg;
 	_clk_disable(clk);
 
-	/* No handshake with IPU as its not enabled. */
+	/* No handshake with IPU whe dividers are changed
+	 * as its not enabled. */
 	reg = __raw_readl(MXC_CCM_CCDR);
 	reg |= MXC_CCM_CCDR_IPU_HS_MASK;
 	__raw_writel(reg, MXC_CCM_CCDR);
+
+	/* No handshake with IPU when LPM is entered as its not enabled. */
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg |= MXC_CCM_CLPCR_BYPASS_IPU_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
+
 }
 
 
@@ -1062,18 +1129,26 @@ static int _clk_hsc_enable(struct clk *clk)
 	reg &= ~MXC_CCM_CCDR_HSC_HS_MASK;
 	__raw_writel(reg, MXC_CCM_CCDR);
 
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg &= ~MXC_CCM_CLPCR_BYPASS_HSC_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
+
 	return 0;
 }
 
 static void _clk_hsc_disable(struct clk *clk)
 {
 	u32 reg;
-	_clk_disable(clk);
 
-	/* No handshake with IPU as its not enabled. */
+	_clk_disable(clk);
+	/* No handshake with HSC as its not enabled. */
 	reg = __raw_readl(MXC_CCM_CCDR);
 	reg |= MXC_CCM_CCDR_IPU_HS_MASK;
 	__raw_writel(reg, MXC_CCM_CCDR);
+
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg |= MXC_CCM_CLPCR_BYPASS_HSC_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
 }
 
 static struct clk mipi_esc_clk = {
@@ -2584,7 +2659,7 @@ static void clk_tree_init(void)
 int __init mxc_clocks_init(void)
 {
 	struct clk **clkp;
-	int i;
+	int i, reg;
 
 	for (clkp = mxc_clks; clkp < mxc_clks + ARRAY_SIZE(mxc_clks); clkp++)
 		clk_register(*clkp);
@@ -2615,13 +2690,23 @@ int __init mxc_clocks_init(void)
 	__raw_writel(0, MXC_CCM_CCGR1);
 	__raw_writel(0, MXC_CCM_CCGR2);
 	__raw_writel(0, MXC_CCM_CCGR3);
-	__raw_writel(0, MXC_CCM_CCGR4);
-	__raw_writel(1 << MXC_CCM_CCGR5_CG7_OFFSET |
+	__raw_writel(3 << MXC_CCM_CCGR4_CG8_OFFSET, MXC_CCM_CCGR4);
+	__raw_writel(1 << MXC_CCM_CCGR5_CG2_OFFSET |
+		     1 << MXC_CCM_CCGR5_CG7_OFFSET |
 		     1 << MXC_CCM_CCGR5_CG8_OFFSET |
 		     1 << MXC_CCM_CCGR5_CG9_OFFSET |
 		     1 << MXC_CCM_CCGR5_CG10_OFFSET |
 		     3 << MXC_CCM_CCGR5_CG11_OFFSET, MXC_CCM_CCGR5);
 	__raw_writel(1 << MXC_CCM_CCGR6_CG4_OFFSET, MXC_CCM_CCGR6);
+
+	/*Setup the LPM bypass bits */
+	reg = __raw_readl(MXC_CCM_CLPCR);
+	reg |= MXC_CCM_CLPCR_BYPASS_HSC_LPM_HS
+		| MXC_CCM_CLPCR_BYPASS_IPU_LPM_HS
+		| MXC_CCM_CLPCR_BYPASS_RTIC_LPM_HS
+		| MXC_CCM_CLPCR_BYPASS_SCC_LPM_HS
+		| MXC_CCM_CLPCR_BYPASS_SDMA_LPM_HS;
+	__raw_writel(reg, MXC_CCM_CLPCR);
 
 	/* This will propagate to all children and init all the clock rates */
 	propagate_rate(&osc_clk);

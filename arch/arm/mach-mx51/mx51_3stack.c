@@ -784,6 +784,30 @@ static int __init mxc_init_touchscreen(void)
 }
 #endif
 
+static int __init mxc_init_srpgconfig(void)
+{
+	struct clk *gpcclk = clk_get(NULL, "gpc_dvfs_clk");
+	clk_enable(gpcclk);
+
+	/* Setup the number of clock cycles to wait for SRPG
+	 * power up and power down requests.
+	 */
+	__raw_writel(0x010F0201, MXC_SRPG_ARM_PUPSCR);
+	__raw_writel(0x010F0201, MXC_SRPG_NEON_PUPSCR);
+	__raw_writel(0x00000008, MXC_SRPG_EMPGC0_PUPSCR);
+	__raw_writel(0x00000008, MXC_SRPG_EMPGC1_PUPSCR);
+
+	__raw_writel(0x01010101, MXC_SRPG_ARM_PDNSCR);
+	__raw_writel(0x01010101, MXC_SRPG_NEON_PDNSCR);
+	__raw_writel(0x00000018, MXC_SRPG_EMPGC0_PDNSCR);
+	__raw_writel(0x00000018, MXC_SRPG_EMPGC1_PDNSCR);
+
+	clk_disable(gpcclk);
+	clk_put(gpcclk);
+
+	return 0;
+}
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -829,6 +853,7 @@ static void __init mxc_board_init(void)
 	mxc_init_keypad();
 	mxc_init_nand_mtd();
 	mxc_init_mmc();
+	mxc_init_srpgconfig();
 
 #if defined(CONFIG_I2C_MXC) || defined(CONFIG_I2C_MXC_MODULE)
 

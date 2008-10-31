@@ -1246,6 +1246,8 @@ static int smsc911x_open(struct net_device *dev)
 		return -ENODEV;
 	}
 
+	smsc911x_set_mac_address(pdata, dev->dev_addr);
+
 	temp = smsc911x_reg_read(pdata, HW_CFG);
 	temp &= HW_CFG_TX_FIF_SZ_;
 	temp |= HW_CFG_SF_;

@@ -322,27 +322,57 @@ EXPORT_SYMBOL(gpio_activate_audio_ports);
  */
 void gpio_sdhc_active(int module)
 {
-	unsigned int pad_val;
-
 	switch (module) {
 	case 0:
 		mxc_request_iomux(MX37_PIN_SD1_CLK,
 				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
 		mxc_request_iomux(MX37_PIN_SD1_CMD,
 				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
-		mxc_request_iomux(MX37_PIN_SD1_DATA0, IOMUX_CONFIG_ALT0);
-		mxc_request_iomux(MX37_PIN_SD1_DATA1, IOMUX_CONFIG_ALT0);
-		mxc_request_iomux(MX37_PIN_SD1_DATA2, IOMUX_CONFIG_ALT0);
-		mxc_request_iomux(MX37_PIN_SD1_DATA3, IOMUX_CONFIG_ALT0);
+		mxc_request_iomux(MX37_PIN_SD1_DATA0,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX37_PIN_SD1_DATA1,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX37_PIN_SD1_DATA2,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX37_PIN_SD1_DATA3,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
 
-		pad_val = PAD_CTL_DRV_MAX | PAD_CTL_22K_PU | PAD_CTL_SRE_FAST;
-
-		mxc_iomux_set_pad(MX37_PIN_SD1_CLK, pad_val);
-		mxc_iomux_set_pad(MX37_PIN_SD1_CMD, pad_val);
-		mxc_iomux_set_pad(MX37_PIN_SD1_DATA0, pad_val);
-		mxc_iomux_set_pad(MX37_PIN_SD1_DATA1, pad_val);
-		mxc_iomux_set_pad(MX37_PIN_SD1_DATA2, pad_val);
-		mxc_iomux_set_pad(MX37_PIN_SD1_DATA3, pad_val);
+		mxc_iomux_set_pad(MX37_PIN_SD1_CMD,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD1_CLK,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD1_DATA0,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD1_DATA1,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD1_DATA2,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_KEEPER |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD1_DATA3,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
 
 		/* Write Protected Pin */
 		mxc_request_iomux(MX37_PIN_CSPI1_SS0,
@@ -358,6 +388,55 @@ void gpio_sdhc_active(int module)
 		mxc_set_gpio_dataout(MX37_PIN_CSPI1_SS0, 1);
 		break;
 	case 1:
+		mxc_request_iomux(MX37_PIN_SD2_CLK,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX37_PIN_SD2_CMD,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX37_PIN_SD2_DATA0,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX37_PIN_SD2_DATA1,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX37_PIN_SD2_DATA2,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX37_PIN_SD2_DATA3,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+
+		mxc_iomux_set_pad(MX37_PIN_SD2_CMD,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD2_CLK,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD2_DATA0,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD2_DATA1,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD2_DATA2,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX37_PIN_SD2_DATA3,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_47K_PU |
+				  PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
 		break;
 	default:
 		break;
@@ -379,10 +458,14 @@ void gpio_sdhc_inactive(int module)
 			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
 		mxc_free_iomux(MX37_PIN_SD1_CMD,
 			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
-		mxc_free_iomux(MX37_PIN_SD1_DATA0, IOMUX_CONFIG_ALT0);
-		mxc_free_iomux(MX37_PIN_SD1_DATA1, IOMUX_CONFIG_ALT0);
-		mxc_free_iomux(MX37_PIN_SD1_DATA2, IOMUX_CONFIG_ALT0);
-		mxc_free_iomux(MX37_PIN_SD1_DATA3, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX37_PIN_SD1_DATA0,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX37_PIN_SD1_DATA1,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX37_PIN_SD1_DATA2,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX37_PIN_SD1_DATA3,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
 
 		mxc_iomux_set_pad(MX37_PIN_SD1_CLK,
 				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
@@ -404,7 +487,31 @@ void gpio_sdhc_inactive(int module)
 				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
 		break;
 	case 1:
-		/* TODO:what are the pins for SDHC2? */
+		mxc_free_iomux(MX37_PIN_SD2_CLK,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX37_PIN_SD2_CMD,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX37_PIN_SD2_DATA0,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX37_PIN_SD2_DATA1,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX37_PIN_SD2_DATA2,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX37_PIN_SD2_DATA3,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+
+		mxc_iomux_set_pad(MX37_PIN_SD2_CLK,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX37_PIN_SD2_CMD,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX37_PIN_SD2_DATA0,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX37_PIN_SD2_DATA1,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX37_PIN_SD2_DATA2,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
+		mxc_iomux_set_pad(MX37_PIN_SD2_DATA3,
+				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));
 		break;
 	default:
 		break;

@@ -150,7 +150,7 @@ static mxc_sdma_channel_params_t mxc_sdma_mmc1_width4_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_mmc2_width1_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SDHC_MMC_WML,
+			.watermark_level = MXC_SDHC_MMC_WML / 32,
 			.per_address =
 			MMC_SDHC2_BASE_ADDR + MXC_MMC_BUFFER_ACCESS,
 			.peripheral_type = MMC,
@@ -165,7 +165,7 @@ static mxc_sdma_channel_params_t mxc_sdma_mmc2_width1_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_mmc2_width4_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SDHC_SD_WML,
+			.watermark_level = MXC_SDHC_SD_WML / 8,
 			.per_address =
 			MMC_SDHC2_BASE_ADDR + MXC_MMC_BUFFER_ACCESS,
 			.peripheral_type = MMC,

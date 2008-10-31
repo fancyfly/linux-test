@@ -1143,6 +1143,12 @@ static void sdhci_tasklet_finish(unsigned long param)
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 
+	/* BUG: Since there is no a bit that indicated whether
+	 * the clock is stable or not, so the first sd/mmc cmd would be
+	 * failed after the clock is enabled again and is not statble in
+	 * actually. Due to the same reason, the wifi would be failed to
+	 * bring up, so mask them again. */
+#if 0
 	/* Stop the clock when the req is done */
 	flags = SDHCI_DATA_ACTIVE | SDHCI_DOING_WRITE | SDHCI_DOING_READ;
 	if (!(readl(host->ioaddr + SDHCI_PRESENT_STATE) & flags)) {
@@ -1151,6 +1157,7 @@ static void sdhci_tasklet_finish(unsigned long param)
 			host->plat_data->clk_flg = 0;
 		}
 	}
+#endif
 
 	mmc_request_done(host->mmc, mrq);
 }
@@ -1599,6 +1606,7 @@ static int __devinit sdhci_probe_slot(struct platform_device
 
 	host = mmc_priv(mmc);
 	host->mmc = mmc;
+	host->id = pdev->id;
 	host->dma = -1;
 	host->plat_data = mmc_plat;
 	if (!host->plat_data) {

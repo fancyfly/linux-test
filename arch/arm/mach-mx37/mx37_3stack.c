@@ -522,6 +522,46 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 #endif
 }
 
+#if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
+static void mxc_unifi_hardreset(void)
+{
+	struct regulator *gpo4;
+
+	if (board_is_mx37(BOARD_REV_2)) {
+		gpo4 = regulator_get(NULL, "GPO4");
+		if (!IS_ERR(gpo4))
+			regulator_enable(gpo4);
+		regulator_put(gpo4, NULL);
+	} else {
+		mxc_request_iomux(MX37_PIN_AUD5_RXC, IOMUX_CONFIG_GPIO);
+		mxc_set_gpio_dataout(MX37_PIN_AUD5_RXC, 1);
+		mxc_set_gpio_direction(MX37_PIN_AUD5_RXC, 0);
+		mxc_free_iomux(MX37_PIN_AUD5_RXC, IOMUX_CONFIG_GPIO);
+	}
+}
+
+static struct mxc_unifi_platform_data unifi_data = {
+	.hardreset = mxc_unifi_hardreset,
+	.enable = NULL,
+	.reg_1v5_ana_bb = "VGEN1",
+	.reg_vdd_vpa = "VCAM",
+	.reg_1v5_dd = "VGEN1",
+	.host_id = 1,
+};
+
+struct mxc_unifi_platform_data *get_unifi_plat_data(void)
+{
+	return &unifi_data;
+}
+#else
+struct mxc_unifi_platform_data *get_unifi_plat_data(void)
+{
+	return NULL;
+}
+#endif
+
+EXPORT_SYMBOL(get_unifi_plat_data);
+
 #if defined(CONFIG_MMC_IMX_ESDHCI) || defined(CONFIG_MMC_IMX_ESDHCI_MODULE)
 static struct mxc_mmc_platform_data mmc_data = {
 	.ocr_mask = MMC_VDD_32_33,
@@ -567,6 +607,49 @@ static struct platform_device mxcsdhc1_device = {
 	.resource = mxcsdhc1_resources,
 };
 
+#if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
+static struct mxc_mmc_platform_data mmc1_data = {
+	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30 |
+	    MMC_VDD_31_32,
+	.caps = MMC_CAP_4_BIT_DATA,
+	.min_clk = 150000,
+	.max_clk = 25000000,
+	.card_inserted_state = 1,
+	.status = sdhc_get_card_det_status,
+	.wp_status = sdhc_write_protect,
+	.clock_mmc = "esdhc_clk",
+};
+
+static struct resource mxcsdhc2_resources[] = {
+	[0] = {
+	       .start = MMC_SDHC2_BASE_ADDR,
+	       .end = MMC_SDHC2_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_MMC_SDHC2,
+	       .end = MXC_INT_MMC_SDHC2,
+	       .flags = IORESOURCE_IRQ,
+	       },
+	[2] = {
+	       .start = 0,
+	       .end = 0,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+static struct platform_device mxcsdhc2_device = {
+	.name = "mxsdhci",
+	.id = 1,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mmc1_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcsdhc2_resources),
+	.resource = mxcsdhc2_resources,
+};
+#endif
+
 static inline void mxc_init_mmc(void)
 {
 	int cd_irq;
@@ -579,6 +662,15 @@ static inline void mxc_init_mmc(void)
 
 	spba_take_ownership(SPBA_SDHC1, SPBA_MASTER_A | SPBA_MASTER_C);
 	(void)platform_device_register(&mxcsdhc1_device);
+#if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
+	cd_irq = sdhc_init_card_det(1);
+	if (cd_irq) {
+		mxcsdhc2_device.resource[2].start = cd_irq;
+		mxcsdhc2_device.resource[2].end = cd_irq;
+	}
+	spba_take_ownership(SPBA_SDHC2, SPBA_MASTER_A | SPBA_MASTER_C);
+	(void)platform_device_register(&mxcsdhc2_device);
+#endif
 }
 #else
 static inline void mxc_init_mmc(void)
@@ -638,6 +730,11 @@ static void mx37_3stack_fixup_for_board_v1(void)
 	mxc_bt_data.bt_vdd = "DCDC3";
 	mxc_bt_data.bt_vusb = "DCDC6";
 	mxc_init_touchscreen();
+#if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
+	unifi_data.reg_1v5_ana_bb = NULL;	/* VMAIN is used on v1 board */
+	unifi_data.reg_vdd_vpa = NULL;
+	unifi_data.reg_1v5_dd = NULL;
+#endif
 }
 
 #if defined(CONFIG_GPS_IOCTRL) || defined(CONFIG_GPS_IOCTRL_MODULE)

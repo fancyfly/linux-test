@@ -238,7 +238,7 @@ struct regulation_constraints led_regulation_constraints = {
 };
 struct regulation_constraints dcdc1_regulation_constraints = {
 	.min_uV = mV_to_uV(850),
-	.max_uV = mV_to_uV(1000),
+	.max_uV = mV_to_uV(1200),
 	.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
 };
 struct regulation_constraints dcdc4_regulation_constraints = {

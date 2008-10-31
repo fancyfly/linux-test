@@ -41,8 +41,10 @@
  */
 #define CPU_FREQUENCY_200000_KHZ		200000
 #define CPU_FREQUENCY_532000_KHZ		532000
+#define CPU_FREQUENCY_600000_KHZ		600000
 #define ARM_LPM_CLK  200000000
 #define ARM_NORMAL_CLK  532000000
+#define ARM_HIGH_CLK  600000000
 
 #define LP_LPM_CLK  24000000
 #define LP_NORMAL_CLK  133000000
@@ -50,6 +52,7 @@
 #define LP_LPM_VOLTAGE 1000000
 #define GP_NORMAL_VOLTAGE 1000000
 #define LP_NORMAL_VOLTAGE 1200000
+#define GP_HIGH_VOLTAGE 1200000
 
 int low_bus_freq_mode;
 int high_bus_freq_mode;
@@ -77,6 +80,7 @@ static struct regulator *lp_regulator;
 static struct cpufreq_frequency_table imx37_freq_table[] = {
 	{0x01, CPU_FREQUENCY_200000_KHZ},
 	{0x02, CPU_FREQUENCY_532000_KHZ},
+	{0x02, CPU_FREQUENCY_600000_KHZ},
 	{0, CPUFREQ_TABLE_END},
 };
 
@@ -114,6 +118,19 @@ int set_cpu_freq(int freq)
 		ret = regulator_set_voltage(gp_regulator, GP_LPM_VOLTAGE);
 		if (ret < 0) {
 			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!!\n");
+			return ret;
+		}
+	} else if (freq == ARM_HIGH_CLK) {
+		/* Set the voltage to 1.2v for the GP domain. */
+		ret = regulator_set_voltage(gp_regulator, GP_HIGH_VOLTAGE);
+		if (ret < 0) {
+			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!!\n");
+			return ret;
+		}
+
+		ret = clk_set_rate(cpu_clk, ARM_HIGH_CLK);
+		if (ret != 0) {
+			printk(KERN_DEBUG "cannot set CPU clock rate\n");
 			return ret;
 		}
 	}

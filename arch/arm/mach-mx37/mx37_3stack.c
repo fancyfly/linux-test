@@ -79,11 +79,18 @@ static struct cpu_wp cpu_wp_auto[] = {
 	 .mfi = 8,
 	 .mfd = 2,
 	 .mfn = 1,},
+	{
+	 .pll_rate = 600000000,
+	 .cpu_rate = 600000000,
+	 .pdf = 0,
+	 .mfi = 6,
+	 .mfd = 3,
+	 .mfn = 1,},
 };
 
 struct cpu_wp *get_cpu_wp(int *wp)
 {
-	*wp = 2;
+	*wp = 3;
 	return cpu_wp_auto;
 }
 

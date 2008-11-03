@@ -235,10 +235,87 @@ static u32 bpp_to_fmt(struct fb_info *fbi)
 	return 0;
 }
 
+static irqreturn_t mxc_v4l2out_disp_refresh_irq_handler(int irq, void *dev_id)
+{
+	struct completion *comp = dev_id;
+
+	complete(comp);
+	return IRQ_HANDLED;
+}
+
+static void timer_work_func(struct work_struct *work)
+{
+	int index, ret, disp_irq = 0;
+	unsigned long timeout;
+	unsigned long lock_flags = 0;
+	vout_data *vout =
+		container_of(work, vout_data, timer_work);
+	DECLARE_COMPLETION_ONSTACK(disp_comp);
+
+	switch (vout->display_ch) {
+	case MEM_FG_SYNC:
+	case MEM_BG_SYNC:
+		disp_irq = IPU_IRQ_BG_SF_END;
+		break;
+	case MEM_DC_SYNC:
+		disp_irq = IPU_IRQ_DC_FC_1;
+		break;
+	default:
+		dev_err(vout->video_dev->dev,
+			"not support display channel\n");
+	}
+
+	ipu_clear_irq(disp_irq);
+	ret = ipu_request_irq(disp_irq, mxc_v4l2out_disp_refresh_irq_handler, 0, NULL, &disp_comp);
+	if (ret < 0) {
+		dev_err(vout->video_dev->dev,
+			"Disp irq %d in use\n", disp_irq);
+		return;
+	}
+	wait_for_completion_timeout(&disp_comp, msecs_to_jiffies(40));
+	ipu_free_irq(disp_irq, &disp_comp);
+
+	spin_lock_irqsave(&g_lock, lock_flags);
+
+	if (ipu_select_buffer(vout->post_proc_ch, IPU_INPUT_BUFFER,
+			      vout->next_rdy_ipu_buf) < 0) {
+		dev_err(vout->video_dev->dev,
+			"unable to set IPU buffer ready\n");
+	}
+	vout->next_rdy_ipu_buf = !vout->next_rdy_ipu_buf;
+
+	/* Setup timer for next buffer */
+	index = peek_next_buf(&vout->ready_q);
+	if (index != -1) {
+		/* if timestamp is 0, then default to 30fps */
+		if ((vout->v4l2_bufs[index].timestamp.tv_sec == 0)
+		    && (vout->v4l2_bufs[index].timestamp.tv_usec == 0))
+			timeout =
+			    vout->start_jiffies + vout->frame_count * HZ / 30;
+		else
+			timeout =
+			    get_jiffies(&vout->v4l2_bufs[index].timestamp);
+
+		if (jiffies >= timeout) {
+			dev_dbg(vout->video_dev->dev,
+				"warning: timer timeout already expired.\n");
+		}
+		if (mod_timer(&vout->output_timer, timeout))
+			dev_dbg(vout->video_dev->dev,
+				"warning: timer was already set\n");
+
+		dev_dbg(vout->video_dev->dev,
+			"timer handler next schedule: %lu\n", timeout);
+	} else {
+		vout->state = STATE_STREAM_PAUSED;
+	}
+
+	spin_unlock_irqrestore(&g_lock, lock_flags);
+}
+
 static void mxc_v4l2out_timer_handler(unsigned long arg)
 {
 	int index;
-	unsigned long timeout;
 	unsigned long lock_flags = 0;
 	vout_data *vout = (vout_data *) arg;
 
@@ -279,41 +356,11 @@ static void mxc_v4l2out_timer_handler(unsigned long arg)
 			vout->next_rdy_ipu_buf);
 		goto exit0;
 	}
-	if (ipu_select_buffer(vout->post_proc_ch, IPU_INPUT_BUFFER,
-			      vout->next_rdy_ipu_buf) < 0) {
-		dev_err(vout->video_dev->dev,
-			"unable to set IPU buffer ready\n");
-	}
-	vout->next_rdy_ipu_buf = !vout->next_rdy_ipu_buf;
-
-	/* Setup timer for next buffer */
-	index = peek_next_buf(&vout->ready_q);
-	if (index != -1) {
-		/* if timestamp is 0, then default to 30fps */
-		if ((vout->v4l2_bufs[index].timestamp.tv_sec == 0)
-		    && (vout->v4l2_bufs[index].timestamp.tv_usec == 0))
-			timeout =
-			    vout->start_jiffies + vout->frame_count * HZ / 30;
-		else
-			timeout =
-			    get_jiffies(&vout->v4l2_bufs[index].timestamp);
-
-		if (jiffies >= timeout) {
-			dev_dbg(vout->video_dev->dev,
-				"warning: timer timeout already expired.\n");
-		}
-		if (mod_timer(&vout->output_timer, timeout))
-			dev_dbg(vout->video_dev->dev,
-				"warning: timer was already set\n");
-
-		dev_dbg(vout->video_dev->dev,
-			"timer handler next schedule: %lu\n", timeout);
-	} else {
-		vout->state = STATE_STREAM_PAUSED;
-	}
 
       exit0:
 	spin_unlock_irqrestore(&g_lock, lock_flags);
+
+	schedule_work(&vout->timer_work);
 }
 
 static irqreturn_t mxc_v4l2out_pp_in_irq_handler(int irq, void *dev_id)
@@ -1048,6 +1095,8 @@ static int mxc_v4l2out_open(struct inode *inode, struct file *file)
 		vout->rotate = IPU_ROTATE_NONE;
 		g_irq_cnt = g_buf_output_cnt = g_buf_q_cnt = g_buf_dq_cnt = 0;
 
+		INIT_WORK(&vout->timer_work, timer_work_func);
+
 	}
 
 	file->private_data = dev;
@@ -1091,6 +1140,9 @@ static int mxc_v4l2out_close(struct inode *inode, struct file *file)
 
 		/* capture off */
 		wake_up_interruptible(&vout->v4l_bufq);
+
+		schedule_work(&vout->timer_work);
+		flush_scheduled_work();
 	}
 
 	return 0;

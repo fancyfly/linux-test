@@ -427,6 +427,8 @@ typedef union {
  */
 enum ipu_irq_line {
 #ifdef CONFIG_MXC_IPU_V1
+	IPU_IRQ_DC_FC_1 = -1,
+
 	IPU_IRQ_PRP_ENC_OUT_EOF = 0,
 	IPU_IRQ_PRP_VF_OUT_EOF = 1,
 	IPU_IRQ_PP_OUT_EOF = 2,

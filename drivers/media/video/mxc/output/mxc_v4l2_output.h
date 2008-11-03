@@ -124,6 +124,8 @@ typedef struct _vout_data {
 	/* crop */
 	struct v4l2_rect crop_bounds[MXC_V4L2_OUT_NUM_OUTPUTS];
 	struct v4l2_rect crop_current;
+
+	struct work_struct timer_work;
 } vout_data;
 
 #endif

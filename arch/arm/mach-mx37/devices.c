@@ -22,10 +22,12 @@
 #include <asm/hardware.h>
 
 #include <asm/arch/spba.h>
+#include <asm/arch/mxc_dptc.h>
 #include "iomux.h"
 #include <asm/arch/sdma.h>
 #include "sdma_script_code.h"
 #include <asm/arch/mxc_scc2_driver.h>
+#include "crm_regs.h"
 
 extern struct dptc_wp dptc_gp_wp_allfreq[DPTC_GP_WP_SUPPORTED];
 extern struct dptc_wp dptc_lp_wp_allfreq[DPTC_LP_WP_SUPPORTED];
@@ -569,6 +571,129 @@ static struct resource tve_resources[] = {
 	 },
 };
 
+/*!
+ * Resource definition for the DPTC GP
+ */
+static struct resource dptc_gp_resources[] = {
+	[0] = {
+	       .start = MXC_DPTC_GP_BASE,
+	       .end = MXC_DPTC_GP_BASE + 8 * SZ_16 - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_GPC1,
+	       .end = MXC_INT_GPC1,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for DPTC GP */
+static struct mxc_dptc_data dptc_gp_data = {
+	.reg_id = "SW1",
+	.clk_id = "cpu_clk",
+	.dptccr_reg_addr = MXC_GP_DPTCCR,
+	.dcvr0_reg_addr = MXC_GP_DCVR0,
+	.gpc_cntr_reg_addr = MXC_GPC_CNTR,
+	.dptccr = MXC_GPCCNTR_DPTC0CR,
+	.dptc_wp_supported = DPTC_GP_WP_SUPPORTED,
+	.dptc_wp_allfreq = dptc_gp_wp_allfreq,
+	.clk_max_val = 532000000,
+	.gpc_adu = MXC_GPCCNTR_ADU,
+	.vai_mask = MXC_DPTCCR_VAI_MASK,
+	.vai_offset = MXC_DPTCCR_VAI_OFFSET,
+	.dptc_enable_bit = MXC_DPTCCR_DEN,
+	.irq_mask = MXC_DPTCCR_VAIM,
+	.dptc_nvcr_bit = MXC_DPTCCR_DPNVCR,
+	.gpc_irq_bit = MXC_GPCCNTR_GPCIRQ,
+	.init_config =
+	    MXC_DPTCCR_DRCE0 | MXC_DPTCCR_DRCE1 | MXC_DPTCCR_DRCE2 |
+	    MXC_DPTCCR_DRCE3 | MXC_DPTCCR_DCR_128 | MXC_DPTCCR_DPNVCR |
+	    MXC_DPTCCR_DPVV,
+	.enable_config =
+	    MXC_DPTCCR_DEN | MXC_DPTCCR_DPNVCR | MXC_DPTCCR_DPVV |
+	    MXC_DPTCCR_DSMM,
+	.dcr_mask = MXC_DPTCCR_DCR_256,
+};
+
+/*!
+ * Resource definition for the DPTC LP
+ */
+static struct resource dptc_lp_resources[] = {
+	[0] = {
+	       .start = MXC_DPTC_LP_BASE,
+	       .end = MXC_DPTC_LP_BASE + 8 * SZ_16 - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_GPC1,
+	       .end = MXC_INT_GPC1,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for MXC DPTC LP */
+static struct mxc_dptc_data dptc_lp_data = {
+	.reg_id = "SW2",
+	.clk_id = "ahb_clk",
+	.dptccr_reg_addr = MXC_LP_DPTCCR,
+	.dcvr0_reg_addr = MXC_LP_DCVR0,
+	.gpc_cntr_reg_addr = MXC_GPC_CNTR,
+	.dptccr = MXC_GPCCNTR_DPTC1CR,
+	.dptc_wp_supported = DPTC_LP_WP_SUPPORTED,
+	.dptc_wp_allfreq = dptc_lp_wp_allfreq,
+	.clk_max_val = 133000000,
+	.gpc_adu = 0x0,
+	.vai_mask = MXC_DPTCCR_VAI_MASK,
+	.vai_offset = MXC_DPTCCR_VAI_OFFSET,
+	.dptc_enable_bit = MXC_DPTCCR_DEN,
+	.irq_mask = MXC_DPTCCR_VAIM,
+	.dptc_nvcr_bit = MXC_DPTCCR_DPNVCR,
+	.gpc_irq_bit = MXC_GPCCNTR_GPCIRQ,
+	.init_config =
+	    MXC_DPTCCR_DRCE0 | MXC_DPTCCR_DRCE1 | MXC_DPTCCR_DRCE2 |
+	    MXC_DPTCCR_DRCE3 | MXC_DPTCCR_DCR_128 | MXC_DPTCCR_DPNVCR |
+	    MXC_DPTCCR_DPVV,
+	.enable_config =
+	    MXC_DPTCCR_DEN | MXC_DPTCCR_DPNVCR | MXC_DPTCCR_DPVV |
+	    MXC_DPTCCR_DSMM,
+	.dcr_mask = MXC_DPTCCR_DCR_256,
+};
+
+/*! Device Definition for MXC DPTC */
+static struct platform_device mxc_dptc_devices[] = {
+	{
+	 .name = "mxc_dptc",
+	 .id = 0,
+	 .dev = {
+		 .release = mxc_nop_release,
+		 .platform_data = &dptc_gp_data,
+		 },
+	 .num_resources = ARRAY_SIZE(dptc_gp_resources),
+	 .resource = dptc_gp_resources,
+	 },
+	{
+	 .name = "mxc_dptc",
+	 .id = 1,
+	 .dev = {
+		 .release = mxc_nop_release,
+		 .platform_data = &dptc_lp_data,
+		 },
+	 .num_resources = ARRAY_SIZE(dptc_lp_resources),
+	 .resource = dptc_lp_resources,
+	 },
+};
+
+static inline void mxc_init_dptc(void)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(mxc_dptc_devices); i++) {
+		if (platform_device_register(&mxc_dptc_devices[i]) < 0)
+			dev_err(&mxc_dptc_devices[i].dev,
+				"Unable to register DPTC device\n");
+	}
+}
+
 static struct platform_device mxc_tve_device = {
 	.name = "tve",
 	.dev = {
@@ -607,36 +732,6 @@ struct mxc_gpio_port mxc_gpio_ports[GPIO_PORT_NUM] = {
 	 .virtual_irq_start = MXC_GPIO_INT_BASE + GPIO_NUM_PIN * 2,
 	 },
 };
-
-/*! Device Definition for DPTC GP */
-static struct platform_device mxc_dptc_gp_device = {
-	.name = "mxc_dptc_gp",
-	.dev = {
-		.release = mxc_nop_release,
-		.platform_data = &dptc_gp_wp_allfreq,
-		},
-};
-
-static inline void mxc_init_dptc_gp(void)
-{
-
-	(void)platform_device_register(&mxc_dptc_gp_device);
-}
-
-/*! Device Definition for DPTC LP */
-static struct platform_device mxc_dptc_lp_device = {
-	.name = "mxc_dptc_lp",
-	.dev = {
-		.release = mxc_nop_release,
-		.platform_data = &dptc_lp_wp_allfreq,
-		},
-};
-
-static inline void mxc_init_dptc_lp(void)
-{
-
-	(void)platform_device_register(&mxc_dptc_lp_device);
-}
 
 #if defined(CONFIG_MXC_VPU) || defined(CONFIG_MXC_VPU_MODULE)
 static struct resource vpu_resources[] = {
@@ -748,8 +843,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_spdif();
 	mxc_init_tve();
 	mx37_init_lpmode();
-	mxc_init_dptc_gp();
-	mxc_init_dptc_lp();
+	mxc_init_dptc();
 	/* SPBA configuration for SSI2 - SDMA and MCU are set */
 	spba_take_ownership(SPBA_SSI2, SPBA_MASTER_C | SPBA_MASTER_A);
 	return 0;

@@ -548,6 +548,43 @@
 #define MXC_DVFSPT2 		(MXC_DVFS_CORE_BASE + 0x3C)
 #define MXC_DVFSPT3 		(MXC_DVFS_CORE_BASE + 0x40)
 
+/* DPTC GP */
+#define MXC_GP_DPTCCR		(MXC_DPTC_GP_BASE + 0x00)
+#define MXC_GP_DPTCDBG		(MXC_DPTC_GP_BASE + 0x04)
+#define MXC_GP_DCVR0		(MXC_DPTC_GP_BASE + 0x08)
+#define MXC_GP_DCVR1		(MXC_DPTC_GP_BASE + 0x0C)
+#define MXC_GP_DCVR2		(MXC_DPTC_GP_BASE + 0x10)
+#define MXC_GP_DCVR3		(MXC_DPTC_GP_BASE + 0x14)
+
+/* DPTC LP */
+#define MXC_LP_DPTCCR		(MXC_DPTC_LP_BASE + 0x00)
+#define MXC_LP_DPTCDBG		(MXC_DPTC_LP_BASE + 0x04)
+#define MXC_LP_DCVR0		(MXC_DPTC_LP_BASE + 0x08)
+#define MXC_LP_DCVR1		(MXC_DPTC_LP_BASE + 0x0C)
+#define MXC_LP_DCVR2		(MXC_DPTC_LP_BASE + 0x10)
+#define MXC_LP_DCVR3		(MXC_DPTC_LP_BASE + 0x14)
+
+#define MXC_DPTCCR_DRCE3                     0x00400000
+#define MXC_DPTCCR_DRCE2                     0x00200000
+#define MXC_DPTCCR_DRCE1                     0x00100000
+#define MXC_DPTCCR_DRCE0                     0x00080000
+#define MXC_DPTCCR_DCR_256                   0x00060000
+#define MXC_DPTCCR_DCR_128                   0x00040000
+#define MXC_DPTCCR_DCR_64                    0x00020000
+#define MXC_DPTCCR_DCR_32                    0x00000000
+#define MXC_DPTCCR_DSMM                      0x00000040
+#define MXC_DPTCCR_DPNVCR                    0x00000020
+#define MXC_DPTCCR_DPVV                      0x00000010
+#define MXC_DPTCCR_VAIM                      0x00000008
+#define MXC_DPTCCR_VAI_OFFSET                1
+#define MXC_DPTCCR_VAI_MASK                  0x00000006
+#define MXC_DPTCCR_DEN                       0x00000001
+
+#define MXC_GPCCNTR_GPCIRQ                   0x00100000
+#define MXC_GPCCNTR_DPTC0CR                  0x00040000
+#define MXC_GPCCNTR_DPTC1CR                  0x00080000
+#define MXC_GPCCNTR_ADU                      0x00008000
+
 /* SRPG */
 #define MXC_SRPGC_EMI_SRPGCR	(MXC_SRPGC_EMI_BASE + 0x0)
 #define MXC_SRPGC_ARM_SRPGCR	(MXC_SRPGC_ARM_BASE + 0x0)

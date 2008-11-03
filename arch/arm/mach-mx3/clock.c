@@ -18,14 +18,13 @@
 #include <linux/clk.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
+#include <asm/arch/mxc_dptc.h>
 #include <asm/div64.h>
 
 #include "crm_regs.h"
 
 #define PRE_DIV_MIN_FREQ    10000000	/* Minimum Frequency after Predivider */
 #define PROPAGATE_RATE_DIS  2
-
-extern void dptc_suspend(void);
 
 static int cpu_clk_set_wp(int wp);
 struct timer_list dptcen_timer;

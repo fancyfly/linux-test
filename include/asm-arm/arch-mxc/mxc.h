@@ -299,10 +299,6 @@ struct mxc_unifi_platform_data *get_unifi_plat_data(void);
 #define MXC_IDE_DMA_WATERMARK	32	/* DMA watermark level in bytes */
 #define MXC_IDE_DMA_BD_NR	(512/3/4)	/* Number of BDs per channel */
 
-#define DPTC_WP_SUPPORTED	17
-#define DPTC_GP_WP_SUPPORTED	7
-#define DPTC_LP_WP_SUPPORTED	9
-
 #ifndef IS_MEM_DEVICE_NONSHARED
 /* all peripherals on MXC so far are below 0x80000000 but leave L2CC alone */
 #define IS_MEM_DEVICE_NONSHARED(x)  ((x) < 0x80000000 && (x) != L2CC_BASE_ADDR)
@@ -311,18 +307,6 @@ struct mxc_unifi_platform_data *get_unifi_plat_data(void);
 #ifndef __ASSEMBLY__
 #include <linux/types.h>
 
-struct dptc_wp {
-	u32 dcvr0;
-	u32 dcvr1;
-	u32 dcvr2;
-	u32 dcvr3;
-#if defined(CONFIG_ARCH_MX37)
-	char *regulator;
-#else
-	u32 regulator;
-#endif
-	u32 voltage;
-};
 struct cpu_wp {
 	u32 pll_reg;
 	u32 pll_rate;
@@ -335,18 +319,6 @@ struct cpu_wp {
 };
 
 struct cpu_wp *get_cpu_wp(int *wp);
-
-/*!
- * This function is called to put the DPTC in a low power state.
- *
- */
-void dptc_disable(void);
-
-/*!
- * This function is called to resume the DPTC from a low power state.
- *
- */
-void dptc_enable(void);
 
 enum mxc_cpu_pwr_mode {
 	WAIT_CLOCKED,		/* wfi only */

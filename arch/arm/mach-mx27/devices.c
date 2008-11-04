@@ -23,6 +23,7 @@
 #include <asm/arch/pmic_external.h>
 #include <asm/arch/pmic_power.h>
 #include <asm/arch/mmc.h>
+#include <asm/arch/mxc_dptc.h>
 
  /*!
   * @file mach-mx27/devices.c

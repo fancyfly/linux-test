@@ -86,7 +86,6 @@ static void __calc_pre_post_dividers(u32 div, u32 *pre, u32 *post)
 static int _clk_enable(struct clk *clk)
 {
 	u32 reg;
-
 	reg = __raw_readl(clk->enable_reg);
 	reg |= MXC_CCM_CCGR_CG_MASK << clk->enable_shift;
 	__raw_writel(reg, clk->enable_reg);
@@ -1997,16 +1996,19 @@ static struct clk esdhc1_clk[] = {
 	 .name = "esdhc_ipg_clk",
 	 .id = 0,
 	 .parent = &ipg_clk,
-#ifdef CONFIG_MMC_IMX_ESDHCI_PIO_MODE
-	 .secondary = &tmax3_clk,
-#else
-	 .secondary = &spba_clk,
-#endif
+	 .secondary = &esdhc1_clk[2],
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR3,
 	 .enable_shift = MXC_CCM_CCGR3_CG0_OFFSET,
 	 .disable = _clk_disable,
 	 },
+	{
+	 .name = "esdhc_sec_clk",
+	 .id = 0,
+	 .parent = &tmax3_clk,
+	 .secondary = &spba_clk,
+	 },
+
 };
 
 static void _clk_esdhc2_recalc(struct clk *clk)
@@ -2053,15 +2055,17 @@ static struct clk esdhc2_clk[] = {
 	 .name = "esdhc_ipg_clk",
 	 .id = 1,
 	 .parent = &ipg_clk,
-#ifdef CONFIG_MMC_IMX_ESDHCI_PIO_MODE
-	 .secondary = &tmax2_clk,
-#else
-	 .secondary = &spba_clk,
-#endif
+	 .secondary = &esdhc2_clk[2],
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR3,
 	 .enable_shift = MXC_CCM_CCGR3_CG2_OFFSET,
 	 .disable = _clk_disable,
+	 },
+	{
+	 .name = "esdhc_sec_clk",
+	 .id = 0,
+	 .parent = &tmax2_clk,
+	 .secondary = &spba_clk,
 	 },
 };
 
@@ -2098,15 +2102,17 @@ static struct clk esdhc3_clk[] = {
 	 .name = "esdhc_ipg_clk",
 	 .id = 2,
 	 .parent = &ipg_clk,
-#ifdef CONFIG_MMC_IMX_ESDHCI_PIO_MODE
-	 .secondary = &ahb_max_clk,
-#else
-	 .secondary = &spba_clk,
-#endif
+	 .secondary = &esdhc3_clk[2],
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR3,
 	 .enable_shift = MXC_CCM_CCGR3_CG4_OFFSET,
 	 .disable = _clk_disable,
+	 },
+	{
+	 .name = "esdhc_sec_clk",
+	 .id = 0,
+	 .parent = &ahb_max_clk,
+	 .secondary = &spba_clk,
 	 },
 };
 
@@ -2144,15 +2150,17 @@ static struct clk esdhc4_clk[] = {
 	 .name = "esdhc_ipg_clk",
 	 .id = 3,
 	 .parent = &ipg_clk,
-#ifdef CONFIG_MMC_IMX_ESDHCI_PIO_MODE
-	 .secondary = &tmax3_clk,
-#else
-	 .secondary = &spba_clk,
-#endif
+	 .secondary = &esdhc3_clk[2],
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR3,
 	 .enable_shift = MXC_CCM_CCGR3_CG6_OFFSET,
 	 .disable = _clk_disable,
+	 },
+	{
+	 .name = "esdhc_sec_clk",
+	 .id = 0,
+	 .parent = &tmax3_clk,
+	 .secondary = &spba_clk,
 	 },
 };
 
@@ -2476,24 +2484,44 @@ static struct clk owire_clk = {
 	.disable = _clk_disable,
 };
 
-static struct clk fec_clk = {
+
+static struct clk fec_clk[] = {
+	{
 	.name = "fec_clk",
 	.parent = &ipg_clk,
-	.secondary = &tmax2_clk,
+	.secondary = &fec_clk[1],
 	.enable = _clk_enable,
 	.enable_reg = MXC_CCM_CCGR2,
 	.enable_shift = MXC_CCM_CCGR2_CG12_OFFSET,
 	.disable = _clk_disable,
+	},
+	{
+	 .name = "fec_sec1_clk",
+	 .parent = &tmax2_clk,
+	 .secondary = &fec_clk[2],
+	},
+	{
+	 .name = "fec_sec2_clk",
+	 .parent = &aips_tz2_clk,
+	 .secondary = &emi_fast_clk,
+	},
 };
 
-static struct clk sahara_clk = {
-	 .name = "sahara_clk",
-	 .parent = &ahb_clk,
-	 .secondary = &ipg_clk,
-	 .enable_reg = MXC_CCM_CCGR4,
-	 .enable_shift = MXC_CCM_CCGR4_CG7_OFFSET,
-	 .enable = _clk_enable,
-	 .disable = _clk_disable,
+static struct clk sahara_clk[] = {
+	{
+	.name = "sahara_clk",
+	.parent = &ahb_clk,
+	.secondary = &sahara_clk[1],
+	.enable_reg = MXC_CCM_CCGR4,
+	.enable_shift = MXC_CCM_CCGR4_CG7_OFFSET,
+	.enable = _clk_enable,
+	.disable = _clk_disable,
+	},
+	{
+	.name = "sahara_sec_clk",
+	.parent = &ipg_clk,
+	.secondary = &tmax1_clk,
+	}
 };
 
 static struct clk *mxc_clks[] = {
@@ -2598,12 +2626,15 @@ static struct clk *mxc_clks[] = {
 	&rtc_clk,
 	&ata_clk,
 	&owire_clk,
-	&fec_clk,
+	&fec_clk[0],
+	&fec_clk[1],
+	&fec_clk[2],
 	&mipi_hsc1_clk,
 	&mipi_hsc2_clk,
 	&mipi_esc_clk,
 	&mipi_hsp_clk,
-	&sahara_clk,
+	&sahara_clk[0],
+	&sahara_clk[1],
 };
 
 static void clk_tree_init(void)
@@ -2719,7 +2750,6 @@ int __init mxc_clocks_init(void)
 	clk_enable(&cpu_clk);
 	clk_enable(&main_bus_clk);
 	clk_enable(&gpt_clk[1]);
-
 
 	clk_set_parent(&ddr_clk, &emi_slow_clk);
 

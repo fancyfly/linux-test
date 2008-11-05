@@ -1587,7 +1587,7 @@ EXPORT_SYMBOL(gpio_spdif_active);
 
 void gpio_spdif_inactive(void)
 {
-	mxc_free_iomux(MX51_PIN_GPIO1_7, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_GPIO1_7, IOMUX_CONFIG_ALT2);
 
 }
 

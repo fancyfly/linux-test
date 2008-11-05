@@ -8,7 +8,7 @@ config MX51_OPTIONS
 	select USB_ARCH_HAS_EHCI
 	select MXC_TZIC
 
-config MACH_MX51_3STACK
+config MACH_MX51_3DS
 	bool "Support MX51 3-Stack platforms"
 	default y
 	help

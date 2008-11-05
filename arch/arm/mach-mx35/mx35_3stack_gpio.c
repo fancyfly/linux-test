@@ -842,11 +842,11 @@ EXPORT_SYMBOL(gpio_spdif_active);
 void gpio_spdif_inactive(void)
 {
 	/* SPDIF OUT */
-	mxc_free_iomux(MX35_PIN_STXD5, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_STXD5, MUX_CONFIG_ALT1);
 	/* SPDIF IN */
-	mxc_free_iomux(MX35_PIN_SRXD5, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_SRXD5, MUX_CONFIG_ALT1);
 	/* SPDIF ext clock */
-	mxc_free_iomux(MX35_PIN_SCK5, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX35_PIN_SCK5, MUX_CONFIG_ALT1);
 }
 
 EXPORT_SYMBOL(gpio_spdif_inactive);

@@ -798,6 +798,8 @@ static inline void mxc_sgtl5000_init(void)
  */
 static void mx37_3stack_fixup_for_board_v1(void)
 {
+	dptc_gp_data.reg_id = "DCDC1";
+	dptc_lp_data.reg_id = "DCDC4";
 	tve_data.dac_reg = "LDO2";
 	tve_data.dig_reg = "LDO3";
 	lcd_data.core_reg = "LDO1";

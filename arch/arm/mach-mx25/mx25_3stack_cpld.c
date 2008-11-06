@@ -74,6 +74,7 @@ unsigned int spi_cpld_read(unsigned int offset)
 	data |= (((frame[1] >> 6) & 0xFFFF) << 16);
 	return data;
 }
+EXPORT_SYMBOL(spi_cpld_read);
 
 /*!
  * This function is called to write to a CPLD register over CSPI.
@@ -106,6 +107,7 @@ unsigned int spi_cpld_write(unsigned int offset, unsigned int reg_val)
 
 	return 0;
 }
+EXPORT_SYMBOL(spi_cpld_write);
 
 static int __devinit mx25_3ds_cpld_probe(struct spi_device *spi)
 {

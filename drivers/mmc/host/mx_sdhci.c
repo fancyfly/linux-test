@@ -905,7 +905,7 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct sdhci_host *host;
 	unsigned long flags;
-	u32 ctrl;
+	u32 tmp;
 	mxc_dma_device_t dev_id = 0;
 
 	DBG("%s: clock %u, bus %lu, power %u, vdd %u\n", DRIVER_NAME,
@@ -961,23 +961,32 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if (ios->power_mode == MMC_POWER_OFF)
 		sdhci_set_power(host, -1);
-	else
+	else {
 		sdhci_set_power(host, ios->vdd);
+		if (!readl(host->ioaddr + SDHCI_SIGNAL_ENABLE)) {
+			tmp = readl(host->ioaddr + SDHCI_INT_ENABLE);
+			if (host->sdio_enable)
+				writel(tmp, host->ioaddr + SDHCI_SIGNAL_ENABLE);
+			else
+				writel(tmp & ~SDHCI_INT_CARD_INT,
+				       host->ioaddr + SDHCI_SIGNAL_ENABLE);
+		}
+	}
 
-	ctrl = readl(host->ioaddr + SDHCI_HOST_CONTROL);
+	tmp = readl(host->ioaddr + SDHCI_HOST_CONTROL);
 
 	if (ios->bus_width == MMC_BUS_WIDTH_4) {
-		ctrl &= ~SDHCI_CTRL_8BITBUS;
-		ctrl |= SDHCI_CTRL_4BITBUS;
+		tmp &= ~SDHCI_CTRL_8BITBUS;
+		tmp |= SDHCI_CTRL_4BITBUS;
 	} else if (ios->bus_width == MMC_BUS_WIDTH_8) {
-		ctrl &= ~SDHCI_CTRL_4BITBUS;
-		ctrl |= SDHCI_CTRL_8BITBUS;
+		tmp &= ~SDHCI_CTRL_4BITBUS;
+		tmp |= SDHCI_CTRL_8BITBUS;
 	}
 
 	if (host->flags & SDHCI_USE_DMA)
-		ctrl |= SDHCI_CTRL_ADMA;
+		tmp |= SDHCI_CTRL_ADMA;
 
-	writel(ctrl, host->ioaddr + SDHCI_HOST_CONTROL);
+	writel(tmp, host->ioaddr + SDHCI_HOST_CONTROL);
 
 	/*
 	 * Some (ENE) controllers go apeshit on some ios operation,
@@ -1019,6 +1028,11 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	} else {
 		if (--(host->sdio_enable))
 			goto exit_unlock;
+	}
+	/* Enable the clock */
+	if (!host->plat_data->clk_flg) {
+		clk_enable(host->clk);
+		host->plat_data->clk_flg = 1;
 	}
 	ier = readl(host->ioaddr + SDHCI_SIGNAL_ENABLE);
 	prot = readl(host->ioaddr + SDHCI_HOST_CONTROL);
@@ -1143,12 +1157,6 @@ static void sdhci_tasklet_finish(unsigned long param)
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	/* BUG: Since there is no a bit that indicated whether
-	 * the clock is stable or not, so the first sd/mmc cmd would be
-	 * failed after the clock is enabled again and is not statble in
-	 * actually. Due to the same reason, the wifi would be failed to
-	 * bring up, so mask them again. */
-#if 0
 	/* Stop the clock when the req is done */
 	flags = SDHCI_DATA_ACTIVE | SDHCI_DOING_WRITE | SDHCI_DOING_READ;
 	if (!(readl(host->ioaddr + SDHCI_PRESENT_STATE) & flags)) {
@@ -1157,7 +1165,6 @@ static void sdhci_tasklet_finish(unsigned long param)
 			host->plat_data->clk_flg = 0;
 		}
 	}
-#endif
 
 	mmc_request_done(host->mmc, mrq);
 }

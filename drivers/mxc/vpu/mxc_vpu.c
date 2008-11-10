@@ -67,6 +67,8 @@ static struct class *vpu_class;
 static struct vpu_t vpu_data;
 static u8 open_count = 0;
 static struct clk *vpu_clk;
+static int clkgate_refcount;
+static vpu_mem_desc bitwork_mem = { 0 };
 
 /* IRAM setting */
 static struct iram_setting iram;
@@ -74,6 +76,36 @@ static struct iram_setting iram;
 /* implement the blocking ioctl */
 static int codec_done = 0;
 static wait_queue_head_t vpu_queue;
+
+/*!
+ * Private function to alloc dma buffer
+ * @return status  0 success.
+ */
+static int vpu_alloc_dma_buffer(vpu_mem_desc *mem)
+{
+	mem->cpu_addr = (unsigned long)
+	    dma_alloc_coherent(NULL,
+			       PAGE_ALIGN(mem->size),
+			       (dma_addr_t
+				*) (&(mem->phy_addr)), GFP_DMA | GFP_KERNEL);
+	pr_debug("[ALLOC] mem alloc cpu_addr = 0x%x\n", mem->cpu_addr);
+	if ((void *)(mem->cpu_addr) == NULL) {
+		printk(KERN_ERR "Physical memory allocation error!\n");
+		return -1;
+	}
+	return 0;
+}
+
+/*!
+ * Private function to free dma buffer
+ */
+static void vpu_free_dma_buffer(vpu_mem_desc *mem)
+{
+	if (mem->cpu_addr != 0) {
+		dma_free_coherent(0, PAGE_ALIGN(mem->size),
+				  (void *)mem->cpu_addr, mem->phy_addr);
+	}
+}
 
 /*!
  * Private function to free buffers
@@ -84,20 +116,16 @@ static int vpu_free_buffers(void)
 	struct memalloc_record *rec, *n;
 	vpu_mem_desc mem;
 
-	spin_lock(&vpu_lock);
 	list_for_each_entry_safe(rec, n, &head, list) {
 		mem = rec->mem;
 		if (mem.cpu_addr != 0) {
-			dma_free_coherent(0, PAGE_ALIGN(mem.size),
-					  (void *)mem.cpu_addr, mem.phy_addr);
+			vpu_free_dma_buffer(&mem);
 			pr_debug("[FREE] freed paddr=0x%08X\n", mem.phy_addr);
-
 			/* delete from list */
 			list_del(&rec->list);
 			kfree(rec);
 		}
 	}
-	spin_unlock(&vpu_lock);
 
 	return 0;
 }
@@ -128,16 +156,11 @@ static irqreturn_t vpu_irq_handler(int irq, void *dev_id)
  */
 static int vpu_open(struct inode *inode, struct file *filp)
 {
-	if (open_count++ == 0) {
-		filp->private_data = (void *)(&vpu_data);
-
-		if (cpu_is_mx32())
-			vl2cc_enable();
-	} else {
-		printk(KERN_ERR "VPU has already been opened.\n");
-		return -EACCES;
-	}
-
+	spin_lock(&vpu_lock);
+	if ((open_count++ == 0) && cpu_is_mx32())
+		vl2cc_enable();
+	filp->private_data = (void *)(&vpu_data);
+	spin_unlock(&vpu_lock);
 	return 0;
 }
 
@@ -169,19 +192,12 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 
 			pr_debug("[ALLOC] mem alloc size = 0x%x\n",
 				 rec->mem.size);
-			rec->mem.cpu_addr = (unsigned long)
-			    dma_alloc_coherent(NULL,
-					       PAGE_ALIGN(rec->mem.size),
-					       (dma_addr_t
-						*) (&(rec->mem.phy_addr)),
-					       GFP_DMA | GFP_KERNEL);
-			pr_debug("[ALLOC] mem alloc cpu_addr = 0x%x\n",
-				 rec->mem.cpu_addr);
-			if ((void *)(rec->mem.cpu_addr) == NULL) {
+
+			ret = vpu_alloc_dma_buffer(&(rec->mem));
+			if (ret == -1) {
 				kfree(rec);
 				printk(KERN_ERR
 				       "Physical memory allocation error!\n");
-				ret = -1;
 				break;
 			}
 			ret = copy_to_user((void __user *)arg, &(rec->mem),
@@ -211,11 +227,7 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 			pr_debug("[FREE] mem freed cpu_addr = 0x%x\n",
 				 vpu_mem.cpu_addr);
 			if ((void *)vpu_mem.cpu_addr != NULL) {
-				dma_free_coherent(NULL,
-						  PAGE_ALIGN(vpu_mem.size),
-						  (void *)vpu_mem.cpu_addr,
-						  (dma_addr_t) vpu_mem.
-						  phy_addr);
+				vpu_free_dma_buffer(&vpu_mem);
 			}
 
 			spin_lock(&vpu_lock);
@@ -268,11 +280,40 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 			if (get_user(clkgate_en, (u32 __user *) arg))
 				return -EFAULT;
 
-			if (clkgate_en)
-				clk_enable(vpu_clk);
-			else
-				clk_disable(vpu_clk);
+			spin_lock(&vpu_lock);
+			if (clkgate_en) {
+				if (++clkgate_refcount == 1)
+					clk_enable(vpu_clk);
+			} else {
+				if (clkgate_refcount > 0
+				    && !(--clkgate_refcount))
+					clk_disable(vpu_clk);
+			}
+			spin_unlock(&vpu_lock);
 
+			break;
+		}
+	case VPU_IOC_GET_WORK_ADDR:
+		{
+			if (bitwork_mem.cpu_addr != 0) {
+				ret =
+				    copy_to_user((void __user *)arg,
+						 &bitwork_mem,
+						 sizeof(vpu_mem_desc));
+				break;
+			} else {
+				if (copy_from_user(&bitwork_mem,
+						   (vpu_mem_desc *) arg,
+						   sizeof(vpu_mem_desc)))
+					return -EFAULT;
+
+				if (vpu_alloc_dma_buffer(&bitwork_mem) == -1)
+					ret = -EFAULT;
+				else if (copy_to_user((void __user *)arg,
+						      &bitwork_mem,
+						      sizeof(vpu_mem_desc)))
+					ret = -EFAULT;
+			}
 			break;
 		}
 	case VPU_IOC_REG_DUMP:
@@ -294,12 +335,14 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
  */
 static int vpu_release(struct inode *inode, struct file *filp)
 {
+	spin_lock(&vpu_lock);
 	if (open_count > 0 && !(--open_count)) {
 		vpu_free_buffers();
 
 		if (cpu_is_mx32())
 			vl2cc_disable();
 	}
+	spin_unlock(&vpu_lock);
 
 	return 0;
 }
@@ -486,6 +529,8 @@ static void __exit vpu_exit(void)
 	if (cpu_is_mx32()) {
 		vl2cc_cleanup();
 	}
+
+	vpu_free_dma_buffer(&bitwork_mem);
 
 	clk_put(vpu_clk);
 

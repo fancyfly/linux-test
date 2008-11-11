@@ -808,6 +808,39 @@ static int __init mxc_init_srpgconfig(void)
 	return 0;
 }
 
+#if defined(CONFIG_SND_SOC_IMX_3STACK_WM8903) \
+    || defined(CONFIG_SND_SOC_IMX_3STACK_WM8903_MODULE)
+static struct mxc_audio_platform_data mxc_audio_data;
+
+static struct platform_device mxc_alsa_device = {
+	.name = "imx-3stack-wm8903",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_audio_data,
+		},
+};
+
+static void __init mxc_init_audio(void)
+{
+	mxc_audio_data.ssi_clk[0] = clk_get(NULL, "ssi_clk.0");
+	clk_put(mxc_audio_data.ssi_clk[0]);
+
+	mxc_audio_data.ssi_clk[1] = clk_get(NULL, "ssi_clk.1");
+	clk_put(mxc_audio_data.ssi_clk[1]);
+
+	mxc_audio_data.ssi_num = 1;
+	mxc_audio_data.src_port = 2;
+	mxc_audio_data.ext_port = 3;
+
+	(void)platform_device_register(&mxc_alsa_device);
+}
+#else
+static void __init mxc_init_audio(void)
+{
+}
+#endif
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -872,6 +905,7 @@ static void __init mxc_board_init(void)
 
 #endif
 	mxc_init_touchscreen();
+	mxc_init_audio()
 
 }
 

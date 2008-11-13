@@ -905,8 +905,7 @@ static void __init mxc_board_init(void)
 
 #endif
 	mxc_init_touchscreen();
-	mxc_init_audio()
-
+	mxc_init_audio();
 }
 
 /*

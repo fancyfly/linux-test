@@ -10,5 +10,8 @@ pmic_mc9sdz60_mod-objs := pmic_external.o pmic_event.o mcu_pmic_core.o max8660.o
 obj-$(CONFIG_MXC_PMIC_MC13892) += pmic_mc13892_mod.o
 pmic_mc13892_mod-objs := pmic_external.o pmic_event.o pmic_core_i2c.o mc13892.o
 
+obj-$(CONFIG_MXC_PMIC_MC34704) += pmic_mc34704_mod.o
+pmic_mc34704_mod-objs := pmic_external.o pmic_event.o mc34704.o
+
 obj-$(CONFIG_MXC_PMIC_CHARDEV)	+= pmic-dev.o
 

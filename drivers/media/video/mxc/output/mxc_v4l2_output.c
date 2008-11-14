@@ -812,6 +812,8 @@ static int mxc_v4l2out_streamoff(vout_data * vout)
 		return 0;
 	}
 
+	cancel_work_sync(&vout->timer_work);
+
 	spin_lock_irqsave(&g_lock, lockflag);
 
 	del_timer(&vout->output_timer);

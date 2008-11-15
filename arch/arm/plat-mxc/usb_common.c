@@ -408,8 +408,11 @@ int fsl_usb_host_init(struct platform_device *pdev)
 		xops->init(xops);
 
 	if (xops->xcvr_type == PORTSC_PTS_SERIAL) {
-		if (machine_is_mx35_3ds())
+		if (machine_is_mx35_3ds()) {
 			usbh2_set_serial_xcvr();
+			/* Close the internal 60Mhz */
+			USBCTRL &= ~UCTRL_XCSH2;
+		}
 		else
 			usbh1_set_serial_xcvr();
 	} else if (xops->xcvr_type == PORTSC_PTS_ULPI) {
@@ -435,8 +438,17 @@ void fsl_usb_host_uninit(struct fsl_usb2_platform_data *pdata)
 	pdata->regs = NULL;
 
 	pdata->gpio_usb_inactive();
-	if (pdata->xcvr_type == PORTSC_PTS_SERIAL)
+	if (pdata->xcvr_type == PORTSC_PTS_SERIAL) {
+		/* Workaround an IC issue for 2.6.26 kernal:
+		 * when turn off root hub port power, EHCI set
+		 * PORTSC reserved bits to be 0, but PTS with 0
+		 * means UTMI interface, so here force the Host2
+		 * port use the internal 60Mhz.
+		 */
+		if (cpu_is_mx35())
+			USBCTRL |= UCTRL_XCSH2;
 		clk_disable(usb_clk);
+	}
 	else if ((pdata->xcvr_type == PORTSC_PTS_ULPI)
 		 && (machine_is_mx31_3ds())) {
 		usbh2_put_xcvr_power(&(pdata->xcvr_pwr->usb_pdev->dev));
@@ -604,7 +616,17 @@ static void otg_set_utmi_xcvr(void)
 		USB_PHY_CTR_FUNC2 &= ~USB_UTMI_PHYCTRL2_PLLDIV_MASK;
 		USB_PHY_CTR_FUNC2 |= 0x01;
 	} else if (machine_is_mx35_3ds()) {
+		/* Workaround an IC issue for 2.6.26 kernal:
+		 * when turn off root hub port power, EHCI set
+		 * PORTSC reserved bits to be 0, but PTW with 0
+		 * means 8 bits tranceiver width, here change
+		 * it back to be 16 bits and do PHY diable and
+		 * then enable.
+		 */
+		UOG_PORTSC1 |= PORTSC_PTW;
+
 		/* Enable UTMI interface in PHY control Reg */
+		USB_PHY_CTR_FUNC &= ~USB_UTMI_PHYCTRL_UTMI_ENABLE;
 		USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_UTMI_ENABLE;
 	}
 

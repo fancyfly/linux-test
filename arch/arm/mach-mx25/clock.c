@@ -1652,6 +1652,10 @@ int __init mxc_clocks_init(void)
 	propagate_rate(&osc24m_clk);
 	propagate_rate(&osc32k_clk);
 
+	/* the NFC clock must be derived from AHB clock */
+	clk_set_parent(&per_clk[8], &ahb_clk);
+	clk_set_rate(&per_clk[8], ahb_clk.rate / 6);
+
 	pr_info("Clock input source is %ld\n", osc24m_clk.rate);
 
 	clk_enable(&emi_clk);

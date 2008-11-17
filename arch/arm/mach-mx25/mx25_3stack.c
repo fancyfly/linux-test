@@ -107,11 +107,11 @@ static inline void mxc_init_keypad(void)
 
 /* MTD NAND flash */
 
-#if defined(CONFIG_MTD_NAND_MXC) || defined(CONFIG_MTD_NAND_MXC_MODULE)
+#if defined(CONFIG_MTD_NAND_MXC_V2) || defined(CONFIG_MTD_NAND_MXC_V2_MODULE)
 
 static struct mtd_partition mxc_nand_partitions[] = {
 	{
-	 .name = "IPL-SPL",
+	 .name = "nand.bootloader",
 	 .offset = 0,
 	 .size = 256 * 1024},
 	{
@@ -139,7 +139,7 @@ static struct flash_platform_data mxc_nand_data = {
 };
 
 static struct platform_device mxc_nand_mtd_device = {
-	.name = "mxc_nand_flash",
+	.name = "mxc_nandv2_flash",
 	.id = 0,
 	.dev = {
 		.release = mxc_nop_release,

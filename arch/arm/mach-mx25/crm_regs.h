@@ -27,7 +27,7 @@
 #define MXC_CCM_PCDR1               (IO_ADDRESS(CCM_BASE_ADDR) + 0x1C)
 #define MXC_CCM_PCDR2               (IO_ADDRESS(CCM_BASE_ADDR) + 0x20)
 #define MXC_CCM_PCDR3               (IO_ADDRESS(CCM_BASE_ADDR) + 0x24)
-#define MXC_CCM_CRSR                (IO_ADDRESS(CCM_BASE_ADDR) + 0x28)
+#define MXC_CCM_RCSR                (IO_ADDRESS(CCM_BASE_ADDR) + 0x28)
 #define MXC_CCM_CRDR                (IO_ADDRESS(CCM_BASE_ADDR) + 0x2C)
 #define MXC_CCM_DCVR0               (IO_ADDRESS(CCM_BASE_ADDR) + 0x30)
 #define MXC_CCM_DCVR1               (IO_ADDRESS(CCM_BASE_ADDR) + 0x34)

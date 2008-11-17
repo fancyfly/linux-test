@@ -468,10 +468,10 @@
 #define MXC_TIMER_GPT4          4
 
 /*!
- * NFMS bit in FMCR register for pagesize of nandflash
+ * NFMS bit in RCSR register for pagesize of nandflash
  */
-#define NFMS (*((volatile u32 *)IO_ADDRESS(SYSCTRL_BASE_ADDR+0x28)))
-
-#define NFMS_BIT 8
+#define NFMS (*((volatile u32 *)IO_ADDRESS(CCM_BASE_ADDR + 0x28)))
+#define NFMS_NF_DWIDTH		14
+#define NFMS_NF_PG_SZ		8
 
 #endif				/* __ASM_ARCH_MXC_MX25_H__ */

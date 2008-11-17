@@ -170,9 +170,9 @@ static void wait_op_done(int maxRetries, bool useirq)
 				  REG_NFC_INTRRUPT);
 			wait_event(irq_waitq,
 				   (raw_read(REG_NFC_OPS_STAT) & NFC_OPS_STAT));
-			WRITE_NFC_IP_REG((raw_read(REG_NFC_OPS_STAT) &
-					  ~NFC_OPS_STAT), REG_NFC_OPS_STAT);
 		}
+		WRITE_NFC_IP_REG((raw_read(REG_NFC_OPS_STAT) &
+				  ~NFC_OPS_STAT), REG_NFC_OPS_STAT);
 	} else {
 		while (1) {
 			maxRetries--;

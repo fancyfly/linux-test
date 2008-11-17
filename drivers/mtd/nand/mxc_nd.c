@@ -153,8 +153,8 @@ static void wait_op_done(int maxRetries, u16 param, bool useirq)
 		if ((NFC_CONFIG2 & NFC_INT) == 0) {
 			NFC_CONFIG1 &= ~NFC_INT_MSK;	/* Enable interrupt */
 			wait_event(irq_waitq, NFC_CONFIG2 & NFC_INT);
-			NFC_CONFIG2 &= ~NFC_INT;
 		}
+		NFC_CONFIG2 &= ~NFC_INT;
 	} else {
 		while (maxRetries-- > 0) {
 			if (NFC_CONFIG2 & NFC_INT) {

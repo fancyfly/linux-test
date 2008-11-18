@@ -297,7 +297,7 @@ static const struct snd_soc_pcm_stream ak4647_hifi_dai_playback = {
 
 static const struct snd_soc_pcm_stream ak4647_hifi_dai_capture = {
 	.stream_name = "Capture",
-	.channels_min = 2,
+	.channels_min = 1,
 	.channels_max = 2,
 	.rates = AK4647_RATES,
 	.formats = AK4647_FORMATS,
@@ -634,7 +634,8 @@ static struct snd_soc_device_driver ak4647_hifi_dai_driver = {
 		   },
 };
 
-static int ak4647_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int ak4647_i2c_probe(struct i2c_client *client,
+			    const struct i2c_device_id *id)
 {
 	ak4647_i2c_client = client;
 	return 0;
@@ -646,9 +647,10 @@ static int ak4647_i2c_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id ak4647_id[] = {
-	{ "ak4647-i2c", 0 },
+	{"ak4647-i2c", 0},
 	{},
 };
+
 MODULE_DEVICE_TABLE(i2c, ak4647_id);
 
 static struct i2c_driver ak4647_i2c_driver = {

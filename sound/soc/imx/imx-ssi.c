@@ -249,24 +249,24 @@ static int imx_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	/* DAI clock inversion */
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_IB_IF:
+		stcr &= ~(SSI_STCR_TSCKP | SSI_STCR_TFSI);
+		srcr &= ~(SSI_SRCR_RSCKP | SSI_SRCR_RFSI);
+		break;
+	case SND_SOC_DAIFMT_IB_NF:
 		stcr |= SSI_STCR_TFSI;
 		stcr &= ~SSI_STCR_TSCKP;
 		srcr |= SSI_SRCR_RFSI;
 		srcr &= ~SSI_SRCR_RSCKP;
 		break;
-	case SND_SOC_DAIFMT_IB_NF:
-		stcr &= ~(SSI_STCR_TSCKP | SSI_STCR_TFSI);
-		srcr &= ~(SSI_SRCR_RSCKP | SSI_SRCR_RFSI);
-		break;
 	case SND_SOC_DAIFMT_NB_IF:
-		stcr |= SSI_STCR_TFSI | SSI_STCR_TSCKP;
-		srcr |= SSI_SRCR_RFSI | SSI_SRCR_RSCKP;
-		break;
-	case SND_SOC_DAIFMT_NB_NF:
 		stcr &= ~SSI_STCR_TFSI;
 		stcr |= SSI_STCR_TSCKP;
 		srcr &= ~SSI_SRCR_RFSI;
 		srcr |= SSI_SRCR_RSCKP;
+		break;
+	case SND_SOC_DAIFMT_NB_NF:
+		stcr |= SSI_STCR_TFSI | SSI_STCR_TSCKP;
+		srcr |= SSI_SRCR_RFSI | SSI_SRCR_RSCKP;
 		break;
 	}
 

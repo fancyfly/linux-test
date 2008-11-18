@@ -155,6 +155,9 @@ struct mxc_spi_xfer {
 	void *rx_buf;
 	/* Data transfered count */
 	unsigned int count;
+	/* Data received count, descending sequence, zero means no more data to
+	   be received */
+	unsigned int rx_count;
 	/* Function to read the FIFO data to rx_buf */
 	void (*rx_get) (struct mxc_spi *, u32 val);
 	/* Function to get the data to be written to FIFO */
@@ -700,6 +703,7 @@ static irqreturn_t mxc_spi_isr(int irq, void *dev_id)
 			master_drv_data->transfer.rx_get(master_drv_data,
 							 rx_tmp);
 		(master_drv_data->transfer.count)--;
+		(master_drv_data->transfer.rx_count)--;
 		ret = IRQ_HANDLED;
 		if (pass_counter-- == 0) {
 			break;
@@ -710,6 +714,9 @@ static irqreturn_t mxc_spi_isr(int irq, void *dev_id)
 		  (MXC_CSPISTAT_RR +
 		   master_drv_data->spi_ver_def->int_status_dif)));
 
+	if (master_drv_data->transfer.rx_count)
+		return ret;
+
 	if (master_drv_data->transfer.count) {
 		if (master_drv_data->transfer.tx_buf) {
 			u32 count = (master_drv_data->transfer.count >
@@ -717,6 +724,7 @@ static irqreturn_t mxc_spi_isr(int irq, void *dev_id)
 			    master_drv_data->transfer.count;
 			spi_put_tx_data(master_drv_data->base, count,
 					master_drv_data);
+			master_drv_data->transfer.rx_count = count;
 		}
 	} else {
 		complete(&master_drv_data->xfer_done);
@@ -833,6 +841,7 @@ int mxc_spi_transfer(struct spi_device *spi, struct spi_transfer *t)
 	/* Perform Tx transaction */
 
 	spi_put_tx_data(master_drv_data->base, count, master_drv_data);
+	master_drv_data->transfer.rx_count = count;
 
 	/* Wait for transfer completion */
 

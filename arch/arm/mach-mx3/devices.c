@@ -25,12 +25,13 @@
 #include <asm/arch/pmic_power.h>
 
 #include <asm/arch/spba.h>
+#include <asm/arch/mxc_dptc.h>
 #include "iomux.h"
+#include "crm_regs.h"
 #include <asm/arch/sdma.h>
 #include "sdma_script_code.h"
 #include "sdma_script_code_pass2.h"
 
-#ifndef CONFIG_MXC_DPTC
 extern struct dptc_wp dptc_wp_allfreq_26ckih[DPTC_WP_SUPPORTED];
 extern struct dptc_wp dptc_wp_allfreq_26ckih_TO_2_0[DPTC_WP_SUPPORTED];
 extern struct dptc_wp dptc_wp_allfreq_27ckih_TO_2_0[DPTC_WP_SUPPORTED];
@@ -38,7 +39,6 @@ extern struct dptc_wp dptc_wp_allfreq_27ckih_TO_2_0[DPTC_WP_SUPPORTED];
  * Clock structures
  */
 static struct clk *ckih_clk;
-#endif
 
 void mxc_sdma_get_script_info(sdma_script_start_addrs * sdma_script_addr)
 {
@@ -702,14 +702,57 @@ static inline void mxc_init_dma(void)
 	(void)platform_device_register(&mxc_dma_device);
 }
 
-#ifndef CONFIG_MXC_DPTC
-/*! Device Definition for DPTC */
+/*!
+ * Resource definition for the DPTC LP
+ */
+static struct resource dptc_resources[] = {
+	[0] = {
+	       .start = MXC_CCM_BASE,
+	       .end = MXC_CCM_BASE + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_CCM,
+	       .end = MXC_INT_CCM,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for DPTC */
+static struct mxc_dptc_data dptc_data = {
+	.reg_id = "SW1A_NORMAL",
+	.clk_id = "cpu_clk",
+	.dptccr_reg_addr = MXC_CCM_PMCR0,
+	.dcvr0_reg_addr = MXC_CCM_DCVR0,
+	.gpc_cntr_reg_addr = MXC_CCM_PMCR0,
+	.dptccr = 0xFFFFFFFF,
+	.dptc_wp_supported = DPTC_WP_SUPPORTED,
+	.dptc_wp_allfreq = dptc_wp_allfreq_26ckih,
+	.clk_max_val = 532000000,
+	.gpc_adu = 0x0,
+	.vai_mask = MXC_CCM_PMCR0_PTVAI_MASK,
+	.vai_offset = MXC_CCM_PMCR0_PTVAI_OFFSET,
+	.dptc_enable_bit = MXC_CCM_PMCR0_DPTEN,
+	.irq_mask = MXC_CCM_PMCR0_PTVAIM,
+	.dptc_nvcr_bit = 0x0,
+	.gpc_irq_bit = 0x00000000,
+	.init_config =
+	    MXC_CCM_PMCR0_PTVIS | MXC_CCM_PMCR0_DRCE3 | MXC_CCM_PMCR0_DRCE1,
+	.enable_config =
+	    MXC_CCM_PMCR0_DPTEN | MXC_CCM_PMCR0_DPVCR | MXC_CCM_PMCR0_DPVV,
+	.dcr_mask = MXC_CCM_PMCR0_DCR,
+};
+
+/*! Device Definition for MXC DPTC */
 static struct platform_device mxc_dptc_device = {
 	.name = "mxc_dptc",
+	.id = 0,
 	.dev = {
 		.release = mxc_nop_release,
-		.platform_data = &dptc_wp_allfreq_26ckih,
+		.platform_data = &dptc_data,
 		},
+	.num_resources = ARRAY_SIZE(dptc_resources),
+	.resource = dptc_resources,
 };
 
 static inline void mxc_init_dptc(void)
@@ -717,20 +760,18 @@ static inline void mxc_init_dptc(void)
 	if (clk_get_rate(ckih_clk) == 27000000) {
 
 		if (mxc_cpu_is_rev(CHIP_REV_2_0) < 0)
-			mxc_dptc_device.dev.platform_data = NULL;
+			dptc_data.dptc_wp_allfreq = NULL;
 		else
-			mxc_dptc_device.dev.platform_data =
-			    &dptc_wp_allfreq_27ckih_TO_2_0;
+			dptc_data.dptc_wp_allfreq =
+			    dptc_wp_allfreq_27ckih_TO_2_0;
 
 	} else if (clk_get_rate(ckih_clk) == 26000000
 		   && mxc_cpu_is_rev(CHIP_REV_2_0) == 1) {
-		mxc_dptc_device.dev.platform_data =
-		    &dptc_wp_allfreq_26ckih_TO_2_0;
+		dptc_data.dptc_wp_allfreq = dptc_wp_allfreq_26ckih_TO_2_0;
 	}
 
 	(void)platform_device_register(&mxc_dptc_device);
 }
-#endif
 
 #ifdef	CONFIG_MXC_VPU
 static struct resource vpu_resources[] = {
@@ -779,10 +820,8 @@ static int __init mxc_init_devices(void)
 	mxc_init_hmp4e();
 	mxc_init_dma();
 	mxc_init_audio();
-#ifndef CONFIG_MXC_DPTC
 	ckih_clk = clk_get(NULL, "ckih");
 	mxc_init_dptc();
-#endif
 	mxc_init_vpu();
 
 	/* SPBA configuration for SSI2 - SDMA and MCU are set */

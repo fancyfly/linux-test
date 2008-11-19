@@ -581,6 +581,7 @@ enum ipu_irq_line {
 
 	IPU_IRQ_DP_SF_START = 448 + 2,
 	IPU_IRQ_DP_SF_END = 448 + 3,
+	IPU_IRQ_BG_SF_END = IPU_IRQ_DP_SF_END,
 	IPU_IRQ_DC_FC_0 = 448 + 8,
 	IPU_IRQ_DC_FC_1 = 448 + 9,
 	IPU_IRQ_DC_FC_2 = 448 + 10,

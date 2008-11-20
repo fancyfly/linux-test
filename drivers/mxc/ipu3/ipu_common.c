@@ -223,6 +223,8 @@ static int ipu_probe(struct platform_device *pdev)
 
 	clk_disable(g_ipu_clk);
 
+	register_ipu_device();
+
 	return 0;
 }
 
@@ -1666,7 +1668,9 @@ uint32_t bytes_per_pixel(uint32_t fmt)
 		break;
 	case IPU_PIX_FMT_GENERIC_32:	/*generic data */
 	case IPU_PIX_FMT_BGR32:
+	case IPU_PIX_FMT_BGRA32:
 	case IPU_PIX_FMT_RGB32:
+	case IPU_PIX_FMT_RGBA32:
 	case IPU_PIX_FMT_ABGR32:
 		return 4;
 		break;
@@ -1686,7 +1690,10 @@ ipu_color_space_t format_to_colorspace(uint32_t fmt)
 	case IPU_PIX_FMT_BGR24:
 	case IPU_PIX_FMT_RGB24:
 	case IPU_PIX_FMT_BGR32:
+	case IPU_PIX_FMT_BGRA32:
 	case IPU_PIX_FMT_RGB32:
+	case IPU_PIX_FMT_RGBA32:
+	case IPU_PIX_FMT_ABGR32:
 		return RGB;
 		break;
 

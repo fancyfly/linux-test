@@ -191,6 +191,14 @@ static int start_dptc(struct device *dev)
 	struct dptc_device *drv_data = dev->driver_data;
 	u32 dptccr, flags;
 	unsigned long clk_rate;
+	int voltage_mV;
+
+	/* Get the voltage */
+	voltage_mV = uV_to_mV(regulator_get_voltage(drv_data->dptc_reg));
+	drv_data->curr_wp =
+	    (dptc_data->dptc_wp_allfreq[0].voltage - voltage_mV) / 25;
+
+	update_dptc_wp(drv_data, drv_data->curr_wp);
 
 	/* Set the voltage */
 	spin_lock_irqsave(&drv_data->lock, flags);
@@ -439,7 +447,6 @@ static int __devinit mxc_dptc_probe(struct platform_device *pdev)
 
 	/* Set driver data */
 	platform_set_drvdata(pdev, dptc_device_data);
-	update_dptc_wp(dptc_device_data, dptc_device_data->curr_wp);
 
 	return 0;
 

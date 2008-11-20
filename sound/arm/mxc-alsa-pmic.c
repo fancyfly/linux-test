@@ -3537,8 +3537,8 @@ void mxc_pmic_audio_init(mxc_pmic_audio_t * mxc_audio, int device)
   *
   * @return              0 on success, -1 otherwise.
   */
-static int __init snd_card_mxc_audio_pcm(mxc_pmic_audio_t * mxc_audio,
-					 int device)
+static int __devinit snd_card_mxc_audio_pcm(mxc_pmic_audio_t *mxc_audio,
+					    int device)
 {
 	struct snd_pcm *pcm;
 	int err;
@@ -3682,7 +3682,7 @@ void snd_mxc_audio_free(struct snd_card *card)
   *
   * @return              0 on success, -1 otherwise.
   */
-static int __init mxc_alsa_audio_probe(struct platform_device *pdev)
+static int __devinit mxc_alsa_audio_probe(struct platform_device *pdev)
 {
 	int err;
 	struct snd_card *card;
@@ -3741,7 +3741,7 @@ static int __init mxc_alsa_audio_probe(struct platform_device *pdev)
 	return err;
 }
 
-static int mxc_alsa_audio_remove(struct platform_device *dev)
+static int __devexit mxc_alsa_audio_remove(struct platform_device *dev)
 {
 	snd_card_free(mxc_audio->card);
 	kfree(mxc_audio);
@@ -3752,7 +3752,7 @@ static int mxc_alsa_audio_remove(struct platform_device *dev)
 
 static struct platform_driver mxc_alsa_audio_driver = {
 	.probe = mxc_alsa_audio_probe,
-	.remove = mxc_alsa_audio_remove,
+	.remove = __devexit_p(mxc_alsa_audio_remove),
 #ifdef CONFIG_PM
 	.suspend = snd_mxc_audio_suspend,
 	.resume = snd_mxc_audio_resume,

@@ -372,7 +372,7 @@ struct snd_kcontrol_new pmic_control_loop_out __devinitdata = {
   *
   * @return              0 on success, -ve otherwise.
   */
-int mxc_alsa_create_ctl(struct snd_card *card, void *p_value)
+int __devinit mxc_alsa_create_ctl(struct snd_card *card, void *p_value)
 {
 	int err = 0;
 

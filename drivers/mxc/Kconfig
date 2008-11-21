@@ -8,6 +8,7 @@ config MXC_IPU
 	bool "Image Processing Unit Driver"
 	depends on !ARCH_MX21
 	depends on !ARCH_MX27
+	depends on !ARCH_MX25
 	select MXC_IPU_V1 if !ARCH_MX37 && !ARCH_MX51
 	select MXC_IPU_V3 if ARCH_MX37 || ARCH_MX51
 	help

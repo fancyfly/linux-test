@@ -128,7 +128,7 @@ config BACKLIGHT_MXC_IPU
 
 config BACKLIGHT_MXC_LCDC
 	tristate "LCDC PWM Backlight Driver"
-	depends on BACKLIGHT_MXC && (ARCH_MX21 || ARCH_MX27)
+	depends on BACKLIGHT_MXC && (ARCH_MX21 || ARCH_MX27 || ARCH_MX25)
 	default y
 
 config BACKLIGHT_MXC_PMIC

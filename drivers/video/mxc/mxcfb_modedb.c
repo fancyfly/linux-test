@@ -1,5 +1,5 @@
 /*
- * Copyright 2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -33,6 +33,12 @@ struct fb_videomode mxcfb_modedb[] = {
 	 /* 640x480 @ 60 Hz */
 	 "NEC-VGA", 60, 640, 480, 38255, 144, 0, 34, 40, 1, 1,
 	 FB_SYNC_VERT_HIGH_ACT | FB_SYNC_OE_ACT_HIGH,
+	 FB_VMODE_NONINTERLACED,
+	 0,},
+	{
+	 /* 640x480 @ 60 Hz */
+	 "CPT-VGA", 60, 640, 480, 39683, 45, 114, 33, 11, 1, 1,
+	 FB_SYNC_OE_ACT_HIGH,
 	 FB_VMODE_NONINTERLACED,
 	 0,},
 	{

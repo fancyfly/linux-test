@@ -974,11 +974,7 @@ static struct clk sdma_clk[] = {
 	{
 	 .name = "sdma_ahb_clk",
 	 .parent = &ahb_clk,
-#ifdef CONFIG_SDMA_IRAM
-	 .secondary = &emi_intr_clk,
-#else
 	 .secondary = &emi_fast_clk,
-#endif
 	 .enable_reg = MXC_CCM_CCGR5,
 	 .enable_shift = MXC_CCM_CCGR5_CG0_OFFSET,
 	 .enable = _clk_enable,
@@ -987,6 +983,9 @@ static struct clk sdma_clk[] = {
 	{
 	 .name = "sdma_ipg_clk",
 	 .parent = &ipg_clk,
+#ifdef CONFIG_SDMA_IRAM
+	 .secondary = &emi_intr_clk,
+#endif
 	 },
 };
 
@@ -1772,7 +1771,12 @@ static struct clk usboh2_clk[] = {
 	 .enable_reg = MXC_CCM_CCGR2,
 	 .enable_shift = MXC_CCM_CCGR2_CG11_OFFSET,
 	 .disable = _clk_disable,
-	 .secondary = &tmax1_clk,
+	 .secondary = &usboh2_clk[2],
+	 },
+	{
+	 .name = "usb_sec_clk",
+	 .parent = &tmax1_clk,
+	 .secondary = &emi_fast_clk,
 	 },
 };
 
@@ -1820,6 +1824,13 @@ static struct clk usb_phy_clk = {
 	.disable = _clk_disable,
 	.secondary = &tmax1_clk,
 };
+
+static struct clk esdhc_dep_clks = {
+	 .name = "sd_dep_clk",
+	 .parent = &spba_clk,
+	 .secondary = &emi_fast_clk,
+};
+
 
 static void _clk_esdhc1_recalc(struct clk *clk)
 {
@@ -1869,12 +1880,13 @@ static struct clk esdhc1_clk[] = {
 	 .enable_reg = MXC_CCM_CCGR2,
 	 .enable_shift = MXC_CCM_CCGR2_CG13_OFFSET,
 	 .disable = _clk_disable,
-#ifdef CONFIG_MMC_IMX_ESDHCI_PIO_MODE
-	 .secondary = &tmax2_clk,
-#else
-	 .secondary = &spba_clk,
-#endif
+	 .secondary = &esdhc1_clk[2],
 	 },
+	{
+	.name = "esdhc1_sec_clk",
+	.parent = &tmax2_clk,
+	.secondary = &esdhc_dep_clks,
+	},
 };
 
 static void _clk_esdhc2_recalc(struct clk *clk)
@@ -1925,12 +1937,13 @@ static struct clk esdhc2_clk[] = {
 	 .enable_reg = MXC_CCM_CCGR2,
 	 .enable_shift = MXC_CCM_CCGR2_CG15_OFFSET,
 	 .disable = _clk_disable,
-#ifdef CONFIG_MMC_IMX_ESDHCI_PIO_MODE
-	 .secondary = &ahb_max_clk,
-#else
-	 .secondary = &spba_clk,
-#endif
+	 .secondary = &esdhc2_clk[2],
 	 },
+	{
+	.name = "esdhc2_sec_clk",
+	.parent = &ahb_max_clk,
+	.secondary = &esdhc_dep_clks,
+	},
 };
 
 static int _clk_esdhc3_set_parent(struct clk *clk, struct clk *parent)
@@ -1970,12 +1983,14 @@ static struct clk esdhc3_clk[] = {
 	 .enable_reg = MXC_CCM_CCGR3,
 	 .enable_shift = MXC_CCM_CCGR3_CG1_OFFSET,
 	 .disable = _clk_disable,
-#ifdef CONFIG_MMC_IMX_ESDHCI_PIO_MODE
-	 .secondary = &ahb_max_clk,
-#else
-	 .secondary = &spba_clk,
-#endif
+	 .secondary = &esdhc3_clk[2],
 	 },
+	{
+	.name = "esdhc3_sec_clk",
+	.parent = &ahb_max_clk,
+	.secondary = &esdhc_dep_clks,
+	},
+
 };
 
 static void _clk_nfc_recalc(struct clk *clk)
@@ -2402,6 +2417,7 @@ static struct clk usb_clk = {
 	.name = "usb_clk",
 	.rate = 60000000,
 };
+
 static struct clk usb_utmi_clk = {
 	.name = "usb_utmi_clk",
 #if defined CONFIG_USB_STATIC_IRAM_PPH || defined CONFIG_USB_STATIC_IRAM
@@ -2446,7 +2462,7 @@ static struct clk rng_clk = {
 static struct clk scc_clk = {
 	.name = "scc_clk",
 	.parent = &ipg_clk,
-	.secondary = &ahb_clk,
+	.secondary = &emi_fast_clk,
 };
 
 static struct clk *mxc_clks[] = {
@@ -2514,15 +2530,20 @@ static struct clk *mxc_clks[] = {
 	&ahbmux2_clk,
 	&usboh2_clk[0],
 	&usboh2_clk[1],
+	&usboh2_clk[2],
 	&usb_phy_clk,
 	&usb_utmi_clk,
 	&usb_clk,
 	&esdhc1_clk[0],
 	&esdhc1_clk[1],
+	&esdhc1_clk[2],
 	&esdhc2_clk[0],
 	&esdhc2_clk[1],
+	&esdhc2_clk[2],
 	&esdhc3_clk[0],
 	&esdhc3_clk[1],
+	&esdhc3_clk[2],
+	&esdhc_dep_clks,
 	&emi_core_clk,
 	&emi_fast_clk,
 	&emi_slow_clk,

@@ -160,6 +160,55 @@ static inline void mxc_init_nand_mtd(void)
 }
 #endif
 
+#if defined(CONFIG_FB_MXC_SYNC_PANEL) || \
+    defined(CONFIG_FB_MXC_SYNC_PANEL_MODULE)
+static const char fb_default_mode[] = "CPT-VGA";
+
+/* mxc lcd driver */
+static struct platform_device mxc_fb_device = {
+	.name = "mxc_sdc_fb",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &fb_default_mode,
+		.coherent_dma_mask = 0xFFFFFFFF,
+		},
+};
+
+static void mxc_init_fb(void)
+{
+	(void)platform_device_register(&mxc_fb_device);
+}
+#else
+static inline void mxc_init_fb(void)
+{
+}
+#endif
+
+#if defined(CONFIG_BACKLIGHT_MXC)
+static struct platform_device mxcbl_devices[] = {
+#if defined(CONFIG_BACKLIGHT_MXC_LCDC) || \
+    defined(CONFIG_BACKLIGHT_MXC_LCDC_MODULE)
+	{
+	 .name = "mxc_lcdc_bl",
+	 .id = 0,
+	 },
+#endif
+};
+
+static inline void mxc_init_bl(void)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(mxcbl_devices); i++)
+		platform_device_register(&mxcbl_devices[i]);
+}
+#else
+static inline void mxc_init_bl(void)
+{
+}
+#endif
+
 static struct spi_board_info mxc_spi_board_info[] __initdata = {
 	{
 	 .modalias = "cpld_spi",
@@ -263,6 +312,8 @@ static void __init mxc_board_init(void)
 #endif
 	spi_register_board_info(mxc_spi_board_info,
 				ARRAY_SIZE(mxc_spi_board_info));
+	mxc_init_fb();
+	mxc_init_bl();
 	mxc_init_nand_mtd();
 }
 

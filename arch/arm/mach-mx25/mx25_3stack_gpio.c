@@ -655,7 +655,7 @@ EXPORT_SYMBOL(gpio_spi_inactive);
 /*!
  * Activate LCD
  */
-void gpio_lcd_active(void)
+void gpio_lcdc_active(void)
 {
 	mxc_request_iomux(MX25_PIN_LD0, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX25_PIN_LD1, MUX_CONFIG_FUNC);
@@ -680,7 +680,6 @@ void gpio_lcd_active(void)
 	mxc_request_iomux(MX25_PIN_LSCLK, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX25_PIN_OE_ACD, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX25_PIN_CONTRAST, MUX_CONFIG_FUNC);
-	mxc_request_iomux(MX25_PIN_PWM, MUX_CONFIG_ALT5); /*DEBUG_INT_B*/
 
 #define LCD_PAD_CTL (PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PUD | PAD_CTL_100K_PU)
 	mxc_iomux_set_pad(MX25_PIN_LD0, LCD_PAD_CTL);
@@ -706,14 +705,13 @@ void gpio_lcd_active(void)
 	mxc_iomux_set_pad(MX25_PIN_LSCLK, LCD_PAD_CTL | PAD_CTL_SRE_FAST);
 	mxc_iomux_set_pad(MX25_PIN_OE_ACD, LCD_PAD_CTL);
 	mxc_iomux_set_pad(MX25_PIN_CONTRAST, LCD_PAD_CTL);
-	mxc_iomux_set_pad(MX25_PIN_PWM, 0);
 }
-EXPORT_SYMBOL(gpio_lcd_active);
+EXPORT_SYMBOL(gpio_lcdc_active);
 
 /*!
  * Inactivate LCD
  */
-void gpio_lcd_inactive(void)
+void gpio_lcdc_inactive(void)
 {
 	mxc_request_gpio(MX25_PIN_LD0);
 	mxc_request_gpio(MX25_PIN_LD1);
@@ -723,21 +721,12 @@ void gpio_lcd_inactive(void)
 	mxc_request_gpio(MX25_PIN_LD5);
 	mxc_request_gpio(MX25_PIN_LD6);
 	mxc_request_gpio(MX25_PIN_LD7);
-	mxc_request_gpio(MX25_PIN_LD8);
-	mxc_request_gpio(MX25_PIN_LD9);
-	mxc_request_gpio(MX25_PIN_LD10);
-	mxc_request_gpio(MX25_PIN_LD11);
-	mxc_request_gpio(MX25_PIN_LD12);
-	mxc_request_gpio(MX25_PIN_LD13);
-	mxc_request_gpio(MX25_PIN_LD14);
-	mxc_request_gpio(MX25_PIN_LD15);
 	mxc_request_gpio(MX25_PIN_GPIO_E); /*D16*/
 	mxc_request_gpio(MX25_PIN_GPIO_F); /*D17*/
 	mxc_request_gpio(MX25_PIN_HSYNC);
 	mxc_request_gpio(MX25_PIN_VSYNC);
 	mxc_request_gpio(MX25_PIN_LSCLK);
 	mxc_request_gpio(MX25_PIN_OE_ACD);
-	mxc_request_gpio(MX25_PIN_CONTRAST);
 
 	mxc_free_iomux(MX25_PIN_LD0, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_LD1, MUX_CONFIG_GPIO);
@@ -747,23 +736,31 @@ void gpio_lcd_inactive(void)
 	mxc_free_iomux(MX25_PIN_LD5, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_LD6, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_LD7, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD8, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD9, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD10, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD11, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD12, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD13, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD14, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD15, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_LD8, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX25_PIN_LD9, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX25_PIN_LD10, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX25_PIN_LD11, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX25_PIN_LD12, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX25_PIN_LD13, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX25_PIN_LD14, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX25_PIN_LD15, MUX_CONFIG_FUNC);
 	mxc_free_iomux(MX25_PIN_GPIO_E, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_GPIO_F, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_HSYNC, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_VSYNC, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_LSCLK, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_OE_ACD, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CONTRAST, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_CONTRAST, MUX_CONFIG_FUNC);
 }
-EXPORT_SYMBOL(gpio_lcd_inactive);
+EXPORT_SYMBOL(gpio_lcdc_inactive);
+
+/*
+ * Power on/off CPT VGA panel.
+ */
+void board_power_lcd(int on)
+{
+}
+EXPORT_SYMBOL(board_power_lcd);
 
 /*!
  * Activate SDHC

@@ -38,6 +38,7 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/dma.h>
+#include <asm/div64.h>
 #include <asm/arch/hardware.h>
 #include <asm/arch/mxc_uart.h>
 
@@ -1074,14 +1075,19 @@ static void mxcuart_free_interrupts(uart_mxc_port * umxc)
 static void mxcuart_set_ref_freq(uart_mxc_port * umxc, unsigned long per_clk,
 				 unsigned int req_baud, int *div)
 {
-	int d = 1;
+	unsigned int d = 1;
 
-	d = per_clk / ((req_baud * 16) + 1000);
-	if (d > 6) {
-		d = 6;
-	}
+	/*
+	 * Choose the smallest possible prescaler to maximize
+	 * the chance of using integer scaling.  Ensure that
+	 * the calculation won't overflow.  Limit the denom
+	 * to 15 bits since a 16-bit denom doesn't work.
+	 */
+	if (req_baud < (1 << (31 - (4 + 15))))
+		d = per_clk / (req_baud << (4 + 15)) + 1;
 
 	umxc->port.uartclk = per_clk / d;
+
 	/*
 	 * Set the ONEMS register that is used by IR special case bit and
 	 * the Escape character detect logic
@@ -1400,13 +1406,25 @@ static void mxcuart_set_termios(struct uart_port *port,
 	   }
 	   } */
 	writel(cr4, umxc->port.membase + MXC_UARTUCR4);
-	/* Set baud rate */
-	num = (baud / 100) - 1;
-	denom = (umxc->port.uartclk / 1600) - 1;
-	if ((denom < 65536) && (umxc->port.uartclk > 1600)) {
-		writel(num, umxc->port.membase + MXC_UARTUBIR);
-		writel(denom, umxc->port.membase + MXC_UARTUBMR);
+
+	/*
+	 * Set baud rate
+	 */
+
+	/* Use integer scaling, if possible. Limit the denom to 15 bits. */
+	num = 0;
+	denom = (umxc->port.uartclk + 8 * baud) / (16 * baud) - 1;
+
+	/* Use fractional scaling if needed to limit the max error to 0.5% */
+	if (denom < 100) {
+		u64 n64 = (u64) 16 * 0x8000 * baud + (umxc->port.uartclk / 2);
+		do_div(n64, umxc->port.uartclk);
+		num = (u_int) n64 - 1;
+		denom = 0x7fff;
 	}
+	writel(num, umxc->port.membase + MXC_UARTUBIR);
+	writel(denom, umxc->port.membase + MXC_UARTUBMR);
+
 	spin_unlock_irqrestore(&umxc->port.lock, flags);
 }
 

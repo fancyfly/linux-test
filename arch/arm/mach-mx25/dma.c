@@ -107,6 +107,62 @@ static mxc_sdma_channel_params_t mxc_sdma_uart3_tx_params = {
 	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
 };
 
+static mxc_sdma_channel_params_t mxc_sdma_uart4_rx_params = {
+	.chnl_params = {
+			.watermark_level = UART4_UFCR_RXTL,
+			.per_address = UART4_BASE_ADDR,
+			.peripheral_type = UART_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_UART4_RX,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_UART4_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_uart4_tx_params = {
+	.chnl_params = {
+			.watermark_level = UART4_UFCR_TXTL,
+			.per_address = UART4_BASE_ADDR + MXC_UARTUTXD,
+			.peripheral_type = UART_SP,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_UART4_TX,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_UART4_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_uart5_rx_params = {
+	.chnl_params = {
+			.watermark_level = UART5_UFCR_RXTL,
+			.per_address = UART5_BASE_ADDR,
+			.peripheral_type = UART_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_UART5_RX,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_UART5_RX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_uart5_tx_params = {
+	.chnl_params = {
+			.watermark_level = UART5_UFCR_TXTL,
+			.per_address = UART5_BASE_ADDR + MXC_UARTUTXD,
+			.peripheral_type = UART_SP,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_UART5_TX,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_UART5_TX,
+	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
+};
+
 static mxc_sdma_channel_params_t mxc_sdma_memory_params = {
 	.chnl_params = {
 			.peripheral_type = MEMORY,
@@ -125,6 +181,10 @@ static struct mxc_sdma_info_entry_s mxc_sdma_active_dma_info[] = {
 	{MXC_DMA_UART2_TX, &mxc_sdma_uart2_tx_params},
 	{MXC_DMA_UART3_RX, &mxc_sdma_uart3_rx_params},
 	{MXC_DMA_UART3_TX, &mxc_sdma_uart3_tx_params},
+	{MXC_DMA_UART4_RX, &mxc_sdma_uart4_rx_params},
+	{MXC_DMA_UART4_TX, &mxc_sdma_uart4_tx_params},
+	{MXC_DMA_UART5_RX, &mxc_sdma_uart5_rx_params},
+	{MXC_DMA_UART5_TX, &mxc_sdma_uart5_tx_params},
 	{MXC_DMA_MEMORY, &mxc_sdma_memory_params},
 };
 

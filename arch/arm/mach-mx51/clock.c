@@ -2336,7 +2336,7 @@ static int _clk_ddr_set_parent(struct clk *clk, struct clk *parent)
 
 static struct clk ddr_clk = {
 	.name = "ddr_clk",
-	.parent = &emi_slow_clk,
+	.parent = &axi_a_clk,
 	.set_parent = _clk_ddr_set_parent,
 	.flags = RATE_PROPAGATES,
 };
@@ -2751,7 +2751,7 @@ int __init mxc_clocks_init(void)
 	clk_enable(&main_bus_clk);
 	clk_enable(&gpt_clk[1]);
 
-	clk_set_parent(&ddr_clk, &emi_slow_clk);
+	clk_set_parent(&ddr_clk, &axi_a_clk);
 
 	/* Set the current working point. */
 	cpu_wp_tbl = get_cpu_wp(&cpu_wp_nr);

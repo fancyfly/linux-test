@@ -29,7 +29,7 @@
 #ifdef __KERNEL__
 #include <linux/interrupt.h>
 #else
-#define bool int
+#define bool char
 #define irqreturn_t int
 #define dma_addr_t int
 #define u32 unsigned int
@@ -1066,6 +1066,12 @@ typedef struct _ipu_event_info {
 	void *dev;
 } ipu_event_info;
 
+typedef struct _ipu_mem_info {
+	dma_addr_t paddr;
+	void *vaddr;
+	int size;
+} ipu_mem_info;
+
 /* IOCTL commands */
 
 #define IPU_INIT_CHANNEL              _IOW('I',0x1,ipu_channel_parm)
@@ -1103,5 +1109,7 @@ typedef struct _ipu_event_info {
 #define IPU_PF_SET_PAUSE_ROW          _IOW('I',0x21, uint32_t)
 #define IPU_REGISTER_GENERIC_ISR      _IOW('I',0x22,ipu_event_info)
 #define IPU_GET_EVENT                 _IOR('I',0x23,ipu_event_info)
+#define IPU_ALOC_MEM		      _IOWR('I', 0x24, ipu_mem_info)
+#define IPU_FREE_MEM		      _IOW('I', 0x25, ipu_mem_info)
 
 #endif

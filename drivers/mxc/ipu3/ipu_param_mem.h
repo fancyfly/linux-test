@@ -205,7 +205,7 @@ static inline void _ipu_ch_param_init(int ch,
 		ipu_ch_param_set_field(&params, 1, 85, 4, 7);	/* pix format */
 		ipu_ch_param_set_field(&params, 1, 78, 7, 15);	/* burst size */
 
-		_ipu_ch_params_set_packing(&params, 8, 24, 8, 16, 8, 8, 8, 0);
+		_ipu_ch_params_set_packing(&params, 8, 0, 8, 8, 8, 16, 8, 24);
 		break;
 	case IPU_PIX_FMT_UYVY:
 		ipu_ch_param_set_field(&params, 0, 107, 3, 3);	/* bits/pixel */

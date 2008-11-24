@@ -1,10 +1,15 @@
 /*
- *  linux/arch/arm/mach-mx51/wfi.S
- *
- *  Copyright (C) 2008, Freescale Semiconductor, Inc. All Rights Reserved.
- *   THIS SOURCE CODE, AND ITS USE AND DISTRIBUTION, IS SUBJECT TO THE TERMS
- *  AND CONDITIONS OF THE APPLICABLE LICENSE AGREEMENT
+ * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
+/*
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
 
 #include <linux/linkage.h>
 #include <asm/assembler.h>

@@ -845,11 +845,7 @@ static struct clk sdma_clk[] = {
 	{
 	 .name = "sdma_ahb_clk",
 	 .parent = &ahb_clk,
-#ifdef CONFIG_SDMA_IRAM
-	 .secondary = &emi_intr_clk,
-#else
 	 .secondary = &emi_fast_clk,
-#endif
 	 .enable_reg = MXC_CCM_CCGR4,
 	 .enable_shift = MXC_CCM_CCGR4_CG15_OFFSET,
 	 .enable = _clk_sdma_enable,
@@ -858,6 +854,9 @@ static struct clk sdma_clk[] = {
 	{
 	 .name = "sdma_ipg_clk",
 	 .parent = &ipg_clk,
+#ifdef CONFIG_SDMA_IRAM
+	 .secondary = &emi_intr_clk,
+#endif
 	 },
 };
 
@@ -1893,18 +1892,18 @@ static struct clk usboh3_clk[] = {
 	 .secondary = &usboh3_clk[1],
 	 },
 	{
-	 .name = "usb_tmax_clk",
-	 .parent = &tmax2_clk,
-	 .secondary = &usboh3_clk[2],
-	 },
-	{
 	 .name = "usb_ahb_clk",
-	 .parent = &ahb_clk,
-	 .secondary = &ipg_clk,
+	 .parent = &ipg_clk,
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR2,
 	 .enable_shift = MXC_CCM_CCGR2_CG13_OFFSET,
 	 .disable = _clk_disable,
+	 .secondary = &usboh3_clk[2],
+	 },
+	{
+	 .name = "usb_sec_clk",
+	 .parent = &tmax2_clk,
+	 .secondary = &emi_fast_clk,
 	 },
 };
 
@@ -1951,6 +1950,13 @@ static struct clk usb_phy_clk = {
 	.enable_shift = MXC_CCM_CCGR2_CG0_OFFSET,
 	.disable = _clk_disable,
 };
+
+static struct clk esdhc_dep_clks = {
+	 .name = "sd_dep_clk",
+	 .parent = &spba_clk,
+	 .secondary = &emi_fast_clk,
+};
+
 
 static void _clk_esdhc1_recalc(struct clk *clk)
 {
@@ -2006,7 +2012,7 @@ static struct clk esdhc1_clk[] = {
 	 .name = "esdhc_sec_clk",
 	 .id = 0,
 	 .parent = &tmax3_clk,
-	 .secondary = &spba_clk,
+	 .secondary = &esdhc_dep_clks,
 	 },
 
 };
@@ -2065,7 +2071,7 @@ static struct clk esdhc2_clk[] = {
 	 .name = "esdhc_sec_clk",
 	 .id = 0,
 	 .parent = &tmax2_clk,
-	 .secondary = &spba_clk,
+	 .secondary = &esdhc_dep_clks,
 	 },
 };
 
@@ -2112,7 +2118,7 @@ static struct clk esdhc3_clk[] = {
 	 .name = "esdhc_sec_clk",
 	 .id = 0,
 	 .parent = &ahb_max_clk,
-	 .secondary = &spba_clk,
+	 .secondary = &esdhc_dep_clks,
 	 },
 };
 
@@ -2160,7 +2166,7 @@ static struct clk esdhc4_clk[] = {
 	 .name = "esdhc_sec_clk",
 	 .id = 0,
 	 .parent = &tmax3_clk,
-	 .secondary = &spba_clk,
+	 .secondary = &esdhc_dep_clks,
 	 },
 };
 
@@ -2519,8 +2525,8 @@ static struct clk sahara_clk[] = {
 	},
 	{
 	.name = "sahara_sec_clk",
-	.parent = &ipg_clk,
-	.secondary = &tmax1_clk,
+	.parent = &tmax1_clk,
+	.secondary = &emi_fast_clk,
 	}
 };
 
@@ -2607,6 +2613,7 @@ static struct clk *mxc_clks[] = {
 	&esdhc3_clk[1],
 	&esdhc4_clk[0],
 	&esdhc4_clk[1],
+	&esdhc_dep_clks,
 	&emi_slow_clk,
 	&ddr_clk,
 	&emi_enfc_clk,

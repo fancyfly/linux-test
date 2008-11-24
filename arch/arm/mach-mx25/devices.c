@@ -185,15 +185,46 @@ static struct platform_device mxcspi2_device = {
 };
 #endif				/* CONFIG_SPI_MXC_SELECT2 */
 
+#ifdef CONFIG_SPI_MXC_SELECT3
+/*!
+ * Resource definition for the CSPI3
+ */
+static struct resource mxcspi3_resources[] = {
+	[0] = {
+	       .start = CSPI3_BASE_ADDR,
+	       .end = CSPI3_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_CSPI3,
+	       .end = MXC_INT_CSPI3,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for MXC CSPI3 */
+static struct mxc_spi_master mxcspi3_data = {
+	.maxchipselect = 4,
+	.spi_version = 7,
+};
+
+/*! Device Definition for MXC CSPI3 */
+static struct platform_device mxcspi3_device = {
+	.name = "mxc_spi",
+	.id = 2,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxcspi3_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcspi3_resources),
+	.resource = mxcspi3_resources,
+};
+#endif				/* CONFIG_SPI_MXC_SELECT3 */
+
 static inline void mxc_init_spi(void)
 {
-#ifdef CONFIG_SPI_MXC_DMA
-	spba_take_ownership(SPBA_CSPI2, SPBA_MASTER_A | SPBA_MASTER_C);
-	spba_take_ownership(SPBA_CSPI3, SPBA_MASTER_A | SPBA_MASTER_C);
-#else
 	spba_take_ownership(SPBA_CSPI2, SPBA_MASTER_A);
 	spba_take_ownership(SPBA_CSPI3, SPBA_MASTER_A);
-#endif
 
 #ifdef CONFIG_SPI_MXC_SELECT1
 	if (platform_device_register(&mxcspi1_device) < 0)
@@ -203,6 +234,10 @@ static inline void mxc_init_spi(void)
 	if (platform_device_register(&mxcspi2_device) < 0)
 		printk(KERN_ERR "Error: Registering the SPI Controller_2\n");
 #endif				/* CONFIG_SPI_MXC_SELECT2 */
+#ifdef CONFIG_SPI_MXC_SELECT3
+	if (platform_device_register(&mxcspi3_device) < 0)
+		printk(KERN_ERR "Error: Registering the SPI Controller_3\n");
+#endif				/* CONFIG_SPI_MXC_SELECT3 */
 }
 #else
 static inline void mxc_init_spi(void)

@@ -508,7 +508,6 @@ void gpio_spi_active(int cspi_mod)
 		break;
 	case 1:
 		/* SPI2 */
-#if 0
 		mxc_request_iomux(MX25_PIN_LD12, MUX_CONFIG_ALT2); /*MOSI*/
 		mxc_request_iomux(MX25_PIN_LD13, MUX_CONFIG_ALT2); /*MISO*/
 		mxc_request_iomux(MX25_PIN_LD14, MUX_CONFIG_ALT2); /*SCLK*/
@@ -537,11 +536,9 @@ void gpio_spi_active(int cspi_mod)
 				    INPUT_CTL_PATH0);
 		mxc_iomux_set_input(MUX_IN_CSPI2_IPP_IND_SS1_B,
 				    INPUT_CTL_PATH0);
-#endif
 		break;
 	case 2:
 		/* SPI3 */
-#if 0
 		mxc_request_iomux(MX25_PIN_EB0, MUX_CONFIG_ALT6); /*SS0*/
 		mxc_request_iomux(MX25_PIN_EB1, MUX_CONFIG_ALT6); /*SS1*/
 		mxc_request_iomux(MX25_PIN_CS4, MUX_CONFIG_ALT6); /*MOSI*/
@@ -572,7 +569,6 @@ void gpio_spi_active(int cspi_mod)
 				    INPUT_CTL_PATH1);
 		mxc_iomux_set_input(MUX_IN_CSPI3_IPP_IND_SS3_B,
 				    INPUT_CTL_PATH0);
-#endif
 		break;
 	default:
 		break;

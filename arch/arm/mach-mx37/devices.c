@@ -581,7 +581,7 @@ static struct resource dptc_gp_resources[] = {
 
 /*! Platform Data for DPTC GP */
 static struct mxc_dptc_data dptc_gp_data = {
-	.reg_id = "SW1",
+	.reg_id = "DCDC1",
 	.clk_id = "cpu_clk",
 	.dptccr_reg_addr = MXC_GP_DPTCCR,
 	.dcvr0_reg_addr = MXC_GP_DCVR0,
@@ -625,7 +625,7 @@ static struct resource dptc_lp_resources[] = {
 
 /*! Platform Data for MXC DPTC LP */
 static struct mxc_dptc_data dptc_lp_data = {
-	.reg_id = "SW2",
+	.reg_id = "DCDC4",
 	.clk_id = "ahb_clk",
 	.dptccr_reg_addr = MXC_LP_DPTCCR,
 	.dcvr0_reg_addr = MXC_LP_DCVR0,

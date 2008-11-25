@@ -55,6 +55,8 @@ static pmic_version_t mxc_pmic_version;
 unsigned int active_events[MAX_ACTIVE_EVENTS];
 struct i2c_client *mc13892_client;
 
+static struct workqueue_struct *pmic_event_wq;
+
 /*
  * Platform device structure for PMIC client drivers
  */
@@ -135,7 +137,7 @@ DECLARE_WORK(pmic_ws, pmic_bh_handler);
 static irqreturn_t pmic_irq_handler(int irq, void *dev_id)
 {
 	/* prepare a task */
-	schedule_work(&pmic_ws);
+	queue_work(pmic_event_wq, &pmic_ws);
 
 	return IRQ_HANDLED;
 }
@@ -340,11 +342,19 @@ static struct i2c_driver pmic_driver = {
 
 static int __init pmic_init(void)
 {
+	pmic_event_wq = create_workqueue(pmic_driver.driver.name);
+	if (!pmic_event_wq) {
+		pr_err("mc13892 pmic driver init: fail to create work queue");
+		return -EFAULT;
+	}
 	return i2c_add_driver(&pmic_driver);
 }
 
 static void __exit pmic_exit(void)
 {
+	if (pmic_event_wq)
+		destroy_workqueue(pmic_event_wq);
+
 	i2c_del_driver(&pmic_driver);
 }
 

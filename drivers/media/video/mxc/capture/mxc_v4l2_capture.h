@@ -52,6 +52,7 @@ struct mxc_v4l_frame {
 	int index;
 };
 
+/* Only for old version.  Will go away soon. */
 typedef struct {
 	u8 clk_mode;
 	u8 ext_vsync;
@@ -72,6 +73,7 @@ typedef struct {
 } sensor_interface;
 
 /* Sensor control function */
+/* Only for old version.  Will go away soon. */
 struct camera_sensor {
 	void (*set_color) (int bright, int saturation, int red, int green,
 			   int blue);
@@ -91,6 +93,7 @@ struct camera_sensor {
  */
 typedef struct _cam_data {
 	struct video_device *video_dev;
+	int device_type;
 
 	/* semaphore guard against SMP multithreading */
 	struct semaphore busy_lock;
@@ -100,7 +103,7 @@ typedef struct _cam_data {
 	/* params lock for this camera */
 	struct semaphore param_lock;
 
-	/* Encorder */
+	/* Encoder */
 	struct list_head ready_q;
 	struct list_head done_q;
 	struct list_head working_q;
@@ -149,9 +152,10 @@ typedef struct _cam_data {
 	int blue;
 	int ae_mode;
 
-	/* standart */
+	/* standard */
 	struct v4l2_streamparm streamparm;
 	struct v4l2_standard standard;
+	bool standard_autodetect;
 
 	/* crop */
 	struct v4l2_rect crop_bounds;
@@ -176,9 +180,11 @@ typedef struct _cam_data {
 	int capture_pid;
 	bool low_power;
 	wait_queue_head_t power_queue;
+	unsigned int csi;
 
 	/* camera sensor interface */
-	struct camera_sensor *cam_sensor;
+	struct camera_sensor *cam_sensor; 	/* old version */
+	struct v4l2_int_device *sensor;
 } cam_data;
 
 #if defined(CONFIG_MXC_IPU_V1) || defined(CONFIG_VIDEO_MXC_EMMA_CAMERA)

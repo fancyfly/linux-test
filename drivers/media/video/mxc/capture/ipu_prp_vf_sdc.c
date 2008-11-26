@@ -54,12 +54,11 @@ static int prpvf_start(void *private)
 
 	memset(&vf, 0, sizeof(ipu_channel_params_t));
 	ipu_csi_get_window_size(&vf.csi_prp_vf_mem.in_width,
-				&vf.csi_prp_vf_mem.in_height,
-				cam->cam_sensor->csi);
+				&vf.csi_prp_vf_mem.in_height, cam->csi);
 	vf.csi_prp_vf_mem.in_pixel_fmt = IPU_PIX_FMT_UYVY;
 	vf.csi_prp_vf_mem.out_width = cam->win.w.width;
 	vf.csi_prp_vf_mem.out_height = cam->win.w.height;
-	vf.csi_prp_vf_mem.csi = cam->cam_sensor->csi;
+	vf.csi_prp_vf_mem.csi = cam->csi;
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		vf.csi_prp_vf_mem.out_width = cam->win.w.height;
 		vf.csi_prp_vf_mem.out_height = cam->win.w.width;
@@ -71,7 +70,7 @@ static int prpvf_start(void *private)
 	if (err != 0)
 		goto out_4;
 
-	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->cam_sensor->csi, true, true);
+	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, true, true);
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -214,7 +213,7 @@ static int prpvf_start(void *private)
 			goto out_2;
 
 		ipu_disp_set_window_pos(MEM_FG_SYNC, cam->win.w.left,
-				       cam->win.w.top);
+					cam->win.w.top);
 
 		err = ipu_init_channel_buffer(MEM_FG_SYNC, IPU_INPUT_BUFFER,
 					      format,
@@ -263,7 +262,7 @@ static int prpvf_start(void *private)
 			goto out_3;
 
 		ipu_disp_set_window_pos(MEM_FG_SYNC, cam->win.w.left,
-				       cam->win.w.top);
+					cam->win.w.top);
 		err = ipu_init_channel_buffer(MEM_FG_SYNC,
 					      IPU_INPUT_BUFFER, format,
 					      cam->win.w.width,
@@ -363,7 +362,7 @@ static int prpvf_stop(void *private)
 	ipu_uninit_channel(MEM_FG_SYNC);
 	ipu_uninit_channel(CSI_PRP_VF_MEM);
 
-	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->cam_sensor->csi, false, false);
+	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, false, false);
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],

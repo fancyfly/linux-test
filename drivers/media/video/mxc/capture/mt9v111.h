@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -20,14 +20,24 @@
  *
  * @brief MT9V111 Camera Header file
  *
- * It include all the defines for bitmaps operations, also two main structure
- * one for IFP interface structure, other for sensor core registers.
+ * This header file contains defines and structures for the iMagic mi8012
+ * aka the Micron mt9v111 camera.
  *
  * @ingroup Camera
  */
 
 #ifndef MT9V111_H_
 #define MT9V111_H_
+
+/*!
+ * Basic camera values
+ */
+#define MT9V111_FRAME_RATE        30
+#define MT9V111_MCLK              27000000 /* Desired clock rate */
+#define MT9V111_CLK_MIN           12000000 /* This clock rate yields 15 fps */
+#define MT9V111_CLK_MAX           27000000
+#define MT9V111_MAX_WIDTH         640      /* Max width for this camera */
+#define MT9V111_MAX_HEIGHT        480      /* Max height for this camera */
 
 /*!
  * mt9v111 IFP REGISTER BANK MAP
@@ -191,12 +201,12 @@
 #define MT9V111S_CHIP_ENABLE              0xF1
 #define MT9V111S_CHIP_VERSION             0xFF
 
-// OUTPUT_CTRL
+/* OUTPUT_CTRL */
 #define MT9V111S_OUTCTRL_SYNC             0x1
 #define MT9V111S_OUTCTRL_CHIP_ENABLE      0x2
 #define MT9V111S_OUTCTRL_TEST_MODE        0x40
 
-// READ_MODE
+/* READ_MODE */
 #define MT9V111S_RM_NOBADFRAME            0x1
 #define MT9V111S_RM_NODESTRUCT            0x2
 #define MT9V111S_RM_COLUMNSKIP            0x4
@@ -418,4 +428,4 @@ typedef struct {
 	u16 height;
 } mt9v111_image_format;
 
-#endif				// MT9V111_H_
+#endif				/* MT9V111_H_  */

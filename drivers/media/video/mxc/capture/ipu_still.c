@@ -112,7 +112,7 @@ static int prp_still_start(void *private)
 	err = ipu_init_channel(CSI_MEM, &params);
 	if (err != 0)
 		return err;
-	ipu_csi_enable_mclk_if(CSI_MCLK_RAW, cam->cam_sensor->csi, true, true);
+	ipu_csi_enable_mclk_if(CSI_MCLK_RAW, cam->csi, true, true);
 
 	err = ipu_init_channel_buffer(CSI_MEM, IPU_OUTPUT_BUFFER,
 				      pixel_fmt, cam->v2f.fmt.pix.width,
@@ -165,8 +165,6 @@ static int prp_still_stop(void *private)
 	cam_data *cam = (cam_data *) private;
 	int err = 0;
 
-	callback_eof_flag = 0;
-
 #ifdef CONFIG_MXC_IPU_V1
 	ipu_free_irq(IPU_IRQ_SENSOR_EOF, NULL);
 	ipu_free_irq(IPU_IRQ_SENSOR_OUT_EOF, cam);
@@ -176,8 +174,7 @@ static int prp_still_stop(void *private)
 
 	ipu_disable_channel(CSI_MEM, true);
 	ipu_uninit_channel(CSI_MEM);
-	ipu_csi_enable_mclk_if(CSI_MCLK_RAW,
-		cam->cam_sensor->csi, false, false);
+	ipu_csi_enable_mclk_if(CSI_MCLK_RAW, cam->csi, false, false);
 
 	return err;
 }

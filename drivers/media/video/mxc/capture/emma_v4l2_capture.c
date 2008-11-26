@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -50,7 +50,7 @@ static cam_data *g_cam;
  *
  * @return status  0 success.
  */
-static int mxc_free_frame_buf(cam_data * cam)
+static int mxc_free_frame_buf(cam_data *cam)
 {
 	int i;
 
@@ -76,19 +76,16 @@ static int mxc_free_frame_buf(cam_data * cam)
  *
  * @return status  -0 Successfully allocated a buffer, -ENOBUFS	failed.
  */
-static int mxc_allocate_frame_buf(cam_data * cam, int count)
+static int mxc_allocate_frame_buf(cam_data *cam, int count)
 {
 	int i;
 
 	for (i = 0; i < count; i++) {
-		cam->frame[i].vaddress = dma_alloc_coherent(0,
-							    PAGE_ALIGN(cam->v2f.
-								       fmt.pix.
-								       sizeimage),
-							    &cam->frame[i].
-							    paddress,
-							    GFP_DMA |
-							    GFP_KERNEL);
+		cam->frame[i].vaddress =
+			dma_alloc_coherent(0,
+					PAGE_ALIGN(cam->v2f. fmt.pix.sizeimage),
+					   &cam->frame[i].paddress,
+					   GFP_DMA | GFP_KERNEL);
 		if (cam->frame[i].vaddress == 0) {
 			pr_debug("mxc_allocate_frame_buf failed.\n");
 			mxc_free_frame_buf(cam);
@@ -114,7 +111,7 @@ static int mxc_allocate_frame_buf(cam_data * cam, int count)
  *
  * @return none
  */
-static void mxc_free_frames(cam_data * cam)
+static void mxc_free_frames(cam_data *cam)
 {
 	int i;
 
@@ -137,7 +134,7 @@ static void mxc_free_frames(cam_data * cam)
  *
  * @return status  0 success, EINVAL failed.
  */
-static int mxc_v4l2_buffer_status(cam_data * cam, struct v4l2_buffer *buf)
+static int mxc_v4l2_buffer_status(cam_data *cam, struct v4l2_buffer *buf)
 {
 	/* check range */
 	if (buf->index < 0 || buf->index >= FRAME_NUM) {
@@ -156,7 +153,7 @@ static int mxc_v4l2_buffer_status(cam_data * cam, struct v4l2_buffer *buf)
  *
  * @return status  0 Success
  */
-static int mxc_streamon(cam_data * cam)
+static int mxc_streamon(cam_data *cam)
 {
 	struct mxc_v4l_frame *frame;
 	int err = 0;
@@ -206,7 +203,7 @@ static int mxc_streamon(cam_data * cam)
  *
  * @return status  0 Success
  */
-static int mxc_streamoff(cam_data * cam)
+static int mxc_streamoff(cam_data *cam)
 {
 	int err = 0;
 
@@ -245,7 +242,7 @@ static inline int valid_mode(u32 palette)
  *
  * @return 0
  */
-static int verify_preview(cam_data * cam, struct v4l2_window *win)
+static int verify_preview(cam_data *cam, struct v4l2_window *win)
 {
 	if (cam->output >= num_registered_fb) {
 		pr_debug("verify_preview No matched.\n");
@@ -283,7 +280,7 @@ static int verify_preview(cam_data * cam, struct v4l2_window *win)
  *
  * @return status  0 Success
  */
-static int start_preview(cam_data * cam)
+static int start_preview(cam_data *cam)
 {
 	int err = 0;
 
@@ -304,7 +301,7 @@ static int start_preview(cam_data * cam)
  *
  * @return status  0 Success
  */
-static int stop_preview(cam_data * cam)
+static int stop_preview(cam_data *cam)
 {
 	int err = 0;
 
@@ -321,7 +318,7 @@ static int stop_preview(cam_data * cam)
  *
  * @return  status    0 success, EINVAL failed
  */
-static int mxc_v4l2_g_fmt(cam_data * cam, struct v4l2_format *f)
+static int mxc_v4l2_g_fmt(cam_data *cam, struct v4l2_format *f)
 {
 	int retval = 0;
 
@@ -353,7 +350,7 @@ static int mxc_v4l2_g_fmt(cam_data * cam, struct v4l2_format *f)
  *
  * @return  status    0 success, EINVAL failed
  */
-static int mxc_v4l2_s_fmt(cam_data * cam, struct v4l2_format *f)
+static int mxc_v4l2_s_fmt(cam_data *cam, struct v4l2_format *f)
 {
 	int retval = 0;
 	int size = 0;
@@ -429,7 +426,7 @@ static int mxc_v4l2_s_fmt(cam_data * cam, struct v4l2_format *f)
  *
  * @return  status    0 success, EINVAL failed
  */
-static int mxc_get_v42l_control(cam_data * cam, struct v4l2_control *c)
+static int mxc_get_v42l_control(cam_data *cam, struct v4l2_control *c)
 {
 	int status = 0;
 
@@ -480,7 +477,7 @@ static int mxc_get_v42l_control(cam_data * cam, struct v4l2_control *c)
  *
  * @return  status    0 success, EINVAL failed
  */
-static int mxc_set_v42l_control(cam_data * cam, struct v4l2_control *c)
+static int mxc_set_v42l_control(cam_data *cam, struct v4l2_control *c)
 {
 	switch (c->id) {
 	case V4L2_CID_HFLIP:
@@ -570,7 +567,7 @@ static int mxc_set_v42l_control(cam_data * cam, struct v4l2_control *c)
  *
  * @return  status    0 success, EINVAL failed
  */
-static int mxc_v4l2_s_param(cam_data * cam, struct v4l2_streamparm *parm)
+static int mxc_v4l2_s_param(cam_data *cam, struct v4l2_streamparm *parm)
 {
 	sensor_interface *param;
 	csi_signal_cfg_t csi_param;
@@ -644,7 +641,7 @@ static int mxc_v4l2_s_param(cam_data * cam, struct v4l2_streamparm *parm)
  * @return  status    0 success, EINVAL invalid frame number,
  *                    ETIME timeout, ERESTARTSYS interrupted by user
  */
-static int mxc_v4l_dqueue(cam_data * cam, struct v4l2_buffer *buf)
+static int mxc_v4l_dqueue(cam_data *cam, struct v4l2_buffer *buf)
 {
 	int retval = 0;
 	struct mxc_v4l_frame *frame;
@@ -825,7 +822,7 @@ static int mxc_v4l_close(struct inode *inode, struct file *file)
 /* Number of bytes for one DMA transfer */
 #define CSI_DMA_LENGTH		(1024 * 200)
 
-static int g_dma_channel = 0;
+static int g_dma_channel;
 static int g_dma_status = CSI_DMA_STATUS_DONE;
 static volatile int g_dma_completed;	/* number of completed DMA transfers */
 static volatile int g_dma_copied;	/* number of copied DMA transfers */
@@ -997,7 +994,7 @@ static void mxc_csi_irq_callback(void *data, unsigned long status)
  * @return           bytes read
  */
 static ssize_t
-mxc_v4l_read(struct file *file, char *buf, size_t count, loff_t * ppos)
+mxc_v4l_read(struct file *file, char *buf, size_t count, loff_t *ppos)
 {
 	int err = 0;
 	struct video_device *dev = video_devdata(file);
@@ -1144,7 +1141,7 @@ mxc_v4l_read(struct file *file, char *buf, size_t count, loff_t * ppos)
  * @return           bytes read
  */
 static ssize_t
-mxc_v4l_read(struct file *file, char *buf, size_t count, loff_t * ppos)
+mxc_v4l_read(struct file *file, char *buf, size_t count, loff_t *ppos)
 {
 	int err = 0;
 	u8 *v_address;
@@ -1821,7 +1818,7 @@ static void camera_callback(u32 mask, void *dev)
  *
  * @return status  0 Success
  */
-static void init_camera_struct(cam_data * cam)
+static void init_camera_struct(cam_data *cam)
 {
 	int i;
 
@@ -1886,7 +1883,7 @@ static void init_camera_struct(cam_data * cam)
 	cam->enc_callback = camera_callback;
 
 	init_waitqueue_head(&cam->power_queue);
-	cam->int_lock = SPIN_LOCK_UNLOCKED;
+	cam->int_lock = __SPIN_LOCK_UNLOCKED(cam->int_lock);
 	spin_lock_init(&cam->int_lock);
 }
 
@@ -2000,11 +1997,13 @@ static __init int camera_init(void)
 	u8 err = 0;
 	cam_data *cam;
 
-	if ((g_cam = cam = kmalloc(sizeof(cam_data), GFP_KERNEL)) == NULL) {
+	g_cam = kmalloc(sizeof(cam_data), GFP_KERNEL);
+	if (g_cam == NULL) {
 		pr_debug("failed to mxc_v4l_register_camera\n");
 		return -1;
 	}
 
+	cam = &g_cam;
 	init_camera_struct(cam);
 
 	/* Register the I2C device */

@@ -85,8 +85,7 @@ static int prpvf_start(void *private)
 		if (err != 0)
 			return err;
 
-		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
-			cam->cam_sensor->csi, true, true);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, true, true);
 
 		if (cam->vf_bufs_vaddr[0]) {
 			dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -282,8 +281,7 @@ static int prpvf_start(void *private)
 			       "initializing CSI_PRP_VF_ADC\n");
 			return err;
 		}
-		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
-			cam->cam_sensor->csi, true, true);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, true, true);
 		err = ipu_init_channel_buffer(CSI_PRP_VF_ADC, IPU_OUTPUT_BUFFER,
 					      format, cam->win.w.width,
 					      cam->win.w.height,
@@ -307,8 +305,7 @@ static int prpvf_start(void *private)
 			return err;
 		}
 
-		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
-			cam->cam_sensor->csi, true, true);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, true, true);
 
 		if (cam->vf_bufs[0]) {
 			dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -478,15 +475,13 @@ static int prpvf_stop(void *private)
 		ipu_uninit_channel(MEM_ROT_VF_MEM);
 		ipu_uninit_channel(ADC_SYS2);
 
-		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
-			cam->cam_sensor->csi, false, false);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, false, false);
 	}
 #ifndef CONFIG_MXC_IPU_PRP_VF_SDC
 	else if (cam->rotation == IPU_ROTATE_NONE) {
 		ipu_disable_channel(CSI_PRP_VF_ADC, false);
 		ipu_uninit_channel(CSI_PRP_VF_ADC);
-		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
-			cam->cam_sensor->csi, false, false);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, false, false);
 	}
 #endif
 	else {
@@ -498,8 +493,7 @@ static int prpvf_stop(void *private)
 		ipu_uninit_channel(CSI_PRP_VF_MEM);
 		ipu_uninit_channel(ADC_SYS2);
 
-		ipu_csi_enable_mclk_if(CSI_MCLK_VF,
-			cam->cam_sensor->csi, false, false);
+		ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, false, false);
 	}
 
 	if (cam->vf_bufs_vaddr[0]) {

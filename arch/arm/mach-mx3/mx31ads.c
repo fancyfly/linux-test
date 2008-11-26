@@ -29,6 +29,7 @@
 #include <linux/platform_device.h>
 #include <linux/fsl_devices.h>
 #include <linux/spi/spi.h>
+#include <linux/i2c.h>
 #include <linux/ata.h>
 #if defined(CONFIG_MTD) || defined(CONFIG_MTD_MODULE)
 #include <linux/mtd/mtd.h>
@@ -422,6 +423,40 @@ static inline void mxc_init_bl(void)
 {
 }
 #endif
+
+/*!
+ * Data structures and data for mt9v111 camera.
+ */
+static struct mxc_camera_platform_data camera_mt9v111_data = {
+	.mclk = 27000000,
+};
+
+/*!
+ * Data structures and data for ov2640 camera.
+ */
+static struct mxc_camera_platform_data camera_ov2640_data = {
+	.core_regulator = NULL,
+	.io_regulator = NULL,
+	.analog_regulator = NULL,
+	.gpo_regulator = NULL,
+	.mclk = 24000000,
+};
+
+/*!
+ * Info to register i2c devices.
+ */
+static struct i2c_board_info mxc_i2c_info[] __initdata = {
+	{
+	 .type = "mt9v111",
+	 .addr = 0x48,
+	 .platform_data = (void *)&camera_mt9v111_data,
+	 },
+	{
+	 .type = "ov2640",
+	 .addr = 0x30,
+	 .platform_data = (void *)&camera_ov2640_data,
+	 },
+};
 
 #if defined(CONFIG_MXC_FIR) || defined(CONFIG_MXC_FIR_MODULE)
 /*!
@@ -878,6 +913,7 @@ static void __init mxc_board_init(void)
 	mxc_init_nor_mtd();
 	mxc_init_nand_mtd();
 
+	i2c_register_board_info(0, mxc_i2c_info, ARRAY_SIZE(mxc_i2c_info));
 	spi_register_board_info(mxc_spi_board_info,
 				ARRAY_SIZE(mxc_spi_board_info));
 

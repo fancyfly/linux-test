@@ -24,6 +24,12 @@
 #include "ipu_prp_sw.h"
 #include <linux/dma-mapping.h>
 
+#ifdef CAMERA_DBG
+	#define CAMERA_TRACE(x) (printk)x
+#else
+	#define CAMERA_TRACE(x)
+#endif
+
 static ipu_rotate_mode_t grotation = IPU_ROTATE_NONE;
 
 /*
@@ -63,24 +69,25 @@ static int prp_enc_setup(cam_data * cam)
 	int err = 0;
 	dma_addr_t dummy = 0xdeadbeaf;
 
+	CAMERA_TRACE("In prp_enc_setup\n");
 	if (!cam) {
 		printk(KERN_ERR "cam private is NULL\n");
 		return -ENXIO;
 	}
-
 	memset(&enc, 0, sizeof(ipu_channel_params_t));
 
 	ipu_csi_get_window_size(&enc.csi_prp_enc_mem.in_width,
-				&enc.csi_prp_enc_mem.in_height,
-				cam->cam_sensor->csi);
+				&enc.csi_prp_enc_mem.in_height, cam->csi);
+
 	enc.csi_prp_enc_mem.in_pixel_fmt = IPU_PIX_FMT_UYVY;
 	enc.csi_prp_enc_mem.out_width = cam->v2f.fmt.pix.width;
 	enc.csi_prp_enc_mem.out_height = cam->v2f.fmt.pix.height;
-	enc.csi_prp_enc_mem.csi = cam->cam_sensor->csi;
+	enc.csi_prp_enc_mem.csi = cam->csi;
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		enc.csi_prp_enc_mem.out_width = cam->v2f.fmt.pix.height;
 		enc.csi_prp_enc_mem.out_height = cam->v2f.fmt.pix.width;
 	}
+
 	if (cam->v2f.fmt.pix.pixelformat == V4L2_PIX_FMT_YUV420) {
 		enc.csi_prp_enc_mem.out_pixel_fmt = IPU_PIX_FMT_YUV420P;
 		pr_info("YUV420\n");
@@ -113,7 +120,7 @@ static int prp_enc_setup(cam_data * cam)
 		return err;
 	}
 
-	ipu_csi_enable_mclk_if(CSI_MCLK_ENC, cam->cam_sensor->csi, true, true);
+	ipu_csi_enable_mclk_if(CSI_MCLK_ENC, cam->csi, true, true);
 
 	grotation = cam->rotation;
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
@@ -244,6 +251,7 @@ static int prp_enc_setup(cam_data * cam)
 			return err;
 		}
 	}
+
 	return err;
 }
 
@@ -296,6 +304,7 @@ static int prp_enc_enabling_tasks(void *private)
 {
 	cam_data *cam = (cam_data *) private;
 	int err = 0;
+	CAMERA_TRACE("IPU:In prp_enc_enabling_tasks\n");
 
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		err = ipu_request_irq(IPU_IRQ_PRP_ENC_ROT_OUT_EOF,
@@ -349,8 +358,7 @@ static int prp_enc_disabling_tasks(void *private)
 		ipu_uninit_channel(MEM_ROT_ENC_MEM);
 	}
 
-	ipu_csi_enable_mclk_if(CSI_MCLK_ENC,
-		cam->cam_sensor->csi, false, false);
+	ipu_csi_enable_mclk_if(CSI_MCLK_ENC, cam->csi, false, false);
 
 	return err;
 }

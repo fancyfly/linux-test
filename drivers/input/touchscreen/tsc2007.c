@@ -262,6 +262,7 @@ static int tsc2007_driver_register(struct tsc2007_data *data)
 		if (!ret) {
 			printk(KERN_INFO "%s: Registering Touchscreen device\n",
 			       __func__);
+			set_irq_wake(data->penirq, 1);
 		} else {
 			printk(KERN_ERR "%s: Cannot grab irq %d\n",
 			       __func__, data->penirq);

@@ -234,6 +234,7 @@ static int mpr084_driver_register(struct mpr084_data *data)
 				IRQF_TRIGGER_FALLING, DRIVER_NAME, data);
 		if (!ret) {
 			init_completion(&data->kpirq_completion);
+			set_irq_wake(data->kpirq, 1);
 		} else {
 			printk(KERN_ERR "%s: cannot grab irq %d\n",
 			       __func__, data->kpirq);

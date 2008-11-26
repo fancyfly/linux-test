@@ -93,17 +93,12 @@ struct mxc_dptc_data {
 
 /*!
  * This function is called to put the DPTC in a low power state.
- *
  */
-void dptc_disable(struct device *dev);
-
+void dptc_suspend(void);
 /*!
  * This function is called to resume the DPTC from a low power state.
- *
  */
-void dptc_enable(struct device *dev);
-
-extern void dptc_suspend(void);
+void dptc_resume(void);
 
 #endif				/* __KERNEL__ */
 

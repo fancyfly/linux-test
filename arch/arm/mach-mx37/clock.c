@@ -2677,7 +2677,7 @@ static struct clk *mxc_clks[] = {
 	&esdhc3_clk[0],
 	&esdhc3_clk[1],
 	&esdhc3_clk[2],
-	&esdhc_dep_clks;
+	&esdhc_dep_clks,
 	&emi_core_clk,
 	&emi_fast_clk,
 	&emi_slow_clk,

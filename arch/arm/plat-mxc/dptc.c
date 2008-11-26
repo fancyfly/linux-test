@@ -138,9 +138,10 @@ static irqreturn_t dptc_irq(int irq, void *dev_id)
 
 		if (drv_data->turbo_mode_active == 1)
 			schedule_delayed_work(&drv_data->dptc_work, 0);
+		return IRQ_HANDLED;
 	}
 
-	return IRQ_RETVAL(1);
+	return IRQ_NONE;
 }
 
 static void dptc_workqueue_handler(struct work_struct *work1)
@@ -231,7 +232,7 @@ static int start_dptc(struct device *dev)
 
 	return 0;
 
-      err:
+err:
 	spin_unlock_irqrestore(&drv_data->lock, flags);
 	pr_info("DPTC is not enabled\n");
 	return -1;
@@ -262,7 +263,7 @@ static void stop_dptc(struct device *dev)
 }
 
 /*
-  this function does not change the working point. It can be
+  This function does not change the working point. It can be
  called from an interrupt context.
 */
 void dptc_suspend()
@@ -276,14 +277,34 @@ void dptc_suspend()
 
 	dptccr = __raw_readl(dptc_data->dptccr_reg_addr);
 
-	/* disable DPTC and mask its interrupt */
-	dptccr =
-	    ((dptccr & ~(dptc_data->dptc_enable_bit)) | dptc_data->
-	     irq_mask) & (~dptc_data->dptc_nvcr_bit);
+	/* Disable DPTC and mask its interrupt */
+	dptccr = (dptccr & ~(dptc_data->dptc_enable_bit)) | dptc_data->irq_mask;
 
 	__raw_writel(dptccr, dptc_data->dptccr_reg_addr);
 }
 EXPORT_SYMBOL(dptc_suspend);
+
+/*
+  This function does not change the working point. It can be
+ called from an interrupt context.
+*/
+void dptc_resume()
+{
+	struct mxc_dptc_data *dptc_data = dev_data->platform_data;
+	struct dptc_device *drv_data = dev_data->driver_data;
+	u32 dptccr;
+
+	if (!drv_data->dptc_is_active)
+		return;
+
+	dptccr = __raw_readl(dptc_data->dptccr_reg_addr);
+
+	/* Enable DPTC and unmask its interrupt */
+	dptccr = (dptccr & ~(dptc_data->irq_mask)) | dptc_data->dptc_enable_bit;
+
+	__raw_writel(dptccr, dptc_data->dptccr_reg_addr);
+}
+EXPORT_SYMBOL(dptc_resume);
 
 /*!
  * This function is called to put the DPTC in a low power state.
@@ -305,13 +326,14 @@ void dptc_disable(struct device *dev)
  * This function is called to resume the DPTC from a low power state.
  *
  */
-void dptc_enable(struct device *dev)
+int dptc_enable(struct device *dev)
 {
 	struct dptc_device *drv_data = dev->driver_data;
 
 	if (drv_data->dptc_is_active)
-		return;
-	start_dptc(dev);
+		return 0;
+
+	return start_dptc(dev);
 }
 
 static ssize_t dptc_show(struct device *dev, struct device_attribute *attr,
@@ -488,7 +510,7 @@ static int mxc_dptc_resume(struct platform_device *pdev)
 	struct dptc_device *drv_data = pdev->dev.driver_data;
 
 	if (drv_data->dptc_is_active)
-		start_dptc(&pdev->dev);
+		return start_dptc(&pdev->dev);
 
 	return 0;
 }
@@ -536,9 +558,6 @@ static void __exit dptc_cleanup(void)
 
 module_init(dptc_init);
 module_exit(dptc_cleanup);
-
-EXPORT_SYMBOL(dptc_disable);
-EXPORT_SYMBOL(dptc_enable);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("DPTC driver");

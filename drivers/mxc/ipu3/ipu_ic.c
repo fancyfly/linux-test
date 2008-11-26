@@ -487,9 +487,9 @@ static void _init_csc(uint8_t ic_task, ipu_color_space_t in_format,
 	uint32_t param;
 	uint32_t *base = NULL;
 
-	if (ic_task == IC_TASK_VIEWFINDER) {
+	if (ic_task == IC_TASK_ENCODER) {
 		base = ipu_tpmem_base + 0x2008 / 4;
-	} else if (ic_task == IC_TASK_ENCODER) {
+	} else if (ic_task == IC_TASK_VIEWFINDER) {
 		base = ipu_tpmem_base + 0x4028 / 4;
 	} else if (ic_task == IC_TASK_POST_PROCESSOR) {
 		base = ipu_tpmem_base + 0x6060 / 4;

@@ -20,6 +20,7 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/mxc_dptc.h>
 #include <asm/div64.h>
+#include <asm/arch/mxc_dptc.h>
 
 #include "crm_regs.h"
 
@@ -1243,15 +1244,12 @@ static void dptcen_after_timeout(unsigned long ptr)
 	u32 dptc_active;
 
 	spin_lock_irqsave(&mxc_dfs_lock, flags);
-	pmcr0 = __raw_readl(MXC_CCM_PMCR0);
-	dptc_active = pmcr0 & MXC_CCM_PMCR0_DPTEN;
 
 	/*
 	 * If DPTC is still active and core is running in Turbo mode
 	 */
-	if ((dptcen_timer.data == cpu_wp_nr - 1) && dptc_active) {
-		pmcr0 |= (MXC_CCM_PMCR0_DPVCR | MXC_CCM_PMCR0_DPVV);
-		__raw_writel(pmcr0, MXC_CCM_PMCR0);
+	if (dptcen_timer.data == cpu_wp_nr - 1) {
+		dptc_resume();
 	}
 	spin_unlock_irqrestore(&mxc_dfs_lock, flags);
 }

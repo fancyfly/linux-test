@@ -221,6 +221,21 @@ static void isp1504_suspend(struct fsl_xcvr_ops *this)
 	pr_debug("%s.\n", __func__);
 }
 
+/*!
+ * Set the 1504 transceiver to the proper mode for testing purposes.
+ *
+ * @param       view  the ULPI VIEWPORT register address
+ * @param       test_mode Set the 1504 transceiver to disable bit stuffing and NRZI
+ */
+ static void isp1504_set_test_mode(volatile u32 *view, enum usb_test_mode test_mode)
+{
+	if (test_mode == USB_TEST_J || test_mode == USB_TEST_K) {
+		printk(KERN_INFO "udc: disable bit stuffing and NRZI\n");
+		/* Disable bit-stuffing and NRZI encoding. */
+		isp1504_set(0x10, 0x04, view);
+	}
+}
+
 static struct fsl_xcvr_ops isp1504_ops = {
 	.name = "isp1504",
 	.xcvr_type = PORTSC_PTS_ULPI,
@@ -229,6 +244,7 @@ static struct fsl_xcvr_ops isp1504_ops = {
 	.suspend = isp1504_suspend,
 	.set_vbus_power = isp1504_set_vbus_power,
 	.set_remote_wakeup = isp1504_set_remote_wakeup,
+	.set_test_mode = isp1504_set_test_mode,
 };
 
 extern void fsl_usb_xcvr_register(struct fsl_xcvr_ops *xcvr_ops);

@@ -5,6 +5,11 @@
 
 struct fsl_usb2_platform_data;
 
+enum usb_test_mode{
+	USB_TEST_J = 1,
+	USB_TEST_K = 2,
+};
+
 /**
  * @name: transceiver name
  * @xcvr_type: one of PORTSC_PTS_{UTMI,SERIAL,ULPI}
@@ -28,6 +33,7 @@ struct fsl_xcvr_ops {
 			       struct fsl_usb2_platform_data *pdata, int on);
 	void (*set_remote_wakeup)(u32 *view);
 	void (*pullup)(int on);
+	void(*set_test_mode)(u32 *view, enum usb_test_mode mode);
 };
 
 struct fsl_xcvr_power {

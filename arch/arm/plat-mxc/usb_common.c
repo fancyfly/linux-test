@@ -52,6 +52,7 @@ static struct clk *usb_ahb_clk;
 
 extern int gpio_usbotg_hs_active(void);
 extern int gpio_usbotg_hs_inactive(void);
+
 /*
  * make sure USB_CLK is running at 60 MHz +/- 1000 Hz
  */
@@ -92,6 +93,13 @@ void fsl_usb_xcvr_register(struct fsl_xcvr_ops *xcvr_ops)
 	pr_debug("Failed %s\n", __func__);
 }
 EXPORT_SYMBOL(fsl_usb_xcvr_register);
+
+void fsl_platform_set_test_mode (struct fsl_usb2_platform_data *pdata, enum usb_test_mode mode)
+{
+	if (pdata->xcvr_ops && pdata->xcvr_ops->set_test_mode)
+		pdata->xcvr_ops->set_test_mode((u32 *)(pdata->regs + ULPIVW_OFF), mode);
+}
+EXPORT_SYMBOL(fsl_platform_set_test_mode);
 
 void fsl_usb_xcvr_unregister(struct fsl_xcvr_ops *xcvr_ops)
 {

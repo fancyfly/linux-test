@@ -96,6 +96,8 @@ static void fsl_ep_fifo_flush(struct usb_ep *_ep);
 extern struct resource *otg_get_resources(void);
 #endif
 
+extern void fsl_platform_set_test_mode(struct fsl_usb2_platform_data *pdata, enum usb_test_mode mode);
+
 #ifdef CONFIG_PPC32
 #define fsl_readl(addr)		in_le32((addr))
 #define fsl_writel(addr, val32) out_le32((val32), (addr))
@@ -1514,9 +1516,10 @@ static void setup_received_irq(struct fsl_udc *udc,
 			u32 tmp;
 
 			mdelay(10);
+			fsl_platform_set_test_mode(udc->pdata, ptc);
 			tmp = fsl_readl(&dr_regs->portsc1) | (ptc << 16);
 			fsl_writel(tmp, &dr_regs->portsc1);
-			printk(KERN_INFO "udc: switch to test mode %d.\n", ptc);
+			printk(KERN_INFO "udc: switch to test mode 0x%x.\n", ptc);
 		}
 
 		return;

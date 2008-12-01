@@ -25,6 +25,7 @@
 #include <asm/hardware.h>
 #include <asm/arch/arc_otg.h>
 #include <asm/mach-types.h>
+#include <asm/arch/pmic_external.h>
 
 static void usb_utmi_init(struct fsl_xcvr_ops *this)
 {
@@ -57,6 +58,24 @@ static void set_power(struct fsl_xcvr_ops *this,
 		} else {
 			regulator_disable(usbotg_regux);
 		}
+		regulator_put(usbotg_regux, dev);
+	} else if (machine_is_mx51_3ds()) {
+		unsigned int value;
+
+		/* VUSBIN */
+		pmic_read_reg(REG_USB1, &value, 0xffffff);
+		if (on)
+			value |= 0x1;
+		else
+			value &= ~0x1;
+		pmic_write_reg(REG_USB1, value, 0xffffff);
+
+		/* VUSBEN */
+		usbotg_regux = regulator_get(dev, "USB");
+		if (on)
+			regulator_enable(usbotg_regux);
+		else
+			regulator_disable(usbotg_regux);
 		regulator_put(usbotg_regux, dev);
 	}
 }

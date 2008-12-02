@@ -425,31 +425,17 @@ void gpio_i2c_inactive(int i2c_num)
 	switch (i2c_num) {
 	case 0:
 		/*i2c1 sda */
-		mxc_request_iomux(MX51_PIN_CSPI1_MOSI, IOMUX_CONFIG_ALT0);
-		mxc_iomux_set_input(MUX_IN_I2C1_IPP_SDA_IN_SELECT_INPUT,
-				    INPUT_CTL_PATH0);
-		mxc_iomux_set_pad(MX51_PIN_CSPI1_MOSI,
-				  PAD_CTL_PUE_KEEPER | PAD_CTL_PKE_ENABLE);
+		mxc_free_iomux(MX51_PIN_CSPI1_MOSI,
+			       IOMUX_CONFIG_ALT1 | IOMUX_CONFIG_SION);
 		/*i2c1 scl */
-		mxc_request_iomux(MX51_PIN_CSPI1_SCLK, IOMUX_CONFIG_ALT0);
-		mxc_iomux_set_input(MUX_IN_I2C1_IPP_SCL_IN_SELECT_INPUT,
-				    INPUT_CTL_PATH0);
-		mxc_iomux_set_pad(MX51_PIN_CSPI1_SCLK,
-				  PAD_CTL_PUE_KEEPER | PAD_CTL_PKE_ENABLE);
+		mxc_free_iomux(MX51_PIN_CSPI1_SCLK,
+			       IOMUX_CONFIG_ALT1 | IOMUX_CONFIG_SION);
 		break;
 	case 1:
-		mxc_request_iomux(MX51_PIN_GPIO1_2, IOMUX_CONFIG_ALT0);
-		mxc_request_iomux(MX51_PIN_GPIO1_3, IOMUX_CONFIG_ALT0);
-
-		mxc_iomux_set_input(MUX_IN_I2C2_IPP_SDA_IN_SELECT_INPUT,
-				    INPUT_CTL_PATH0);
-		mxc_iomux_set_input(MUX_IN_I2C2_IPP_SCL_IN_SELECT_INPUT,
-				    INPUT_CTL_PATH0);
-
-		mxc_iomux_set_pad(MX51_PIN_GPIO1_2,
-				  PAD_CTL_PUE_KEEPER | PAD_CTL_PKE_ENABLE);
-		mxc_iomux_set_pad(MX51_PIN_GPIO1_3,
-				  PAD_CTL_PUE_KEEPER | PAD_CTL_PKE_ENABLE);
+		mxc_free_iomux(MX51_PIN_GPIO1_2,
+			       IOMUX_CONFIG_ALT2 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX51_PIN_GPIO1_3,
+			       IOMUX_CONFIG_ALT2 | IOMUX_CONFIG_SION);
 		break;
 	case 2:
 		break;
@@ -475,6 +461,10 @@ EXPORT_SYMBOL(gpio_i2c_hs_active);
 
 void gpio_i2c_hs_inactive(void)
 {
+	mxc_free_iomux(MX51_PIN_I2C1_CLK,
+		       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+	mxc_free_iomux(MX51_PIN_I2C1_DAT,
+		       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
 }
 
 EXPORT_SYMBOL(gpio_i2c_hs_inactive);
@@ -742,28 +732,29 @@ void gpio_sensor_active(unsigned int csi)
 
 		mxc_request_iomux(MX51_PIN_CSI1_VSYNC, IOMUX_CONFIG_ALT0);
 		mxc_iomux_set_pad(MX51_PIN_CSI1_VSYNC, PAD_CTL_HYS_NONE |
-				PAD_CTL_SRE_SLOW);
+				  PAD_CTL_SRE_SLOW);
 
 		mxc_request_iomux(MX51_PIN_CSI1_HSYNC, IOMUX_CONFIG_ALT0);
 		mxc_iomux_set_pad(MX51_PIN_CSI1_HSYNC, PAD_CTL_HYS_NONE |
-				PAD_CTL_SRE_SLOW);
+				  PAD_CTL_SRE_SLOW);
 
 		mxc_iomux_set_pad(MX51_PIN_CSI1_PIXCLK, PAD_CTL_HYS_NONE);
 
 		mxc_request_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_ALT1);
 		mxc_iomux_set_pad(MX51_PIN_EIM_EB2, PAD_CTL_HYS_NONE |
-				PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
-				PAD_CTL_100K_PD | PAD_CTL_ODE_OPENDRAIN_NONE |
-				PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW);
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_100K_PD | PAD_CTL_ODE_OPENDRAIN_NONE |
+				  PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW);
 		mxc_set_gpio_direction(MX51_PIN_EIM_EB2, 0);
 		mxc_set_gpio_dataout(MX51_PIN_EIM_EB2, 0);
 
 		mxc_request_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT5);
-		mxc_iomux_set_input(
-			MUX_IN_HSC_MIPI_MIX_IPP_IND_SENS2_DATA_EN_SELECT_INPUT,
-			INPUT_CTL_PATH0);
-		mxc_iomux_set_pad(MX51_PIN_EIM_A26, PAD_CTL_HYS_NONE |
-				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL);
+		mxc_iomux_set_input
+		    (MUX_IN_HSC_MIPI_MIX_IPP_IND_SENS2_DATA_EN_SELECT_INPUT,
+		     INPUT_CTL_PATH0);
+		mxc_iomux_set_pad(MX51_PIN_EIM_A26,
+				  PAD_CTL_HYS_NONE | PAD_CTL_PKE_ENABLE |
+				  PAD_CTL_PUE_PULL);
 		break;
 	case 1:
 		mxc_iomux_set_pad(MX51_PIN_CSI2_PKE0, PAD_CTL_PKE_ENABLE);

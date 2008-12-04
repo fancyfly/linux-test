@@ -93,12 +93,18 @@ struct mxc_dptc_data {
 
 /*!
  * This function is called to put the DPTC in a low power state.
+ *
+ * @param   id   The DPTC device id. DPTC_GP_ID is for DPTC GP;
+ *               DPTC_LP_ID is for DPTC LP
  */
-void dptc_suspend(void);
+void dptc_suspend(int id);
 /*!
  * This function is called to resume the DPTC from a low power state.
+ *
+ * @param   id   The DPTC device id. DPTC_GP_ID is for DPTC GP;
+ *               DPTC_LP_ID is for DPTC LP
  */
-void dptc_resume(void);
+void dptc_resume(int id);
 
 #endif				/* __KERNEL__ */
 

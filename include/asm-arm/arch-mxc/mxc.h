@@ -320,6 +320,12 @@ struct mxc_unifi_platform_data *get_unifi_plat_data(void);
 #define IS_MEM_DEVICE_NONSHARED(x)  ((x) < 0x80000000 && (x) != L2CC_BASE_ADDR)
 #endif
 
+/*!
+ * DPTC GP and LP ID
+ */
+#define DPTC_GP_ID 0
+#define DPTC_LP_ID 1
+
 #ifndef __ASSEMBLY__
 #include <linux/types.h>
 

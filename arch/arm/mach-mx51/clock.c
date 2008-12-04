@@ -2530,6 +2530,47 @@ static struct clk sahara_clk[] = {
 	}
 };
 
+static int _clk_gpu3d_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 reg, mux;
+
+	reg = __raw_readl(MXC_CCM_CBCMR);
+	mux = _get_mux(parent, &axi_a_clk, &axi_b_clk, &emi_slow_clk, &ahb_clk);
+	reg = (reg & ~MXC_CCM_CBCMR_GPU_CLK_SEL_MASK) |
+	    (mux << MXC_CCM_CBCMR_GPU_CLK_SEL_OFFSET);
+	__raw_writel(reg, MXC_CCM_CBCMR);
+
+	return 0;
+}
+
+static struct clk gpu3d_clk = {
+	.name = "gpu3d_clk",
+	.parent = &axi_a_clk,
+	.set_parent = _clk_gpu3d_set_parent,
+	.enable = _clk_enable,
+	.enable_reg = MXC_CCM_CCGR5,
+	.enable_shift = MXC_CCM_CCGR5_CG1_OFFSET,
+	.disable = _clk_disable,
+};
+
+static struct clk garb_clk = {
+	.name = "garb_clk",
+	.parent = &axi_a_clk,
+	.enable = _clk_enable,
+	.enable_reg = MXC_CCM_CCGR5,
+	.enable_shift = MXC_CCM_CCGR5_CG2_OFFSET,
+	.disable = _clk_disable,
+};
+
+static struct clk emi_garb_clk = {
+	.name = "emi_garb_clk",
+	.parent = &axi_a_clk,
+	.enable = _clk_enable,
+	.enable_reg = MXC_CCM_CCGR6,
+	.enable_shift = MXC_CCM_CCGR6_CG4_OFFSET,
+	.disable = _clk_disable,
+};
+
 static struct clk *mxc_clks[] = {
 	&osc_clk,
 	&ckih_clk,
@@ -2642,6 +2683,9 @@ static struct clk *mxc_clks[] = {
 	&mipi_hsp_clk,
 	&sahara_clk[0],
 	&sahara_clk[1],
+	&gpu3d_clk,
+	&garb_clk,
+	&emi_garb_clk,
 };
 
 static void clk_tree_init(void)

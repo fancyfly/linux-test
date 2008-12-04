@@ -779,7 +779,7 @@ int32_t ipu_select_buffer(ipu_channel_t channel, ipu_buffer_t type,
 EXPORT_SYMBOL(ipu_select_buffer);
 
 static int proc_dest_sel[] =
-    { 0, 1, 2, 3, 5, 5, 4, 7, 8, 9, 10, 11, 12, 14, 15 };
+    { 0, 1, 1, 3, 5, 5, 4, 7, 8, 9, 10, 11, 12, 14, 15 };
 static int proc_src_sel[] = { 0, 6, 7, 6, 7, 8, 5, };
 static int disp_src_sel[] = { 0, 6, 7, 8, 3, 4, 5, };
 

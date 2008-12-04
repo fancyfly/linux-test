@@ -55,7 +55,8 @@ enum {
 	DPTC_PTVAI_EMERG,
 };
 
-struct device *dev_data;
+struct device *dev_data0;
+struct device *dev_data1;
 
 /*!
  * In case the MXC device has multiple DPTC modules, this structure is used to
@@ -266,11 +267,28 @@ static void stop_dptc(struct device *dev)
   This function does not change the working point. It can be
  called from an interrupt context.
 */
-void dptc_suspend()
+void dptc_suspend(int id)
 {
-	struct mxc_dptc_data *dptc_data = dev_data->platform_data;
-	struct dptc_device *drv_data = dev_data->driver_data;
+	struct mxc_dptc_data *dptc_data;
+	struct dptc_device *drv_data;
 	u32 dptccr;
+
+	switch (id) {
+	case DPTC_GP_ID:
+		dptc_data = dev_data0->platform_data;
+		drv_data = dev_data0->driver_data;
+		break;
+	case DPTC_LP_ID:
+		if (dev_data1 == NULL)
+			return;
+
+		dptc_data = dev_data1->platform_data;
+		drv_data = dev_data1->driver_data;
+		break;
+		/* Unknown DPTC ID */
+	default:
+		return;
+	}
 
 	if (!drv_data->dptc_is_active)
 		return;
@@ -288,11 +306,28 @@ EXPORT_SYMBOL(dptc_suspend);
   This function does not change the working point. It can be
  called from an interrupt context.
 */
-void dptc_resume()
+void dptc_resume(int id)
 {
-	struct mxc_dptc_data *dptc_data = dev_data->platform_data;
-	struct dptc_device *drv_data = dev_data->driver_data;
+	struct mxc_dptc_data *dptc_data;
+	struct dptc_device *drv_data;
 	u32 dptccr;
+
+	switch (id) {
+	case DPTC_GP_ID:
+		dptc_data = dev_data0->platform_data;
+		drv_data = dev_data0->driver_data;
+		break;
+	case DPTC_LP_ID:
+		if (dev_data1 == NULL)
+			return;
+
+		dptc_data = dev_data1->platform_data;
+		drv_data = dev_data1->driver_data;
+		break;
+		/* Unknown DPTC ID */
+	default:
+		return;
+	}
 
 	if (!drv_data->dptc_is_active)
 		return;
@@ -463,7 +498,9 @@ static int __devinit mxc_dptc_probe(struct platform_device *pdev)
 	dptc_device_data->dptc_clk = clk_get(NULL, dptc_data->clk_id);
 
 	if (pdev->id == 0)
-		dev_data = &pdev->dev;
+		dev_data0 = &pdev->dev;
+	else
+		dev_data1 = &pdev->dev;
 
 	dptc_device_data->dptc_platform_data = pdev->dev.platform_data;
 

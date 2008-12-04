@@ -1239,8 +1239,6 @@ static DEFINE_SPINLOCK(mxc_dfs_lock);
 static void dptcen_after_timeout(unsigned long ptr)
 {
 	u32 flags = 0;
-	u32 pmcr0;
-	u32 dptc_active;
 
 	spin_lock_irqsave(&mxc_dfs_lock, flags);
 
@@ -1248,7 +1246,7 @@ static void dptcen_after_timeout(unsigned long ptr)
 	 * If DPTC is still active and core is running in Turbo mode
 	 */
 	if (dptcen_timer.data == cpu_wp_nr - 1) {
-		dptc_resume();
+		dptc_resume(DPTC_GP_ID);
 	}
 	spin_unlock_irqrestore(&mxc_dfs_lock, flags);
 }
@@ -1352,7 +1350,7 @@ static int cpu_clk_set_wp(int wp)
 		dptcen_timer.data = wp;
 		add_timer(&dptcen_timer);
 	} else {
-		dptc_suspend();
+		dptc_suspend(DPTC_GP_ID);
 	}
 
 	return 0;

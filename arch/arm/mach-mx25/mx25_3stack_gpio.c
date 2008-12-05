@@ -170,15 +170,10 @@ void gpio_uart_inactive(int port, int no_irda)
 		mxc_free_iomux(MX25_PIN_KPP_ROW3, MUX_CONFIG_GPIO);
 		break;
 	case 3:
-		mxc_request_gpio(MX25_PIN_LD8);
-		mxc_request_gpio(MX25_PIN_LD9);
-		mxc_request_gpio(MX25_PIN_LD10);
-		mxc_request_gpio(MX25_PIN_LD11);
-
-		mxc_free_iomux(MX25_PIN_LD8, MUX_CONFIG_GPIO);
-		mxc_free_iomux(MX25_PIN_LD9, MUX_CONFIG_GPIO);
-		mxc_free_iomux(MX25_PIN_LD10, MUX_CONFIG_GPIO);
-		mxc_free_iomux(MX25_PIN_LD11, MUX_CONFIG_GPIO);
+		mxc_free_iomux(MX25_PIN_LD8, MUX_CONFIG_FUNC);
+		mxc_free_iomux(MX25_PIN_LD9, MUX_CONFIG_FUNC);
+		mxc_free_iomux(MX25_PIN_LD10, MUX_CONFIG_FUNC);
+		mxc_free_iomux(MX25_PIN_LD11, MUX_CONFIG_FUNC);
 		break;
 	case 4:
 		mxc_request_gpio(MX25_PIN_CSI_D2);

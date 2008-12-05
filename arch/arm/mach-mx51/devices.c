@@ -819,7 +819,7 @@ static inline void mx51_init_lpmode(void)
 	(void)platform_device_register(&mx51_lpmode_device);
 }
 
-static int __init mxc_init_devices(void)
+int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
 	mxc_init_spi();
@@ -836,5 +836,3 @@ static int __init mxc_init_devices(void)
 	mx51_init_lpmode();
 	return 0;
 }
-
-arch_initcall(mxc_init_devices);

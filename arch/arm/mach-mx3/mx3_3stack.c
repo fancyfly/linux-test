@@ -74,6 +74,7 @@ extern struct sys_timer mxc_timer;
 extern void mxc_cpu_common_init(void);
 extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
+extern int mxc_init_devices(void);
 
 static void mxc_nop_release(struct device *dev)
 {
@@ -982,6 +983,7 @@ static void __init mxc_board_init(void)
 	mxc_clocks_init();
 	mxc_gpio_init();
 	early_console_setup(saved_command_line);
+	mxc_init_devices();
 
 	/*Pull down MX31_PIN_USB_BYP to reset USB3317 */
 	mxc_request_iomux(MX31_PIN_USB_BYP, OUTPUTCONFIG_GPIO,

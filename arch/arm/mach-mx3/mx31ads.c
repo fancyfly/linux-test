@@ -67,6 +67,7 @@ extern void mx31ads_gpio_init(void) __init;
 extern void mxc_cpu_common_init(void);
 extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
+extern int mxc_init_devices(void);
 
 static void mxc_nop_release(struct device *dev)
 {
@@ -867,6 +868,7 @@ static void __init mxc_board_init(void)
 	mxc_cpu_common_init();
 	mxc_clocks_init();
 	early_console_setup(saved_command_line);
+	mxc_init_devices();
 	mxc_init_pmic_audio();
 	mxc_gpio_init();
 	mx31ads_gpio_init();

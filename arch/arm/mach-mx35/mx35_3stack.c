@@ -55,6 +55,8 @@
  * @ingroup MSL_MX35
  */
 
+extern int mxc_init_devices(void);
+
 unsigned int mx35_3stack_board_io;
 
 static void mxc_nop_release(struct device *dev)
@@ -820,6 +822,7 @@ static void __init mxc_board_init(void)
 	mxc_clocks_init();
 	early_console_setup(saved_command_line);
 	mxc_gpio_init();
+	mxc_init_devices();
 	mx35_3stack_gpio_init();
 	mxc_init_enet();
 	mxc_init_nor_mtd();

@@ -829,7 +829,7 @@ static inline void mx37_init_lpmode(void)
 	(void)platform_device_register(&mx37_lpmode_device);
 }
 
-static int __init mxc_init_devices(void)
+int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
 	mxc_init_ipu();
@@ -848,5 +848,3 @@ static int __init mxc_init_devices(void)
 	spba_take_ownership(SPBA_SSI2, SPBA_MASTER_C | SPBA_MASTER_A);
 	return 0;
 }
-
-arch_initcall(mxc_init_devices);

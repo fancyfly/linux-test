@@ -62,6 +62,7 @@ extern struct sys_timer mxc_timer;
 extern void mxc_cpu_common_init(void);
 extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
+extern int mxc_init_devices(void);
 
 /* working point(wp): 0 - 532MHz; 1 - 200MHz; */
 static struct cpu_wp cpu_wp_auto[] = {
@@ -850,6 +851,7 @@ static void __init mxc_board_init(void)
 	mxc_clocks_init();
 	mxc_gpio_init();
 	early_console_setup(saved_command_line);
+	mxc_init_devices();
 	if (!board_is_mx37(BOARD_REV_2))
 		mx37_3stack_fixup_for_board_v1();
 	i2c_register_board_info(0, mxc_i2c0_board_info,

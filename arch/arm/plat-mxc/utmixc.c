@@ -59,6 +59,7 @@ static void set_power(struct fsl_xcvr_ops *this,
 			regulator_disable(usbotg_regux);
 		}
 		regulator_put(usbotg_regux, dev);
+#if defined(CONFIG_MXC_PMIC_MC13892_MODULE) || defined(CONFIG_MXC_PMIC_MC13892)
 	} else if (machine_is_mx51_3ds()) {
 		unsigned int value;
 
@@ -77,6 +78,7 @@ static void set_power(struct fsl_xcvr_ops *this,
 		else
 			regulator_disable(usbotg_regux);
 		regulator_put(usbotg_regux, dev);
+#endif
 	}
 }
 

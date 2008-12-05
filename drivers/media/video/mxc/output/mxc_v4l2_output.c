@@ -357,10 +357,12 @@ static void mxc_v4l2out_timer_handler(unsigned long arg)
 		goto exit0;
 	}
 
+	spin_unlock_irqrestore(&g_lock, lock_flags);
+	schedule_work(&vout->timer_work);
+	return;
+
       exit0:
 	spin_unlock_irqrestore(&g_lock, lock_flags);
-
-	schedule_work(&vout->timer_work);
 }
 
 static irqreturn_t mxc_v4l2out_pp_in_irq_handler(int irq, void *dev_id)

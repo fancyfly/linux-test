@@ -29,6 +29,7 @@
 #include <linux/irq.h>
 #include <linux/sysfs.h>
 #include <linux/platform_device.h>
+#include <linux/regulator/regulator.h>
 #include <asm/uaccess.h>
 #include <asm/atomic.h>
 #include <asm/arch/gpio.h>
@@ -63,6 +64,8 @@ struct tve_data {
 	void *base;
 	int irq;
 	struct clk *clk;
+	struct regulator *dac_reg;
+	struct regulator *dig_reg;
 } tve;
 
 static struct fb_videomode video_modes[] = {
@@ -141,7 +144,7 @@ static void tve_enable(void)
 		enabled = 1;
 		clk_enable(tve.clk);
 		reg = __raw_readl(tve.base + TVE_COM_CONF_REG);
-		__raw_writel(reg | 0x01, tve.base + TVE_COM_CONF_REG);
+		__raw_writel(reg | 0x09, tve.base + TVE_COM_CONF_REG);
 		pr_debug("TVE power on.\n");
 	}
 }
@@ -157,7 +160,7 @@ static void tve_disable(void)
 	if (enabled) {
 		enabled = 0;
 		reg = __raw_readl(tve.base + TVE_COM_CONF_REG);
-		__raw_writel(reg & ~0x01, tve.base + TVE_COM_CONF_REG);
+		__raw_writel(reg & ~0x09, tve.base + TVE_COM_CONF_REG);
 		clk_disable(tve.clk);
 		pr_debug("TVE power off.\n");
 	}
@@ -315,12 +318,13 @@ static ssize_t show_headphone(struct device_driver *dev, char *buf)
 	return strlen(buf);
 }
 
-DRIVER_ATTR(headphone, 0644, show_headphone, NULL);
+static DRIVER_ATTR(headphone, 0644, show_headphone, NULL);
 
 static int tve_probe(struct platform_device *pdev)
 {
 	int ret, i;
 	struct resource *res;
+	struct tve_platform_data *plat_data = pdev->dev.platform_data;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL)
@@ -352,6 +356,18 @@ static int tve_probe(struct platform_device *pdev)
 	if (tve_fbi != NULL) {
 		fb_add_videomode(&video_modes[0], &tve_fbi->modelist);
 		fb_add_videomode(&video_modes[1], &tve_fbi->modelist);
+	}
+
+	tve.dac_reg = regulator_get(&pdev->dev, plat_data->dac_reg);
+	if (!IS_ERR(tve.dac_reg)) {
+		regulator_set_voltage(tve.dac_reg, 2500000);
+		regulator_enable(tve.dac_reg);
+	}
+
+	tve.dig_reg = regulator_get(&pdev->dev, plat_data->dig_reg);
+	if (!IS_ERR(tve.dig_reg)) {
+		regulator_set_voltage(tve.dig_reg, 1250000);
+		regulator_enable(tve.dig_reg);
 	}
 
 	tve.clk = clk_get(&pdev->dev, "tve_clk");

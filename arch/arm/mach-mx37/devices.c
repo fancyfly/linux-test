@@ -196,6 +196,10 @@ static struct platform_device mxc_ipu_device = {
 
 static void mxc_init_ipu(void)
 {
+	struct clk *clk;
+
+	mxc_ipu_data.di_clk[1] = clk_get(NULL, "ipu_di_clk");
+
 	platform_device_register(&mxc_ipu_device);
 }
 #else
@@ -551,6 +555,11 @@ static inline void mxc_init_i2c(void)
 }
 #endif
 
+struct tve_platform_data tve_data = {
+	.dac_reg = "LDO2",
+	.dig_reg = "LDO3",
+};
+
 static struct resource tve_resources[] = {
 	{
 	 .start = TVE_BASE_ADDR,
@@ -690,6 +699,7 @@ static struct platform_device mxc_tve_device = {
 	.name = "tve",
 	.dev = {
 		.release = mxc_nop_release,
+		.platform_data = &tve_data,
 		},
 	.num_resources = ARRAY_SIZE(tve_resources),
 	.resource = tve_resources,
@@ -821,7 +831,7 @@ static inline void mx37_init_lpmode(void)
 	(void)platform_device_register(&mx37_lpmode_device);
 }
 
-static int __init mxc_init_devices(void)
+int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
 	mxc_init_ipu();

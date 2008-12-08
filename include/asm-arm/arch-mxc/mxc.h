@@ -64,6 +64,7 @@ struct mxc_spi_master {
 
 struct mxc_ipu_config {
 	int rev;
+	struct clk *di_clk[2];
 };
 
 struct mxc_ir_platform_data {
@@ -215,6 +216,11 @@ struct flexcan_platform_data {
 
 struct mxc_srtc_platform_data {
 	u32 srtc_sec_mode_addr;
+};
+
+struct tve_platform_data {
+	char *dac_reg;
+	char *dig_reg;
 };
 
 extern void mxc_wd_reset(void);

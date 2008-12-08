@@ -840,5 +840,3 @@ static int __init mxc_init_devices(void)
 	spba_take_ownership(SPBA_SSI2, SPBA_MASTER_C | SPBA_MASTER_A);
 	return 0;
 }
-
-arch_initcall(mxc_init_devices);

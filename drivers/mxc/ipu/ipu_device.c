@@ -30,6 +30,7 @@
 #include <linux/sched.h>
 #include <linux/time.h>
 #include <linux/wait.h>
+#include <linux/dma-mapping.h>
 #include <asm/io.h>
 #include <asm/arch/ipu.h>
 
@@ -544,11 +545,61 @@ static int mxc_ipu_ioctl(struct inode *inode, struct file *file,
 			ret = ipu_pf_set_pause_row(p);
 		}
 		break;
+	case IPU_ALOC_MEM:
+		{
+			ipu_mem_info info;
+			if (copy_from_user
+					(&info, (ipu_mem_info *) arg,
+					 sizeof(ipu_mem_info)))
+				return -EFAULT;
+
+			info.vaddr = dma_alloc_coherent(0,
+					PAGE_ALIGN(info.size),
+					&info.paddr,
+					GFP_DMA | GFP_KERNEL);
+			if (info.vaddr == 0) {
+				printk(KERN_ERR "dma alloc failed!\n");
+				return -ENOBUFS;
+			}
+			if (copy_to_user((ipu_mem_info *) arg, &info,
+					sizeof(ipu_mem_info)) > 0)
+				return -EFAULT;
+		}
+		break;
+	case IPU_FREE_MEM:
+		{
+			ipu_mem_info info;
+			if (copy_from_user
+					(&info, (ipu_mem_info *) arg,
+					 sizeof(ipu_mem_info)))
+				return -EFAULT;
+
+			if (info.vaddr != 0)
+				dma_free_coherent(0, PAGE_ALIGN(info.size),
+						info.vaddr, info.paddr);
+			else
+				return -EFAULT;
+		}
+		break;
 	default:
 		break;
 
 	}
 	return ret;
+}
+
+static int mxc_ipu_mmap(struct file *file, struct vm_area_struct *vma)
+{
+	vma->vm_page_prot = pgprot_writethru(vma->vm_page_prot);
+
+	if (remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff,
+				vma->vm_end - vma->vm_start,
+				vma->vm_page_prot)) {
+		printk(KERN_ERR
+				"mmap failed!\n");
+		return -ENOBUFS;
+	}
+	return 0;
 }
 
 static int mxc_ipu_release(struct inode *inode, struct file *file)
@@ -559,6 +610,7 @@ static int mxc_ipu_release(struct inode *inode, struct file *file)
 static struct file_operations mxc_ipu_fops = {
 	.owner = THIS_MODULE,
 	.open = mxc_ipu_open,
+	.mmap = mxc_ipu_mmap,
 	.release = mxc_ipu_release,
 	.ioctl = mxc_ipu_ioctl
 };

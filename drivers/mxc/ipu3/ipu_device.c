@@ -361,8 +361,11 @@ static int mxc_ipu_ioctl(struct inode *inode, struct file *file,
 					 sizeof(ipu_mem_info)))
 				return -EFAULT;
 
-			dma_free_coherent(0, PAGE_ALIGN(info.size),
-					info.vaddr, info.paddr);
+			if (info.vaddr != 0)
+				dma_free_coherent(0, PAGE_ALIGN(info.size),
+						info.vaddr, info.paddr);
+			else
+				return -EFAULT;
 		}
 		break;
 	default:

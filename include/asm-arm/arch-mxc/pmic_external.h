@@ -1114,6 +1114,7 @@ typedef enum {
 /* EXPORTED FUNCTIONS */
 #ifdef __KERNEL__
 
+#if defined(CONFIG_MXC_PMIC)
 /*!
  * This function is used to determine the PMIC type and its revision.
  *
@@ -1225,7 +1226,7 @@ static inline int reg_mc13892_probe(void)
 #ifdef CONFIG_REGULATOR_MC34704
 int reg_mc34704_probe(void);
 #endif
-
+#endif				/*CONFIG_MXC_PMIC*/
 #endif				/* __KERNEL__ */
 /* CONFIG_MXC_PMIC_MC13783 || CONFIG_MXC_PMIC_MC9SDZ60 */
 

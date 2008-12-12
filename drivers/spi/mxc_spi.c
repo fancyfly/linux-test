@@ -722,9 +722,9 @@ static irqreturn_t mxc_spi_isr(int irq, void *dev_id)
 			u32 count = (master_drv_data->transfer.count >
 				     fifo_size) ? fifo_size :
 			    master_drv_data->transfer.count;
+			master_drv_data->transfer.rx_count = count;
 			spi_put_tx_data(master_drv_data->base, count,
 					master_drv_data);
-			master_drv_data->transfer.rx_count = count;
 		}
 	} else {
 		complete(&master_drv_data->xfer_done);
@@ -839,9 +839,8 @@ int mxc_spi_transfer(struct spi_device *spi, struct spi_transfer *t)
 	count = (t->len > fifo_size) ? fifo_size : t->len;
 
 	/* Perform Tx transaction */
-
-	spi_put_tx_data(master_drv_data->base, count, master_drv_data);
 	master_drv_data->transfer.rx_count = count;
+	spi_put_tx_data(master_drv_data->base, count, master_drv_data);
 
 	/* Wait for transfer completion */
 

@@ -320,6 +320,7 @@ void mxc_mmc_force_detect(int id)
 	if (id < MAX_HOST)
 		mmc_detect_change(hosts[id], msecs_to_jiffies(100));
 }
+
 EXPORT_SYMBOL(mxc_mmc_force_detect);
 
 /*!
@@ -851,7 +852,7 @@ static irqreturn_t mxcmci_irq(int irq, void *devid)
 	 * mode, we ignore STATUS_READ_OP_DONE.
 	 */
 	if ((status & (STATUS_WRITE_OP_DONE | STATUS_READ_OP_DONE)) &&
-	     !(status & STATUS_END_CMD_RESP)) {
+	    !(status & STATUS_END_CMD_RESP)) {
 		pr_debug(KERN_INFO "MXC MMC IO OP DONE INT.\n");
 		intctrl = __raw_readl(host->base + MMC_INT_CNTR);
 		__raw_writel((~(INT_CNTR_WRITE_OP_DONE | INT_CNTR_READ_OP_DONE)
@@ -1008,7 +1009,7 @@ static void mxcmci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		if (ios->power_mode == MMC_POWER_UP) {
 			if (regulator_enable(host->regulator_mmc) == 0) {
 				pr_debug("mmc power on\n");
-				msleep(300);
+				msleep(1);
 			}
 		} else if (ios->power_mode == MMC_POWER_OFF) {
 			regulator_disable(host->regulator_mmc);
@@ -1214,8 +1215,6 @@ static int mxcmci_probe(struct platform_device *pdev)
 		goto out0;
 	}
 
-	gpio_sdhc_active(pdev->id);
-
 	/* Get pwr supply for SDHC */
 	if (NULL != mmc_plat->power_mmc) {
 		host->regulator_mmc =
@@ -1224,7 +1223,13 @@ static int mxcmci_probe(struct platform_device *pdev)
 			ret = PTR_ERR(host->regulator_mmc);
 			goto out1;
 		}
+		if (regulator_enable(host->regulator_mmc) == 0) {
+			pr_debug("mmc power on\n");
+			msleep(1);
+		}
 	}
+
+	gpio_sdhc_active(pdev->id);
 
 	host->clk = clk_get(&pdev->dev, "sdhc_clk");
 	pr_debug("SDHC:%d clock:%lu\n", pdev->id, clk_get_rate(host->clk));
@@ -1262,7 +1267,7 @@ static int mxcmci_probe(struct platform_device *pdev)
 
 		do {
 			card_gpio_status =
-				host->plat_data->status(host->mmc->parent);
+			    host->plat_data->status(host->mmc->parent);
 			if (card_gpio_status)
 				set_irq_type(host->detect_irq, IRQT_FALLING);
 			else
@@ -1312,6 +1317,7 @@ static int mxcmci_probe(struct platform_device *pdev)
 			   pdev->resource[0].end - pdev->resource[0].start + 1);
       out2:
 	clk_disable(host->clk);
+	regulator_disable(host->regulator_mmc);
 	regulator_put(host->regulator_mmc, &pdev->dev);
       out1:
 	gpio_sdhc_inactive(pdev->id);
@@ -1389,9 +1395,10 @@ static int mxcmci_suspend(struct platform_device *pdev, pm_message_t state)
 	 */
 	disable_irq(host->detect_irq);
 
+	gpio_sdhc_inactive(pdev->id);
+
 	if (host->regulator_mmc)
 		regulator_disable(host->regulator_mmc);
-	gpio_sdhc_inactive(pdev->id);
 
 	return ret;
 }
@@ -1421,13 +1428,13 @@ static int mxcmci_resume(struct platform_device *pdev)
 		return 0;
 	}
 
-	gpio_sdhc_active(pdev->id);
-
 	/* enable pwr supply for SDHC */
 	if (host->regulator_mmc) {
 		regulator_enable(host->regulator_mmc);
-		msleep(300);
+		msleep(1);
 	}
+
+	gpio_sdhc_active(pdev->id);
 
 	clk_enable(host->clk);
 

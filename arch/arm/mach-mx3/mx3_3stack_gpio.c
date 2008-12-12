@@ -437,17 +437,23 @@ void gpio_sdhc_active(int module)
 				  INPUTCONFIG_FUNC);
 
 		mxc_iomux_set_pad(MX31_PIN_SD1_CLK,
-				  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
+				  (PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST
+				   | PAD_CTL_100K_PU));
 		mxc_iomux_set_pad(MX31_PIN_SD1_CMD,
-				  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
+				  (PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST
+				   | PAD_CTL_100K_PU));
 		mxc_iomux_set_pad(MX31_PIN_SD1_DATA0,
-				  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
+				  (PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST
+				   | PAD_CTL_100K_PU));
 		mxc_iomux_set_pad(MX31_PIN_SD1_DATA1,
-				  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
+				  (PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST
+				   | PAD_CTL_100K_PU));
 		mxc_iomux_set_pad(MX31_PIN_SD1_DATA2,
-				  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
+				  (PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST
+				   | PAD_CTL_100K_PU));
 		mxc_iomux_set_pad(MX31_PIN_SD1_DATA3,
-				  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
+				  (PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST
+				   | PAD_CTL_100K_PU));
 
 		/*
 		 * Active the Buffer Enable Pin only if there is
@@ -490,25 +496,18 @@ void gpio_sdhc_inactive(int module)
 {
 	switch (module) {
 	case 0:
-		mxc_request_gpio(MX31_PIN_SD1_CLK);
-		mxc_request_gpio(MX31_PIN_SD1_CMD);
-		mxc_request_gpio(MX31_PIN_SD1_DATA0);
-		mxc_request_gpio(MX31_PIN_SD1_DATA1);
-		mxc_request_gpio(MX31_PIN_SD1_DATA2);
-		mxc_request_gpio(MX31_PIN_SD1_DATA3);
-
-		mxc_free_iomux(MX31_PIN_SD1_CLK, OUTPUTCONFIG_GPIO,
-			       INPUTCONFIG_GPIO);
-		mxc_free_iomux(MX31_PIN_SD1_CMD, OUTPUTCONFIG_GPIO,
-			       INPUTCONFIG_GPIO);
-		mxc_free_iomux(MX31_PIN_SD1_DATA0, OUTPUTCONFIG_GPIO,
-			       INPUTCONFIG_GPIO);
-		mxc_free_iomux(MX31_PIN_SD1_DATA1, OUTPUTCONFIG_GPIO,
-			       INPUTCONFIG_GPIO);
-		mxc_free_iomux(MX31_PIN_SD1_DATA2, OUTPUTCONFIG_GPIO,
-			       INPUTCONFIG_GPIO);
-		mxc_free_iomux(MX31_PIN_SD1_DATA3, OUTPUTCONFIG_GPIO,
-			       INPUTCONFIG_GPIO);
+		mxc_free_iomux(MX31_PIN_SD1_CLK, OUTPUTCONFIG_FUNC,
+			       INPUTCONFIG_FUNC);
+		mxc_free_iomux(MX31_PIN_SD1_CMD, OUTPUTCONFIG_FUNC,
+			       INPUTCONFIG_FUNC);
+		mxc_free_iomux(MX31_PIN_SD1_DATA0, OUTPUTCONFIG_FUNC,
+			       INPUTCONFIG_FUNC);
+		mxc_free_iomux(MX31_PIN_SD1_DATA1, OUTPUTCONFIG_FUNC,
+			       INPUTCONFIG_FUNC);
+		mxc_free_iomux(MX31_PIN_SD1_DATA2, OUTPUTCONFIG_FUNC,
+			       INPUTCONFIG_FUNC);
+		mxc_free_iomux(MX31_PIN_SD1_DATA3, OUTPUTCONFIG_FUNC,
+			       INPUTCONFIG_FUNC);
 
 		mxc_iomux_set_pad(MX31_PIN_SD1_CLK,
 				  (PAD_CTL_DRV_NORMAL | PAD_CTL_SRE_SLOW));

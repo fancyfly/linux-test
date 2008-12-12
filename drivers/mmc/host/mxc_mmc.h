@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -80,7 +80,7 @@
 #define STATUS_END_CMD_RESP             (1<<13)
 #define STATUS_WRITE_OP_DONE            (1<<12)
 #define STATUS_READ_OP_DONE             (1<<11)
-#define STATUS_WR_CRC_ERROR_CODE_MASK   (3<<10)
+#define STATUS_WR_CRC_ERROR_CODE_MASK   (3<<9)
 #define STATUS_CARD_BUS_CLK_RUN         (1<<8)
 #define STATUS_BUF_READ_RDY             (1<<7)
 #define STATUS_BUF_WRITE_RDY            (1<<6)

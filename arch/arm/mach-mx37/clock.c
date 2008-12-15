@@ -20,6 +20,7 @@
 #include <asm/div64.h>
 #include <asm/hardware.h>
 #include <asm/arch/clock.h>
+#include <asm/arch/mxc_dptc.h>
 #include <asm/arch/spba.h>
 #include <asm/arch/mxc_uart.h>
 
@@ -2992,5 +2993,11 @@ static int cpu_clk_set_wp(int wp)
 	pll1_sw_clk.rate = cpu_wp_tbl[wp].cpu_rate;
 	pll1_main_clk.rate = pll1_sw_clk.rate;
 	cpu_clk.rate = pll1_sw_clk.rate;
+
+	if (wp == 0)
+		dptc_resume(DPTC_GP_ID);
+	else
+		dptc_suspend(DPTC_GP_ID);
+
 	return 0;
 }

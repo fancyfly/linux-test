@@ -72,21 +72,32 @@ static struct cpu_wp cpu_wp_auto[] = {
 	 .pdf = 0,
 	 .mfi = 5,
 	 .mfd = 23,
-	 .mfn = 13,},
+	 .mfn = 13,
+	 .cpu_voltage = 1000000,},
+	{
+	 .pll_rate = 400000000,
+	 .cpu_rate = 400000000,
+	 .pdf = 1,
+	 .mfi = 8,
+	 .mfd = 2,
+	 .mfn = 1,
+	 .cpu_voltage = 900000,},
 	{
 	 .pll_rate = 200000000,
 	 .cpu_rate = 200000000,
 	 .pdf = 3,
 	 .mfi = 8,
 	 .mfd = 2,
-	 .mfn = 1,},
+	 .mfn = 1,
+	 .cpu_voltage = 850000,},
 	{
 	 .pll_rate = 600000000,
 	 .cpu_rate = 600000000,
 	 .pdf = 0,
 	 .mfi = 6,
 	 .mfd = 3,
-	 .mfn = 1,},
+	 .mfn = 1,
+	 .cpu_voltage = 1200000,},
 };
 
 struct cpu_wp *get_cpu_wp(int *wp)
@@ -252,11 +263,6 @@ static struct mxc_lcd_platform_data lcd_data = {
 	.core_reg = "VVIDEO",
 	.io_reg = "SW4",
 	.reset = lcd_reset,
-};
-
-static struct mxc_dvfs_platform_data dvfs_data = {
-	.vddgp_reg = "SW1",
-	.vcclp_reg = "SW2",
 };
 
 #if defined(CONFIG_KEYBOARD_MPR084) || defined(CONFIG_KEYBOARD_MPR084_MODULE)
@@ -805,8 +811,7 @@ static void mx37_3stack_fixup_for_board_v1(void)
 	tve_data.dig_reg = "LDO3";
 	lcd_data.core_reg = "LDO1";
 	lcd_data.io_reg = "DCDC6";
-	dvfs_data.vddgp_reg = "DCDC1";
-	dvfs_data.vcclp_reg = "DCDC4";
+	dvfs_core_data.reg_id = "DCDC1";
 	ls_data.vdd_reg = "DCDC3";
 	mxc_bt_data.bt_vdd = "DCDC3";
 	mxc_bt_data.bt_vusb = "DCDC6";

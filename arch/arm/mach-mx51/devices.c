@@ -22,6 +22,7 @@
 #include <asm/hardware.h>
 #include <asm/arch/spba.h>
 #include "iomux.h"
+#include "crm_regs.h"
 #include <asm/arch/sdma.h>
 #include "sdma_script_code.h"
 #include <asm/arch/mxc_scc2_driver.h>
@@ -727,6 +728,65 @@ static inline void mxc_init_tve(void)
 }
 #endif
 
+/*!
+ * Resource definition for the DVFS CORE
+ */
+static struct resource dvfs_core_resources[] = {
+	[0] = {
+	       .start = MXC_DVFS_CORE_BASE,
+	       .end = MXC_DVFS_CORE_BASE + 8 * SZ_16 - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_GPC1,
+	       .end = MXC_INT_GPC1,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for DVFS CORE */
+struct mxc_dvfs_platform_data dvfs_core_data = {
+	.reg_id = "SW1",
+	.clk1_id = "cpu_clk",
+	.clk2_id = "gpc_dvfs_clk",
+	.gpc_cntr_reg_addr = MXC_GPC_CNTR,
+	.gpc_vcr_reg_addr = MXC_GPC_VCR,
+	.dvfs_thrs_reg_addr = MXC_DVFSTHRS,
+	.dvfs_coun_reg_addr = MXC_DVFSCOUN,
+	.dvfs_emac_reg_addr = MXC_DVFSEMAC,
+	.dvfs_cntr_reg_addr = MXC_DVFSCNTR,
+	.div3ck_mask = 0xE0000000,
+	.div3ck_offset = 29,
+	.div3ck_val = 2,
+	.emac_val = 0x10,
+	.upthr_val = 25,
+	.dnthr_val = 9,
+	.pncthr_val = 33,
+	.upcnt_val = 3,
+	.dncnt_val = 3,
+	.delay_time = 30,
+	.num_wp = 2,
+};
+
+/*! Device Definition for MXC DVFS core */
+static struct platform_device mxc_dvfs_core_device = {
+	.name = "mxc_dvfs_core",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &dvfs_core_data,
+		},
+	.num_resources = ARRAY_SIZE(dvfs_core_resources),
+	.resource = dvfs_core_resources,
+};
+
+static inline void mxc_init_dvfs(void)
+{
+	if (platform_device_register(&mxc_dvfs_core_device) < 0)
+		dev_err(&mxc_dvfs_core_device.dev,
+			"Unable to register DVFS core device\n");
+}
+
 struct mxc_gpio_port mxc_gpio_ports[GPIO_PORT_NUM] = {
 	{
 	 .num = 0,
@@ -834,5 +894,6 @@ int __init mxc_init_devices(void)
 	mxc_init_spdif();
 	mxc_init_tve();
 	mx51_init_lpmode();
+	mxc_init_dvfs();
 	return 0;
 }

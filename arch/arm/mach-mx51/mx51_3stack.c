@@ -72,14 +72,16 @@ static struct cpu_wp cpu_wp_auto[] = {
 	 .pdf = 0,
 	 .mfi = 6,
 	 .mfd = 95,
-	 .mfn = 89,},
+	 .mfn = 89,
+	 .cpu_voltage = 1050000,},
 	{
 	 .pll_rate = 200000000,
 	 .cpu_rate = 200000000,
 	 .pdf = 3,
 	 .mfi = 8,
 	 .mfd = 2,
-	 .mfn = 1,},
+	 .mfn = 1,
+	 .cpu_voltage = 775000,},
 };
 
 struct cpu_wp *get_cpu_wp(int *wp)

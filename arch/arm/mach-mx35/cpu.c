@@ -31,10 +31,15 @@
  */
 void __init mxc_cpu_init(void)
 {
+
 	/* Setup Peripheral Port Remap register for AVIC */
 	asm("ldr r0, =0xC0000015				\n\
 	 mcr p15, 0, r0, c15, c2, 4");
 	/*TODO:Add code to check chip version */
+
+	if (!system_rev)
+		mxc_set_system_rev(0x35, CHIP_REV_1_0);
+
 }
 
 /*!

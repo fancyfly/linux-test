@@ -100,6 +100,9 @@
 #define MXC_CCM_PDR2_SSI1_PODF_OFFSET           0
 #define MXC_CCM_PDR2_SSI1_PODF_MASK             (0x3F)
 
+/* Extra definitions for Chip Version 2*/
+#define MXC_CCM_PDR2_CSI_PODF_MASK_V2              (0x3F << 16)
+
 #define MXC_CCM_PDR3_SPDIF_PRDF_OFFSET          29
 #define MXC_CCM_PDR3_SPDIF_PRDF_MASK            (0x7 << 29)
 #define MXC_CCM_PDR3_SPDIF_PODF_OFFSET          23
@@ -120,6 +123,11 @@
 #define MXC_CCM_PDR3_ESDHC1_PODF_OFFSET         0
 #define MXC_CCM_PDR3_ESDHC1_PODF_MASK           (0x7)
 
+/* Extra definitions for Chip Version 2 */
+#define MXC_CCM_PDR3_ESDHC3_PODF_MASK_V2	(0x3F << 16)
+#define MXC_CCM_PDR3_ESDHC2_PODF_MASK_V2        (0x3F << 8)
+#define MXC_CCM_PDR3_ESDHC1_PODF_MASK_V2        0x3F
+
 #define MXC_CCM_PDR4_NFC_PODF_OFFSET           	28
 #define MXC_CCM_PDR4_NFC_PODF_MASK            	(0xF << 28)
 #define MXC_CCM_PDR4_USB_PRDF_OFFSET          	25
@@ -135,6 +143,11 @@
 #define MXC_CCM_PDR4_UART_PODF_OFFSET          	10
 #define MXC_CCM_PDR4_UART_PODF_MASK            	(0x7 << 10)
 #define MXC_CCM_PDR4_USB_M_U			(1 << 9)
+
+/* Extra definitions for Chip Version 2 */
+#define MXC_CCM_PDR4_USB_PODF_MASK_V2		(0x3F << 22)
+#define MXC_CCM_PDR4_PER0_PODF_MASK_V2		(0x3F << 16)
+#define MXC_CCM_PDR4_UART_PODF_MASK_V2          (0x3F << 10)
 
 /* Bit definitions for RCSR */
 #define MXC_CCM_RCSR_BUS_WIDTH			(1 << 29)
@@ -169,6 +182,13 @@
 #define MXC_CCM_ACMR_SSI1_CLK_SEL_MASK		(0xF << 4)
 #define MXC_CCM_ACMR_SSI2_CLK_SEL_OFFSET	0
 #define MXC_CCM_ACMR_SSI2_CLK_SEL_MASK		(0xF << 0)
+
+/* Extra definitions for Version 2 */
+#define MXC_CCM_ACMR_CKILH_PODF0_OFFSET		16
+#define MXC_CCM_ACMR_CKILH_PODF1_OFFSET		19
+#define MXC_CCM_ACMR_CKILH_PODF2_OFFSET		22
+#define MXC_CCM_ACMR_CKILH_PODF3_OFFSET         25
+#define MXC_CCM_ACMR_CKILH_PODF_MASK		0x7
 
 /* Bit definitions for Clock gating Register*/
 #define MXC_CCM_CGR0_ASRC_OFFSET             	0
@@ -372,10 +392,10 @@
 #define MXC_CCM_COSR_CLKOSEL_OFFSET             0
 #define MXC_CCM_COSR_CLKOEN                     (1 << 5)
 #define MXC_CCM_COSR_CLKOUTDIV_1             	(1 << 6)
-#define MXC_CCM_COSR_CLKOUT_PREDIV_MASK         (0x7 << 10)
-#define MXC_CCM_COSR_CLKOUT_PREDIV_OFFSET       10
-#define MXC_CCM_COSR_CLKOUT_PRODIV_MASK         (0x7 << 13)
-#define MXC_CCM_COSR_CLKOUT_PRODIV_OFFSET       13
+#define MXC_CCM_COSR_CLKOUT_PREDIV_MASK         (0x7 << 13)
+#define MXC_CCM_COSR_CLKOUT_PREDIV_OFFSET       13
+#define MXC_CCM_COSR_CLKOUT_PRODIV_MASK         (0x7 << 10)
+#define MXC_CCM_COSR_CLKOUT_PRODIV_OFFSET       10
 #define MXC_CCM_COSR_SSI1_RX_SRC_SEL_MASK       (0x3 << 16)
 #define MXC_CCM_COSR_SSI1_RX_SRC_SEL_OFFSET     16
 #define MXC_CCM_COSR_SSI1_TX_SRC_SEL_MASK       (0x3 << 18)
@@ -387,6 +407,11 @@
 #define MXC_CCM_COSR_ASRC_AUDIO_EN              (1 << 24)
 #define MXC_CCM_COSR_ASRC_AUDIO_PODF_MASK       (0x3F << 26)
 #define MXC_CCM_COSR_ASRC_AUDIO_PODF_OFFSET     26
+
+/* extra definitions for Version 2 */
+#define MXC_CCM_COSR_CKIL_CKIH_MASK		(1 << 7)
+#define MXC_CCM_COSR_CKIL_CKIH_OFFSET		7
+#define MXC_CCM_COSR_CLKOUT_PRODIV_MASK_V2	(0x3F << 10)
 
 /*
  * PMCR0 register offsets

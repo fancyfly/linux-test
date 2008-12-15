@@ -941,12 +941,17 @@ static struct cpu_wp cpu_wp_con[] = {
 
 struct cpu_wp *get_cpu_wp(int *wp)
 {
-	if (__raw_readl(MXC_CCM_PDR0) & MXC_CCM_PDR0_AUTO_CON) {
+	if (cpu_is_mx35_rev(CHIP_REV_2_0) >= 1) {
 		*wp = 9;
 		return cpu_wp_con;
 	} else {
-		*wp = 6;
-		return cpu_wp_auto;
+		if (__raw_readl(MXC_CCM_PDR0) & MXC_CCM_PDR0_AUTO_CON) {
+			*wp = 9;
+			return cpu_wp_con;
+		} else {
+			*wp = 6;
+			return cpu_wp_auto;
+		}
 	}
 }
 

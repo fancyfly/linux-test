@@ -332,6 +332,15 @@ void dptc_resume(int id)
 	if (!drv_data->dptc_is_active)
 		return;
 
+	__raw_writel(dptc_data->dptc_wp_allfreq[0].dcvr0,
+		     dptc_data->dcvr0_reg_addr);
+	__raw_writel(dptc_data->dptc_wp_allfreq[0].dcvr1,
+		     dptc_data->dcvr0_reg_addr + 0x4);
+	__raw_writel(dptc_data->dptc_wp_allfreq[0].dcvr2,
+		     dptc_data->dcvr0_reg_addr + 0x8);
+	__raw_writel(dptc_data->dptc_wp_allfreq[0].dcvr3,
+		     dptc_data->dcvr0_reg_addr + 0xC);
+
 	dptccr = __raw_readl(dptc_data->dptccr_reg_addr);
 
 	/* Enable DPTC and unmask its interrupt */

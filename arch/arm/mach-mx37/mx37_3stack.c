@@ -71,19 +71,29 @@ static struct cpu_wp cpu_wp_auto[] = {
 	 .pdf = 0,
 	 .mfi = 5,
 	 .mfd = 23,
-	 .mfn = 13,},
+	 .mfn = 13,
+	 .cpu_voltage = 1000000,},
+	{
+	 .pll_rate = 400000000,
+	 .cpu_rate = 400000000,
+	 .pdf = 1,
+	 .mfi = 8,
+	 .mfd = 2,
+	 .mfn = 1,
+	 .cpu_voltage = 900000,},
 	{
 	 .pll_rate = 200000000,
 	 .cpu_rate = 200000000,
 	 .pdf = 3,
 	 .mfi = 8,
 	 .mfd = 2,
-	 .mfn = 1,},
+	 .mfn = 1,
+	 .cpu_voltage = 850000,},
 };
 
 struct cpu_wp *get_cpu_wp(int *wp)
 {
-	*wp = 2;
+	*wp = 3;
 	return cpu_wp_auto;
 }
 
@@ -185,11 +195,6 @@ static struct mxc_lcd_platform_data lcd_data = {
 	.reset = lcd_reset,
 };
 
-static struct mxc_dvfs_platform_data dvfs_data = {
-	.vddgp_reg = "DCDC1",
-	.vcclp_reg = "DCDC4",
-};
-
 #if defined(CONFIG_KEYBOARD_MPR084) || defined(CONFIG_KEYBOARD_MPR084_MODULE)
 /*!
  * These functions are used to configure and the GPIO pins for keypad to
@@ -221,10 +226,6 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	 .addr = 0x5D,
 	 .platform_data = &keypad_data,
 	 .irq = IOMUX_TO_IRQ(MX37_PIN_GPIO1_3),
-	 },
-	{
-	 .driver_name = "DVFSCORE",
-	 .platform_data = &dvfs_data,
 	 },
 };
 static struct spi_board_info mxc_spi_board_info[] __initdata = {

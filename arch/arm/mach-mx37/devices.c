@@ -572,6 +572,80 @@ static struct resource tve_resources[] = {
 	 },
 };
 
+static struct platform_device mxc_tve_device = {
+	.name = "tve",
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &tve_data,
+		},
+	.num_resources = ARRAY_SIZE(tve_resources),
+	.resource = tve_resources,
+};
+
+void __init mxc_init_tve(void)
+{
+	platform_device_register(&mxc_tve_device);
+}
+
+/*!
+ * Resource definition for the DVFS CORE
+ */
+static struct resource dvfs_core_resources[] = {
+	[0] = {
+	       .start = MXC_DVFS_CORE_BASE,
+	       .end = MXC_DVFS_CORE_BASE + 8 * SZ_16 - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_GPC1,
+	       .end = MXC_INT_GPC1,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Platform Data for DVFS CORE */
+struct mxc_dvfs_platform_data dvfs_core_data = {
+	.reg_id = "DCDC1",
+	.clk1_id = "cpu_clk",
+	.clk2_id = "gpc_dvfs_clk",
+	.gpc_cntr_reg_addr = MXC_GPC_CNTR,
+	.gpc_vcr_reg_addr = MXC_GPC_VCR,
+	.dvfs_thrs_reg_addr = MXC_DVFSTHRS,
+	.dvfs_coun_reg_addr = MXC_DVFSCOUN,
+	.dvfs_emac_reg_addr = MXC_DVFSEMAC,
+	.dvfs_cntr_reg_addr = MXC_DVFSCNTR,
+	.div3ck_mask = 0x00000006,
+	.div3ck_offset = 1,
+	.div3ck_val = 3,
+	.emac_val = 0x20,
+	.upthr_val = 28,
+	.dnthr_val = 10,
+	.pncthr_val = 33,
+	.upcnt_val = 5,
+	.dncnt_val = 5,
+	.delay_time = 100,
+	.num_wp = 3,
+};
+
+/*! Device Definition for MXC DVFS core */
+static struct platform_device mxc_dvfs_core_device = {
+	.name = "mxc_dvfs_core",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &dvfs_core_data,
+		},
+	.num_resources = ARRAY_SIZE(dvfs_core_resources),
+	.resource = dvfs_core_resources,
+};
+
+static inline void mxc_init_dvfs(void)
+{
+	if (platform_device_register(&mxc_dvfs_core_device) < 0)
+		dev_err(&mxc_dvfs_core_device.dev,
+			"Unable to register DVFS core device\n");
+}
+
 /*!
  * Resource definition for the DPTC GP
  */
@@ -693,21 +767,6 @@ static inline void mxc_init_dptc(void)
 			dev_err(&mxc_dptc_devices[i].dev,
 				"Unable to register DPTC device\n");
 	}
-}
-
-static struct platform_device mxc_tve_device = {
-	.name = "tve",
-	.dev = {
-		.release = mxc_nop_release,
-		.platform_data = &tve_data,
-		},
-	.num_resources = ARRAY_SIZE(tve_resources),
-	.resource = tve_resources,
-};
-
-void __init mxc_init_tve(void)
-{
-	platform_device_register(&mxc_tve_device);
 }
 
 struct mxc_gpio_port mxc_gpio_ports[GPIO_PORT_NUM] = {
@@ -845,6 +904,7 @@ int __init mxc_init_devices(void)
 	mxc_init_spdif();
 	mxc_init_tve();
 	mx37_init_lpmode();
+	mxc_init_dvfs();
 	mxc_init_dptc();
 	/* SPBA configuration for SSI2 - SDMA and MCU are set */
 	spba_take_ownership(SPBA_SSI2, SPBA_MASTER_C | SPBA_MASTER_A);

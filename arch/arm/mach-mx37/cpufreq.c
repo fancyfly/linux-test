@@ -40,14 +40,17 @@
  * Frequencys can be set for CPU.
  */
 #define CPU_FREQUENCY_200000_KHZ		200000
+#define CPU_FREQUENCY_400000_KHZ		400000
 #define CPU_FREQUENCY_532000_KHZ		532000
 #define ARM_LPM_CLK  200000000
+#define ARM_400MHZ_CLK  400000000
 #define ARM_NORMAL_CLK  532000000
 
 #define LP_LPM_CLK  24000000
 #define LP_NORMAL_CLK  133000000
 #define GP_LPM_VOLTAGE 850000
 #define LP_LPM_VOLTAGE 1000000
+#define GP_400MHZ_VOLTAGE 900000
 #define GP_NORMAL_VOLTAGE 1000000
 #define LP_NORMAL_VOLTAGE 1200000
 
@@ -73,10 +76,13 @@ static struct clk *osc;
 static struct regulator *gp_regulator;
 static struct regulator *lp_regulator;
 
+extern int dvfs_core_is_active;
+
 /* does need to be in ascending order for calc_frequency_khz() below */
 static struct cpufreq_frequency_table imx37_freq_table[] = {
 	{0x01, CPU_FREQUENCY_200000_KHZ},
-	{0x02, CPU_FREQUENCY_532000_KHZ},
+	{0x02, CPU_FREQUENCY_400000_KHZ},
+	{0x03, CPU_FREQUENCY_532000_KHZ},
 	{0, CPUFREQ_TABLE_END},
 };
 
@@ -91,17 +97,26 @@ int set_cpu_freq(int freq)
 
 	if (freq == ARM_NORMAL_CLK) {
 		/*Set the voltage to 1.00v for the GP domain. */
-
-		ret = regulator_set_voltage(gp_regulator, GP_NORMAL_VOLTAGE);
-		if (ret < 0) {
-			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!\n");
-			return ret;
+		if (freq > org_cpu_rate) {
+			ret = regulator_set_voltage(gp_regulator, GP_NORMAL_VOLTAGE);
+			if (ret < 0) {
+				printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!\n");
+				return ret;
+			}
 		}
 
 		ret = clk_set_rate(cpu_clk, ARM_NORMAL_CLK);
 		if (ret != 0) {
 			printk(KERN_DEBUG "cannot set CPU clock rate\n");
 			return ret;
+		}
+
+		if (freq < org_cpu_rate) {
+			ret = regulator_set_voltage(gp_regulator, GP_NORMAL_VOLTAGE);
+			if (ret < 0) {
+				printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!\n");
+				return ret;
+			}
 		}
 	} else if (freq == ARM_LPM_CLK) {
 		ret = clk_set_rate(cpu_clk, ARM_LPM_CLK);
@@ -115,6 +130,30 @@ int set_cpu_freq(int freq)
 		if (ret < 0) {
 			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!!\n");
 			return ret;
+		}
+	} else if (freq == ARM_400MHZ_CLK) {
+		if (freq > org_cpu_rate) {
+			/* Set the voltage to 0.9v for the GP domain. */
+			ret = regulator_set_voltage(gp_regulator, GP_400MHZ_VOLTAGE);
+			if (ret < 0) {
+				printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!!\n");
+				return ret;
+			}
+		}
+
+		ret = clk_set_rate(cpu_clk, ARM_400MHZ_CLK);
+		if (ret != 0) {
+			printk(KERN_DEBUG "cannot set CPU clock rate\n");
+			return ret;
+		}
+
+		if (freq < org_cpu_rate) {
+			/* Set the voltage to 0.9v for the GP domain. */
+			ret = regulator_set_voltage(gp_regulator, GP_400MHZ_VOLTAGE);
+			if (ret < 0) {
+				printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!!\n");
+				return ret;
+			}
 		}
 	}
 	return ret;
@@ -284,6 +323,9 @@ static int mx37_set_target(struct cpufreq_policy *policy,
 	freqs.cpu = 0;
 	freqs.flags = 0;
 
+	if ((freqs.old == freqs.new) && (freqs.new != ARM_LPM_CLK))
+		return 0;
+
 	low_freq_bus_ready = low_freq_bus_used();
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
@@ -291,12 +333,14 @@ static int mx37_set_target(struct cpufreq_policy *policy,
 	if ((freq_Hz == ARM_LPM_CLK) && (!low_bus_freq_mode)
 	    && (low_freq_bus_ready)) {
 		set_low_bus_freq();
-		ret = set_cpu_freq(freq_Hz);
+		if (!dvfs_core_is_active)
+			ret = set_cpu_freq(freq_Hz);
 	} else {
 		if (!high_bus_freq_mode)
 			set_high_bus_freq();
 
-		ret = set_cpu_freq(freq_Hz);
+		if (!dvfs_core_is_active)
+			ret = set_cpu_freq(freq_Hz);
 		if (low_bus_freq_mode) {
 			if (ret == 0)
 				set_high_bus_freq();

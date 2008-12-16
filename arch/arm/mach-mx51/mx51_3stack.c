@@ -44,6 +44,8 @@
 #include <asm/arch/memory.h>
 #include <asm/arch/gpio.h>
 #include <asm/arch/mmc.h>
+#include <asm/arch/pmic_external.h>
+
 #include "board-mx51_3stack.h"
 #include "iomux.h"
 #include "crm_regs.h"
@@ -910,6 +912,8 @@ static void __init mxc_board_init(void)
 #endif
 	mxc_init_touchscreen();
 	mxc_init_audio();
+
+	pm_power_off = mc13892_power_off;
 }
 
 /*

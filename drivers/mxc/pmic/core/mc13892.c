@@ -202,3 +202,14 @@ int pmic_event_mask(type_event event)
 
 	return ret;
 }
+
+void mc13892_power_off(void)
+{
+	unsigned int value;
+
+	pmic_read_reg(REG_POWER_CTL0, &value, 0xffffff);
+
+	value |= 0x000008;
+
+	pmic_write_reg(REG_POWER_CTL0, value, 0xffffff);
+}

@@ -959,6 +959,7 @@ int pmic_read(int reg_num, unsigned int *reg_val);
 int pmic_write(int reg_num, const unsigned int reg_val);
 void gpio_pmic_active(void);
 void pmic_event_list_init(void);
+void mc13892_power_off(void);
 
 #endif
 

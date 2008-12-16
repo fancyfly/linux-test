@@ -615,6 +615,11 @@ static struct platform_device mxc_asrc_device = {
 
 static inline void mxc_init_asrc(void)
 {
+	if (cpu_is_mx35_rev(CHIP_REV_2_0) < 1)
+		mxc_asrc_data.channel_bits = 3;
+	else
+		mxc_asrc_data.channel_bits = 4;
+
 	mxc_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	clk_put(mxc_asrc_data.asrc_core_clk);
 	mxc_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_audio_clk");

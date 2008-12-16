@@ -102,6 +102,7 @@ struct mxc_spdif_platform_data {
 struct mxc_asrc_platform_data {
 	struct clk *asrc_core_clk;
 	struct clk *asrc_audio_clk;
+	unsigned int channel_bits;
 };
 
 struct mxc_bt_platform_data {

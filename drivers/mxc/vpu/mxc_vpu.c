@@ -143,6 +143,15 @@ static irqreturn_t vpu_irq_handler(int irq, void *dev_id)
 	if (dev->async_queue)
 		kill_fasync(&dev->async_queue, SIGIO, POLL_IN);
 
+	/*
+	 * Clock is gated on when dec/enc started, gate it off when
+	 * interrupt is received.
+	 */
+	spin_lock(&vpu_lock);
+	if (clkgate_refcount > 0 && !(--clkgate_refcount))
+		clk_disable(vpu_clk);
+	spin_unlock(&vpu_lock);
+
 	codec_done = 1;
 	wake_up_interruptible(&vpu_queue);
 
@@ -277,10 +286,12 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 	case VPU_IOC_CLKGATE_SETTING:
 		{
 			u32 clkgate_en;
+			unsigned long lock_flags;
+
 			if (get_user(clkgate_en, (u32 __user *) arg))
 				return -EFAULT;
 
-			spin_lock(&vpu_lock);
+			spin_lock_irqsave(&vpu_lock, lock_flags);
 			if (clkgate_en) {
 				if (++clkgate_refcount == 1)
 					clk_enable(vpu_clk);
@@ -289,7 +300,7 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 				    && !(--clkgate_refcount))
 					clk_disable(vpu_clk);
 			}
-			spin_unlock(&vpu_lock);
+			spin_unlock_irqrestore(&vpu_lock, lock_flags);
 
 			break;
 		}

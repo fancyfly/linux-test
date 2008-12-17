@@ -124,6 +124,26 @@ void gpio_uart_inactive(int port, int no_irda)
 	 * and disable the UART transceivers
 	 */
 	switch (port) {
+	case 0:
+		mxc_request_iomux(MX37_PIN_UART1_RXD, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX37_PIN_UART1_TXD, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX37_PIN_UART1_RTS, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX37_PIN_UART1_CTS, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_UART1_RXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_UART1_TXD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_UART1_RTS, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_UART1_CTS, IOMUX_CONFIG_GPIO);
+		break;
+	case 1:
+		mxc_request_iomux(MX37_PIN_UART1_DCD, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX37_PIN_UART1_RI, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX37_PIN_UART1_DSR, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX37_PIN_UART1_DTR, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_UART1_DCD, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_UART1_RI, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_UART1_DSR, IOMUX_CONFIG_GPIO);
+		mxc_free_iomux(MX37_PIN_UART1_DTR, IOMUX_CONFIG_GPIO);
+		break;
 		/* UART 3 IOMUX Configs */
 	case 2:
 		mxc_request_iomux(MX37_PIN_AUD3_BB_TXD, IOMUX_CONFIG_GPIO);

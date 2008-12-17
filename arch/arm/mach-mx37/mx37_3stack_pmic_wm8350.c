@@ -38,6 +38,7 @@
 #include <asm/arch/spba.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/mxc.h>
+#include "iomux.h"
 #include "board-mx37_3stack.h"
 
 static void wm8350_regulator_init(void)
@@ -75,13 +76,12 @@ struct mxc_audio_platform_data imx_3stack_audio_platform_data = {
 	.regulator2 = "DCDC3"
 };
 
-#ifdef NOT_PORTED_TO_IMX37_3STACK_YET
 
 static void imx37_3stack_switch_handler(struct wm8350 *wm8350, int irq)
 {
 	printk("switch pressed %d\n", irq);
 }
-#endif
+
 static struct platform_device *imx_snd_device;
 
 void wm8350_free(struct wm8350 *wm8350)
@@ -188,7 +188,6 @@ static int config_gpios(struct wm8350 *wm8350)
 			   WM8350_GPIO9_BATT_FAULT_OUT, WM8350_GPIO_ACTIVE_LOW,
 			   WM8350_GPIO_PULL_NONE, WM8350_GPIO_INVERT_OFF,
 			   WM8350_GPIO_DEBOUNCE_OFF);
-
 	return 0;
 }
 
@@ -295,6 +294,13 @@ static inline void mxc_init_wm8350(void)
 			dev_err(&mxc_wm8350_devices[i].dev,
 				"Unable to register WM8350 device\n");
 	}
+
+	/*set INT pin*/
+	mxc_request_iomux(MX37_PIN_GPIO1_4, IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX37_PIN_GPIO1_4, PAD_CTL_SRE_FAST |
+		PAD_CTL_DRV_HIGH | PAD_CTL_22K_PU |
+		PAD_CTL_ODE_OPENDRAIN_ENABLE | PAD_CTL_HYS_NONE |
+		PAD_CTL_DDR_INPUT_CMOS | PAD_CTL_DRV_VOT_LOW);
 }
 
 int wm8350_init(struct wm8350 *wm8350)
@@ -329,6 +335,14 @@ int wm8350_init(struct wm8350 *wm8350)
 	if (ret)
 		printk(KERN_ERR "Error in setting USB VBUS enable pin\n");
 
+	/*PMIC RDY*/
+	if (wm8350_gpio_config(wm8350, 9, WM8350_GPIO_DIR_OUT, WM8350_GPIO9_GPIO_OUT,
+			   WM8350_GPIO_ACTIVE_LOW, WM8350_GPIO_PULL_NONE,
+			   WM8350_GPIO_INVERT_OFF, WM8350_GPIO_DEBOUNCE_OFF) == 0)
+		wm8350_gpio_set_status(wm8350, 9, 1);
+	else
+		printk(KERN_ERR "Error in setting Wolfson GPIO pin 9 \n");
+
 	/* register sound */
 	printk("Registering imx37_snd_device");
 	imx_snd_device = platform_device_alloc("wm8350-imx-3stack-audio", -1);
@@ -343,7 +357,6 @@ int wm8350_init(struct wm8350 *wm8350)
 		goto snd_err;
 
 	/* set up PMIC IRQ (active high) to i.MX32ADS */
-#ifdef NOT_PORTED_TO_IMX37
 	printk("Registering PMIC INT");
 	INIT_WORK(&wm8350->work, wm8350_irq_work);
 	wm8350_reg_unlock(wm8350);
@@ -358,21 +371,25 @@ int wm8350_init(struct wm8350 *wm8350)
 		goto err;
 	}
 	wm8350->nirq = MXC_PMIC_INT_LINE;
+
+	set_irq_wake(MXC_PMIC_INT_LINE, 1);
+
+#ifdef NOT_PORTED_TO_IMX37
 	printk("Configuring WM8350 GPIOS");
 	config_gpios(wm8350);
 	config_hibernate(wm8350);
+#endif
 
 	/* Sw1 --> PWR_ON */
-	printk("Registering and unmasking the WM8350 wakeup key");
+	printk("Registering and unmasking the WM8350 wakeup key\n");
 	wm8350_register_irq(wm8350, WM8350_IRQ_WKUP_ONKEY,
-			    imx37_3stack_switch_handler);
+			    imx37_3stack_switch_handler, NULL);
 	wm8350_unmask_irq(wm8350, WM8350_IRQ_WKUP_ONKEY);
 
 	/* unmask all & clear sticky */
-	printk("Unmasking WM8350 local interrupts");
-	wm8350_reg_write(wm8350, WM8350_SYSTEM_INTERRUPTS_MASK, 0x0);
+	printk("Unmasking WM8350 local interrupts\n");
+	wm8350_reg_write(wm8350, WM8350_SYSTEM_INTERRUPTS_MASK, 0x3ffe);
 	schedule_work(&wm8350->work);
-#endif
 
 #if BATTERY
 	/* not much use without a battery atm */

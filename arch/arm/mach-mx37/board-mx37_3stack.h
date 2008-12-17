@@ -102,8 +102,12 @@
 /* CPLD code version */
 #define CPLD_CODE_VER_REG	BOARD_IO_ADDR + 0x50
 
+#define MXC_PMIC_INT_LINE       IOMUX_TO_IRQ(MX37_PIN_GPIO1_4)
+
 extern unsigned int sdhc_get_card_det_status(struct device *dev);
 extern int sdhc_write_protect(struct device *dev);
 extern int sdhc_init_card_det(int id);
+extern irqreturn_t wm8350_irq_handler(int irq, void *v);
+extern void wm8350_irq_work(struct work_struct *work);
 
 #endif				/* __ASM_ARCH_MXC_BOARD_MX37_3STACK_H__ */

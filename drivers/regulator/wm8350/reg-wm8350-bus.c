@@ -79,6 +79,8 @@ static const u16 wm8350_reg_map[] = WM8350_REGISTER_DEFAULTS_3;
 #error Invalid WM8350 configuration
 #endif
 
+static int wm8350_in_suspend;
+
 /*
  * WM8350 Register IO access map
  */
@@ -548,6 +550,11 @@ void wm8350_irq_worker(struct work_struct *work)
 	u16 level_one, status1, status2, comp, oc, gpio, uv;
 	struct wm8350 *wm8350 =
 		container_of(work, struct wm8350, work);
+
+	if (wm8350_in_suspend) {
+		wm8350_in_suspend = 0;
+		return;
+	}
 
 	/* read this in 1 block read */
 	/* read 1st level irq sources and then read required 2nd sources */
@@ -1400,6 +1407,8 @@ int wm8350_device_register_pmic(struct wm8350 *wm8350)
 	wm8350->pmic.dev.parent = &wm8350->i2c_client->dev;
 	wm8350->pmic.dev.release = wm8350_pmic_dev_release;
 
+	wm8350_in_suspend = 0;
+
 	ret = device_register(&wm8350->pmic.dev);
 	if (ret < 0)
 		printk(KERN_ERR "failed to register WM8350 PMIC device\n");
@@ -1476,6 +1485,8 @@ static int wm8350_bus_suspend(struct device *dev, pm_message_t state)
 {
 	int ret = 0;
 
+	wm8350_in_suspend = 1;
+
 	if (dev->driver && dev->driver->suspend)
 		ret = dev->driver->suspend(dev, state);
 
@@ -1485,6 +1496,13 @@ static int wm8350_bus_suspend(struct device *dev, pm_message_t state)
 static int wm8350_bus_resume(struct device *dev)
 {
 	int ret = 0;
+	if (wm8350_in_suspend)
+		wm8350_in_suspend = 0;
+	else {
+		struct wm8350_pmic *wm8350_pmic = to_wm8350_pmic_device(dev);
+		struct wm8350 *wm8350 = to_wm8350_from_pmic(wm8350_pmic);
+		schedule_work(&wm8350->work);
+	}
 
 	if (dev->driver && dev->driver->resume)
 		ret = dev->driver->resume(dev);

@@ -592,6 +592,26 @@ static void mxc_init_surround_audio(void)
 	platform_device_register(&mxc_alsa_surround_device);
 }
 
+static struct mxc_audio_platform_data mxc_bt_audio_data;
+
+static struct platform_device mxc_bt_alsa_device = {
+	.name = "imx-3stack-bt",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_bt_audio_data,
+		},
+
+};
+
+static void mxc_init_bt_audio(void)
+{
+	mxc_bt_audio_data.src_port = 2;
+	mxc_bt_audio_data.ext_port = 5;
+	mxc_bt_audio_data.ext_ram = 1;
+	platform_device_register(&mxc_bt_alsa_device);
+}
+
 static struct resource asrc_resources[] = {
 	{
 	 .start = ASRC_BASE_ADDR,
@@ -693,6 +713,7 @@ int __init mxc_init_devices(void)
 	pmic_init_rtc();
 	mxc_init_rtc();
 	mxc_init_dma();
+	mxc_init_bt_audio();
 	mxc_init_spdif();
 	mxc_init_audio();
 	mxc_init_surround_audio();

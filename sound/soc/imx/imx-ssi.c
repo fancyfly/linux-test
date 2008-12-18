@@ -50,17 +50,19 @@
 #define IMX_SSI_DUMP 0
 #if IMX_SSI_DUMP
 #define SSI_DUMP() \
-	printk("dump @ %s\n", __FUNCTION__); \
-	printk("scr %x\n", SSI1_SCR); \
-	printk("sisr %x\n", SSI1_SISR); \
-	printk("stcr %x\n", SSI1_STCR); \
-	printk("srcr %x\n", SSI1_SRCR); \
-	printk("stccr %x\n", SSI1_STCCR); \
-	printk("srccr %x\n", SSI1_SRCCR); \
-	printk("sfcsr %x\n", SSI1_SFCSR); \
-	printk("stmsk %x\n", SSI1_STMSK); \
-	printk("srmsk %x\n", SSI1_SRMSK); \
-	printk("sier %x\n", SSI1_SIER);
+	do { \
+		printk(KERN_INFO "dump @ %s\n", __func__); \
+		printk(KERN_INFO "scr %x\t, %x\n", SSI1_SCR, SSI2_SCR); \
+		printk(KERN_INFO "sisr %x\t, %x\n", SSI1_SISR, SSI2_SISR); \
+		printk(KERN_INFO "stcr %x\t, %x\n", SSI1_STCR, SSI2_STCR); \
+		printk(KERN_INFO "srcr %x\t, %x\n", SSI1_SRCR, SSI2_SRCR); \
+		printk(KERN_INFO "stccr %x\t, %x\n", SSI1_STCCR, SSI2_STCCR); \
+		printk(KERN_INFO "srccr %x\t, %x\n", SSI1_SRCCR, SSI2_SRCCR); \
+		printk(KERN_INFO "sfcsr %x\t, %x\n", SSI1_SFCSR, SSI2_SFCSR); \
+		printk(KERN_INFO "stmsk %x\t, %x\n", SSI1_STMSK, SSI2_STMSK); \
+		printk(KERN_INFO "srmsk %x\t, %x\n", SSI1_SRMSK, SSI2_SRMSK); \
+		printk(KERN_INFO "sier %x\t, %x\n", SSI1_SIER, SSI2_SIER); \
+	} while (0);
 #else
 #define SSI_DUMP()
 #endif
@@ -319,7 +321,8 @@ static int imx_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	return 0;
 }
 
-static struct clk *ssi_clk;
+static struct clk *ssi1_clk;
+static struct clk *ssi2_clk;
 
 static int imx_ssi_startup(struct snd_pcm_substream *substream)
 {
@@ -338,8 +341,8 @@ static int imx_ssi_startup(struct snd_pcm_substream *substream)
 			return 0;
 
 		SSI1_SCR = 0;
-		ssi_clk = clk_get(NULL, "ssi_clk.0");
-		clk_enable(ssi_clk);
+		ssi1_clk = clk_get(NULL, "ssi_clk.0");
+		clk_enable(ssi1_clk);
 
 		/* BIG FAT WARNING
 		 * SDMA FIFO watermark must == SSI FIFO watermark for
@@ -356,8 +359,8 @@ static int imx_ssi_startup(struct snd_pcm_substream *substream)
 			return 0;
 
 		SSI2_SCR = 0;
-		ssi_clk = clk_get(NULL, "ssi_clk.1");
-		clk_enable(ssi_clk);
+		ssi2_clk = clk_get(NULL, "ssi_clk.1");
+		clk_enable(ssi2_clk);
 
 		/* above warning applies here too */
 		SSI2_SFCSR = SSI_SFCSR_RFWM1(SSI_RXFIFO_WATERMARK) |
@@ -497,20 +500,24 @@ static int imx_ssi_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		/* cant change any parameters when SSI is running */
 		if (id == IMX_DAI_SSI0 || id == IMX_DAI_SSI1) {
-			if (SSI1_SCR & SSI_SCR_SSIEN)
+			if ((SSI1_SCR & SSI_SCR_SSIEN) &&
+			    (SSI1_SCR & SSI_SCR_TE))
 				return 0;
 		} else {
-			if (SSI2_SCR & SSI_SCR_SSIEN)
+			if ((SSI2_SCR & SSI_SCR_SSIEN) &&
+			    (SSI2_SCR & SSI_SCR_TE))
 				return 0;
 		}
 		return imx_ssi_hw_tx_params(substream, params);
 	} else {
 		/* cant change any parameters when SSI is running */
 		if (id == IMX_DAI_SSI0 || id == IMX_DAI_SSI1) {
-			if (SSI1_SCR & SSI_SCR_SSIEN)
+			if ((SSI1_SCR & SSI_SCR_SSIEN) &&
+			    (SSI1_SCR & SSI_SCR_RE))
 				return 0;
 		} else {
-			if (SSI2_SCR & SSI_SCR_SSIEN)
+			if ((SSI2_SCR & SSI_SCR_SSIEN) &&
+			    (SSI2_SCR & SSI_SCR_RE))
 				return 0;
 		}
 		return imx_ssi_hw_rx_params(substream, params);
@@ -596,15 +603,15 @@ static void imx_ssi_shutdown(struct snd_pcm_substream *substream)
 
 		SSI1_SCR = 0;
 
-		clk_disable(ssi_clk);
-		clk_put(ssi_clk);
+		clk_disable(ssi1_clk);
+		clk_put(ssi1_clk);
 
 	} else {
 		if (--ssi_active[SSI2_PORT])
 			return;
 		SSI2_SCR = 0;
-		clk_disable(ssi_clk);
-		clk_put(ssi_clk);
+		clk_disable(ssi2_clk);
+		clk_put(ssi2_clk);
 	}
 }
 
@@ -749,17 +756,19 @@ static int imx_ssi_probe(struct device *dev)
 	dai->playback = &imx_ssi_playback;
 	snd_soc_register_cpu_dai(dai);
 
-	if (request_irq(MXC_INT_SSI1, ssi1_irq, 0, "ssi1", dai)) {
-		printk(KERN_ERR "%s: failure requesting irq %s\n",
-		       __func__, "ssi1");
-		return -EBUSY;
-	}
+	if ((!strcmp(imx_ssi_1, dai->name)) || (!strcmp(imx_ssi_2, dai->name)))
+		if (request_irq(MXC_INT_SSI1, ssi1_irq, 0, "ssi1", dai)) {
+			printk(KERN_ERR "%s: failure requesting irq %s\n",
+			       __func__, "ssi1");
+			return -EBUSY;
+		}
 
-	if (request_irq(MXC_INT_SSI2, ssi2_irq, 0, "ssi2", dai)) {
-		printk(KERN_ERR "%s: failure requesting irq %s\n",
-		       __func__, "ssi2");
-		return -EBUSY;
-	}
+	if ((!strcmp(imx_ssi_3, dai->name)) || (!strcmp(imx_ssi_4, dai->name)))
+		if (request_irq(MXC_INT_SSI2, ssi2_irq, 0, "ssi2", dai)) {
+			printk(KERN_ERR "%s: failure requesting irq %s\n",
+			       __func__, "ssi2");
+			return -EBUSY;
+		}
 
 	return 0;
 }

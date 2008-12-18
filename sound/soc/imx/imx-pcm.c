@@ -460,6 +460,9 @@ static int
 imx_pcm_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct snd_soc_machine *machine = substream->pcm->card->private_data;
+	struct mxc_audio_platform_data *dev_data = machine->private_data;
+	int ext_ram = 0;
 	int ret = 0;
 
 	dbg("+imx_pcm_mmap:"
@@ -467,7 +470,11 @@ imx_pcm_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma)
 	    UseIram, (unsigned int)runtime->dma_addr,
 	    runtime->dma_area, runtime->dma_bytes);
 
-	if ((substream->stream == SNDRV_PCM_STREAM_CAPTURE) || !UseIram) {
+	if (dev_data)
+		ext_ram = dev_data->ext_ram;
+
+	if ((substream->stream == SNDRV_PCM_STREAM_CAPTURE) || ext_ram
+	    || !UseIram) {
 		ret = dma_mmap_writecombine(substream->pcm->card->dev, vma,
 					    runtime->dma_area,
 					    runtime->dma_addr,
@@ -493,17 +500,24 @@ static int imx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 {
 	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
 	struct snd_dma_buffer *buf = &substream->dma_buffer;
+	struct snd_soc_machine *machine = pcm->card->private_data;
+	struct mxc_audio_platform_data *dev_data = machine->private_data;
+	int ext_ram = 0;
 	size_t size = imx_pcm_hardware.buffer_bytes_max;
+
+	if (dev_data)
+		ext_ram = dev_data->ext_ram;
+
 	buf->dev.type = SNDRV_DMA_TYPE_DEV;
 	buf->dev.dev = pcm->card->dev;
 	buf->private_data = NULL;
 
-	if ((stream == SNDRV_PCM_STREAM_CAPTURE) || !UseIram) {
+	if ((stream == SNDRV_PCM_STREAM_CAPTURE) || ext_ram || !UseIram)
 		buf->area = dma_alloc_writecombine(pcm->card->dev, size,
 						   &buf->addr, GFP_KERNEL);
-	} else {
+	else
 		buf->area = imx_iram_init(&buf->addr, size);
-	}
+
 	if (!buf->area)
 		return -ENOMEM;
 	buf->bytes = size;
@@ -517,7 +531,13 @@ static void imx_pcm_free_dma_buffers(struct snd_pcm *pcm)
 {
 	struct snd_pcm_substream *substream;
 	struct snd_dma_buffer *buf;
+	struct snd_soc_machine *machine = pcm->card->private_data;
+	struct mxc_audio_platform_data *dev_data = machine->private_data;
+	int ext_ram = 0;
 	int stream;
+
+	if (dev_data)
+		ext_ram = dev_data->ext_ram;
 
 	for (stream = 0; stream < 2; stream++) {
 		substream = pcm->streams[stream].substream;
@@ -528,10 +548,10 @@ static void imx_pcm_free_dma_buffers(struct snd_pcm *pcm)
 		if (!buf->area)
 			continue;
 
-		if ((stream == SNDRV_PCM_STREAM_CAPTURE) || !UseIram) {
+		if ((stream == SNDRV_PCM_STREAM_CAPTURE) || ext_ram || !UseIram)
 			dma_free_writecombine(pcm->card->dev, buf->bytes,
 					      buf->area, buf->addr);
-		} else
+		else
 			imx_iram_free();
 		buf->area = NULL;
 	}

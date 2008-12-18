@@ -832,6 +832,7 @@ void gpio_spdif_active(void)
 			  | PAD_CTL_100K_PU | PAD_CTL_HYS_SCHMITZ);
 	/* SPDIF ext clock */
 	mxc_request_iomux(MX35_PIN_SCK5, MUX_CONFIG_ALT1);
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_2, 0, 1);
 }
 
 EXPORT_SYMBOL(gpio_spdif_active);
@@ -873,6 +874,43 @@ void gpio_activate_audio_ports(void)
 }
 
 EXPORT_SYMBOL(gpio_activate_audio_ports);
+
+/*!
+ * This function activates DAM ports 5 to enable
+ * audio I/O.
+ */
+void gpio_activate_bt_audio_port(void)
+{
+	unsigned int pad_val;
+
+	mxc_request_iomux(MX35_PIN_STXD5, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_SRXD5, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_SCK5, MUX_CONFIG_FUNC);
+	mxc_request_iomux(MX35_PIN_STXFS5, MUX_CONFIG_FUNC);
+
+	pad_val = PAD_CTL_HYS_SCHMITZ | PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+	    PAD_CTL_PUE_PUD;
+	mxc_iomux_set_pad(MX35_PIN_STXD5, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_SRXD5, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_SCK5, pad_val);
+	mxc_iomux_set_pad(MX35_PIN_STXFS5, pad_val);
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_2, 0, 0);
+}
+
+EXPORT_SYMBOL(gpio_activate_bt_audio_port);
+
+/*!
+ * Setup GPIO for bluetooth audio to be inactive
+ */
+void gpio_inactivate_bt_audio_port(void)
+{
+	mxc_free_iomux(MX35_PIN_STXD5, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_SRXD5, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_SCK5, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX35_PIN_STXFS5, MUX_CONFIG_FUNC);
+}
+
+EXPORT_SYMBOL(gpio_inactivate_bt_audio_port);
 
 /*!
  * Setup GPIO for ATA interface

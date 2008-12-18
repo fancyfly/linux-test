@@ -84,6 +84,7 @@ struct mxc_audio_platform_data {
 	int src_port;
 	int ext_port;
 	int intr_id_hp;
+	int ext_ram;
 	struct clk *ssi_clk[2];
 	char *regulator1;
 	char *regulator2;

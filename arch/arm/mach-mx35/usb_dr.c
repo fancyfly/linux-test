@@ -32,8 +32,6 @@ static struct fsl_usb2_platform_data __maybe_unused dr_utmi_config = {
 	.gpio_usb_active   = gpio_usbotg_utmi_active,
 	.gpio_usb_inactive = gpio_usbotg_utmi_inactive,
 	.transceiver       = "utmi",
-	.change_ahb_burst = 1, /* defaultly i.MX35 is in INCR8 mode */
-	.ahb_burst_mode = 0, /* i.MX35 should be in INCR mode */
 };
 
 
@@ -94,6 +92,12 @@ static struct platform_device __maybe_unused dr_otg_device = {
 static int __init usb_dr_init(void)
 {
 	pr_debug("%s: \n", __func__);
+
+	/* i.MX35 1.0 should work in INCR mode */
+	if (cpu_is_mx35_rev(CHIP_REV_2_0) < 0) {
+		PDATA->change_ahb_burst = 1;
+		PDATA->ahb_burst_mode = 0;
+	}
 
 	dr_register_otg();
 	dr_register_host(otg_resources, ARRAY_SIZE(otg_resources));

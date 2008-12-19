@@ -60,13 +60,20 @@ fsl_platform_set_vbus_power(struct fsl_usb2_platform_data *pdata, int on)
 static inline void fsl_platform_set_ahb_burst(struct usb_hcd *hcd)
 {
 	struct fsl_usb2_platform_data *pdata;
+	unsigned int temp;
 
 	pdata = hcd->self.controller->platform_data;
 	if (pdata->change_ahb_burst) {
-		unsigned int temp;
-
 		temp = readl(hcd->regs + FSL_SOC_USB_SBUSCFG);
 		writel((temp & (~(0x7))) | pdata->ahb_burst_mode,
 			hcd->regs + FSL_SOC_USB_SBUSCFG);
+	}
+
+	/* Increase TX fifo threshold for USB+ATA for i.mx35 2.0 */
+	if (cpu_is_mx35_rev(CHIP_REV_2_0) >= 1) {
+		temp = readl(hcd->regs + FSL_SOC_USB_TXFILLTUNING);
+		/* Change TX FIFO threshold to be 0x20 */
+		writel((temp & (~(0x3f << 16)) | (0x20 << 16)),
+			hcd->regs + FSL_SOC_USB_TXFILLTUNING);
 	}
 }

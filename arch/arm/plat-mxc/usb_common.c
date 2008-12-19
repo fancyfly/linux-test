@@ -345,10 +345,22 @@ static void usbh2_set_serial_xcvr(void)
 	USBCTRL &= ~(UCTRL_H2PM);	/* Power Mask */
 	USBCTRL &= ~UCTRL_OCPOL;	/* OverCurrent Polarity is Low Active */
 	USBCTRL |= UCTRL_H2WIE |	/* Wakeup intr enable */
-		UCTRL_H2LOCKD |		/* Host2 Lock Disable */
 	    UCTRL_IP_PUE_DOWN |	/* ipp_pue_pulldwn_dpdm */
 	    UCTRL_USBTE |	/* USBT is enabled */
 	    UCTRL_H2DT;		/* Disable H2 TLL */
+
+	if (cpu_is_mx35_rev(CHIP_REV_2_0) < 0) {
+		/* Disable Host2 bus Lock for i.MX35 1.0 */
+		USBCTRL |= UCTRL_H2LOCKD;
+		/* USBOTG_PWR low active */
+		USBCTRL &= ~UCTRL_PP;
+		/* OverCurrent Polarity is Low Active */
+		USBCTRL &= ~UCTRL_OCPOL;
+	} else if (cpu_is_mx35_rev(CHIP_REV_2_0) >= 1) {
+		/* i.MX35 2.0 OTG and Host2 have seperate OC/PWR polarity */
+		USBCTRL &= ~UCTRL_H2PP;
+		USBCTRL &= ~UCTRL_H2OCPOL;
+	}
 
 	USBCTRL &= ~(UCTRL_PP);
 	UH2_PORTSC1 = (UH2_PORTSC1 & (~PORTSC_PTS_MASK)) | PORTSC_PTS_SERIAL;
@@ -416,7 +428,7 @@ int fsl_usb_host_init(struct platform_device *pdev)
 		xops->init(xops);
 
 	if (xops->xcvr_type == PORTSC_PTS_SERIAL) {
-		if (machine_is_mx35_3ds()) {
+		if (cpu_is_mx35()) {
 			usbh2_set_serial_xcvr();
 			/* Close the internal 60Mhz */
 			USBCTRL &= ~UCTRL_XCSH2;
@@ -607,8 +619,10 @@ static void otg_set_utmi_xcvr(void)
 		USBCTRL &= ~UCTRL_PP;
 		/* OverCurrent Polarity is Low Active */
 		USBCTRL &= ~UCTRL_OCPOL;
-		/* OTG Lock Disable */
-		USBCTRL |= UCTRL_OLOCKD;
+
+		if (cpu_is_mx35_rev(CHIP_REV_2_0) < 0)
+			/* OTG Lock Disable */
+			USBCTRL |= UCTRL_OLOCKD;
 	}
 
 	USBCTRL &= ~UCTRL_OPM;	/* OTG Power Mask */
@@ -623,7 +637,7 @@ static void otg_set_utmi_xcvr(void)
 		/* Set the PHY clock to 19.2MHz */
 		USB_PHY_CTR_FUNC2 &= ~USB_UTMI_PHYCTRL2_PLLDIV_MASK;
 		USB_PHY_CTR_FUNC2 |= 0x01;
-	} else if (machine_is_mx35_3ds()) {
+	} else if (cpu_is_mx35()) {
 		/* Workaround an IC issue for 2.6.26 kernal:
 		 * when turn off root hub port power, EHCI set
 		 * PORTSC reserved bits to be 0, but PTW with 0

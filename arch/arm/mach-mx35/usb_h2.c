@@ -30,8 +30,6 @@ static struct fsl_usb2_platform_data usbh2_config = {
 	.gpio_usb_active   = gpio_usbh2_active,
 	.gpio_usb_inactive = gpio_usbh2_inactive,
 	.transceiver       = "serial",
-	.change_ahb_burst = 1,	/* i.MX35 should work in INCR mode */
-	.ahb_burst_mode = 0,
 };
 
 static struct resource usbh2_resources[] = {
@@ -50,6 +48,12 @@ static struct resource usbh2_resources[] = {
 static int __init usbh2_init(void)
 {
 	pr_debug("%s: \n", __func__);
+
+	/* i.MX35 1.0 should work in INCR mode */
+	if (cpu_is_mx35_rev(CHIP_REV_2_0) < 0) {
+		usbh2_config.change_ahb_burst = 1;
+		usbh2_config.ahb_burst_mode = 0;
+	}
 
 	host_pdev_register(usbh2_resources, ARRAY_SIZE(usbh2_resources),
 			   &usbh2_config);

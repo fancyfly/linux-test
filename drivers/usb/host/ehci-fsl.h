@@ -21,6 +21,7 @@
 /* offsets for the non-ehci registers in the FSL SOC USB controller */
 #define FSL_SOC_USB_SBUSCFG     0x90
 #define FSL_SOC_USB_BURSTSIZE	0x160
+#define FSL_SOC_USB_TXFILLTUNING	0x164
 #define FSL_SOC_USB_ULPIVP	0x170
 #define FSL_SOC_USB_PORTSC1	0x184
 #define PORT_PTS_MSK		(3<<30)

@@ -249,6 +249,7 @@
 
 #define UCTRL_H2UIE		(1 << 20)	/* HOST2 ULPI intr enable */
 #define UCTRL_H2WIE		(1 << 19)	/* HOST2 wakeup intr enable */
+#define UCTRL_H2PP		(1 << 18)	/* Power Polarity for uh2 */
 #define UCTRL_H2PM		(1 << 16)	/* HOST2 power mask */
 
 #define UCTRL_H1WIR		(1 << 15)	/* HOST1 wakeup intr request received */
@@ -277,6 +278,7 @@
 #define UCTRL_USBTE             (1 <<  4)       /* USBT Transceiver enable */
 #define UCTRL_OCPOL             (1 <<  3)       /* OverCurrent Polarity */
 #define UCTRL_OCE               (1 <<  2)       /* OverCurrent Enable */
+#define UCTRL_H2OCPOL		(1 <<  2)       /* OverCurrent Polarity of Host2 */
 #define UCTRL_H2OCS             (1 <<  1)       /* Host OverCurrent State */
 #define UCTRL_BPE		(1 <<  0)	/* bypass mode enable */
 #define UCTRL_OTD		(1 <<  0)	/* OTG TLL Disable */

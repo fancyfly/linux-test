@@ -216,7 +216,7 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 	    SDHCI_INT_DATA_TIMEOUT | SDHCI_INT_INDEX |
 	    SDHCI_INT_END_BIT | SDHCI_INT_CRC | SDHCI_INT_TIMEOUT |
 	    SDHCI_INT_DATA_AVAIL | SDHCI_INT_SPACE_AVAIL |
-	    SDHCI_INT_DMA_END | SDHCI_INT_DATA_END | SDHCI_INT_RESPONSE;
+	    SDHCI_INT_DATA_END | SDHCI_INT_RESPONSE;
 
 	if (host->flags & SDHCI_USE_DMA)
 		mask_u32 &= ~(SDHCI_INT_DATA_AVAIL | SDHCI_INT_SPACE_AVAIL);
@@ -239,7 +239,7 @@ static void sdhci_init(struct sdhci_host *host)
 	    SDHCI_INT_DATA_TIMEOUT | SDHCI_INT_INDEX |
 	    SDHCI_INT_END_BIT | SDHCI_INT_CRC | SDHCI_INT_TIMEOUT |
 	    SDHCI_INT_DATA_AVAIL | SDHCI_INT_SPACE_AVAIL |
-	    SDHCI_INT_DMA_END | SDHCI_INT_DATA_END | SDHCI_INT_RESPONSE;
+	    SDHCI_INT_DATA_END | SDHCI_INT_RESPONSE;
 
 	if (host->flags & SDHCI_USE_DMA)
 		intmask &= ~(SDHCI_INT_DATA_AVAIL | SDHCI_INT_SPACE_AVAIL);
@@ -427,6 +427,10 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct mmc_data *data)
 
 	if (data == NULL)
 		return;
+
+	/* Enable the DMA INT */
+	writel(readl(host->ioaddr + SDHCI_INT_ENABLE) |
+	       SDHCI_INT_DMA_END, host->ioaddr + SDHCI_INT_ENABLE);
 
 	/* Sanity checks */
 	BUG_ON(data->blksz * data->blocks > 524288);
@@ -622,14 +626,7 @@ static void sdhci_finish_data(struct sdhci_host *host)
 		blocks = (data->error == 0) ? 0 : 1;
 	else
 		blocks = readl(host->ioaddr + SDHCI_BLOCK_COUNT) >> 16;
-	data->bytes_xfered = data->blksz * (data->blocks - blocks);
-
-	if (!data->error && blocks) {
-		printk(KERN_ERR "%s: Controller signalled completion even "
-		       "though there were blocks left.\n",
-		       mmc_hostname(host->mmc));
-		data->error = -EIO;
-	}
+	data->bytes_xfered = data->blksz * data->blocks;
 
 	if (data->stop) {
 		/*
@@ -823,7 +820,11 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	/* Configure the clock control register */
 	clk |=
 	    (readl(host->ioaddr + SDHCI_CLOCK_CONTROL) & (~SDHCI_CLOCK_MASK));
-	writel(clk, host->ioaddr + SDHCI_CLOCK_CONTROL);
+	if (host->plat_data->vendor_ver < ESDHC_VENDOR_V22)
+		writel(clk, host->ioaddr + SDHCI_CLOCK_CONTROL);
+	else
+		writel(clk | SDHCI_CLOCK_SD_EN,
+		       host->ioaddr + SDHCI_CLOCK_CONTROL);
 
 	/* Wait max 10 ms */
 	timeout = 10;
@@ -1248,7 +1249,6 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		       "though no data operation was in progress.\n",
 		       mmc_hostname(host->mmc), (unsigned)intmask);
 		sdhci_dumpregs(host);
-
 		return;
 	}
 
@@ -1301,21 +1301,26 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 				 */
 				host->data_early = 1;
 			} else {
-				/* ????
-				 * There are the DATA END INT when writing is
-				 * not complete. Double check on it.
-				 */
-				intmask = readl(host->ioaddr +
-						SDHCI_PRESENT_STATE);
-				if (intmask & SDHCI_DATA_ACTIVE)
-					goto data_irq_out;
+
+				if (host->plat_data->vendor_ver
+				    < ESDHC_VENDOR_V22) {
+					/*
+					 * There are the DATA END INT when
+					 * writing is not complete. Double
+					 * check on it. TO2 has been fixed it.
+					 */
+					intmask = readl(host->ioaddr +
+							SDHCI_PRESENT_STATE);
+					if (intmask & SDHCI_DATA_ACTIVE)
+						goto data_irq_out;
+				}
 				sdhci_finish_data(host);
 			}
 		}
 	}
 data_irq_out:
-	/* Enable the INT */
-	writel(intsave, host->ioaddr + SDHCI_INT_ENABLE);
+	/* Enable the INT except the DMA INT */
+	writel(intsave & (~SDHCI_INT_DMA_END), host->ioaddr + SDHCI_INT_ENABLE);
 }
 
 /*!
@@ -1572,7 +1577,7 @@ static int sdhci_resume(struct platform_device *pdev)
 		mmiowb();
 
 		cd_status = chip->hosts[i]->plat_data->status(chip->hosts[i]->
-		mmc->parent);
+							      mmc->parent);
 		if (cd_status)
 			chip->hosts[i]->flags &= ~SDHCI_CD_PRESENT;
 		else
@@ -1706,6 +1711,8 @@ no_detect_irq:
 	sdhci_reset(host, SDHCI_RESET_ALL);
 
 	version = readl(host->ioaddr + SDHCI_HOST_VERSION);
+	host->plat_data->vendor_ver = (version & SDHCI_VENDOR_VER_MASK) >>
+	    SDHCI_VENDOR_VER_SHIFT;
 	version = (version & SDHCI_SPEC_VER_MASK) >> SDHCI_SPEC_VER_SHIFT;
 	if (version != 1) {
 		printk(KERN_ERR "%s: Unknown controller version (%d). "

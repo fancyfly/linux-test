@@ -89,6 +89,7 @@
 
 #define SDHCI_CLOCK_CONTROL	0x2C
 #define  SDHCI_DIVIDER_SHIFT	8
+#define  SDHCI_CLOCK_SD_EN	0x00000008
 #define  SDHCI_CLOCK_PER_EN	0x00000004
 #define  SDHCI_CLOCK_HLK_EN	0x00000002
 #define  SDHCI_CLOCK_IPG_EN	0x00000001
@@ -196,6 +197,7 @@ enum {
 #define  SDHCI_SPEC_VER_SHIFT	0
 #define   SDHCI_SPEC_100	0
 #define   SDHCI_SPEC_200	1
+#define   ESDHC_VENDOR_V22 	0x12
 
 struct sdhci_chip;
 
@@ -212,9 +214,9 @@ struct sdhci_host {
 	int flags;		/* Host attributes */
 #define SDHCI_USE_DMA		(1<<0)	/* Host is DMA capable */
 #define SDHCI_REQ_USE_DMA	(1<<1)	/* Use DMA for this req. */
-#define SDHCI_USE_EXTERNAL_DMA	(1<<2)	/* Use DMA for this req. */
-#define SDHCI_CD_PRESENT 	(1<<8)	/* Use DMA for this req. */
-#define SDHCI_WP_ENABLED	(1<<9)	/* Use DMA for this req. */
+#define SDHCI_USE_EXTERNAL_DMA	(1<<2)	/* Use the External DMA */
+#define SDHCI_CD_PRESENT 	(1<<8)	/* CD present */
+#define SDHCI_WP_ENABLED	(1<<9)	/* Write protect */
 
 	unsigned int max_clk;	/* Max possible freq (MHz) */
 	unsigned int min_clk;	/* Min possible freq (MHz) */

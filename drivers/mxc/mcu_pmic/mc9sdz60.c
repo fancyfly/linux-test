@@ -43,9 +43,8 @@ int mc9sdz60_read_reg(u8 reg, u8 *value)
 
 int mc9sdz60_write_reg(u8 reg, u8 value)
 {
-	if (i2c_smbus_write_byte_data(mc9sdz60_i2c_client, reg, value) < 0) {
+	if (i2c_smbus_write_byte_data(mc9sdz60_i2c_client, reg, value) < 0)
 		return -1;
-	}
 	return 0;
 }
 
@@ -55,7 +54,8 @@ int mc9sdz60_write_reg(u8 reg, u8 value)
  * @param adapter            struct i2c_adapter *
  * @return  0
  */
-static int mc9sdz60_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int mc9sdz60_probe(struct i2c_client *client,
+			const struct i2c_device_id *id)
 {
 	mc9sdz60_i2c_client = client;
 	return 0;
@@ -94,10 +94,7 @@ int mc9sdz60_init(void)
 {
 	int err;
 	err = i2c_add_driver(&mc9sdz60_i2c_driver);
-	if (err) {
-		return err;
-	}
-	return 0;
+	return err;
 }
 void mc9sdz60_exit(void)
 {

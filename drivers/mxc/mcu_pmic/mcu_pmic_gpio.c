@@ -22,22 +22,21 @@
  * Includes
  */
 #include <linux/platform_device.h>
+#include <linux/regulator/mcu_max8660-bus.h>
+#include <asm/arch-mxc/pmic_status.h>
 #include <asm/ioctl.h>
-#include <asm/arch/pmic_status.h>
-#include <asm/arch/pmic_external.h>
-#include <asm/arch/pmic_power.h>
 
 #define SET_BIT_IN_BYTE(byte, pos) (byte |= (0x01 << pos))
 #define CLEAR_BIT_IN_BYTE(byte, pos) (byte &= ~(0x01 << pos))
 
-PMIC_STATUS pmic_gpio_set_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
+int pmic_gpio_set_bit_val(int reg, unsigned int bit,
 				  unsigned int val)
 {
 	int reg_name;
 	u8 reg_mask = 0;
 
 	if (bit > 7)
-		return PMIC_PARAMETER_ERROR;
+		return -1;
 
 	switch (reg) {
 	case MCU_GPIO_REG_RESET_1:
@@ -56,20 +55,20 @@ PMIC_STATUS pmic_gpio_set_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
 		reg_name = REG_MCU_GPIO_2;
 		break;
 	default:
-		return PMIC_PARAMETER_ERROR;
+		return -1;
 	}
 
 	SET_BIT_IN_BYTE(reg_mask, bit);
 	if (0 == val)
-		CHECK_ERROR(pmic_write_reg(reg_name, 0, reg_mask));
+		CHECK_ERROR(mcu_pmic_write_reg(reg_name, 0, reg_mask));
 	else
-		CHECK_ERROR(pmic_write_reg(reg_name, reg_mask, reg_mask));
+		CHECK_ERROR(mcu_pmic_write_reg(reg_name, reg_mask, reg_mask));
 
-	return PMIC_SUCCESS;
+	return 0;
 }
 EXPORT_SYMBOL(pmic_gpio_set_bit_val);
 
-PMIC_STATUS pmic_gpio_get_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
+int pmic_gpio_get_bit_val(int reg, unsigned int bit,
 				  unsigned int *val)
 {
 	int reg_name;
@@ -77,7 +76,7 @@ PMIC_STATUS pmic_gpio_get_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
 	u8 reg_mask = 0;
 
 	if (bit > 7)
-		return PMIC_PARAMETER_ERROR;
+		return -1;
 
 	switch (reg) {
 	case MCU_GPIO_REG_RESET_1:
@@ -96,37 +95,38 @@ PMIC_STATUS pmic_gpio_get_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
 		reg_name = REG_MCU_GPIO_2;
 		break;
 	default:
-		return PMIC_PARAMETER_ERROR;
+		return -1;
 	}
 
 	SET_BIT_IN_BYTE(reg_mask, bit);
-	CHECK_ERROR(pmic_read_reg(reg_name, &reg_read_val, reg_mask));
+	CHECK_ERROR(mcu_pmic_read_reg(reg_name, &reg_read_val, reg_mask));
 	if (0 == reg_read_val)
 		*val = 0;
 	else
 		*val = 1;
 
-	return PMIC_SUCCESS;
+	return 0;
 }
 EXPORT_SYMBOL(pmic_gpio_get_bit_val);
 
-PMIC_STATUS pmic_gpio_get_designation_bit_val(unsigned int bit,
+int pmic_gpio_get_designation_bit_val(unsigned int bit,
 					unsigned int *val)
 {
 	unsigned int reg_read_val;
 	u8 reg_mask = 0;
 
 	if (bit > 7)
-		return PMIC_PARAMETER_ERROR;
+		return -1;
 
 	SET_BIT_IN_BYTE(reg_mask, bit);
-	CHECK_ERROR(pmic_read_reg(REG_MCU_DES_FLAG, &reg_read_val, reg_mask));
+	CHECK_ERROR(
+		mcu_pmic_read_reg(REG_MCU_DES_FLAG, &reg_read_val, reg_mask));
 	if (0 == reg_read_val)
 		*val = 0;
 	else
 		*val = 1;
 
-	return PMIC_SUCCESS;
+	return 0;
 }
 EXPORT_SYMBOL(pmic_gpio_get_designation_bit_val);
 

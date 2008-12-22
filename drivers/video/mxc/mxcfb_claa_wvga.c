@@ -121,6 +121,8 @@ static int __devinit lcd_probe(struct platform_device *pdev)
 			plat->reset();
 
 		io_reg = regulator_get(&pdev->dev, plat->io_reg);
+		if (IS_ERR(io_reg))
+			io_reg = NULL;
 		core_reg = regulator_get(&pdev->dev, plat->core_reg);
 		if (!IS_ERR(core_reg)) {
 			regulator_set_voltage(io_reg, 1800000);
@@ -196,7 +198,8 @@ static void lcd_poweron(void)
 	dev_dbg(&plcd_dev->dev, "turning on LCD\n");
 	if (core_reg)
 		regulator_enable(core_reg);
-	regulator_enable(io_reg);
+	if (io_reg)
+		regulator_enable(io_reg);
 	lcd_on = 1;
 }
 

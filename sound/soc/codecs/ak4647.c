@@ -637,12 +637,32 @@ static struct snd_soc_device_driver ak4647_hifi_dai_driver = {
 static int ak4647_i2c_probe(struct i2c_client *client,
 			    const struct i2c_device_id *id)
 {
+	int ret;
+	u8 value;
 	ak4647_i2c_client = client;
-	return 0;
+	ret = ak4647_read_reg(AK4647_REG_START, &value);
+	if (0 == ret) {
+		pr_info("ak4647 codec detected\n");
+		ret = driver_register(&ak4647_codec_driver.driver);
+		if (ret < 0)
+			return ret;
+		ret = driver_register(&ak4647_hifi_dai_driver.driver);
+		if (ret < 0) {
+			driver_unregister(&ak4647_codec_driver.driver);
+			return ret;
+		}
+
+		return 0;
+	} else {
+		pr_info("ak4647 codec not detected\n");
+		return -1;
+	}
 }
 
 static int ak4647_i2c_remove(struct i2c_client *client)
 {
+	driver_unregister(&ak4647_hifi_dai_driver.driver);
+	driver_unregister(&ak4647_codec_driver.driver);
 	return 0;
 }
 
@@ -670,23 +690,11 @@ static __init int ak4647_init(void)
 		pr_err("ak4647 i2c driver register failed");
 		return ret;
 	}
-
-	ret = driver_register(&ak4647_codec_driver.driver);
-	if (ret < 0)
-		return ret;
-	ret = driver_register(&ak4647_hifi_dai_driver.driver);
-	if (ret < 0) {
-		driver_unregister(&ak4647_codec_driver.driver);
-		return ret;
-	}
-
 	return ret;
 }
 
 static __exit void ak4647_exit(void)
 {
-	driver_unregister(&ak4647_hifi_dai_driver.driver);
-	driver_unregister(&ak4647_codec_driver.driver);
 	i2c_del_driver(&ak4647_i2c_driver);
 }
 

@@ -3,6 +3,7 @@ obj-$(CONFIG_MXC_IPU_V3)			+= ipu3/
 obj-$(CONFIG_MXC_SSI)               	+= ssi/
 obj-$(CONFIG_MXC_DAM)               	+= dam/
 
+obj-$(CONFIG_MXC_PMIC_MC9SDZ60)		+= mcu_pmic/
 obj-$(CONFIG_MXC_PMIC)			+= pmic/
 
 obj-$(CONFIG_MXC_DPTC)			+= pm/

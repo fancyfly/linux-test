@@ -25,9 +25,9 @@
 #include <linux/spinlock.h>
 #include <linux/proc_fs.h>
 #include <linux/i2c.h>
+#include <linux/regulator/mcu_max8660-bus.h>
 #include <asm/arch/clock.h>
 #include <asm/uaccess.h>
-#include <asm/arch/pmic_external.h>
 #include "max8660.h"
 
 /* I2C bus id and device address of mcu */
@@ -54,14 +54,21 @@ static struct i2c_client *max8660_i2c_client;
 static u8 max8660_reg_value_table[] =
     { 0x0, 0x0, 0x0, 0x17, 0x17, 0x1F, 0x1F, 0x04, 0x04, 0x0, 0x0
 };
+static int max8660_dev_present;
+
+int is_max8660_present(void)
+{
+	return max8660_dev_present;
+}
+
 int max8660_get_buffered_reg_val(int reg_name, u8 *value)
 {
-
+	if (!max8660_dev_present)
+		return -1;
 	/* outof range */
 	if (reg_name < REG_MAX8660_OUTPUT_ENABLE_1
-	    || reg_name > REG_MAX8660_FORCE_PWM) {
+	    || reg_name > REG_MAX8660_FORCE_PWM)
 		return -1;
-	}
 	*value =
 	    max8660_reg_value_table[reg_name - REG_MAX8660_OUTPUT_ENABLE_1];
 	return 0;
@@ -71,31 +78,41 @@ int max8660_save_buffered_reg_val(int reg_name, u8 value)
 
 	/* outof range */
 	if (reg_name < REG_MAX8660_OUTPUT_ENABLE_1
-	    || reg_name > REG_MAX8660_FORCE_PWM) {
+	    || reg_name > REG_MAX8660_FORCE_PWM)
 		return -1;
-	}
 	max8660_reg_value_table[reg_name - REG_MAX8660_OUTPUT_ENABLE_1] = value;
 	return 0;
 }
 
 int max8660_write_reg(u8 reg, u8 value)
 {
-	if (i2c_smbus_write_byte_data(max8660_i2c_client, reg, value) < 0) {
-		return -1;
-	}
-	return 0;
+	if (max8660_dev_present && (i2c_smbus_write_byte_data(
+		max8660_i2c_client, reg, value) >= 0))
+		return 0;
+	return -1;
 }
 
 /*!
  * max8660 I2C attach function
  *
  * @param adapter            struct i2c_client *
- * @return  Always 0 because max8660 is write-only and can not be detected
+ * @return  0 for max8660 successfully detected
  */
-static int max8660_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int max8660_probe(struct i2c_client *client,
+			const struct i2c_device_id *id)
 {
+	int retval;
 	max8660_i2c_client = client;
-	return 0;
+	retval = i2c_smbus_write_byte_data(max8660_i2c_client,
+				MAX8660_OUTPUT_ENABLE_1, 0);
+	if (retval == 0) {
+		max8660_dev_present = 1;
+		pr_info("max8660 probed !\n");
+	} else {
+		max8660_dev_present = 0;
+		pr_info("max8660 not detected!\n");
+	}
+	return retval;
 }
 
 /*!
@@ -129,10 +146,7 @@ int max8660_init(void)
 {
 	int err;
 	err = i2c_add_driver(&max8660_i2c_driver);
-	if (err) {
-		return err;
-	}
-	return 0;
+	return err;
 }
 void max8660_exit(void)
 {

@@ -337,8 +337,10 @@ static int tsc2007_i2c_probe(struct i2c_client *client, const struct i2c_device_
 			data->penup_threshold = 10;
 
 		data->vdd_reg = regulator_get(&client->dev, tsc_data->vdd_reg);
-		if (data->vdd_reg)
+		if (!IS_ERR(data->vdd_reg))
 			regulator_enable(data->vdd_reg);
+		else
+			data->vdd_reg = NULL;
 		if (tsc_data->active)
 			tsc_data->active();
 	} else {

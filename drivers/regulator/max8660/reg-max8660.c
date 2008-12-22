@@ -21,9 +21,9 @@
 #include <linux/regulator/regulator-platform.h>
 #include <linux/regulator/regulator-drv.h>
 #include <asm/ioctl.h>
+#include <asm/arch-mxc/pmic_status.h>
 #include <linux/platform_device.h>
-#include <asm/arch/pmic_status.h>
-#include <asm/arch/pmic_external.h>
+#include <linux/regulator/mcu_max8660-bus.h>
 
 /*!
  * brief PMIC regulators.
@@ -179,7 +179,7 @@ static int max8660_regulator_on(int regulator)
 		return PMIC_PARAMETER_ERROR;
 	}
 
-	CHECK_ERROR(pmic_write_reg(reg_num, reg_mask, reg_mask));
+	CHECK_ERROR(mcu_pmic_write_reg(reg_num, reg_mask, reg_mask));
 
 	return 0;
 }
@@ -227,14 +227,14 @@ static int max8660_regulator_off(int regulator)
 		return PMIC_PARAMETER_ERROR;
 	}
 
-	CHECK_ERROR(pmic_write_reg(reg_num, 0, reg_mask));
+	CHECK_ERROR(mcu_pmic_write_reg(reg_num, 0, reg_mask));
 
 	/* handle sw3,4 */
 	switch (regulator) {
 	case MCU_SW3:
 		reg_mask = 0;
 		SET_BIT_IN_BYTE(reg_mask, 2);
-		CHECK_ERROR(pmic_read_reg
+		CHECK_ERROR(mcu_pmic_read_reg
 			    (REG_MCU_POWER_CTL, &reg_read, reg_mask));
 
 		/* check if hw pin enable sw34 */
@@ -243,21 +243,21 @@ static int max8660_regulator_off(int regulator)
 			/* keep sw4 on */
 			reg_mask = 0;
 			SET_BIT_IN_BYTE(reg_mask, 2);
-			CHECK_ERROR(pmic_write_reg
+			CHECK_ERROR(mcu_pmic_write_reg
 				    (REG_MAX8660_OUTPUT_ENABLE_1, reg_mask,
 				     reg_mask));
 
 			/* disable hw pin to actually turn off sw3 */
 			reg_mask = 0;
 			SET_BIT_IN_BYTE(reg_mask, 2);
-			CHECK_ERROR(pmic_write_reg
+			CHECK_ERROR(mcu_pmic_write_reg
 				    (REG_MCU_POWER_CTL, 0, reg_mask));
 		}
 		break;
 	case MCU_SW4:
 		reg_mask = 0;
 		SET_BIT_IN_BYTE(reg_mask, 2);
-		CHECK_ERROR(pmic_read_reg
+		CHECK_ERROR(mcu_pmic_read_reg
 			    (REG_MCU_POWER_CTL, &reg_read, reg_mask));
 
 		/* check if hw pin enable sw34 */
@@ -266,14 +266,14 @@ static int max8660_regulator_off(int regulator)
 			/* keep sw3 on */
 			reg_mask = 0;
 			SET_BIT_IN_BYTE(reg_mask, 0);
-			CHECK_ERROR(pmic_write_reg
+			CHECK_ERROR(mcu_pmic_write_reg
 				    (REG_MAX8660_OUTPUT_ENABLE_1, reg_mask,
 				     reg_mask));
 
 			/* disable hw pin to actually turn off sw4 */
 			reg_mask = 0;
 			SET_BIT_IN_BYTE(reg_mask, 2);
-			CHECK_ERROR(pmic_write_reg
+			CHECK_ERROR(mcu_pmic_write_reg
 				    (REG_MCU_POWER_CTL, 0, reg_mask));
 		}
 		break;
@@ -327,15 +327,16 @@ static int max8660_sw3_set_voltage(struct regulator *reg, int uV)
 
 	/* hold on */
 	SET_BIT_IN_BYTE(reg_mask, 0);
-	CHECK_ERROR(pmic_write_reg
+	CHECK_ERROR(mcu_pmic_write_reg
 		    (REG_MAX8660_VOLT_CHANGE_CONTROL_1, 0, reg_mask));
 
 	/* set volt */
-	CHECK_ERROR(pmic_write_reg(REG_MAX8660_V3_TARGET_VOLT_1, volt, 0xff));
+	CHECK_ERROR(
+		mcu_pmic_write_reg(REG_MAX8660_V3_TARGET_VOLT_1, volt, 0xff));
 
 	/* start ramp */
 	SET_BIT_IN_BYTE(reg_mask, 0);
-	CHECK_ERROR(pmic_write_reg
+	CHECK_ERROR(mcu_pmic_write_reg
 		    (REG_MAX8660_VOLT_CHANGE_CONTROL_1, reg_mask, reg_mask));
 
 	return 0;
@@ -346,7 +347,7 @@ static int max8660_sw3_get_voltage(struct regulator *reg)
 	int uV;
 	unsigned int reg_val = 0;
 
-	CHECK_ERROR(pmic_read_reg
+	CHECK_ERROR(mcu_pmic_read_reg
 		    (REG_MAX8660_V3_TARGET_VOLT_1, &reg_val, 0xff));
 
 	uV = 1000 * (reg_val * 25 + 725);
@@ -378,15 +379,16 @@ static int max8660_sw4_set_voltage(struct regulator *reg, int uV)
 
 	/* hold on */
 	SET_BIT_IN_BYTE(reg_mask, 4);
-	CHECK_ERROR(pmic_write_reg
+	CHECK_ERROR(mcu_pmic_write_reg
 		    (REG_MAX8660_VOLT_CHANGE_CONTROL_1, 0, reg_mask));
 
 	/* set volt */
-	CHECK_ERROR(pmic_write_reg(REG_MAX8660_V4_TARGET_VOLT_1, volt, 0xff));
+	CHECK_ERROR(
+		mcu_pmic_write_reg(REG_MAX8660_V4_TARGET_VOLT_1, volt, 0xff));
 
 	/* start ramp */
 	SET_BIT_IN_BYTE(reg_mask, 4);
-	CHECK_ERROR(pmic_write_reg
+	CHECK_ERROR(mcu_pmic_write_reg
 		    (REG_MAX8660_VOLT_CHANGE_CONTROL_1, reg_mask, reg_mask));
 
 	return 0;
@@ -397,7 +399,7 @@ static int max8660_sw4_get_voltage(struct regulator *reg)
 	int uV;
 	unsigned int reg_val = 0;
 
-	CHECK_ERROR(pmic_read_reg
+	CHECK_ERROR(mcu_pmic_read_reg
 		    (REG_MAX8660_V4_TARGET_VOLT_1, &reg_val, 0xff));
 
 	uV = 1000 * (reg_val * 25 + 725);
@@ -429,15 +431,16 @@ static int max8660_ldo5_set_voltage(struct regulator *reg, int uV)
 
 	/* hold on */
 	SET_BIT_IN_BYTE(reg_mask, 6);
-	CHECK_ERROR(pmic_write_reg
+	CHECK_ERROR(mcu_pmic_write_reg
 		    (REG_MAX8660_VOLT_CHANGE_CONTROL_1, 0, reg_mask));
 
 	/* set volt */
-	CHECK_ERROR(pmic_write_reg(REG_MAX8660_V5_TARGET_VOLT_1, volt, 0xff));
+	CHECK_ERROR(
+		mcu_pmic_write_reg(REG_MAX8660_V5_TARGET_VOLT_1, volt, 0xff));
 
 	/* start ramp */
 	SET_BIT_IN_BYTE(reg_mask, 6);
-	CHECK_ERROR(pmic_write_reg
+	CHECK_ERROR(mcu_pmic_write_reg
 		    (REG_MAX8660_VOLT_CHANGE_CONTROL_1, reg_mask, reg_mask));
 
 	return 0;
@@ -448,7 +451,7 @@ static int max8660_ldo5_get_voltage(struct regulator *reg)
 	int uV;
 	unsigned int reg_val = 0;
 
-	CHECK_ERROR(pmic_read_reg
+	CHECK_ERROR(mcu_pmic_read_reg
 		    (REG_MAX8660_V5_TARGET_VOLT_1, &reg_val, 0xff));
 
 	uV = 1000 * (reg_val * 25 + 1700);
@@ -479,7 +482,8 @@ static int max8660_ldo6_set_voltage(struct regulator *reg, int uV)
 	volt = (mV - 1800) / 100;
 
 	/* set volt */
-	CHECK_ERROR(pmic_write_reg(REG_MAX8660_V6V7_TARGET_VOLT, volt, 0x0f));
+	CHECK_ERROR(
+		mcu_pmic_write_reg(REG_MAX8660_V6V7_TARGET_VOLT, volt, 0x0f));
 
 	return 0;
 }
@@ -489,7 +493,7 @@ static int max8660_ldo6_get_voltage(struct regulator *reg)
 	int uV;
 	unsigned int reg_val = 0;
 
-	CHECK_ERROR(pmic_read_reg
+	CHECK_ERROR(mcu_pmic_read_reg
 		    (REG_MAX8660_V6V7_TARGET_VOLT, &reg_val, 0x0f));
 
 	uV = 1000 * (reg_val * 100 + 1800);
@@ -519,7 +523,7 @@ static int max8660_ldo7_set_voltage(struct regulator *reg, int uV)
 	volt = (mV - 1800) / 100;
 
 	/* set volt */
-	CHECK_ERROR(pmic_write_reg
+	CHECK_ERROR(mcu_pmic_write_reg
 		    (REG_MAX8660_V6V7_TARGET_VOLT, (volt << 4), 0xf0));
 
 	return 0;
@@ -530,7 +534,7 @@ static int max8660_ldo7_get_voltage(struct regulator *reg)
 	int uV;
 	unsigned int reg_val = 0;
 
-	CHECK_ERROR(pmic_read_reg
+	CHECK_ERROR(mcu_pmic_read_reg
 		    (REG_MAX8660_V6V7_TARGET_VOLT, &reg_val, 0x0f));
 	reg_val = (reg_val >> 4) & 0xf;
 
@@ -876,6 +880,18 @@ int reg_max8660_probe(void)
 	return 0;
 }
 EXPORT_SYMBOL(reg_max8660_probe);
+
+int reg_max8660_remove(void)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(reg_max8660_children); i++)
+		regulator_unregister(&reg_max8660_children[i].regulator);
+
+	for (i = 0; i < ARRAY_SIZE(reg_max8660); i++)
+		regulator_unregister(&reg_max8660[i].regulator);
+	return 0;
+}
+EXPORT_SYMBOL(reg_max8660_remove);
 
 /* Module information */
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");

@@ -33,12 +33,16 @@
 #define MAX8660_V5_TARGET_VOLT_2	0x33
 #define MAX8660_V6V7_TARGET_VOLT	0x39
 #define MAX8660_FORCE_PWM			0x80
+
+int is_max8660_present(void);
 int max8660_write_reg(u8 reg, u8 value);
 int max8660_save_buffered_reg_val(int reg_name, u8 value);
 int max8660_get_buffered_reg_val(int reg_name, u8 *value);
 int max8660_init(void);
+void max8660_exit(void);
 
 extern int reg_max8660_probe(void);
+extern int reg_max8660_remove(void);
 
 #endif				/* __KERNEL__ */
 

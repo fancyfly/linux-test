@@ -36,7 +36,6 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 
-#include <asm/arch/pmic_power.h>
 #include <asm/arch/mmc.h>
 #include <asm/arch/gpio.h>
 

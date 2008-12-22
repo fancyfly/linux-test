@@ -30,14 +30,12 @@
 #include <linux/wait.h>
 #include <linux/videodev2.h>
 #include <linux/workqueue.h>
-#include "asm-arm/arch-mxc/pmic_external.h"
 #include <media/v4l2-int-device.h>
+#include <linux/regulator/mcu_max8660-bus.h>
 #include "mxc_v4l2_capture.h"
 
 extern void gpio_sensor_active(void);
 extern void gpio_sensor_inactive(void);
-extern PMIC_STATUS pmic_gpio_set_bit_val(t_mcu_gpio_reg reg, unsigned int bit,
-					 unsigned int val);
 
 static int adv7180_probe(struct i2c_client *adapter,
 			 const struct i2c_device_id *id);

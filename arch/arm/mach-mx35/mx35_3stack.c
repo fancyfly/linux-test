@@ -28,6 +28,7 @@
 #include <linux/mtd/map.h>
 #include <linux/mtd/partitions.h>
 #include <linux/delay.h>
+#include <linux/regulator/mcu_max8660-bus.h>
 
 #include <asm/mach/flash.h>
 #endif
@@ -41,7 +42,6 @@
 #include <asm/arch/memory.h>
 #include <asm/arch/gpio.h>
 #include <asm/arch/mmc.h>
-#include <asm/arch/pmic_external.h>
 
 #include "board-mx35_3stack.h"
 #include "crm_regs.h"
@@ -718,7 +718,7 @@ static void __init mxc_init_gps(void)
 static void pmic_power_off(void)
 {
 #ifdef CONFIG_MXC_PMIC_MC9SDZ60
-	pmic_write_reg(REG_MCU_POWER_CTL, 0x10, 0x10);
+	mcu_pmic_write_reg(REG_MCU_POWER_CTL, 0x10, 0x10);
 #endif
 }
 

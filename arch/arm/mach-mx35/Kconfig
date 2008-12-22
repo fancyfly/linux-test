@@ -13,7 +13,7 @@ config MX35_OPTIONS
 config MACH_MX35_3DS
 	bool "Support MX35 3STACK platforms"
 	default y
-	select MXC_PSEUDO_IRQS if MXC_PMIC
+	select MXC_PSEUDO_IRQS if MXC_PMIC_MC9SDZ60
 	help
 	  Include support for MX35 3STACK platform. This includes specific
 	  configurations for the board and its peripherals.

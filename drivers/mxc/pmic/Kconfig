@@ -30,13 +30,6 @@ config MXC_PMIC_MC34704
 	  ---help---
 	  This is the MXC MC34704 PMIC support.
 
-config MXC_PMIC_MC9SDZ60
-	tristate "MC9sDZ60 PMIC"
-	depends on ARCH_MXC && I2C
-	select MXC_PMIC
-	  ---help---
-	  This is the MXC MC9sDZ60(MCU) PMIC support.
-
 config MXC_PMIC_CHARDEV
 	tristate "MXC PMIC device interface"
 	depends on MXC_PMIC
@@ -52,6 +45,5 @@ comment "MXC PMIC Client Drivers"
 source "drivers/mxc/pmic/mc13783/Kconfig"
 
 source "drivers/mxc/pmic/mc13892/Kconfig"
-source "drivers/mxc/pmic/mc9sdz60/Kconfig"
 
 endmenu

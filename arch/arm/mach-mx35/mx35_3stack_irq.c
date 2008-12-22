@@ -17,6 +17,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/regulator/mcu_max8660-bus.h>
 
 #include <asm/hardware.h>
 #include <asm/irq.h>
@@ -27,7 +28,6 @@
 #include <asm/mach/irq.h>
 
 #include <asm/arch/gpio.h>
-#include <asm/arch/pmic_external.h>
 
 #include "board-mx35_3stack.h"
 #include "iomux.h"
@@ -242,11 +242,12 @@ static void mcu_event_handler(struct work_struct *work)
 
 	/* read int flags and ack int */
 	for (i = 0; i < 3; i++) {
-		err = pmic_read_reg(REG_MCU_INT_FLAG_1, &flag1, 0xFFFFFFFF);
-		err |= pmic_read_reg(REG_MCU_INT_FLAG_2, &flag2, 0xFFFFFFFF);
-		err |= pmic_write_reg(REG_MCU_INT_FLAG_1, 0, 0xFFFFFFFF);
-		err |= pmic_write_reg(REG_MCU_INT_FLAG_2, 0, 0xFFFFFFFF);
-		if (err == PMIC_SUCCESS)
+		err = mcu_pmic_read_reg(REG_MCU_INT_FLAG_1, &flag1, 0xFFFFFFFF);
+		err |= mcu_pmic_read_reg(REG_MCU_INT_FLAG_2,
+			&flag2, 0xFFFFFFFF);
+		err |= mcu_pmic_write_reg(REG_MCU_INT_FLAG_1, 0, 0xFFFFFFFF);
+		err |= mcu_pmic_write_reg(REG_MCU_INT_FLAG_2, 0, 0xFFFFFFFF);
+		if (err == 0)
 			break;
 	}
 
@@ -276,9 +277,9 @@ static void mcu_state_handler(struct work_struct *work)
 	event2 = pseudo_irq_enable >> MCU_INT_RTC;
 
 	for (i = 0; i < 3; i++) {
-		err = pmic_write_reg(REG_MCU_INT_ENABLE_1, event1, 0xFF);
-		err |= pmic_write_reg(REG_MCU_INT_ENABLE_2, event2, 0xFF);
-		if (err == PMIC_SUCCESS)
+		err = mcu_pmic_write_reg(REG_MCU_INT_ENABLE_1, event1, 0xFF);
+		err |= mcu_pmic_write_reg(REG_MCU_INT_ENABLE_2, event2, 0xFF);
+		if (err == 0)
 			break;
 	}
 	if (i >= 3)
@@ -334,9 +335,9 @@ static int mxc_pseudo_irq_suspend(struct platform_device *dev,
 	event2 = pseudo_irq_wakeup >> MCU_INT_RTC;
 
 	for (i = 0; i < 3; i++) {
-		err = pmic_write_reg(REG_MCU_INT_ENABLE_1, event1, 0xFF);
-		err |= pmic_write_reg(REG_MCU_INT_ENABLE_2, event2, 0xFF);
-		if (err == PMIC_SUCCESS)
+		err = mcu_pmic_write_reg(REG_MCU_INT_ENABLE_1, event1, 0xFF);
+		err |= mcu_pmic_write_reg(REG_MCU_INT_ENABLE_2, event2, 0xFF);
+		if (err == 0)
 			break;
 	}
 	pseudo_suspend = 1;

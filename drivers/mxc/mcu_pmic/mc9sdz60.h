@@ -65,6 +65,7 @@
 int mc9sdz60_read_reg(u8 reg, u8 *value);
 int mc9sdz60_write_reg(u8 reg, u8 value);
 int mc9sdz60_init(void);
+void mc9sdz60_exit(void);
 
 #endif	/* _MC9SDZ60_H_ */
 

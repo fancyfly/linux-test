@@ -15,10 +15,10 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
+#include <linux/regulator/mcu_max8660-bus.h>
 #include <asm/io.h>
 #include <asm/hardware.h>
 #include <asm/arch/gpio.h>
-#include <asm/arch/pmic_external.h>
 #include "board-mx35_3stack.h"
 #include "iomux.h"
 

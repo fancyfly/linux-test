@@ -28,7 +28,7 @@
 #include <asm/hardware.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/mxc.h>
-#include <asm/arch/pmic_external.h>
+#include <linux/regulator/mcu_max8660-bus.h>
 
 #include "imx-pcm.h"
 #include "imx-ssi.h"

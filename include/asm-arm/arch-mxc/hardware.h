@@ -64,8 +64,10 @@ static inline int type## _rev (int rev)		\
 #ifdef CONFIG_ARCH_MX35
 #include <asm/arch/mx35.h>
 #define cpu_is_mx35()   (1)
+#define board_is_mx35(rev)   ((system_rev & rev) ? 1 : 0)
 #else
 #define cpu_is_mx35()   (0)
+#define board_is_mx35(rev) (0)
 #endif
 
 #ifdef CONFIG_ARCH_MX37
@@ -146,4 +148,4 @@ MXC_REV(cpu_is_mx51);
 				MXC_MAX_GPIO_LINES + \
 				MXC_MAX_EXP_IO_LINES + \
 				MXC_MAX_PSEUDO_IO_LINES)
-#endif /* __ASM_ARCH_MXC_HARDWARE_H__ */
+#endif				/* __ASM_ARCH_MXC_HARDWARE_H__ */

@@ -1240,3 +1240,16 @@ void gpio_can_inactive(int id)
 		printk(KERN_ERR "NO such device\n");
 	}
 }
+
+void gpio_pmic_active(void)
+{
+	unsigned int pad_val = PAD_CTL_SRE_SLOW | PAD_CTL_DRV_NORMAL
+		| PAD_CTL_HYS_CMOS | PAD_CTL_100K_PU | PAD_CTL_DRV_3_3V;
+	mxc_request_iomux(MX35_PIN_GPIO2_0, MUX_CONFIG_FUNC);
+	mxc_iomux_set_pad(MX35_PIN_GPIO2_0, pad_val);
+	mxc_set_gpio_direction(MX35_PIN_GPIO2_0, 1);
+}
+
+EXPORT_SYMBOL(gpio_pmic_active);
+
+

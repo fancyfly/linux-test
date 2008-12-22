@@ -424,6 +424,11 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	 .type = "adv7180",
 	 .addr = 0x21,
 	 },
+	{
+	 .type = "mc13892",
+	 .addr = 0x08,
+	 .platform_data = (void *)MX35_PIN_GPIO2_0,
+	 },
 };
 
 static struct spi_board_info mxc_spi_board_info[] __initdata = {

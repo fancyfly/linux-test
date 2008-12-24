@@ -29,6 +29,20 @@
 #include "ipu_regs.h"
 #include "ipu_param_mem.h"
 
+typedef enum {
+	RGB2YUV = 0,
+	YUV2RGB,
+	RGB2RGB,
+	YUV2YUV,
+	CSC_NONE,
+	CSC_NUM
+} csc_type_t;
+
+typedef struct {
+	int mode;
+	void *coeff;
+} dp_csc_param_t;
+
 #define SYNC_WAVE 0
 #define ASYNC_SER_WAVE 6
 
@@ -235,14 +249,59 @@ static int _rgb_to_yuv(int n, int red, int green, int blue)
 	return c;
 }
 
+/*
+ * Row is for BG: 	RGB2YUV YUV2RGB RGB2RGB YUV2YUV CSC_NONE
+ * Column is for FG:	RGB2YUV YUV2RGB RGB2RGB YUV2YUV CSC_NONE
+ */
+static dp_csc_param_t dp_csc_array[CSC_NUM][CSC_NUM] = {
+{{DP_COM_CONF_CSC_DEF_BOTH, &rgb2ycbcr_coeff}, {0, 0}, {0, 0}, {DP_COM_CONF_CSC_DEF_BG, &rgb2ycbcr_coeff}, {DP_COM_CONF_CSC_DEF_BG, &rgb2ycbcr_coeff} },
+{{0, 0}, {DP_COM_CONF_CSC_DEF_BOTH, &ycbcr2rgb_coeff}, {DP_COM_CONF_CSC_DEF_BG, &ycbcr2rgb_coeff}, {0, 0}, {DP_COM_CONF_CSC_DEF_BG, &ycbcr2rgb_coeff} },
+{{0, 0}, {DP_COM_CONF_CSC_DEF_FG, &ycbcr2rgb_coeff}, {0, 0}, {0, 0}, {0, 0} },
+{{DP_COM_CONF_CSC_DEF_FG, &rgb2ycbcr_coeff}, {0, 0}, {0, 0}, {0, 0}, {0, 0} },
+{{DP_COM_CONF_CSC_DEF_FG, &rgb2ycbcr_coeff}, {DP_COM_CONF_CSC_DEF_FG, &ycbcr2rgb_coeff}, {0, 0}, {0, 0}, {0, 0} }
+};
+
+static csc_type_t fg_csc_type = CSC_NONE, bg_csc_type = CSC_NONE;
+
+void __ipu_dp_csc_setup(int dp, dp_csc_param_t dp_csc_param)
+{
+	u32 reg;
+	const int (*coeff)[5][3];
+
+	reg = __raw_readl(DP_COM_CONF(dp));
+	reg &= ~DP_COM_CONF_CSC_DEF_MASK;
+	reg |= dp_csc_param.mode;
+	__raw_writel(reg, DP_COM_CONF(dp));
+
+	coeff = dp_csc_param.coeff;
+
+	if (coeff) {
+		__raw_writel(mask_a((*coeff)[0][0]) |
+				(mask_a((*coeff)[0][1]) << 16), DP_CSC_A_0(dp));
+		__raw_writel(mask_a((*coeff)[0][2]) |
+				(mask_a((*coeff)[1][0]) << 16), DP_CSC_A_1(dp));
+		__raw_writel(mask_a((*coeff)[1][1]) |
+				(mask_a((*coeff)[1][2]) << 16), DP_CSC_A_2(dp));
+		__raw_writel(mask_a((*coeff)[2][0]) |
+				(mask_a((*coeff)[2][1]) << 16), DP_CSC_A_3(dp));
+		__raw_writel(mask_a((*coeff)[2][2]) |
+				(mask_b((*coeff)[3][0]) << 16) |
+				((*coeff)[4][0] << 30), DP_CSC_0(dp));
+		__raw_writel(mask_b((*coeff)[3][1]) | ((*coeff)[4][1] << 14) |
+				(mask_b((*coeff)[3][2]) << 16) |
+				((*coeff)[4][2] << 30), DP_CSC_1(dp));
+	}
+
+	reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
+	__raw_writel(reg, IPU_SRM_PRI2);
+}
+
 int _ipu_dp_init(ipu_channel_t channel, uint32_t in_pixel_fmt,
 		 uint32_t out_pixel_fmt)
 {
-	u32 reg;
 	int in_fmt, out_fmt;
 	int dp;
 	int partial = false;
-	const int (*coeff)[5][3];
 
 	if (channel == MEM_FG_SYNC) {
 		dp = DP_SYNC;
@@ -259,52 +318,40 @@ int _ipu_dp_init(ipu_channel_t channel, uint32_t in_pixel_fmt,
 
 	in_fmt = format_to_colorspace(in_pixel_fmt);
 	out_fmt = format_to_colorspace(out_pixel_fmt);
-	if (in_fmt != out_fmt) {
-		reg = __raw_readl(DP_COM_CONF(dp));
-		if (reg & DP_COM_CONF_CSC_DEF_MASK) {
-			dev_err(g_ipu_dev, "DP CSC already in use.\n");
-			return -EBUSY;
-		}
-		reg &= ~DP_COM_CONF_CSC_DEF_MASK;
-		if (partial) {
-			dev_info(g_ipu_dev, "Enable DP CSC for FG\n");
-			reg |= DP_COM_CONF_CSC_DEF_FG;
+
+	if (partial) {
+		if (in_fmt == RGB) {
+			if (out_fmt == RGB)
+				fg_csc_type = RGB2RGB;
+			else
+				fg_csc_type = RGB2YUV;
 		} else {
-			dev_info(g_ipu_dev, "Enable DP CSC for BG\n");
-			reg |= DP_COM_CONF_CSC_DEF_BG;
+			if (out_fmt == RGB)
+				fg_csc_type = YUV2RGB;
+			else
+				fg_csc_type = YUV2YUV;
 		}
-		__raw_writel(reg, DP_COM_CONF(dp));
-
-		if ((in_fmt == RGB) && (out_fmt == YCbCr))
-			coeff = &rgb2ycbcr_coeff;
-		else
-			coeff = &ycbcr2rgb_coeff;
-
-		__raw_writel(mask_a((*coeff)[0][0]) |
-			     (mask_a((*coeff)[0][1]) << 16), DP_CSC_A_0(dp));
-		__raw_writel(mask_a((*coeff)[0][2]) |
-			     (mask_a((*coeff)[1][0]) << 16), DP_CSC_A_1(dp));
-		__raw_writel(mask_a((*coeff)[1][1]) |
-			     (mask_a((*coeff)[1][2]) << 16), DP_CSC_A_2(dp));
-		__raw_writel(mask_a((*coeff)[2][0]) |
-			     (mask_a((*coeff)[2][1]) << 16), DP_CSC_A_3(dp));
-		__raw_writel(mask_a((*coeff)[2][2]) |
-			     (mask_b((*coeff)[3][0]) << 16) |
-			     ((*coeff)[4][0] << 30), DP_CSC_0(dp));
-		__raw_writel(mask_b((*coeff)[3][1]) | ((*coeff)[4][1] << 14) |
-			     (mask_b((*coeff)[3][2]) << 16) |
-			     ((*coeff)[4][2] << 30), DP_CSC_1(dp));
+	} else {
+		if (in_fmt == RGB) {
+			if (out_fmt == RGB)
+				bg_csc_type = RGB2RGB;
+			else
+				bg_csc_type = RGB2YUV;
+		} else {
+			if (out_fmt == RGB)
+				bg_csc_type = YUV2RGB;
+			else
+				bg_csc_type = YUV2YUV;
+		}
 	}
 
-	reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
-	__raw_writel(reg, IPU_SRM_PRI2);
+	__ipu_dp_csc_setup(dp, dp_csc_array[bg_csc_type][fg_csc_type]);
 
 	return 0;
 }
 
 void _ipu_dp_uninit(ipu_channel_t channel)
 {
-	u32 reg, csc;
 	int dp;
 	int partial = false;
 
@@ -321,24 +368,17 @@ void _ipu_dp_uninit(ipu_channel_t channel)
 		return;
 	}
 
-	reg = __raw_readl(DP_COM_CONF(dp));
-	csc = reg & DP_COM_CONF_CSC_DEF_MASK;
-	if (partial && (csc != DP_COM_CONF_CSC_DEF_FG))
-		return;
-	if (!partial && (csc != DP_COM_CONF_CSC_DEF_BG))
-		return;
+	if (partial)
+		fg_csc_type = CSC_NONE;
+	else
+		bg_csc_type = CSC_NONE;
 
-	dev_info(g_ipu_dev, "Disable DP CSC for %s\n", partial ? "FG" : "BG");
-	reg &= ~DP_COM_CONF_CSC_DEF_MASK;
-	__raw_writel(reg, DP_COM_CONF(dp));
-
-	reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
-	__raw_writel(reg, IPU_SRM_PRI2);
+	__ipu_dp_csc_setup(dp, dp_csc_array[bg_csc_type][fg_csc_type]);
 }
 
 void _ipu_dc_init(int dc_chan, int di, bool interlaced)
 {
-	u32 reg;
+	u32 reg = 0;
 
 	if ((dc_chan == 1) || (dc_chan == 5)) {
 		if (interlaced) {
@@ -356,14 +396,6 @@ void _ipu_dc_init(int dc_chan, int di, bool interlaced)
 		_ipu_dc_link_event(dc_chan, DC_EVT_EOFIELD, 0, 0);
 		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_CHAN, 0, 0);
 		_ipu_dc_link_event(dc_chan, DC_EVT_NEW_ADDR, 0, 0);
-
-		/* Make sure other DC sync channel is not assigned same DI */
-		reg = __raw_readl(DC_WR_CH_CONF(6 - dc_chan));
-		if ((di << 2) == (reg & DC_WR_CH_CONF_PROG_DI_ID)) {
-			reg &= ~DC_WR_CH_CONF_PROG_DI_ID;
-			reg |= di ? 0 : DC_WR_CH_CONF_PROG_DI_ID;
-			__raw_writel(reg, DC_WR_CH_CONF(6 - dc_chan));
-		}
 
 		reg = 0x2;
 		reg |= DC_DISP_ID_SYNC(di) << DC_WR_CH_CONF_PROG_DISP_ID_OFFSET;
@@ -426,6 +458,7 @@ int _ipu_chan_is_interlaced(ipu_channel_t channel)
 
 void _ipu_dp_dc_enable(ipu_channel_t channel)
 {
+	int di;
 	uint32_t reg;
 	uint32_t dc_chan;
 	int irq = 0;
@@ -449,55 +482,39 @@ void _ipu_dp_dc_enable(ipu_channel_t channel)
 		return;
 	}
 
+	di = g_dc_di_assignment[dc_chan];
+
+	/* Make sure other DC sync channel is not assigned same DI */
+	reg = __raw_readl(DC_WR_CH_CONF(6 - dc_chan));
+	if ((di << 2) == (reg & DC_WR_CH_CONF_PROG_DI_ID)) {
+		reg &= ~DC_WR_CH_CONF_PROG_DI_ID;
+		reg |= di ? 0 : DC_WR_CH_CONF_PROG_DI_ID;
+		__raw_writel(reg, DC_WR_CH_CONF(6 - dc_chan));
+	}
+
 	reg = __raw_readl(DC_WR_CH_CONF(dc_chan));
 	reg |= 4 << DC_WR_CH_CONF_PROG_TYPE_OFFSET;
 	__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
 
 	reg = __raw_readl(IPU_DISP_GEN);
-	if (g_dc_di_assignment[dc_chan])
+	if (di)
 		reg |= DI1_COUNTER_RELEASE;
 	else
 		reg |= DI0_COUNTER_RELEASE;
 	__raw_writel(reg, IPU_DISP_GEN);
 }
 
+static bool dc_swap;
+
 static irqreturn_t dc_irq_handler(int irq, void *dev_id)
 {
-	u32 reg;
-	uint32_t dc_chan;
-	ipu_channel_t channel;
 	struct completion *comp = dev_id;
-
-	if (irq == IPU_IRQ_DP_SF_END) {
-		channel = MEM_BG_SYNC;
-		dc_chan = 5;
-	} else if (irq == IPU_IRQ_DC_FC_1) {
-		channel = MEM_DC_SYNC;
-		dc_chan = 1;
-	} else {
-		return IRQ_HANDLED;
-	}
-
-	reg = __raw_readl(IPU_DISP_GEN);
-	if (g_dc_di_assignment[dc_chan])
-		reg &= ~DI1_COUNTER_RELEASE;
-	else
-		reg &= ~DI0_COUNTER_RELEASE;
-	__raw_writel(reg, IPU_DISP_GEN);
-
-	reg = __raw_readl(DC_WR_CH_CONF(dc_chan));
-	reg &= ~DC_WR_CH_CONF_PROG_TYPE_MASK;
-	__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
-
-	if (__raw_readl(IPUIRQ_2_STATREG(IPU_IRQ_VSYNC_PRE_0 + g_dc_di_assignment[dc_chan])) &
-		IPUIRQ_2_MASK(IPU_IRQ_VSYNC_PRE_0 + g_dc_di_assignment[dc_chan]))
-		dev_err(g_ipu_dev, "VSyncPre occurred before DI%d disable\n", g_dc_di_assignment[dc_chan]);
 
 	complete(comp);
 	return IRQ_HANDLED;
 }
 
-void _ipu_dp_dc_disable(ipu_channel_t channel)
+void _ipu_dp_dc_disable(ipu_channel_t channel, bool swap)
 {
 	int ret;
 	uint32_t lock_flags;
@@ -508,6 +525,8 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 	int timeout = 50;
 	DECLARE_COMPLETION_ONSTACK(dc_comp);
 
+	dc_swap = swap;
+
 	if (channel == MEM_DC_SYNC) {
 		dc_chan = 1;
 		irq = IPU_IRQ_DC_FC_1;
@@ -516,6 +535,7 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 		irq = IPU_IRQ_DP_SF_END;
 	} else if (channel == MEM_FG_SYNC) {
 		/* Disable FG channel */
+		dc_chan = 5;
 
 		spin_lock_irqsave(&ipu_lock, lock_flags);
 
@@ -541,13 +561,25 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 			if (timeout <= 0)
 				break;
 		}
+
+		/* Wait for DC triple buffer to empty,
+		 * this check is useful for tv overlay */
+		if (g_dc_di_assignment[dc_chan] == 0)
+			while ((__raw_readl(DC_STAT) & 0x00000002)
+				!= 0x00000002) ;
+		else if (g_dc_di_assignment[dc_chan] == 1)
+			while ((__raw_readl(DC_STAT) & 0x00000020)
+				!= 0x00000020) ;
 		return;
 	} else {
 		return;
 	}
 
-	__raw_writel(IPUIRQ_2_MASK(IPU_IRQ_VSYNC_PRE_0 + g_dc_di_assignment[dc_chan]),
-		     IPUIRQ_2_STATREG(IPU_IRQ_VSYNC_PRE_0 + g_dc_di_assignment[dc_chan]));
+	if (!dc_swap)
+		__raw_writel(IPUIRQ_2_MASK(IPU_IRQ_VSYNC_PRE_0
+			+ g_dc_di_assignment[dc_chan]),
+		     IPUIRQ_2_STATREG(IPU_IRQ_VSYNC_PRE_0
+			+ g_dc_di_assignment[dc_chan]));
 	ipu_clear_irq(irq);
 	ret = ipu_request_irq(irq, dc_irq_handler, 0, NULL, &dc_comp);
 	if (ret < 0) {
@@ -558,6 +590,47 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 
 	dev_dbg(g_ipu_dev, "DC stop timeout - %d * 10ms\n", 5 - ret);
 	ipu_free_irq(irq, &dc_comp);
+
+	if (dc_swap) {
+		spin_lock_irqsave(&ipu_lock, lock_flags);
+		/* Swap DC channel 1 and 5 settings, and disable old dc chan */
+		reg = __raw_readl(DC_WR_CH_CONF(dc_chan));
+		__raw_writel(reg, DC_WR_CH_CONF(6 - dc_chan));
+		reg &= ~DC_WR_CH_CONF_PROG_TYPE_MASK;
+		reg ^= DC_WR_CH_CONF_PROG_DI_ID;
+		__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
+		spin_unlock_irqrestore(&ipu_lock, lock_flags);
+	} else {
+		/* Wait for DC triple buffer to empty */
+		if (g_dc_di_assignment[dc_chan] == 0)
+			while ((__raw_readl(DC_STAT) & 0x00000002)
+				!= 0x00000002) ;
+		else if (g_dc_di_assignment[dc_chan] == 1)
+			while ((__raw_readl(DC_STAT) & 0x00000020)
+				!= 0x00000020) ;
+
+		spin_lock_irqsave(&ipu_lock, lock_flags);
+		reg = __raw_readl(DC_WR_CH_CONF(dc_chan));
+		reg &= ~DC_WR_CH_CONF_PROG_TYPE_MASK;
+		__raw_writel(reg, DC_WR_CH_CONF(dc_chan));
+
+		reg = __raw_readl(IPU_DISP_GEN);
+		if (g_dc_di_assignment[dc_chan])
+			reg &= ~DI1_COUNTER_RELEASE;
+		else
+			reg &= ~DI0_COUNTER_RELEASE;
+		__raw_writel(reg, IPU_DISP_GEN);
+
+		spin_unlock_irqrestore(&ipu_lock, lock_flags);
+
+		if (__raw_readl(IPUIRQ_2_STATREG(IPU_IRQ_VSYNC_PRE_0
+			+ g_dc_di_assignment[dc_chan])) &
+			IPUIRQ_2_MASK(IPU_IRQ_VSYNC_PRE_0
+			+ g_dc_di_assignment[dc_chan]))
+			dev_dbg(g_ipu_dev,
+				"VSyncPre occurred before DI%d disable\n",
+				g_dc_di_assignment[dc_chan]);
+	}
 }
 
 void _ipu_init_dc_mappings(void)

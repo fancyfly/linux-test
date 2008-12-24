@@ -281,12 +281,28 @@ int tve_fb_event(struct notifier_block *nb, unsigned long val, void *v)
 		}
 		break;
 	case FB_EVENT_BLANK:
-		if ((tve_fbi != fbi) || (tve.cur_mode == TVOUT_FMT_OFF))
+		if (tve_fbi != fbi)
 			return 0;
 
-		if (*((int *)event->data) == FB_BLANK_UNBLANK)
-			tve_enable();
-		else
+		if (*((int *)event->data) == FB_BLANK_UNBLANK) {
+
+			if (fb_mode_is_equal(fbi->mode, &video_modes[0])) {
+				if (tve.cur_mode != TVOUT_FMT_NTSC) {
+					tve_disable();
+					tve_setup(TVOUT_FMT_NTSC);
+				}
+				tve_enable();
+			} else if (fb_mode_is_equal(fbi->mode,
+					&video_modes[1])) {
+				if (tve.cur_mode != TVOUT_FMT_PAL) {
+					tve_disable();
+					tve_setup(TVOUT_FMT_PAL);
+				}
+				tve_enable();
+			} else {
+				tve_setup(TVOUT_FMT_OFF);
+			}
+		} else
 			tve_disable();
 		break;
 	}
@@ -432,8 +448,20 @@ static int tve_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int tve_resume(struct platform_device *pdev)
 {
-	if (enabled)
+	if (enabled) {
 		clk_enable(tve.clk);
+
+		if (tve.cur_mode == TVOUT_FMT_NTSC) {
+			tve_disable();
+			tve.cur_mode == TVOUT_FMT_OFF;
+			tve_setup(TVOUT_FMT_NTSC);
+		} else if (tve.cur_mode == TVOUT_FMT_PAL) {
+			tve_disable();
+			tve.cur_mode == TVOUT_FMT_OFF;
+			tve_setup(TVOUT_FMT_PAL);
+		}
+		tve_enable();
+	}
 
 	return 0;
 }

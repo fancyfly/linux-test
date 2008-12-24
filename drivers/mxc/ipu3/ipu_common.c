@@ -50,6 +50,7 @@ int g_ipu_irq[2];
 int g_ipu_hw_rev;
 bool g_sec_chan_en[21];
 uint32_t g_channel_init_mask;
+uint32_t g_channel_enable_mask;
 DEFINE_SPINLOCK(ipu_lock);
 struct device *g_ipu_dev;
 
@@ -1040,6 +1041,11 @@ int32_t ipu_enable_channel(ipu_channel_t channel)
 	uint32_t in_dma;
 	uint32_t out_dma;
 
+	if (g_channel_enable_mask & (1L << IPU_CHAN_ID(channel))) {
+		dev_err(g_ipu_dev, "Warning: channel already enabled %d\n",
+			IPU_CHAN_ID(channel));
+	}
+
 	/* Get input and output dma channels */
 	out_dma = channel_2_dma(channel, IPU_OUTPUT_BUFFER);
 	in_dma = channel_2_dma(channel, IPU_VIDEO_IN_BUFFER);
@@ -1063,6 +1069,8 @@ int32_t ipu_enable_channel(ipu_channel_t channel)
 		_ipu_ic_enable_task(channel);
 
 	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+
+	g_channel_enable_mask |= 1L << IPU_CHAN_ID(channel);
 	return 0;
 }
 EXPORT_SYMBOL(ipu_enable_channel);
@@ -1086,6 +1094,12 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 	uint32_t out_dma;
 	uint32_t timeout;
 
+	if ((g_channel_enable_mask & (1L << IPU_CHAN_ID(channel))) == 0) {
+		dev_err(g_ipu_dev, "Channel already disabled %d\n",
+			IPU_CHAN_ID(channel));
+		return 0;
+	}
+
 	/* Get input and output dma channels */
 	out_dma = channel_2_dma(channel, IPU_OUTPUT_BUFFER);
 	in_dma = channel_2_dma(channel, IPU_VIDEO_IN_BUFFER);
@@ -1097,7 +1111,7 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 
 	if ((channel == MEM_BG_SYNC) || (channel == MEM_FG_SYNC) ||
 	    (channel == MEM_DC_SYNC)) {
-		_ipu_dp_dc_disable(channel);
+		_ipu_dp_dc_disable(channel, false);
 	} else if (wait_for_stop) {
 		timeout = 40;
 		while (idma_is_set(IDMAC_CHA_BUSY, in_dma) ||
@@ -1132,6 +1146,8 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 	}
 
 	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+
+	g_channel_enable_mask &= ~(1L << IPU_CHAN_ID(channel));
 
 	return 0;
 }
@@ -1398,6 +1414,40 @@ uint32_t _ipu_channel_status(ipu_channel_t channel)
 	}
 	return stat;
 }
+
+int32_t ipu_swap_channel(ipu_channel_t from_ch, ipu_channel_t to_ch)
+{
+	uint32_t reg;
+	unsigned long lock_flags;
+
+	int from_dma = channel_2_dma(from_ch, IPU_INPUT_BUFFER);
+	int to_dma = channel_2_dma(to_ch, IPU_INPUT_BUFFER);
+
+	/*enable target channel*/
+	spin_lock_irqsave(&ipu_lock, lock_flags);
+
+	reg = __raw_readl(IDMAC_CHA_EN(to_dma));
+	__raw_writel(reg | idma_mask(to_dma), IDMAC_CHA_EN(to_dma));
+
+	g_channel_enable_mask |= 1L << IPU_CHAN_ID(to_ch);
+
+	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+
+	/*switch dp dc*/
+	_ipu_dp_dc_disable(from_ch, true);
+
+	/*disable source channel*/
+	spin_lock_irqsave(&ipu_lock, lock_flags);
+	reg = __raw_readl(IDMAC_CHA_EN(from_dma));
+	__raw_writel(reg & ~idma_mask(from_dma), IDMAC_CHA_EN(from_dma));
+	__raw_writel(idma_mask(from_dma), IPU_CHA_CUR_BUF(from_dma));
+	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+
+	g_channel_enable_mask &= ~(1L << IPU_CHAN_ID(from_ch));
+
+	return 0;
+}
+EXPORT_SYMBOL(ipu_swap_channel);
 
 uint32_t bytes_per_pixel(uint32_t fmt)
 {

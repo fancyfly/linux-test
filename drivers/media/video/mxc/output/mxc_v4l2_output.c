@@ -26,6 +26,7 @@
 #include <linux/fs.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
+#include <linux/kthread.h>
 #include <asm/cacheflush.h>
 #include <asm/io.h>
 #include <asm/semaphore.h>
@@ -58,6 +59,8 @@ struct v4l2_output mxc_outputs[2] = {
 
 static int video_nr = 16;
 static spinlock_t g_lock = SPIN_LOCK_UNLOCKED;
+static struct fb_var_screeninfo saved_fbvar;
+static int saved_blank;
 
 /* debug counters */
 uint32_t g_irq_cnt;
@@ -581,29 +584,43 @@ static int mxc_v4l2out_streamon(vout_data * vout)
 		}
 	} else
 #endif
-	{			/* Use SDC */
+	{	/* Use SDC */
+		unsigned int ipu_ch = CHAN_NONE;
+
 		dev_dbg(dev, "Using SDC channel\n");
 
 		fbvar = fbi->var;
+		saved_fbvar = fbvar;
 
-		if (vout->cur_disp_output == 3) {
-			vout->display_ch = MEM_FG_SYNC;
+		if (fbi->fbops->fb_ioctl) {
+			old_fs = get_fs();
+			set_fs(KERNEL_DS);
+			fbi->fbops->fb_ioctl(fbi, MXCFB_GET_FB_IPU_CHAN,
+					(unsigned long)&ipu_ch);
+			set_fs(old_fs);
+		}
+		if (ipu_ch == CHAN_NONE) {
+			dev_err(dev,
+					"Can not get display ipu channel\n");
+			return -EINVAL;
+		}
+
+		if (fbi->fbops->fb_ioctl) {
+			old_fs = get_fs();
+			set_fs(KERNEL_DS);
+			if (fbi->fbops->fb_ioctl(fbi, MXCFB_GET_FB_BLANK_STATE,
+					(unsigned long)&saved_blank) < 0)
+				saved_blank = FB_BLANK_UNBLANK;
+			set_fs(old_fs);
+		}
+
+		vout->display_ch = ipu_ch;
+		if (vout->cur_disp_output == 3 || vout->cur_disp_output == 5) {
 			fbvar.bits_per_pixel = 16;
 			fbvar.nonstd = IPU_PIX_FMT_UYVY;
-
 			fbvar.xres = fbvar.xres_virtual = out_width;
 			fbvar.yres = out_height;
 			fbvar.yres_virtual = out_height * 2;
-		} else if (vout->cur_disp_output == 5) {
-			vout->display_ch = MEM_DC_SYNC;
-			fbvar.bits_per_pixel = 16;
-			fbvar.nonstd = IPU_PIX_FMT_UYVY;
-
-			fbvar.xres = fbvar.xres_virtual = out_width;
-			fbvar.yres = out_height;
-			fbvar.yres_virtual = out_height * 2;
-		} else {
-			vout->display_ch = MEM_BG_SYNC;
 		}
 
 		fbvar.activate |= FB_ACTIVATE_FORCE;
@@ -806,6 +823,8 @@ static int mxc_v4l2out_streamoff(vout_data * vout)
 	    registered_fb[vout->output_fb_num[vout->cur_disp_output]];
 	int i, retval = 0;
 	unsigned long lockflag = 0;
+	struct mxcfb_pos fb_pos;
+	mm_segment_t old_fs;
 
 	if (!vout)
 		return -EINVAL;
@@ -814,6 +833,7 @@ static int mxc_v4l2out_streamoff(vout_data * vout)
 		return 0;
 	}
 
+	/*disp irq may not be freed*/
 	cancel_work_sync(&vout->timer_work);
 
 	spin_lock_irqsave(&g_lock, lockflag);
@@ -827,6 +847,18 @@ static int mxc_v4l2out_streamoff(vout_data * vout)
 	ipu_disable_irq(IPU_IRQ_PP_IN_EOF);
 
 	spin_unlock_irqrestore(&g_lock, lockflag);
+
+	if (vout->display_ch == MEM_FG_SYNC) {
+		fb_pos.x = 0;
+		fb_pos.y = 0;
+		if (fbi->fbops->fb_ioctl) {
+			old_fs = get_fs();
+			set_fs(KERNEL_DS);
+			fbi->fbops->fb_ioctl(fbi, MXCFB_SET_OVERLAY_POS,
+					(unsigned long)&fb_pos);
+			set_fs(old_fs);
+		}
+	}
 
 	if (vout->post_proc_ch == MEM_PP_MEM) {	/* SDC or ADC with Rotation */
 		if (!ipu_can_rotate_in_place(vout->rotate)) {
@@ -848,14 +880,13 @@ static int mxc_v4l2out_streamoff(vout_data * vout)
 			ipu_disable_channel(vout->display_ch, true);
 			ipu_uninit_channel(vout->display_ch);
 		} else {
+			fbi->var = saved_fbvar;
 			fbi->var.activate |= FB_ACTIVATE_FORCE;
 			fb_set_var(fbi, &fbi->var);
 
-			if (vout->display_ch == MEM_FG_SYNC) {
-				acquire_console_sem();
-				fb_blank(fbi, FB_BLANK_POWERDOWN);
-				release_console_sem();
-			}
+			acquire_console_sem();
+			fb_blank(fbi, saved_blank);
+			release_console_sem();
 
 			vout->display_bufs[0] = 0;
 			vout->display_bufs[1] = 0;
@@ -1100,7 +1131,6 @@ static int mxc_v4l2out_open(struct inode *inode, struct file *file)
 		g_irq_cnt = g_buf_output_cnt = g_buf_q_cnt = g_buf_dq_cnt = 0;
 
 		INIT_WORK(&vout->timer_work, timer_work_func);
-
 	}
 
 	file->private_data = dev;
@@ -1144,9 +1174,6 @@ static int mxc_v4l2out_close(struct inode *inode, struct file *file)
 
 		/* capture off */
 		wake_up_interruptible(&vout->v4l_bufq);
-
-		schedule_work(&vout->timer_work);
-		flush_scheduled_work();
 	}
 
 	return 0;
@@ -1469,7 +1496,8 @@ mxc_v4l2out_do_ioctl(struct inode *inode, struct file *file,
 			}
 
 			/* only full screen supported for SDC BG */
-			if (vout->cur_disp_output == 4) {
+			if (vout->cur_disp_output == 4 ||
+				vout->cur_disp_output == 5) {
 				crop->c = vout->crop_current;
 				break;
 			}
@@ -1545,8 +1573,39 @@ mxc_v4l2out_do_ioctl(struct inode *inode, struct file *file,
 			b = &vout->crop_bounds[vout->cur_disp_output];
 
 			fbnum = vout->output_fb_num[vout->cur_disp_output];
-			if (vout->cur_disp_output == 3)
-				fbnum = vout->output_fb_num[4];
+
+			/* For FG overlay, it use BG window parameter as
+			 * limitation reference; and BG must enable to
+			 * support FG.
+			 */
+			if (vout->cur_disp_output == 3) {
+				unsigned int i, ipu_ch = CHAN_NONE;
+				struct fb_info *fbi;
+				mm_segment_t old_fs;
+
+				for (i = 0; i < num_registered_fb; i++) {
+					fbi = registered_fb[i];
+					if (fbi->fbops->fb_ioctl) {
+						old_fs = get_fs();
+						set_fs(KERNEL_DS);
+						fbi->fbops->fb_ioctl(fbi,
+							MXCFB_GET_FB_IPU_CHAN,
+							(unsigned long)&ipu_ch);
+						set_fs(old_fs);
+					}
+					if (ipu_ch == CHAN_NONE) {
+						dev_err(vdev->dev,
+						"Can not get display ipu channel\n");
+						retval = -EINVAL;
+						break;
+					}
+
+					if (ipu_ch == MEM_BG_SYNC) {
+						fbnum = i;
+						break;
+					}
+				}
+			}
 
 			b->width = registered_fb[fbnum]->var.xres;
 			b->height = registered_fb[fbnum]->var.yres;

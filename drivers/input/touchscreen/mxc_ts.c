@@ -45,12 +45,16 @@ static int ts_thread(void *arg)
 {
 	t_touch_screen ts_sample;
 	s32 wait = 0;
+
 	daemonize("mxc_ts");
 	while (input_ts_installed) {
 		try_to_freeze();
 		memset(&ts_sample, 0, sizeof(t_touch_screen));
 		if (0 != pmic_adc_get_touch_sample(&ts_sample, !wait))
 			continue;
+		if (!(ts_sample.contact_resistance || wait))
+			continue;
+
 		input_report_abs(mxc_inputdev, ABS_X, ts_sample.x_position);
 		input_report_abs(mxc_inputdev, ABS_Y, ts_sample.y_position);
 		input_report_abs(mxc_inputdev, ABS_PRESSURE,

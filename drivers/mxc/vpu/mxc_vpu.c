@@ -607,7 +607,7 @@ static int vpu_dev_probe(struct platform_device *pdev)
 static int vpu_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	if (codec_done == 1)
-		return -EINVAL;
+		return -EAGAIN;
 
 	clk_enable(vpu_clk);
 	if (bitwork_mem.cpu_addr != 0) {
@@ -622,14 +622,17 @@ static int vpu_suspend(struct platform_device *pdev, pm_message_t state)
 	}
 
 	clk_disable(vpu_clk);
-	mxc_pg_enable(pdev);
+
+	if (cpu_is_mx37() || cpu_is_mx51())
+		mxc_pg_enable(pdev);
 
 	return 0;
 }
 
 static int vpu_resume(struct platform_device *pdev)
 {
-	mxc_pg_disable(pdev);
+	if (cpu_is_mx37() || cpu_is_mx51())
+		mxc_pg_disable(pdev);
 
 	clk_enable(vpu_clk);
 

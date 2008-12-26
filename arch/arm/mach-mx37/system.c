@@ -121,13 +121,23 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 
 void mxc_pg_enable(struct platform_device *pdev)
 {
+	unsigned int gpc_pgr;
+
 	if (pdev == NULL)
 		return;
 
 	if (strcmp(pdev->name, "mxc_ipu") == 0) {
+		gpc_pgr = __raw_readl(MXC_GPC_PGR) & ~(MXC_GPC_PGR_IPUPG_MASK);
+		gpc_pgr |= (0x1 << MXC_GPC_PGR_IPUPG_OFFSET);
+		__raw_writel(gpc_pgr, MXC_GPC_PGR);
+
 		__raw_writel(MXC_PGCR_PCR, MXC_PGC_IPU_PGCR);
 		__raw_writel(MXC_PGSR_PSR, MXC_PGC_IPU_PGSR);
 	} else if (strcmp(pdev->name, "mxc_vpu") == 0) {
+		gpc_pgr = __raw_readl(MXC_GPC_PGR) & ~(MXC_GPC_PGR_VPUPG_MASK);
+		gpc_pgr |= (0x1 << MXC_GPC_PGR_VPUPG_OFFSET);
+		__raw_writel(gpc_pgr, MXC_GPC_PGR);
+
 		__raw_writel(MXC_PGCR_PCR, MXC_PGC_VPU_PGCR);
 		__raw_writel(MXC_PGSR_PSR, MXC_PGC_VPU_PGSR);
 	}

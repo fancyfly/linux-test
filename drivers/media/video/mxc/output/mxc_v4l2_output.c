@@ -240,43 +240,32 @@ static u32 bpp_to_fmt(struct fb_info *fbi)
 
 static irqreturn_t mxc_v4l2out_disp_refresh_irq_handler(int irq, void *dev_id)
 {
-	struct completion *comp = dev_id;
+	vout_data * vout = dev_id;
 
-	complete(comp);
+	if (irq == vout->disp_irq) {
+		ipu_disable_irq(vout->disp_irq);
+		if (vout->disp_comp)
+			complete(vout->disp_comp);
+	}
 	return IRQ_HANDLED;
 }
 
 static void timer_work_func(struct work_struct *work)
 {
-	int index, ret, disp_irq = 0;
+	int index;
 	unsigned long timeout;
 	unsigned long lock_flags = 0;
 	vout_data *vout =
 		container_of(work, vout_data, timer_work);
-	DECLARE_COMPLETION_ONSTACK(disp_comp);
+	DECLARE_COMPLETION(completion);
 
-	switch (vout->display_ch) {
-	case MEM_FG_SYNC:
-	case MEM_BG_SYNC:
-		disp_irq = IPU_IRQ_BG_SF_END;
-		break;
-	case MEM_DC_SYNC:
-		disp_irq = IPU_IRQ_DC_FC_1;
-		break;
-	default:
+	vout->disp_comp = &completion;
+	ipu_enable_irq(vout->disp_irq);
+	timeout = wait_for_completion_timeout(vout->disp_comp,
+		msecs_to_jiffies(60));
+	if (timeout == 0)
 		dev_err(vout->video_dev->dev,
-			"not support display channel\n");
-	}
-
-	ipu_clear_irq(disp_irq);
-	ret = ipu_request_irq(disp_irq, mxc_v4l2out_disp_refresh_irq_handler, 0, NULL, &disp_comp);
-	if (ret < 0) {
-		dev_err(vout->video_dev->dev,
-			"Disp irq %d in use\n", disp_irq);
-		return;
-	}
-	wait_for_completion_timeout(&disp_comp, msecs_to_jiffies(40));
-	ipu_free_irq(disp_irq, &disp_comp);
+			"wait for 60ms without disp ref irq!\n");
 
 	spin_lock_irqsave(&g_lock, lock_flags);
 
@@ -361,7 +350,8 @@ static void mxc_v4l2out_timer_handler(unsigned long arg)
 	}
 
 	spin_unlock_irqrestore(&g_lock, lock_flags);
-	schedule_work(&vout->timer_work);
+	if (queue_work(vout->v4l_wq, &vout->timer_work) == 0)
+		dev_err(vout->video_dev->dev, "work was in queue already!\n ");
 	return;
 
       exit0:
@@ -807,6 +797,36 @@ static int mxc_v4l2out_streamon(vout_data * vout)
 	dev_dbg(dev,
 		"streamon: start time = %lu jiffies\n", vout->start_jiffies);
 
+	/* tv jitter work-around */
+	switch (vout->display_ch) {
+	case MEM_FG_SYNC:
+	case MEM_BG_SYNC:
+		vout->disp_irq = IPU_IRQ_BG_SF_END;
+		break;
+	case MEM_DC_SYNC:
+		vout->disp_irq = IPU_IRQ_DC_FC_1;
+		break;
+	default:
+		vout->disp_irq = -1;
+		dev_err(vout->video_dev->dev,
+				"not support display channel\n");
+	}
+	if (vout->disp_irq != -1) {
+		int ret;
+
+		vout->disp_comp = NULL;
+		ipu_clear_irq(vout->disp_irq);
+		ret = ipu_request_irq(vout->disp_irq,
+				mxc_v4l2out_disp_refresh_irq_handler,
+				0, NULL, vout);
+		if (ret < 0) {
+			dev_err(vout->video_dev->dev,
+					"Disp irq %d in use\n", vout->disp_irq);
+			return -EINVAL;
+		}
+		ipu_disable_irq(vout->disp_irq);
+	}
+
 	return 0;
 }
 
@@ -833,8 +853,10 @@ static int mxc_v4l2out_streamoff(vout_data * vout)
 		return 0;
 	}
 
-	/*disp irq may not be freed*/
+	/* tv jitter work-around */
 	cancel_work_sync(&vout->timer_work);
+	ipu_clear_irq(vout->disp_irq);
+	ipu_free_irq(vout->disp_irq, vout);
 
 	spin_lock_irqsave(&g_lock, lockflag);
 
@@ -1130,6 +1152,15 @@ static int mxc_v4l2out_open(struct inode *inode, struct file *file)
 		vout->rotate = IPU_ROTATE_NONE;
 		g_irq_cnt = g_buf_output_cnt = g_buf_q_cnt = g_buf_dq_cnt = 0;
 
+		vout->v4l_wq = create_singlethread_workqueue("v4l2q");
+		if (!vout->v4l_wq) {
+			dev_dbg(dev->dev,
+				"Could not create work queue\n");
+			ipu_free_irq(IPU_IRQ_PP_IN_EOF, vout);
+			up(&vout->busy_lock);
+			return -ENOMEM;
+		}
+
 		INIT_WORK(&vout->timer_work, timer_work_func);
 	}
 
@@ -1174,6 +1205,9 @@ static int mxc_v4l2out_close(struct inode *inode, struct file *file)
 
 		/* capture off */
 		wake_up_interruptible(&vout->v4l_bufq);
+
+		flush_workqueue(vout->v4l_wq);
+		destroy_workqueue(vout->v4l_wq);
 	}
 
 	return 0;

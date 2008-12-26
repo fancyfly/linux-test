@@ -125,7 +125,11 @@ typedef struct _vout_data {
 	struct v4l2_rect crop_bounds[MXC_V4L2_OUT_NUM_OUTPUTS];
 	struct v4l2_rect crop_current;
 
+	/* tv jitter work-around related*/
+	struct workqueue_struct *v4l_wq;
 	struct work_struct timer_work;
+	struct completion *disp_comp;
+	int disp_irq;
 } vout_data;
 
 #endif

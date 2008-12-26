@@ -390,6 +390,19 @@ static int swap_channels(struct fb_info *fbi)
 			swap_mode = BOTH_OFF;
 	}
 
+	/* tvout di-1: for DC use UYVY, for DP use RGB*/
+	if (mxc_fbi_from->ipu_di == 1 && ch_to == MEM_DC_SYNC) {
+		fbi->var.bits_per_pixel = 16;
+		fbi->var.nonstd = IPU_PIX_FMT_UYVY;
+	} else if (mxc_fbi_from->ipu_di == 1 && ch_to == MEM_BG_SYNC)
+		fbi->var.nonstd = 0;
+	else if (mxc_fbi_from->ipu_di == 0 && ch_to == MEM_DC_SYNC)
+		fbi_to->var.nonstd = 0;
+	else if (mxc_fbi_from->ipu_di == 0 && ch_to == MEM_BG_SYNC) {
+		fbi->var.bits_per_pixel = 16;
+		fbi->var.nonstd = IPU_PIX_FMT_UYVY;
+	}
+
 	switch (swap_mode) {
 	case BOTH_ON:
 		/*disable target->switch src->enable target*/
@@ -429,6 +442,7 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	u32 vtotal;
 	u32 htotal;
+	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)info->par;
 
 	if (var->xres_virtual < var->xres)
 		var->xres_virtual = var->xres;
@@ -445,6 +459,11 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	if ((var->bits_per_pixel != 32) && (var->bits_per_pixel != 24) &&
 	    (var->bits_per_pixel != 16))
 		var->bits_per_pixel = default_bpp;
+
+	if (mxc_fbi->ipu_ch == MEM_DC_SYNC && mxc_fbi->ipu_di == 1) {
+		var->bits_per_pixel = 16;
+		var->nonstd = IPU_PIX_FMT_UYVY;
+	}
 
 	switch (var->bits_per_pixel) {
 	case 16:

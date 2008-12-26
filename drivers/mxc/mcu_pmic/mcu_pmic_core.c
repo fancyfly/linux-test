@@ -191,8 +191,10 @@ static int __init mcu_pmic_init(void)
 	if (is_max8660_present()) {
 		pr_info("max8660 is present, reg_max8660_probe\n");
 		reg_max8660_probe();
-	} else
-		pr_debug("max8660 is not present\n");
+	} else {
+		pr_debug("max8660 is not present, reg_mc9sdz60_probe\n");
+		reg_mc9sdz60_probe();
+	}
 	pr_info("mcu_pmic_init completed!\n");
 	return 0;
 

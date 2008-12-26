@@ -41,6 +41,12 @@ config REGULATOR_MAX8660
 	depends on MXC_PMIC_MC9SDZ60
 	default y
 
+config REGULATOR_MC9SDZ60
+	tristate "mc9sdz60 Regulator Support"
+	depends on REGULATOR
+	depends on MXC_PMIC_MC9SDZ60
+	default y
+
 config REGULATOR_WM8350
 	tristate "WM8350 Regulator Support"
 	depends on REGULATOR

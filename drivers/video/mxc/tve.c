@@ -281,7 +281,7 @@ int tve_fb_event(struct notifier_block *nb, unsigned long val, void *v)
 		}
 		break;
 	case FB_EVENT_BLANK:
-		if (tve_fbi != fbi)
+		if ((tve_fbi != fbi) || (fbi->mode == NULL))
 			return 0;
 
 		if (*((int *)event->data) == FB_BLANK_UNBLANK) {
@@ -453,11 +453,11 @@ static int tve_resume(struct platform_device *pdev)
 
 		if (tve.cur_mode == TVOUT_FMT_NTSC) {
 			tve_disable();
-			tve.cur_mode == TVOUT_FMT_OFF;
+			tve.cur_mode = TVOUT_FMT_OFF;
 			tve_setup(TVOUT_FMT_NTSC);
 		} else if (tve.cur_mode == TVOUT_FMT_PAL) {
 			tve_disable();
-			tve.cur_mode == TVOUT_FMT_OFF;
+			tve.cur_mode = TVOUT_FMT_OFF;
 			tve_setup(TVOUT_FMT_PAL);
 		}
 		tve_enable();

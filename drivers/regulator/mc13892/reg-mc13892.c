@@ -99,10 +99,10 @@ enum {
 } regulator_voltage_vsd;
 
 enum {
-	VCAM_1_8V,
 	VCAM_2_5V,
 	VCAM_2_6V,
 	VCAM_2_75V,
+	VCAM_3_0V,
 } regulator_voltage_vcam;
 
 enum {
@@ -205,6 +205,10 @@ enum {
 #define VCAM_EN_WID	1
 #define VCAM_EN_ENABLE	1
 #define VCAM_EN_DISABLE	0
+#define VCAM_CONFIG_LSH	9
+#define VCAM_CONFIG_WID	1
+#define VCAM_CONFIG_EXT	1
+#define VCAM_CONFIG_INT	0
 
 #define SW1_LSH		0
 #define SW1_WID		5
@@ -1062,14 +1066,14 @@ static int mc13892_vcam_set_voltage(struct regulator *reg, int uV)
 	unsigned int register1;
 	int voltage, mV = uV / 1000;
 
-	if ((mV >= 1800) && (mV < 2500))
-		voltage = VCAM_1_8V;
-	else if ((mV >= 2500) && (mV < 2600))
+	if ((mV >= 2500) && (mV < 2600))
 		voltage = VCAM_2_5V;
 	else if ((mV >= 2600) && (mV < 2750))
 		voltage = VCAM_2_6V;
-	else
+	else if ((mV >= 2750) && (mV < 3000))
 		voltage = VCAM_2_75V;
+	else
+		voltage = VCAM_3_0V;
 
 	register_val = BITFVAL(VCAM, voltage);
 	register_mask = BITFMASK(VCAM);
@@ -1087,9 +1091,6 @@ static int mc13892_vcam_get_voltage(struct regulator *reg)
 	voltage = BITFEXT(register_val, VCAM);
 
 	switch (voltage) {
-	case VCAM_1_8V:
-		mV = 1800;
-		break;
 	case VCAM_2_5V:
 		mV = 2500;
 		break;
@@ -1098,6 +1099,9 @@ static int mc13892_vcam_get_voltage(struct regulator *reg)
 		break;
 	case VCAM_2_75V:
 		mV = 2750;
+		break;
+	case VCAM_3_0V:
+		mV = 3000;
 		break;
 	default:
 		return -EINVAL;
@@ -1128,6 +1132,48 @@ static int mc13892_vcam_disable(struct regulator *reg)
 	register1 = REG_MODE_1;
 
 	return (pmic_write_reg(register1, register_val, register_mask));
+}
+
+static int mc13892_vcam_set_mode(struct regulator *reg, unsigned int mode)
+{
+	unsigned int register_val = 0, register_mask = 0;
+	unsigned int register1;
+
+	switch (mode) {
+	case REGULATOR_MODE_FAST:
+		register_val = BITFVAL(VCAM_CONFIG, VCAM_CONFIG_EXT);
+		break;
+	case REGULATOR_MODE_NORMAL:
+		register_val = BITFVAL(VCAM_CONFIG, VCAM_CONFIG_INT);
+		break;
+	default:
+		return -EINVAL;
+	}
+	register_mask = BITFMASK(VCAM_EN);
+	register1 = REG_MODE_1;
+
+	return (pmic_write_reg(register1, register_val, register_mask));
+}
+
+unsigned int mc13892_vcam_get_mode(struct regulator *reg)
+{
+	unsigned int register_val = 0;
+	int config = 0, mode = VCAM_CONFIG_INT;
+
+	CHECK_ERROR(pmic_read_reg(REG_MODE_1, &register_val, PMIC_ALL_BITS));
+	config = BITFEXT(register_val, VCAM_CONFIG);
+
+	switch (config) {
+	case VCAM_CONFIG_EXT:
+		mode = REGULATOR_MODE_FAST;
+		break;
+	case VCAM_CONFIG_INT:
+		mode = REGULATOR_MODE_NORMAL;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return mode;
 }
 
 static int mc13892_vgen1_set_voltage(struct regulator *reg, int uV)
@@ -1558,11 +1604,13 @@ static struct regulator_ops mc13892_vcam_ops = {
 	.get_voltage = mc13892_vcam_get_voltage,
 	.enable = mc13892_vcam_enable,
 	.disable = mc13892_vcam_disable,
+	.set_mode = mc13892_vcam_set_mode,
+	.get_mode = mc13892_vcam_get_mode,
 };
 
 struct regulation_constraints vcam_regulation_constraints = {
-	.min_uV = mV_to_uV(1800),
-	.max_uV = mV_to_uV(2750),
+	.min_uV = mV_to_uV(2500),
+	.max_uV = mV_to_uV(3000),
 	.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
 };
 

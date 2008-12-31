@@ -29,6 +29,7 @@
 #include <linux/device.h>
 #include <linux/spi/spi.h>
 #include <linux/i2c.h>
+#include <linux/delay.h>
 
 #include <asm/mach-types.h>
 #include <asm/uaccess.h>
@@ -41,15 +42,21 @@
 /*
  * Defines
  */
-
+#define MC13892_I2C_RETRY_TIMES 10
 int pmic_i2c_24bit_read(struct i2c_client *client, unsigned int reg_num,
 			unsigned int *value)
 {
 	unsigned char buf[3];
 	int ret;
+	int i;
 
 	memset(buf, 0, 3);
-	ret = i2c_smbus_read_i2c_block_data(client, reg_num, 3, buf);
+	for (i = 0; i < MC13892_I2C_RETRY_TIMES; i++) {
+		ret = i2c_smbus_read_i2c_block_data(client, reg_num, 3, buf);
+		if (ret == 3)
+			break;
+		msleep(1);
+	}
 
 	if (ret == 3) {
 		*value = buf[0] << 16 | buf[1] << 8 | buf[2];
@@ -64,12 +71,21 @@ int pmic_i2c_24bit_write(struct i2c_client *client,
 			 unsigned int reg_num, unsigned int reg_val)
 {
 	char buf[3];
+	int ret;
+	int i;
 
 	buf[0] = (reg_val >> 16) & 0xff;
 	buf[1] = (reg_val >> 8) & 0xff;
 	buf[2] = (reg_val) & 0xff;
 
-	return i2c_smbus_write_i2c_block_data(client, reg_num, 3, buf);
+	for (i = 0; i < MC13892_I2C_RETRY_TIMES; i++) {
+		ret = i2c_smbus_write_i2c_block_data(client, reg_num, 3, buf);
+		if (ret == 0)
+			break;
+		msleep(1);
+	}
+
+	return ret;
 }
 
 int pmic_read(int reg_num, unsigned int *reg_val)

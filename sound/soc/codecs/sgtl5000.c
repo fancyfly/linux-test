@@ -1,7 +1,7 @@
 /*
  * sgtl5000.c  --  SGTL5000 ALSA SoC Audio driver
  *
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -513,13 +513,16 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 		return -EFAULT;
 	}
 
+#if 0 /*SGTL5000 rev1 has a IC bug to prevent switching to MCLK from PLL. */
 	if (fs*256 == sgtl5000->sysclk)
 		clk_ctl |= SGTL5000_MCLK_FREQ_256FS << SGTL5000_MCLK_FREQ_SHIFT;
 	else if (fs*384 == sgtl5000->sysclk && fs != 96000)
 		clk_ctl |= SGTL5000_MCLK_FREQ_384FS << SGTL5000_MCLK_FREQ_SHIFT;
 	else if (fs*512 == sgtl5000->sysclk && fs != 96000)
 		clk_ctl |= SGTL5000_MCLK_FREQ_512FS << SGTL5000_MCLK_FREQ_SHIFT;
-	else {
+	else
+#endif
+	{
 		if (!sgtl5000->master) {
 			pr_err("%s: PLL not supported in slave mode\n",
 			       __func__);
@@ -773,6 +776,9 @@ static int sgtl5000_codec_io_probe(struct snd_soc_codec *codec,
 			lreg_ctrl |= SGTL5000_VDDC_MAN_ASSN_VDDIO <<
 				     SGTL5000_VDDC_MAN_ASSN_SHIFT;
 	}
+	/* If PLL is powered up (such as on power cycle) leave it on. */
+	reg = sgtl5000_read(codec, SGTL5000_CHIP_ANA_POWER);
+	ana_pwr |=  reg & (SGTL5000_PLL_POWERUP | SGTL5000_VCOAMP_POWERUP);
 
 	/* set ADC/DAC ref voltage to vdda/2 */
 	vag = plat->vdda/2;

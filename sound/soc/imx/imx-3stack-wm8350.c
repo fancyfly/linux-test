@@ -199,6 +199,11 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 	codec_dai->ops->set_fmt(codec_dai, dai_format);
 
 	/* set cpu DAI configuration */
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		dai_format &= ~SND_SOC_DAIFMT_INV_MASK;
+		/* Invert frame to switch mic from right channel to left */
+		dai_format |= SND_SOC_DAIFMT_NB_IF;
+	}
 	cpu_dai->ops->set_fmt(cpu_dai, dai_format);
 
 	/* set 32KHZ as the codec system clock for DAC and ADC */

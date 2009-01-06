@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -545,6 +545,10 @@ void gpio_sdhc_active(int module)
 				  MUX_CONFIG_FUNC | MUX_CONFIG_SION);
 #if defined(CONFIG_SDIO_UNIFI_FS) || defined(CONFIG_SDIO_UNIFI_FS_MODULE)
 #else
+		/* MUX4_CTR , 0: SD2 to WIFI, 1:SD2 to SD1 8bit */
+		if (board_is_mx35(BOARD_REV_2))
+			pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2,
+					      7, 1);
 		mxc_request_iomux(MX35_PIN_SD2_CMD,
 				  MUX_CONFIG_ALT2 | MUX_CONFIG_SION);
 		mxc_request_iomux(MX35_PIN_SD2_CLK,
@@ -583,6 +587,10 @@ void gpio_sdhc_active(int module)
 #endif
 		break;
 	case 1:
+		/* MUX4_CTR , 0: SD2 to WIFI, 1:SD2 to SD1 8bit */
+		if (board_is_mx35(BOARD_REV_2))
+			pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2,
+					      7, 0);
 		mxc_request_iomux(MX35_PIN_SD2_CLK,
 				  MUX_CONFIG_FUNC | MUX_CONFIG_SION);
 		mxc_request_iomux(MX35_PIN_SD2_CMD,

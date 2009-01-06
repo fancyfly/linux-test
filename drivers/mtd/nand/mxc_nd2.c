@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -291,7 +291,8 @@ static void auto_cmd_interleave(struct mtd_info *mtd, u16 cmd)
 			raw_write(NFC_AUTO_ERASE, REG_NFC_OPS);
 			wait_op_done(TROP_US_DELAY, true);
 		} else if (cmd == NAND_CMD_RESET) {
-			NFC_SET_NFC_ACTIVE_CS(i);
+			if (j > 1)
+				NFC_SET_NFC_ACTIVE_CS(i);
 			send_atomic_cmd(cmd, true);
 		}
 	}
@@ -1208,7 +1209,6 @@ static int __init mxcnd_probe(struct platform_device *pdev)
 	}
 
 	nfc_clk = clk_get(&pdev->dev, "nfc_clk");
-	clk_enable(nfc_clk);
 
 	init_waitqueue_head(&irq_waitq);
 	err = request_irq(MXC_INT_NANDFC, mxc_nfc_irq, 0, "mxc_nd", NULL);
@@ -1238,9 +1238,6 @@ static int __init mxcnd_probe(struct platform_device *pdev)
 	/* config the gpio */
 	if (flash->init)
 		flash->init();
-
-	/* Reset NAND */
-	this->cmdfunc(mtd, NAND_CMD_RESET, -1, -1);
 
 	/* Scan to find existence of the device */
 	if (nand_scan(mtd, NFC_GET_MAXCHIP_SP())) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -827,6 +827,21 @@ static int mxc_v4l2out_streamoff(vout_data * vout)
 	ipu_disable_irq(IPU_IRQ_PP_IN_EOF);
 
 	spin_unlock_irqrestore(&g_lock, lockflag);
+
+	if (vout->display_ch == MEM_FG_SYNC) {
+		struct mxcfb_pos fb_pos;
+		mm_segment_t old_fs;
+
+		fb_pos.x = 0;
+		fb_pos.y = 0;
+		if (fbi->fbops->fb_ioctl) {
+			old_fs = get_fs();
+			set_fs(KERNEL_DS);
+			fbi->fbops->fb_ioctl(fbi, MXCFB_SET_OVERLAY_POS,
+					(unsigned long)&fb_pos);
+			set_fs(old_fs);
+		}
+	}
 
 	if (vout->post_proc_ch == MEM_PP_MEM) {	/* SDC or ADC with Rotation */
 		if (!ipu_can_rotate_in_place(vout->rotate)) {

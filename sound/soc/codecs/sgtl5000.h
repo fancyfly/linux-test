@@ -1,7 +1,7 @@
 /*
  * sgtl5000.h - SGTL5000 audio codec interface
  *
- * Copyright 2008 Freescale Semiconductor, Inc.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc.
  *
  *  This program is free software; you can redistribute  it and/or modify it
  *  under  the terms of  the GNU General  Public License as published by the
@@ -78,6 +78,7 @@
 #define SGTL5000_PARTID_MASK			0xff00
 #define SGTL5000_PARTID_SHIFT			8
 #define SGTL5000_PARTID_WIDTH			8
+#define SGTL5000_PARTID_PART_ID		0xa0
 #define SGTL5000_REVID_MASK			0x00ff
 #define SGTL5000_REVID_SHIFT			0
 #define SGTL5000_REVID_WIDTH			8

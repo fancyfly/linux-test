@@ -542,8 +542,10 @@ err_reg_vdda:
 		regulator_put(priv->reg_vddio, &pdev->dev);
 err_reg_vddio:
 	kfree(codec_data);
+	codec->platform_data = NULL;
 err_codec_data:
 	kfree(priv);
+	machine->platform_data = NULL;
 	return ret;
 }
 
@@ -555,26 +557,32 @@ static int mach_remove(struct snd_soc_machine *machine)
 	struct platform_device *pdev = machine->pdev;
 	struct mxc_sgtl5000_platform_data *plat = pdev->dev.platform_data;
 
-	free_irq(plat->hp_irq, machine);
+	if (machine->platform_data)
+		free_irq(plat->hp_irq, machine);
 
 	pcm_link = list_first_entry(&machine->active_list,
 				    struct snd_soc_pcm_link, active_list);
 
 	codec = pcm_link->codec;
-	kfree(codec->platform_data);
-	codec->platform_data = NULL;
 
-	priv = machine->platform_data;
-	if (priv->reg_vddio)
-		regulator_disable(priv->reg_vddio);
-	regulator_disable(priv->reg_vdda);
-	regulator_disable(priv->reg_amp_gpo);
-	regulator_put(priv->reg_amp_gpo, &pdev->dev);
-	regulator_put(priv->reg_vdda, &pdev->dev);
-	if (priv->reg_vddio)
-		regulator_put(priv->reg_vddio, &pdev->dev);
-	kfree(machine->platform_data);
-	machine->platform_data = NULL;
+	if (codec && codec->platform_data) {
+		kfree(codec->platform_data);
+		codec->platform_data = NULL;
+	}
+
+	if (machine->platform_data) {
+		priv = machine->platform_data;
+		if (priv->reg_vddio)
+			regulator_disable(priv->reg_vddio);
+		regulator_disable(priv->reg_vdda);
+		regulator_disable(priv->reg_amp_gpo);
+		regulator_put(priv->reg_amp_gpo, &pdev->dev);
+		regulator_put(priv->reg_vdda, &pdev->dev);
+		if (priv->reg_vddio)
+			regulator_put(priv->reg_vddio, &pdev->dev);
+		kfree(machine->platform_data);
+		machine->platform_data = NULL;
+	}
 
 	return 0;
 }

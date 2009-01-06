@@ -868,7 +868,6 @@ static int sgtl5000_codec_probe(struct device *dev)
 {
 	struct snd_soc_codec *codec = to_snd_soc_codec(dev);
 	struct sgtl5000_priv *sgtl5000;
-	u16 val;
 
 	codec->owner = THIS_MODULE;
 	codec->ops = &sgtl5000_codec_ops;
@@ -879,10 +878,6 @@ static int sgtl5000_codec_probe(struct device *dev)
 	codec->private_data = sgtl5000;
 
 	snd_soc_register_codec(codec);
-
-	val = sgtl5000_read(codec, SGTL5000_CHIP_ID);
-	dev_info(&sgtl5000_i2c_client->dev, "SGTL5000 revision %d\n",
-		 (val & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT);
 
 	return 0;
 }
@@ -940,8 +935,20 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
 	int ret;
+	unsigned int val;
 
 	sgtl5000_i2c_client = client;
+
+	val = sgtl5000_read(NULL, SGTL5000_CHIP_ID);
+	if (((val & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
+		SGTL5000_PARTID_PART_ID) {
+		sgtl5000_i2c_client = NULL;
+		pr_err("Device with ID register %x is not a SGTL5000\n", val);
+		return -ENODEV;
+	}
+
+	dev_info(&sgtl5000_i2c_client->dev, "SGTL5000 revision %d\n",
+		 (val & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT);
 
 	ret = driver_register(&sgtl5000_codec_driver.driver);
 	if (ret < 0)

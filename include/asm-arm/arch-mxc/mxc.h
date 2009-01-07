@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -228,6 +228,7 @@ struct mxc_keyp_platform_data {
 	u16 *matrix;
 	void (*active) (void);
 	void (*inactive) (void);
+	char *vdd_reg;
 };
 
 struct mxc_unifi_platform_data {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -279,12 +279,19 @@ static u16 keymap[] = {
 	KEY_RIGHT, KEY_UP, KEY_LEFTALT,
 	KEY_TAB, KEY_ESC,
 };
-#endif
+
 static struct mxc_keyp_platform_data keypad_data = {
 	.matrix = keymap,
 	.active = gpio_keypad_active,
 	.inactive = gpio_keypad_inactive,
+	.vdd_reg = "DCDC3",
 };
+#else
+
+static struct mxc_keyp_platform_data keypad_data = {};
+
+#endif
+
 static struct mxc_lightsensor_platform_data ls_data = {
 	.vdd_reg = "VGEN2",
 	.rext = 100,

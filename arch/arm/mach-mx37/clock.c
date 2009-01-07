@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -58,6 +58,27 @@ extern void propagate_rate(struct clk *tclk);
 extern void board_ref_clk_rate(unsigned long *ckil, unsigned long *osc,
 			       unsigned long *ckih);
 static int cpu_clk_set_wp(int wp);
+
+
+static int _clk_enable_normal(struct clk *clk)
+{
+	u32 reg;
+
+	reg = __raw_readl(clk->enable_reg);
+	reg |= 1 << clk->enable_shift;
+	__raw_writel(reg, clk->enable_reg);
+
+	return 0;
+}
+
+static void _clk_disable_normal(struct clk *clk)
+{
+	u32 reg;
+
+	reg = __raw_readl(clk->enable_reg);
+	reg &= ~(1 << clk->enable_shift);
+	__raw_writel(reg, clk->enable_reg);
+}
 
 static int _clk_enable(struct clk *clk)
 {
@@ -2462,10 +2483,10 @@ static struct clk usb_utmi_clk = {
 #else
 	.secondary = &emi_fast_clk,
 #endif
-	.enable = _clk_enable,
+	.enable = _clk_enable_normal,
 	.enable_reg = MXC_CCM_CSCMR1,
 	.enable_shift = MXC_CCM_CSCMR1_USB_PHY_CLK_SEL_OFFSET,
-	.disable = _clk_disable,
+	.disable = _clk_disable_normal,
 };
 
 static struct clk rtc_clk = {

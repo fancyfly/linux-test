@@ -749,6 +749,13 @@ EXPORT_SYMBOL(sdhc_write_protect);
  */
 int gpio_usbh2_active(void)
 {
+	if (board_is_mx35(BOARD_REV_2)) {
+		/* MUX3_CTR to be low for USB Host2 DP&DM */
+		pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 6, 0);
+		/* CAN_PWDN to be high for USB Host2 Power&OC */
+		pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 1, 1);
+	}
+
 	mxc_request_iomux(MX35_PIN_I2C2_CLK, MUX_CONFIG_ALT2);
 	mxc_iomux_set_pad(MX35_PIN_I2C2_CLK, 0x0040);
 

@@ -250,6 +250,16 @@ void gpio_fec_active(void)
 			  FEC_PAD_CTL_COMMON | PAD_CTL_HYS_CMOS |
 			  PAD_CTL_PKE_NONE | PAD_CTL_100K_PD);
 #undef FEC_PAD_CTL_COMMON
+	/* Pull GPIO1_5 to be high for routing signal to FEC */
+	if (board_is_mx35(BOARD_REV_2)) {
+		mxc_request_iomux(MX35_PIN_COMPARE, MUX_CONFIG_GPIO);
+		mxc_iomux_set_pad(MX35_PIN_COMPARE, PAD_CTL_DRV_NORMAL |
+				PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+				PAD_CTL_DRV_3_3V | PAD_CTL_PUE_PUD |
+				PAD_CTL_SRE_SLOW);
+		mxc_set_gpio_direction(MX35_PIN_COMPARE, 0);
+		mxc_set_gpio_dataout(MX35_PIN_COMPARE, 1);
+	}
 
 	/* FEC enable */
 	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 2, 1);
@@ -303,6 +313,10 @@ void gpio_fec_inactive(void)
 	mxc_free_iomux(MX35_PIN_FEC_TDATA3, MUX_CONFIG_GPIO);
 
 	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 2, 0);
+
+	/* Free GPIO1_5 */
+	if (board_is_mx35(BOARD_REV_2))
+		mxc_free_iomux(MX35_PIN_COMPARE, MUX_CONFIG_GPIO);
 }
 
 EXPORT_SYMBOL(gpio_fec_inactive);

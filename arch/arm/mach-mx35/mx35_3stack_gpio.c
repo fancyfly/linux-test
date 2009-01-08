@@ -98,6 +98,17 @@ void gpio_uart_active(int port, int no_irda)
 		mxc_request_iomux(MX35_PIN_FEC_COL, MUX_CONFIG_ALT2);
 		mxc_request_iomux(MX35_PIN_FEC_RX_DV, MUX_CONFIG_ALT2);
 
+		mxc_iomux_set_pad(MX35_PIN_FEC_TX_CLK,
+				PAD_CTL_HYS_SCHMITZ | PAD_CTL_PKE_ENABLE |
+				PAD_CTL_PUE_PUD | PAD_CTL_100K_PU);
+		mxc_iomux_set_pad(MX35_PIN_FEC_RX_CLK,
+				PAD_CTL_PUE_PUD | PAD_CTL_100K_PD);
+		mxc_iomux_set_pad(MX35_PIN_FEC_RX_DV,
+				PAD_CTL_HYS_SCHMITZ | PAD_CTL_PKE_ENABLE |
+				PAD_CTL_PUE_PUD | PAD_CTL_100K_PU);
+		mxc_iomux_set_pad(MX35_PIN_FEC_COL,
+				PAD_CTL_PUE_PUD | PAD_CTL_100K_PD);
+
 		mxc_iomux_set_input(MUX_IN_UART3_UART_RTS_B, INPUT_CTL_PATH2);
 		mxc_iomux_set_input(MUX_IN_UART3_UART_RXD_MUX, INPUT_CTL_PATH3);
 		break;
@@ -1188,6 +1199,17 @@ EXPORT_SYMBOL(gpio_deactivate_esai_ports);
  */
 void gpio_gps_active(void)
 {
+	/* Pull GPIO1_5 to be low for routing signal to UART3/GPS */
+	if (board_is_mx35(BOARD_REV_2)) {
+		mxc_request_iomux(MX35_PIN_COMPARE, MUX_CONFIG_GPIO);
+		mxc_iomux_set_pad(MX35_PIN_COMPARE, PAD_CTL_DRV_NORMAL |
+				PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+				PAD_CTL_DRV_3_3V | PAD_CTL_PUE_PUD |
+				PAD_CTL_SRE_SLOW);
+		mxc_set_gpio_direction(MX35_PIN_COMPARE, 0);
+		mxc_set_gpio_dataout(MX35_PIN_COMPARE, 0);
+	}
+
 	/* PWR_EN_GPS is set to be 0, will be toggled on in app by ioctl */
 	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 0, 0);
 
@@ -1238,6 +1260,9 @@ void gpio_gps_inactive(void)
 {
 	/* GPS disable */
 	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 0, 0);
+	/* Free GPIO1_5 */
+	if (board_is_mx35(BOARD_REV_2))
+		mxc_free_iomux(MX35_PIN_COMPARE, MUX_CONFIG_GPIO);
 }
 
 EXPORT_SYMBOL(gpio_gps_inactive);

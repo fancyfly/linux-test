@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -193,6 +193,7 @@ static int __init gps_ioctrl_probe(struct platform_device *pdev)
 		gps_regu =
 		    regulator_get(&(pdev->dev), mxc_gps_ioctrl_data->core_reg);
 		if (!IS_ERR_VALUE((u32)gps_regu)) {
+			regulator_set_voltage(gps_regu, 1800000);
 			regulator_enable(gps_regu);
 			regulator_put(gps_regu, &(pdev->dev));
 		} else {
@@ -205,6 +206,7 @@ static int __init gps_ioctrl_probe(struct platform_device *pdev)
 		    regulator_get(&(pdev->dev),
 				  mxc_gps_ioctrl_data->analog_reg);
 		if (!IS_ERR_VALUE((u32)gps_regu)) {
+			regulator_set_voltage(gps_regu, 2800000);
 			regulator_enable(gps_regu);
 			regulator_put(gps_regu, &(pdev->dev));
 		} else {

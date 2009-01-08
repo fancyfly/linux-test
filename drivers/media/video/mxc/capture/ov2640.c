@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -36,7 +36,7 @@
 #define DEFAULT_FPS 30
 
 #define OV2640_XCLK_MIN 6000000
-#define OV2640_XCLK_MAX 24000000
+#define OV2640_XCLK_MAX 27000000
 
 /*
 enum ov2640_mode {

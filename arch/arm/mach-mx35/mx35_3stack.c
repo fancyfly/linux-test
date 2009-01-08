@@ -354,7 +354,7 @@ static struct mxc_camera_platform_data camera_data = {
 	.io_regulator = "VAUDIO",
 	.analog_regulator = "VIOHI",
 	.gpo_regulator = "PWGT1",
-	.mclk = 20000000,
+	.mclk = 27000000,
 };
 
 void si4702_reset(void)
@@ -839,6 +839,7 @@ static void mx35_3stack_fixup_for_board_v1(void)
 	camera_data.core_regulator = NULL;
 	camera_data.io_regulator = NULL;
 	camera_data.gpo_regulator = NULL;
+	camera_data.mclk = 20000000;
 
 #if defined(CONFIG_GPS_IOCTRL) || defined(CONFIG_GPS_IOCTRL_MODULE)
 	gps_data.core_reg = "SW1";

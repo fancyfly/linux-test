@@ -569,18 +569,12 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 			   SGTL5000_I2S_SCLKFREQ_SHIFT;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
-		if ((clk_ctl & SGTL5000_MCLK_FREQ_MASK) !=
-		    SGTL5000_MCLK_FREQ_256FS)
-			return -EINVAL;
 		i2s_ctl |= SGTL5000_I2S_DLEN_24 << SGTL5000_I2S_DLEN_SHIFT;
 		i2s_ctl |= SGTL5000_I2S_SCLKFREQ_64FS <<
 			   SGTL5000_I2S_SCLKFREQ_SHIFT;
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
-		if ((clk_ctl & SGTL5000_MCLK_FREQ_MASK) !=
-		    SGTL5000_MCLK_FREQ_256FS
-		    ||
-		    sgtl5000->fmt == SND_SOC_DAIFMT_RIGHT_J)
+		if (sgtl5000->fmt == SND_SOC_DAIFMT_RIGHT_J)
 			return -EINVAL;
 		i2s_ctl |= SGTL5000_I2S_DLEN_32 << SGTL5000_I2S_DLEN_SHIFT;
 		i2s_ctl |= SGTL5000_I2S_SCLKFREQ_64FS <<

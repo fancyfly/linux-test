@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -47,11 +47,24 @@
 #define CD_LM_INT		0x00000001
 #define CD_SM_INT		0x00000002
 #define CD_MON_END_INT		0x00000004
+#define CD_CH_0_LM_ST		0x00000100
+#define CD_CH_0_SM_ST		0x00001000
+#define CD_CH_1_LM_ST		0x00000200
+#define CD_CH_1_SM_ST		0x00002000
+#define CD_CH_2_LM_ST		0x00000400
+#define CD_CH_2_SM_ST		0x00004000
 #define CD_MAN_TRIG		0x00010000
 
 #define TVOUT_FMT_OFF	0
 #define TVOUT_FMT_NTSC	1
 #define TVOUT_FMT_PAL	2
+
+#define TVE_MODE_STANDBY		0
+#define TVE_MODE_COMPOSITE_0		1
+#define TVE_MODE_COMPOSITE_2		2
+#define TVE_MODE_SVIDEO			4
+#define TVE_MODE_YPrPb_COMPONENT	6
+#define TVE_MODE_RGB_COMPONENT		7
 
 static int enabled;		/* enable power on or not */
 
@@ -60,12 +73,14 @@ static struct fb_info *tve_fbi;
 struct tve_data {
 	struct platform_device *pdev;
 	int cur_mode;
+	int output_mode;
 	int detect;
 	void *base;
 	int irq;
 	struct clk *clk;
 	struct regulator *dac_reg;
 	struct regulator *dig_reg;
+	struct delayed_work cd_work;
 } tve;
 
 static struct fb_videomode video_modes[] = {
@@ -112,10 +127,10 @@ static int tve_setup(int mode)
 
 	/* select output video format */
 	if (mode == TVOUT_FMT_PAL) {
-		__raw_writel(0x00840328, tve.base + TVE_COM_CONF_REG);
+		__raw_writel(0x00840308, tve.base + TVE_COM_CONF_REG);
 		pr_debug("TVE: change to PAL video\n");
 	} else if (mode == TVOUT_FMT_NTSC) {
-		__raw_writel(0x00840028, tve.base + TVE_COM_CONF_REG);
+		__raw_writel(0x00840008, tve.base + TVE_COM_CONF_REG);
 		pr_debug("TVE: change to NTSC video\n");
 	} else if (mode == TVOUT_FMT_OFF) {
 		__raw_writel(0x0, tve.base + TVE_COM_CONF_REG);
@@ -147,6 +162,12 @@ static void tve_enable(void)
 		__raw_writel(reg | 0x09, tve.base + TVE_COM_CONF_REG);
 		pr_debug("TVE power on.\n");
 	}
+
+	/* enable interrupt */
+	__raw_writel(CD_SM_INT | CD_LM_INT | CD_MON_END_INT,
+				tve.base + TVE_STAT_REG);
+	__raw_writel(CD_SM_INT | CD_LM_INT | CD_MON_END_INT,
+				tve.base + TVE_INT_CONT_REG);
 }
 
 /**
@@ -160,7 +181,7 @@ static void tve_disable(void)
 	if (enabled) {
 		enabled = 0;
 		reg = __raw_readl(tve.base + TVE_COM_CONF_REG);
-		__raw_writel(reg & ~0x09, tve.base + TVE_COM_CONF_REG);
+		__raw_writel(reg & ~0x79, tve.base + TVE_COM_CONF_REG);
 		clk_disable(tve.clk);
 		pr_debug("TVE power off.\n");
 	}
@@ -169,28 +190,98 @@ static void tve_disable(void)
 static int tve_update_detect_status(void)
 {
 	int old_detect = tve.detect;
-	u32 stat = __raw_readl(tve.base + TVE_STAT_REG);
+	u32 stat_lm, stat_sm, stat = __raw_readl(tve.base + TVE_STAT_REG);
+	u32 int_ctl = __raw_readl(tve.base + TVE_INT_CONT_REG);
+	u32 cd_cont_reg = __raw_readl(tve.base + TVE_CD_CONT_REG);
+	u32 reg, timeout = 40;
 
-	if ((stat & CD_MON_END_INT) == 0)
+	if ((cd_cont_reg & 0x1) == 0) {
+		pr_warning("Warning: pls enable TVE CD first!\n");
 		return tve.detect;
-
-	if (stat & CD_LM_INT) {
-		if (stat & CD_SM_INT)
-			tve.detect = 2;
-		else
-			tve.detect = 1;
-	} else {
-		tve.detect = 0;
 	}
 
-	__raw_writel(CD_SM_INT | CD_LM_INT | CD_MON_END_INT,
-		     tve.base + TVE_STAT_REG);
+	while (((stat & CD_MON_END_INT) == 0) && (timeout > 0)) {
+		msleep(2);
+		timeout -= 2;
+		stat = __raw_readl(tve.base + TVE_STAT_REG);
+	}
+	if (((stat & CD_MON_END_INT) == 0) && (timeout <= 0)) {
+		pr_warning("Warning: get detect resultwithout CD_MON_END_INT!\n");
+		return tve.detect;
+	}
+
+	stat_lm = stat & (CD_CH_0_LM_ST | CD_CH_1_LM_ST | CD_CH_2_LM_ST);
+	if (stat_lm == (CD_CH_0_LM_ST | CD_CH_1_LM_ST | CD_CH_2_LM_ST)) {
+		stat_sm = stat &
+			(CD_CH_0_SM_ST | CD_CH_1_SM_ST | CD_CH_2_SM_ST);
+		if (stat_sm != 0)
+			tve.detect = 2;
+		else {
+			tve.detect = 1;
+			tve.output_mode = TVE_MODE_YPrPb_COMPONENT;
+		}
+	} else if (stat_lm == (CD_CH_0_LM_ST | CD_CH_1_LM_ST)) {
+		stat_sm = stat & (CD_CH_0_SM_ST | CD_CH_1_SM_ST);
+		if (stat_sm != 0)
+			tve.detect = 2;
+		else {
+			tve.detect = 1;
+			tve.output_mode = TVE_MODE_SVIDEO;
+		}
+	} else if (stat_lm == CD_CH_0_LM_ST) {
+		stat_sm = stat & CD_CH_0_SM_ST;
+		if (stat_sm != 0)
+			tve.detect = 2;
+		else {
+			tve.detect = 1;
+			tve.output_mode = TVE_MODE_COMPOSITE_0;
+		}
+	} else if (stat_lm == CD_CH_2_LM_ST) {
+		stat_sm = stat & CD_CH_2_SM_ST;
+		if (stat_sm != 0)
+			tve.detect = 2;
+		else {
+			tve.detect = 1;
+			tve.output_mode = TVE_MODE_COMPOSITE_2;
+		}
+	} else {
+		tve.detect = 0;
+		tve.output_mode = TVE_MODE_STANDBY;
+	}
+
+	if (tve.detect == 2) {
+		/* assume headset
+		   only enable LM_INT to avoid continuous SM int */
+		int_ctl &= ~CD_SM_INT;
+		__raw_writel(int_ctl | CD_LM_INT, tve.base + TVE_INT_CONT_REG);
+	} else if (tve.detect == 1) {
+		/* assume cvbs
+		only enable SM_INT to avoid continuous LM int*/
+		int_ctl &= ~CD_LM_INT;
+		__raw_writel(int_ctl | CD_SM_INT, tve.base + TVE_INT_CONT_REG);
+	} else {
+		/* none, only enable SM_INT to avoid continuous LM int*/
+		int_ctl &= ~CD_LM_INT;
+		__raw_writel(int_ctl | CD_SM_INT, tve.base + TVE_INT_CONT_REG);
+	}
+
+	reg = __raw_readl(tve.base + TVE_COM_CONF_REG);
+	__raw_writel(reg | (tve.output_mode << 4), tve.base + TVE_COM_CONF_REG);
+
+	__raw_writel(CD_MON_END_INT | CD_LM_INT | CD_SM_INT,
+			tve.base + TVE_STAT_REG);
 
 	if (old_detect != tve.detect)
 		sysfs_notify(&tve.pdev->dev.driver->kobj, NULL, "headphone");
 
-	dev_dbg(&tve.pdev->dev, "detect = %d\n", tve.detect);
+	dev_dbg(&tve.pdev->dev, "detect = %d mode = %d\n",
+			tve.detect, tve.output_mode);
 	return tve.detect;
+}
+
+static void cd_work_func(struct work_struct *work)
+{
+	tve_update_detect_status();
 }
 
 static int tve_man_detect(void)
@@ -224,19 +315,15 @@ static int tve_man_detect(void)
 
 static irqreturn_t tve_detect_handler(int irq, void *data)
 {
-	u32 stat;
-	int old_detect = tve.detect;
+	u32 int_ctl = __raw_readl(tve.base + TVE_INT_CONT_REG);
 
-	stat = __raw_readl(tve.base + TVE_STAT_REG);
-	stat &= __raw_readl(tve.base + TVE_INT_CONT_REG);
+	/* disable INT first */
+	int_ctl &= ~(CD_SM_INT | CD_LM_INT | CD_MON_END_INT);
+	__raw_writel(int_ctl, tve.base + TVE_INT_CONT_REG);
 
-	tve_update_detect_status();
+	__raw_writel(CD_MON_END_INT | CD_LM_INT | CD_SM_INT, tve.base + TVE_STAT_REG);
 
-	__raw_writel(stat | CD_MON_END_INT, tve.base + TVE_STAT_REG);
-
-	if (old_detect != tve.detect)
-		sysfs_notify(&tve.pdev->dev.driver->kobj, NULL, "headphone");
-
+	schedule_delayed_work(&tve.cd_work, msecs_to_jiffies(1000));
 	return IRQ_HANDLED;
 }
 
@@ -348,6 +435,7 @@ static int tve_probe(struct platform_device *pdev)
 
 	tve.pdev = pdev;
 	tve.base = ioremap(res->start, res->end - res->start);
+	tve.detect = -1;
 
 	tve.irq = platform_get_irq(pdev, 0);
 	if (tve.irq < 0) {
@@ -355,6 +443,7 @@ static int tve_probe(struct platform_device *pdev)
 		goto err0;
 	}
 
+	INIT_DELAYED_WORK(&tve.cd_work, cd_work_func);
 	ret = request_irq(tve.irq, tve_detect_handler, 0, pdev->name, pdev);
 	if (ret < 0)
 		goto err0;
@@ -391,11 +480,8 @@ static int tve_probe(struct platform_device *pdev)
 	clk_enable(tve.clk);
 
 	/* Setup cable detect */
-	__raw_writel(0x010777F1, tve.base + TVE_CD_CONT_REG);
+	__raw_writel(0x01007701, tve.base + TVE_CD_CONT_REG);
 	/* tve_man_detect(); not working */
-
-	__raw_writel(CD_SM_INT | CD_LM_INT, tve.base + TVE_STAT_REG);
-	__raw_writel(CD_SM_INT | CD_LM_INT, tve.base + TVE_INT_CONT_REG);
 
 	__raw_writel(0x00000000, tve.base + 0x34);
 	__raw_writel(0x00000000, tve.base + 0x38);
@@ -450,6 +536,9 @@ static int tve_resume(struct platform_device *pdev)
 {
 	if (enabled) {
 		clk_enable(tve.clk);
+
+		/* Setup cable detect, only for channel#2 cvbs case */
+		__raw_writel(0x01007701, tve.base + TVE_CD_CONT_REG);
 
 		if (tve.cur_mode == TVOUT_FMT_NTSC) {
 			tve_disable();

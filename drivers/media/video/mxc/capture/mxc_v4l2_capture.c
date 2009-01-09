@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -2173,7 +2173,6 @@ static void init_camera_struct(cam_data *cam)
 
 	cam->enc_callback = camera_callback;
 	init_waitqueue_head(&cam->power_queue);
-	cam->int_lock = SPIN_LOCK_UNLOCKED;
 	spin_lock_init(&cam->int_lock);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -34,7 +34,10 @@
 #include <asm/hardware.h>
 #include <asm/arch/system.h>
 #include <asm/arch/mxc_pm.h>
+#include <asm/cacheflush.h>
 #include <asm/irq.h>
+#include <asm/arch/common.h>
+#include <asm/hardware/cache-l2x0.h>
 
 #include "crm_regs.h"
 
@@ -291,10 +294,6 @@ void mxc_pm_lowpower(int mode)
 	enable_flag = 0;
 
 	switch (mode) {
-	case DOZE_MODE:
-		lpm = 1;
-		break;
-
 	case STOP_MODE:
 		/* State Retention mode */
 		lpm = 2;
@@ -303,17 +302,19 @@ void mxc_pm_lowpower(int mode)
 		enable_flag = 1;
 
 		/* Enable Well Bias and set VSTBY
-		  * VSTBY pin will be asserted during SR mode. This asks the
-		  * PM IC to set the core voltage to the standby voltage
-		  * Must clear the MXC_CCM_CCMR_SBYCS bit as well  */
+		 * VSTBY pin will be asserted during SR mode. This asks the
+		 * PM IC to set the core voltage to the standby voltage
+		 * Must clear the MXC_CCM_CCMR_SBYCS bit as well  */
 		mxc_ccm_modify_reg(MXC_CCM_CCMR,
 				   MXC_CCM_CCMR_WBEN | MXC_CCM_CCMR_VSTBY |
-					MXC_CCM_CCMR_SBYCS,
-				   MXC_CCM_CCMR_WBEN | MXC_CCM_CCMR_VSTBY);
+				   MXC_CCM_CCMR_SBYCS,
+				   MXC_CCM_CCMR_WBEN | MXC_CCM_CCMR_VSTBY |
+				   MXC_CCM_CCMR_SBYCS);
 
 		mxc_ccm_modify_reg(MXC_CCM_CCMR,
 				   MXC_CCM_CCMR_LPM_MASK,
 				   lpm << MXC_CCM_CCMR_LPM_OFFSET);
+		cpu_do_idle();
 		break;
 
 	case DSM_MODE:
@@ -325,25 +326,34 @@ void mxc_pm_lowpower(int mode)
 		/* Enabled Well Bias
 		 * SBYCS = 0, MCU clock source is disabled*/
 		mxc_ccm_modify_reg(MXC_CCM_CCMR,
-				   MXC_CCM_CCMR_WBEN | MXC_CCM_CCMR_SBYCS,
-				   MXC_CCM_CCMR_WBEN);
-		break;
+				   MXC_CCM_CCMR_WBEN | MXC_CCM_CCMR_VSTBY |
+				   MXC_CCM_CCMR_SBYCS | MXC_CCM_CCMR_LPM_MASK,
+				   MXC_CCM_CCMR_WBEN | MXC_CCM_CCMR_VSTBY |
+				   MXC_CCM_CCMR_SBYCS |
+				   (lpm << MXC_CCM_CCMR_LPM_OFFSET));
 
+		reg = __raw_readl(MXC_CCM_WIMR);
+		reg &= ~(1 << 18);
+		__raw_writel(reg, MXC_CCM_WIMR);
+
+		flush_cache_all();
+		l2x0_disable();
+
+		mxc_pm_arch_entry(IO_ADDRESS(NFC_BASE_ADDR), 2048);
+		printk(KERN_INFO "Resume from DSM\n");
+
+		l2x0_enable();
+		mxc_init_irq();
+
+		break;
 	default:
 	case WAIT_MODE:
 		/* Wait is the default mode used when idle. */
-		lpm = 0;
+		reg = __raw_readl(MXC_CCM_CCMR);
+		reg &= ~MXC_CCM_CCMR_LPM_MASK;
+		__raw_writel(reg, MXC_CCM_CCMR);
 		break;
 	}
-
-	reg = __raw_readl(MXC_CCM_CCMR);
-	reg = (reg & (~MXC_CCM_CCMR_LPM_MASK)) | lpm << MXC_CCM_CCMR_LPM_OFFSET;
-	__raw_writel(reg, MXC_CCM_CCMR);
-	/* Executing CP15 (Wait-for-Interrupt) Instruction */
-	/* wait for interrupt */
-	__asm__ __volatile__("mov r1, #0x0\n"
-				"mcr	p15, 0, r1, c7, c0, 4\n"
-			     "nop\n" "nop\n" "nop\n" "nop\n" "nop\n"::);
 
 	if (enable_flag) {
 		/* Enable timer interrupt */

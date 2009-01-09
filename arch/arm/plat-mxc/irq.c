@@ -1,5 +1,5 @@
 /*
- *  Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -322,6 +322,7 @@ void __init mxc_init_irq(void)
 {
 	int i;
 	u32 reg;
+	static int initialized;
 
 	/* put the AVIC into the reset value with
 	 * all interrupts disabled
@@ -336,20 +337,21 @@ void __init mxc_init_irq(void)
 	/* all IRQ no FIQ */
 	__raw_writel(0, AVIC_INTTYPEH);
 	__raw_writel(0, AVIC_INTTYPEL);
-	for (i = 0; i < MXC_MAX_INT_LINES; i++) {
+	if (!initialized) {
+		for (i = 0; i < MXC_MAX_INT_LINES; i++) {
 #ifdef EDIO_BASE_ADDR
-		if (irq_to_edio(i) != -1) {
-			mxc_irq_set_edio(i, 0, 0, 0);
-			set_irq_chip(i, &mxc_edio_chip);
-		} else
+			if (irq_to_edio(i) != -1) {
+				mxc_irq_set_edio(i, 0, 0, 0);
+				set_irq_chip(i, &mxc_edio_chip);
+			} else
 #endif
-		{
-			set_irq_chip(i, &mxc_avic_chip);
+			{
+				set_irq_chip(i, &mxc_avic_chip);
+			}
+			set_irq_handler(i, handle_level_irq);
+			set_irq_flags(i, IRQF_VALID);
 		}
-		set_irq_handler(i, handle_level_irq);
-		set_irq_flags(i, IRQF_VALID);
 	}
-
 	/* Set WDOG2's interrupt the highest priority level (bit 28-31) */
 	reg = __raw_readl(AVIC_NIPRIORITY6);
 	reg |= (0xF << 28);
@@ -360,6 +362,7 @@ void __init mxc_init_irq(void)
 	else if (MXC_INT_FORCE >= 0)
 		__raw_writel(1 << MXC_INT_FORCE, AVIC_INTFRCL);
 
+	initialized = 1;
 	printk(KERN_INFO "MXC IRQ initialized\n");
 }
 

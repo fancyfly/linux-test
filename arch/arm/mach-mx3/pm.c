@@ -15,7 +15,7 @@
  * Cleanup 2004 for OMAP1510/1610 by Dirk Behme <dirk.behme@de.bosch.com>
  *
  * Modified for the MX31
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -39,8 +39,9 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/err.h>
 #include <linux/suspend.h>
-
+#include <linux/regulator/regulator-platform.h>
 #include <asm/arch/mxc_pm.h>
 
 /*
@@ -68,6 +69,16 @@ static int mx31_suspend_enter(suspend_state_t state)
  */
 static int mx31_suspend_prepare(void)
 {
+	struct regulator *reg_core;
+	reg_core = regulator_get(NULL, "SW1A_STBY");
+	if (reg_core == NULL || IS_ERR(reg_core)) {
+		printk(KERN_ERR "Get regulator SW1A_STBY fail\n");
+		return -1;
+	}
+	regulator_set_voltage(reg_core, 1250000);
+	regulator_set_mode(reg_core, REGULATOR_MODE_STANDBY);
+	regulator_put(reg_core, NULL);
+
 	return 0;
 }
 

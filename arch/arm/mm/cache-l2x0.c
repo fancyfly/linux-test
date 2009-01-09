@@ -34,6 +34,7 @@
 #endif
 
 static void __iomem *l2x0_base;
+static unsigned long l2x0_aux;
 static DEFINE_SPINLOCK(l2x0_lock);
 
 static inline void sync_writel(unsigned long val, unsigned long reg,
@@ -163,6 +164,7 @@ void __init l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 	aux = readl(l2x0_base + L2X0_AUX_CTRL);
 	aux &= aux_mask;
 	aux |= aux_val;
+	l2x0_aux = aux;
 	writel(aux, l2x0_base + L2X0_AUX_CTRL);
 
 	l2x0_inv_all();
@@ -178,3 +180,24 @@ void __init l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 	printk(KERN_INFO "L2X0 cache controller enabled\n");
 }
 EXPORT_SYMBOL(outer_cache);
+
+void l2x0_disable(void)
+{
+	if (readl(l2x0_base + L2X0_CTRL)
+	    && !(readl(l2x0_base + L2X0_DEBUG_CTRL) & 0x2)) {
+		l2x0_flush_all();
+		writel(0, l2x0_base + L2X0_CTRL);
+		l2x0_flush_all();
+	}
+}
+
+void l2x0_enable(void)
+{
+	if (!readl(l2x0_base + L2X0_CTRL)) {
+		writel(l2x0_aux, l2x0_base + L2X0_AUX_CTRL);
+		l2x0_inv_all();
+		/* enable L2X0 */
+		writel(1, l2x0_base + L2X0_CTRL);
+	}
+}
+

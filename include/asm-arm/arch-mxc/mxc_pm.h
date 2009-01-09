@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -246,5 +246,7 @@ int mxc_pm_pllscale(long armfreq, long ahbfreq, long ipfreq);
  *                     Returns 0 on success
  */
 int mxc_pm_dvfs(unsigned long armfreq, long ahbfreq, long ipfreq);
+
+extern void mxc_pm_arch_entry(u32 entry, u32 size);
 
 #endif

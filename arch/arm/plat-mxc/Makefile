@@ -18,7 +18,7 @@ endif
 obj-$(CONFIG_ARCH_MX21) += dma_mx2.o
 obj-$(CONFIG_ARCH_MX25) += 
 obj-$(CONFIG_ARCH_MX27) += dma_mx2.o usb_common.o
-obj-$(CONFIG_ARCH_MX3) += dptc.o usb_common.o
+obj-$(CONFIG_ARCH_MX3) += dptc.o usb_common.o entry-pm.o
 obj-$(CONFIG_ARCH_MX35) += usb_common.o serialxc.o
 obj-$(CONFIG_ARCH_MX37) += usb_common.o utmixc.o dptc.o dvfs_core.o
 obj-$(CONFIG_ARCH_MX51) += usb_common.o utmixc.o dvfs_core.o

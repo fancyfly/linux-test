@@ -304,7 +304,7 @@ static int mc13892_get_sw_hi_bit(int sw)
 	}
 
 	CHECK_ERROR(pmic_read_reg(reg, &register_val, PMIC_ALL_BITS));
-	return register_val & 0x800000;
+	return ((register_val & 0x800000) >> SWXHI_LSH);
 }
 
 static int mc13892_get_voltage_value(int *hi, int mV)

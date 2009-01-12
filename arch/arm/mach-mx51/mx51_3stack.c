@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -912,8 +912,6 @@ static void __init mxc_board_init(void)
 #endif
 	mxc_init_touchscreen();
 	mxc_init_audio();
-
-	pm_power_off = mc13892_power_off;
 }
 
 /*

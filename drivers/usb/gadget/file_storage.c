@@ -2498,7 +2498,7 @@ static int finish_reply(struct fsg_dev *fsg)
 	return rc;
 }
 
-
+static inline void set_scsi_cmd(u8 *cmnd, bool true);
 static int send_status(struct fsg_dev *fsg)
 {
 	struct lun		*curlun = fsg->curlun;
@@ -2514,6 +2514,10 @@ static int send_status(struct fsg_dev *fsg)
 		if (rc)
 			return rc;
 	}
+
+#ifdef CONFIG_USB_USR_MSC
+	set_scsi_cmd(fsg->cmnd, 0);
+#endif
 
 	if (curlun) {
 		sd = curlun->sense_data;
@@ -2738,6 +2742,9 @@ static int do_scsi_command(struct fsg_dev *fsg)
 	fsg->phase_error = 0;
 	fsg->short_packet_received = 0;
 
+#ifdef CONFIG_USB_USR_MSC
+	set_scsi_cmd(fsg->cmnd, 1);
+#endif
 	down_read(&fsg->filesem);	// We're using the backing file
 	switch (fsg->cmnd[0]) {
 
@@ -3672,7 +3679,8 @@ static void lun_release(struct device *dev)
 
 static void /* __init_or_exit */ fsg_unbind(struct usb_gadget *gadget)
 {
-	struct fsg_dev		*fsg = get_gadget_data(gadget);
+	/* struct fsg_dev	*fsg = get_gadget_data(gadget); */
+	struct fsg_dev *fsg = the_fsg;
 	int			i;
 	struct lun		*curlun;
 	struct usb_request	*req = fsg->ep0req;
@@ -3798,6 +3806,9 @@ static int __init check_parameters(struct fsg_dev *fsg)
 	return 0;
 }
 
+#ifdef CONFIG_USB_USR_MSC
+#include "msclib.c"
+#endif
 
 static int __init fsg_bind(struct usb_gadget *gadget)
 {
@@ -3809,11 +3820,12 @@ static int __init fsg_bind(struct usb_gadget *gadget)
 	struct usb_request	*req;
 	char			*pathbuf, *p;
 
+#ifndef CONFIG_USB_USR_MSC
 	fsg->gadget = gadget;
 	set_gadget_data(gadget, fsg);
 	fsg->ep0 = gadget->ep0;
 	fsg->ep0->driver_data = fsg;
-
+#endif
 	if ((rc = check_parameters(fsg)) != 0)
 		goto out;
 
@@ -4046,7 +4058,6 @@ static void fsg_resume(struct usb_gadget *gadget)
 	clear_bit(SUSPENDED, &fsg->atomic_bitflags);
 }
 
-
 /*-------------------------------------------------------------------------*/
 
 static struct usb_gadget_driver		fsg_driver = {
@@ -4056,8 +4067,13 @@ static struct usb_gadget_driver		fsg_driver = {
 	.speed		= USB_SPEED_FULL,
 #endif
 	.function	= (char *) longname,
+#ifdef CONFIG_USB_USR_MSC
+	.bind		= fsg_bind_fail,
+	.unbind         = fsg_unbind_fail,
+#else
 	.bind		= fsg_bind,
-	.unbind		= fsg_unbind,
+	.unbind         = fsg_unbind,
+#endif
 	.disconnect	= fsg_disconnect,
 	.setup		= fsg_setup,
 	.suspend	= fsg_suspend,
@@ -4092,8 +4108,12 @@ static int __init fsg_alloc(void)
 
 static int __init fsg_init(void)
 {
-	int		rc;
-	struct fsg_dev	*fsg;
+	int             rc;
+#ifdef CONFIG_USB_USR_MSC
+	usb_gadget_register_driver(&fsg_driver);
+	rc = create_msc_inode();
+#else
+	struct fsg_dev  *fsg;
 
 	if ((rc = fsg_alloc()) != 0)
 		return rc;
@@ -4101,22 +4121,25 @@ static int __init fsg_init(void)
 	if ((rc = usb_gadget_register_driver(&fsg_driver)) != 0)
 		kref_put(&fsg->ref, fsg_release);
 	return rc;
+#endif
+	return rc;
 }
 module_init(fsg_init);
 
 
 static void __exit fsg_cleanup(void)
 {
-	struct fsg_dev	*fsg = the_fsg;
-
+#ifdef CONFIG_USB_USR_MSC
+	destroy_msc_inode();
+#else
+	struct fsg_dev  *fsg = the_fsg;
 	/* Unregister the driver iff the thread hasn't already done so */
 	if (test_and_clear_bit(REGISTERED, &fsg->atomic_bitflags))
 		usb_gadget_unregister_driver(&fsg_driver);
-
 	/* Wait for the thread to finish up */
 	wait_for_completion(&fsg->thread_notifier);
-
 	close_all_backing_files(fsg);
 	kref_put(&fsg->ref, fsg_release);
+#endif
 }
 module_exit(fsg_cleanup);

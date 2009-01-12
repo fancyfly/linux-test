@@ -586,6 +586,13 @@ config USB_FILE_STORAGE_TEST
 	  behavior of USB Mass Storage hosts.  Not needed for
 	  normal operation.
 
+config USB_USR_MSC
+	bool "File-backed Storage user level lib"
+	depends on USB_FILE_STORAGE
+	default n
+	help
+	  Say "y" to generate the user level msc lib
+
 config USB_G_SERIAL
 	tristate "Serial Gadget (with CDC ACM support)"
 	help

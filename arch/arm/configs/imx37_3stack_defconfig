@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.24
-# Fri Nov 28 10:36:35 2008
+# Wed Dec 31 10:47:27 2008
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1226,9 +1226,10 @@ CONFIG_USB_GADGET_ARC_OTG=y
 CONFIG_USB_GADGET_FSL_UTMI=y
 # CONFIG_USB_ZERO is not set
 # CONFIG_USB_ETH is not set
-# CONFIG_USB_GADGETFS is not set
+CONFIG_USB_GADGETFS=m
 CONFIG_USB_FILE_STORAGE=m
 # CONFIG_USB_FILE_STORAGE_TEST is not set
+# CONFIG_USB_USR_MSC is not set
 # CONFIG_USB_G_SERIAL is not set
 # CONFIG_USB_MIDI_GADGET is not set
 

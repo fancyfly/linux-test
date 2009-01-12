@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2000 Deep Blue Solutions Ltd
  *  Copyright (C) 2002 Shane Nay (shane@minirl.com)
- *  Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1017,9 +1017,6 @@ static void __init mxc_board_init(void)
 	mxc_init_pata();
 	mxc_init_bluetooth();
 	mxc_init_gps();
-
-	/* set power off hook to mc13783 power off */
-	pm_power_off = pmic_power_off;
 }
 
 #define PLL_PCTL_REG(pd, mfd, mfi, mfn)		\

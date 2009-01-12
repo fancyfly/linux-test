@@ -722,13 +722,6 @@ static void __init mxc_init_gps(void)
 }
 #endif
 
-static void pmic_power_off(void)
-{
-#ifdef CONFIG_MXC_PMIC_MC9SDZ60
-	mcu_pmic_write_reg(REG_MCU_POWER_CTL, 0x10, 0x10);
-#endif
-}
-
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -886,8 +879,6 @@ static void __init mxc_board_init(void)
 	mxc_init_bluetooth();
 	mxc_init_gps();
 	mxc_init_mlb();
-
-	pm_power_off = pmic_power_off;
 }
 
 #define PLL_PCTL_REG(brmo, pd, mfd, mfi, mfn)		\

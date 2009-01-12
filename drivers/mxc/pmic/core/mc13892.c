@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -117,6 +117,7 @@ int pmic_init_registers(void)
 	if (machine_is_mx51_3ds())
 		CHECK_ERROR(pmic_write(REG_CHARGE, 0xB40003));
 
+	pm_power_off = mc13892_power_off;
 	return PMIC_SUCCESS;
 }
 

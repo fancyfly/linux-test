@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -175,6 +175,14 @@ int mcu_pmic_write_reg(int reg, unsigned int reg_value,
 	return ret;
 }
 
+/*!
+ * make max8660 - mc9sdz60 enter low-power mode
+ */
+static void pmic_power_off(void)
+{
+	mcu_pmic_write_reg(REG_MCU_POWER_CTL, 0x10, 0x10);
+}
+
 static int __init mcu_pmic_init(void)
 {
 	int err;
@@ -191,6 +199,7 @@ static int __init mcu_pmic_init(void)
 	if (is_max8660_present()) {
 		pr_info("max8660 is present, reg_max8660_probe\n");
 		reg_max8660_probe();
+		pm_power_off = pmic_power_off;
 	} else {
 		pr_debug("max8660 is not present, reg_mc9sdz60_probe\n");
 		reg_mc9sdz60_probe();

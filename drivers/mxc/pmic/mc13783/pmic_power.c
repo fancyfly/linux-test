@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -3117,6 +3117,8 @@ static int __init pmic_power_init(void)
 {
 	pr_debug("PMIC Power driver loading..\n");
 	pmic_power_event_sub(PWR_IT_ONOFD1I, pmic_power_key_callback);
+	/* set power off hook to mc13783 power off */
+	pm_power_off = pmic_power_off;
 	return platform_driver_register(&pmic_power_driver_ldm);
 }
 static void __exit pmic_power_exit(void)

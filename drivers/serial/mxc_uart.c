@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -1801,11 +1801,11 @@ static int mxcuart_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	uart_mxc_port *umxc = platform_get_drvdata(pdev);
 
-	if (umxc == NULL) {
+	if (umxc == NULL)
 		return 0;	/* skip disabled ports */
-	}
-	uart_suspend_port(&mxc_reg, &umxc->port);
+
 	if (umxc->port.info && umxc->port.info->flags & UIF_INITIALIZED) {
+		uart_suspend_port(&mxc_reg, &umxc->port);
 		umxc->port.info->tty->hw_stopped = 1;
 	}
 
@@ -1826,14 +1826,13 @@ static int mxcuart_resume(struct platform_device *pdev)
 {
 	uart_mxc_port *umxc = platform_get_drvdata(pdev);
 
-	if (umxc == NULL) {
+	if (umxc == NULL)
 		return 0;	/* skip disabled ports */
-	}
-	if (umxc->port.info && umxc->port.info->flags & UIF_INITIALIZED) {
-		umxc->port.info->tty->hw_stopped = 0;
-	}
 
-	uart_resume_port(&mxc_reg, &umxc->port);
+	if (umxc->port.info && umxc->port.info->flags & UIF_SUSPENDED) {
+		umxc->port.info->tty->hw_stopped = 0;
+		uart_resume_port(&mxc_reg, &umxc->port);
+	}
 
 	return 0;
 }

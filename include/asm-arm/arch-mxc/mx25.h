@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -216,7 +216,7 @@
 #define GPIO3_BASE_ADDR     (AIPS2_BASE_ADDR + 0x000AD000)
 #define PWM3_BASE_ADDR      (AIPS2_BASE_ADDR + 0x000A8000)
 #define SCC_BASE_ADDR       (AIPS2_BASE_ADDR + 0x000AC000)
-#define RNGD_BASE_ADDR      (AIPS2_BASE_ADDR + 0x000B0000)
+#define RNGB_BASE_ADDR      (AIPS2_BASE_ADDR + 0x000B0000)
 #define MMC_SDHC1_BASE_ADDR (AIPS2_BASE_ADDR + 0x000B4000)
 #define MMC_SDHC2_BASE_ADDR (AIPS2_BASE_ADDR + 0x000B8000)
 #define LCDC_BASE_ADDR      (AIPS2_BASE_ADDR + 0x000BC000)
@@ -404,7 +404,7 @@
 #define MXC_INT_IIM                 19
 #define MXC_INT_SIM1                20
 #define MXC_INT_SIM2                21
-#define MXC_INT_RNGD                22
+#define MXC_INT_RNG                 22
 #define MXC_INT_GPIO4               23
 #define MXC_INT_KPP                 24
 #define MXC_INT_DRYICE_RTC          25

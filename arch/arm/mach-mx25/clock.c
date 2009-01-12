@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -1092,8 +1092,8 @@ struct clk pwm4_clk[] = {
 	 .disable = _clk_disable,},
 };
 
-struct clk rngb_clk = {
-	.name = "rngb_clk",
+struct clk rng_clk = {
+	.name = "rng_clk",
 	.id = 0,
 	.parent = &ipg_clk,
 	.enable = _clk_enable,
@@ -1581,7 +1581,7 @@ static struct clk *mxc_clks[] = {
 	&pwm3_clk[1],
 	&pwm4_clk[0],
 	&pwm4_clk[1],
-	&rngb_clk,
+	&rng_clk,
 	&scc_clk,
 	&sdma_clk[0],
 	&sdma_clk[1],

@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -67,6 +67,8 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 		lpm = MX35_STOP_MODE;
 		/* Enabled Well Bias */
 		reg |= MXC_CCM_CCMR_WBEN;
+		if (board_is_mx35(BOARD_REV_2))
+			reg |= MXC_CCM_CCMR_VSTBY;
 		break;
 
 	case WAIT_CLOCKED:

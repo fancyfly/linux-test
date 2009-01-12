@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -288,6 +288,7 @@ static int __devinit pmic_probe(struct i2c_client *client,
 		dev_err(&client->dev, "request irq %d error!\n", pmic_irq);
 		return ret;
 	}
+	enable_irq_wake(IOMUX_TO_IRQ(pmic_irq));
 
 	reg_mc13892_probe();
 

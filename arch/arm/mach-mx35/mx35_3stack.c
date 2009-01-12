@@ -29,6 +29,7 @@
 #include <linux/mtd/partitions.h>
 #include <linux/delay.h>
 #include <linux/regulator/mcu_max8660-bus.h>
+#include <linux/regulator/regulator.h>
 
 #include <asm/mach/flash.h>
 #endif
@@ -42,6 +43,7 @@
 #include <asm/arch/memory.h>
 #include <asm/arch/gpio.h>
 #include <asm/arch/mmc.h>
+#include <asm/arch/pmic_external.h>
 
 #include "board-mx35_3stack.h"
 #include "crm_regs.h"
@@ -622,20 +624,66 @@ static irqreturn_t power_key_int(int irq, void *dev_id)
  */
 static int __init mxc_init_power_key(void)
 {
-	/*Set power key as wakeup resource */
-	int irq, ret;
-	irq = MXC_PSEUDO_IRQ_POWER_KEY;
-	set_irq_type(irq, IRQF_TRIGGER_RISING);
-	ret = request_irq(irq, power_key_int, 0, "power_key", 0);
-	if (ret)
-		pr_info("register on-off key interrupt failed\n");
-	else
-		set_irq_wake(irq, 1);
-	return ret;
+	if (!board_is_mx35(BOARD_REV_2)) {
+		/*Set power key as wakeup resource */
+		int irq, ret;
+		irq = MXC_PSEUDO_IRQ_POWER_KEY;
+		set_irq_type(irq, IRQF_TRIGGER_RISING);
+		ret = request_irq(irq, power_key_int, 0, "power_key", 0);
+		if (ret)
+			pr_info("register on-off key interrupt failed\n");
+		else
+			enable_irq_wake(irq);
+		return ret;
+	}
+	return 0;
 }
 
 late_initcall(mxc_init_power_key);
 #endif
+
+/*!
+ * the event handler for power on event
+ */
+static void power_on_evt_handler(void)
+{
+	pr_info("pwr on event1 is received \n");
+}
+
+/*!
+ * pmic board initialization code
+ */
+static int __init mxc_init_pmic(void)
+{
+	if (board_is_mx35(BOARD_REV_2)) {
+#if defined(CONFIG_MXC_PMIC_MC13892_MODULE) || defined(CONFIG_MXC_PMIC_MC13892)
+		unsigned int value;
+		pmic_event_callback_t power_key_event;
+		struct regulator *sw2_stby_reg;
+
+		/* subscribe PWRON1 event. */
+		power_key_event.param = NULL;
+		power_key_event.func = (void *)power_on_evt_handler;
+		pmic_event_subscribe(EVENT_PWRONI, power_key_event);
+
+		pmic_read_reg(REG_POWER_CTL2, &value, 0xffffff);
+		/* Bit 11 (STANDBYSECINV): Active Low */
+		value |= 0x00800;
+		pmic_write_reg(REG_POWER_CTL2, value, 0xffffff);
+
+		sw2_stby_reg = regulator_get(NULL, "SW2_STBY");
+
+		/* TBD: If core voltage is expected to be updated above 1.375v,
+		* this code needs to be moved before entering standby mode,
+		* which is decided by MC13892 Hi bit behavior */
+		regulator_set_voltage(sw2_stby_reg, 1000000);
+		regulator_put(sw2_stby_reg, NULL);
+#endif
+	}
+	return 0;
+}
+
+late_initcall(mxc_init_pmic);
 
 #if defined(CONFIG_PATA_FSL) || defined(CONFIG_PATA_FSL_MODULE)
 extern void gpio_ata_active(void);

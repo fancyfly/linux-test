@@ -1295,7 +1295,7 @@ void gpio_can_active(int id)
 	switch (id) {
 	case 0:
 		pad = PAD_CTL_HYS_SCHMITZ | PAD_CTL_PKE_ENABLE | \
-		    PAD_CTL_PUE_PUD | PAD_CTL_100K_PU | PAD_CTL_ODE_OpenDrain;
+		    PAD_CTL_PUE_PUD | PAD_CTL_100K_PU | PAD_CTL_DRV_HIGH;
 		mxc_request_iomux(MX35_PIN_I2C2_CLK, MUX_CONFIG_ALT1);
 		mxc_request_iomux(MX35_PIN_I2C2_DAT, MUX_CONFIG_ALT1);
 		mxc_iomux_set_pad(MX35_PIN_I2C2_CLK, pad);

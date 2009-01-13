@@ -842,8 +842,8 @@ static void mx35_3stack_fixup_for_board_v1(void)
 	mxc_bt_data.bt_vdd = "SW1";
 
 #if defined(CONFIG_CAN_FLEXCAN) || defined(CONFIG_CAN_FLEXCAN_MODULE)
-	flexcan_data[0].core_reg = "GPO2";
-	flexcan_data[1].core_reg = "GPO2";
+	flexcan_data[0].core_reg = "SW1";
+	flexcan_data[1].core_reg = "SW1";
 #endif
 }
 

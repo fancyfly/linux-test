@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -572,6 +572,8 @@ static struct platform_device mxc_alsa_device = {
 
 static void mxc_init_audio(void)
 {
+	if (board_is_mx35(BOARD_REV_2))
+		return;
 	mxc_audio_data.ssi_num = 1;
 	mxc_audio_data.src_port = 1;
 	mxc_audio_data.ext_port = 4;

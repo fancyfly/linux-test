@@ -408,6 +408,10 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	 .platform_data = (void *)&camera_data,
 	 },
 	{
+	.type = "sgtl5000-i2c",
+	.addr = 0x0a,
+	 },
+	{
 	 .type = "ak4647-i2c",
 	 .addr = 0x12,
 	 },
@@ -777,6 +781,76 @@ static void mxc_init_bluetooth(void)
 	(void)platform_device_register(&mxc_bt_device);
 }
 
+#if defined(CONFIG_SND_SOC_IMX_3STACK_SGTL5000) \
+    || defined(CONFIG_SND_SOC_IMX_3STACK_SGTL5000_MODULE)
+
+unsigned int headphone_det_status(void)
+{
+	int ret = 0;
+	if (0 != pmic_gpio_get_designation_bit_val(0, &ret))
+		printk(KERN_ERR "Get headphone status error.");
+	return ret;
+}
+
+static struct mxc_sgtl5000_platform_data sgtl5000_data = {
+	.ssi_num = 1,
+	.src_port = 1,
+	.ext_port = 4,
+	.hp_irq = MXC_PSEUDO_IRQ_HEADPHONE,
+	.hp_status = headphone_det_status,
+	.vddio_reg = NULL,
+	.vdda_reg = "VCAM",
+	.amp_gpo = "SPKR",
+	.vddio = 0,
+	.vdda = 3000000,
+	.vddd = 0,
+	.sysclk = 12000000,
+};
+
+static struct platform_device sgtl5000_device = {
+	.name = "sgtl5000-imx",
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &sgtl5000_data,
+		} ,
+};
+
+static void mxc_sgtl5000_init(void)
+{
+	int err;
+	struct clk *cko1, *parent;
+	unsigned long rate;
+
+	/* for board v1.1 do nothing*/
+	if (!board_is_mx35(BOARD_REV_2))
+		return;
+
+	cko1 = clk_get(NULL, "cko1_clk");
+	if (IS_ERR(cko1))
+		return;
+	parent = clk_get(NULL, "ckih");
+	if (IS_ERR(parent))
+		return;
+	clk_set_parent(cko1, parent);
+	rate = clk_round_rate(cko1, 12000000);
+	if (rate < 8000000 || rate > 27000000) {
+		printk(KERN_ERR "Error: SGTL5000 mclk freq %d out of range!\n",
+			rate);
+		clk_put(parent);
+		clk_put(cko1);
+		return;
+		}
+	clk_set_rate(cko1, rate);
+	clk_enable(cko1);
+	sgtl5000_data.sysclk = rate;
+	platform_device_register(&sgtl5000_device);
+}
+#else
+static void mxc_sgtl5000_init(void)
+{
+}
+#endif
+
 #if defined(CONFIG_CAN_FLEXCAN) || defined(CONFIG_CAN_FLEXCAN_MODULE)
 static void flexcan_xcvr_enable(int id, int en)
 {
@@ -868,6 +942,7 @@ static void __init mxc_board_init(void)
 	mxc_init_lcd();
 	mxc_init_fb();
 	mxc_init_bl();
+	mxc_sgtl5000_init();
 
 	i2c_register_board_info(0, mxc_i2c_board_info,
 				ARRAY_SIZE(mxc_i2c_board_info));

@@ -1,7 +1,7 @@
 /*
  * imx-3stack-sgtl5000.c  --  i.MX 3Stack Driver for Freescale SGTL5000 Codec
  *
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  *  This program is free software; you can redistribute  it and/or modify it
  *  under  the terms of  the GNU General  Public License as published by the
@@ -226,14 +226,6 @@ static const struct snd_soc_pcm_link_ops imx_3stack_pcm_ops = {
 	.free = imx_3stack_pcm_free,
 };
 
-/* imx_3stack machine dapm widgets */
-static const struct snd_soc_dapm_widget imx_3stack_dapm_widgets[] = {
-	SND_SOC_DAPM_MIC("Mic Jack", NULL),
-	SND_SOC_DAPM_LINE("Line In Jack", NULL),
-	SND_SOC_DAPM_LINE("Line Out Jack", NULL),
-	SND_SOC_DAPM_HP("Headphone Jack", NULL),
-};
-
 /* imx_3stack machine audio map */
 static const char *audio_map[][3] = {
 
@@ -248,6 +240,9 @@ static const char *audio_map[][3] = {
 
 	/* LINE_OUT --> Line Out Jack */
 	{"Line Out Jack", NULL, "LINE_OUT"},
+
+	/* LINE_OUT --> Ext Speaker */
+	{"Ext Spk", NULL, "LINE_OUT"},
 
 	{NULL, NULL, NULL},
 };
@@ -382,6 +377,39 @@ static int sgtl5000_set_spk(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
+static int spk_amp_event(struct snd_soc_dapm_widget *w,
+			 struct snd_kcontrol *kcontrol, int event) {
+	int hp_status;
+	struct mxc_sgtl5000_platform_data *plat;
+	struct imx_3stack_priv *priv;
+	priv = sgtl5000_3stack_pcm_link->machine->platform_data;
+	plat = sgtl5000_3stack_pcm_link->machine->pdev->dev.platform_data;
+	hp_status = plat->hp_status();
+	if (SND_SOC_DAPM_EVENT_ON(event)) {
+		if (hp_status) {
+			regulator_disable(priv->reg_amp_gpo);
+			regulator_set_mode(priv->reg_vdda,
+					REGULATOR_MODE_NORMAL);
+		} else {
+			regulator_enable(priv->reg_amp_gpo);
+			regulator_set_mode(priv->reg_vdda, REGULATOR_MODE_FAST);
+		}
+	} else {
+		regulator_disable(priv->reg_amp_gpo);
+		regulator_set_mode(priv->reg_vdda, REGULATOR_MODE_NORMAL);
+	}
+	return 0;
+}
+
+/* imx_3stack machine dapm widgets */
+static const struct snd_soc_dapm_widget imx_3stack_dapm_widgets[] = {
+	SND_SOC_DAPM_MIC("Mic Jack", NULL),
+	SND_SOC_DAPM_LINE("Line In Jack", NULL),
+	SND_SOC_DAPM_LINE("Line Out Jack", NULL),
+	SND_SOC_DAPM_SPK("Ext Spk", spk_amp_event),
+	SND_SOC_DAPM_HP("Headphone Jack", NULL),
+};
+
 static const struct snd_kcontrol_new sgtl5000_machine_controls[] = {
 	SOC_ENUM_EXT("Jack Function", sgtl5000_enum[0], sgtl5000_get_jack,
 		     sgtl5000_set_jack),
@@ -443,7 +471,6 @@ static int mach_probe(struct snd_soc_machine *machine)
 		regulator_set_voltage(priv->reg_vddio, plat->vddio);
 		regulator_enable(priv->reg_vddio);
 	}
-	regulator_enable(priv->reg_amp_gpo);
 
 	codec_data->vddio = plat->vddio / 1000; /* uV to mV */
 	codec_data->vdda = plat->vdda / 1000;

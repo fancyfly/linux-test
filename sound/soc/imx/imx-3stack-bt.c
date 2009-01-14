@@ -1,7 +1,7 @@
 /*
  * imx-3stack-bt.c  --  SoC bluetooth audio for imx_3stack
  *
- * Copyright 2008 Freescale  Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale  Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -33,6 +33,16 @@
 #include "imx-pcm.h"
 #include "imx-ssi.h"
 #include "imx-3stack-bt.h"
+
+static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;
+static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;
+static int enable[SNDRV_CARDS] = SNDRV_DEFAULT_ENABLE;
+module_param_array(index, int, NULL, 0444);
+MODULE_PARM_DESC(index, "Index value for bluetooth sound card.");
+module_param_array(id, charp, NULL, 0444);
+MODULE_PARM_DESC(id, "ID string for bluetooth sound card.");
+module_param_array(enable, bool, NULL, 0444);
+MODULE_PARM_DESC(enable, "Enable bluetooth sound card.");
 
 #define BT_SSI_MASTER	1
 
@@ -212,6 +222,14 @@ static int __init imx_3stack_bt_probe(struct platform_device *pdev)
 	struct snd_soc_pcm_link *bt_audio;
 	const char *ssi_port;
 	int ret;
+	static int dev;
+
+	if (dev >= SNDRV_CARDS)
+		return -ENODEV;
+	if (!enable[dev]) {
+		dev++;
+		return -ENOENT;
+	}
 
 	machine = kzalloc(sizeof(struct snd_soc_machine), GFP_KERNEL);
 	if (machine == NULL)
@@ -227,9 +245,7 @@ static int __init imx_3stack_bt_probe(struct platform_device *pdev)
 
 	/* register card */
 	imx_3stack_mach = machine;
-	ret =
-	    snd_soc_new_card(machine, 1, SNDRV_DEFAULT_IDX1,
-			     SNDRV_DEFAULT_STR1);
+	ret = snd_soc_new_card(machine, 1, index[dev], id[dev]);
 	if (ret < 0) {
 		pr_err("%s: failed to create bt sound card\n", __func__);
 		goto err;

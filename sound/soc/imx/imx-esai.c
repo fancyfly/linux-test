@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -870,13 +870,19 @@ const char imx_esai_tx[SND_SOC_DAI_NAME_SIZE] = {
 	"imx-esai-tx"
 };
 
+EXPORT_SYMBOL_GPL(imx_esai_tx);
+
 const char imx_esai_rx[SND_SOC_DAI_NAME_SIZE] = {
 	"imx-esai-rx"
 };
 
+EXPORT_SYMBOL_GPL(imx_esai_rx);
+
 const char imx_esai_txrx[SND_SOC_DAI_NAME_SIZE] = {
 	"imx-esai-txrx"
 };
+
+EXPORT_SYMBOL_GPL(imx_esai_txrx);
 
 static int imx_esai_probe(struct device *dev)
 {

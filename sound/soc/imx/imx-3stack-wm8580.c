@@ -1,7 +1,7 @@
 /*
  * imx-3stack-wm8580.c  --  SoC 5.1 audio for imx_3stack
  *
- * Copyright 2008 Freescale  Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale  Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -32,6 +32,16 @@
 
 #include "imx-pcm.h"
 #include "imx-esai.h"
+
+static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;
+static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;
+static int enable[SNDRV_CARDS] = SNDRV_DEFAULT_ENABLE;
+module_param_array(index, int, NULL, 0444);
+MODULE_PARM_DESC(index, "Index value for 5.1 codec sound card.");
+module_param_array(id, charp, NULL, 0444);
+MODULE_PARM_DESC(id, "ID string for 5.1 codec sound card.");
+module_param_array(enable, bool, NULL, 0444);
+MODULE_PARM_DESC(enable, "Enable 5.1 codec sound card.");
 
 struct imx_3stack_pcm_state {
 	int lr_clk_active;
@@ -272,6 +282,14 @@ static int __init imx_3stack_wm8580_probe(struct platform_device *pdev)
 	struct snd_soc_machine *machine;
 	struct snd_soc_pcm_link *surround;
 	int ret;
+	static int dev;
+
+	if (dev >= SNDRV_CARDS)
+		return -ENODEV;
+	if (!enable[dev]) {
+		dev++;
+		return -ENOENT;
+	}
 
 	machine = kzalloc(sizeof(struct snd_soc_machine), GFP_KERNEL);
 	if (machine == NULL)
@@ -286,9 +304,7 @@ static int __init imx_3stack_wm8580_probe(struct platform_device *pdev)
 
 	/* register card */
 	imx_3stack_mach = machine;
-	ret =
-	    snd_soc_new_card(machine, 1, SNDRV_DEFAULT_IDX1,
-			     SNDRV_DEFAULT_STR1);
+	ret = snd_soc_new_card(machine, 1, index[dev], id[dev]);
 	if (ret < 0) {
 		pr_err("%s: failed to create stereo sound card\n", __func__);
 		goto err;

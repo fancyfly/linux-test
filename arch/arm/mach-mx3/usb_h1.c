@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -24,7 +24,7 @@ static struct fsl_usb2_platform_data usbh1_config = {
 	.platform_uninit   = fsl_usb_host_uninit,
 	.operating_mode    = FSL_USB2_MPH_HOST,
 	.phy_mode          = FSL_USB2_PHY_SERIAL,
-	.power_budget      = 150,		/* 150 mA max power */
+	.power_budget      = 500,		/* 500 mA max power */
 	.gpio_usb_active   = gpio_usbh1_active,
 	.gpio_usb_inactive = gpio_usbh1_inactive,
 	.transceiver       = "serial",

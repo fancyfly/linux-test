@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -28,7 +28,7 @@ static struct fsl_usb2_platform_data __maybe_unused dr_13783_config = {
 	.platform_init     = usbotg_init,
 	.platform_uninit   = usbotg_uninit,
 	.phy_mode          = FSL_USB2_PHY_SERIAL,
-	.power_budget      = 150,		/* 150 mA max power */
+	.power_budget      = 500,		/* 500 mA max power */
 	.gpio_usb_active   = gpio_usbotg_fs_active,
 	.gpio_usb_inactive = gpio_usbotg_fs_inactive,
 	.transceiver       = "mc13783",

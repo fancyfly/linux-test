@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -94,6 +94,9 @@ static int prp_enc_setup(cam_data * cam)
 	} else if (cam->v2f.fmt.pix.pixelformat == V4L2_PIX_FMT_YUV422P) {
 		enc.csi_prp_enc_mem.out_pixel_fmt = IPU_PIX_FMT_YUV422P;
 		pr_info("YUV422P\n");
+	} else if (cam->v2f.fmt.pix.pixelformat == V4L2_PIX_FMT_NV12) {
+		enc.csi_prp_enc_mem.out_pixel_fmt = IPU_PIX_FMT_NV12;
+		pr_info("NV12\n");
 	} else if (cam->v2f.fmt.pix.pixelformat == V4L2_PIX_FMT_BGR24) {
 		enc.csi_prp_enc_mem.out_pixel_fmt = IPU_PIX_FMT_BGR24;
 		pr_info("BGR24\n");

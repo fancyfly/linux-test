@@ -6,7 +6,7 @@
  *
  * Maintainer: Kumar Gala <galak@kernel.crashing.org>
  *
- * Copyright 2004-2008 Freescale Semiconductor, Inc
+ * Copyright 2004-2009 Freescale Semiconductor, Inc
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -109,6 +109,7 @@ struct fsl_usb2_platform_data {
 	int (*platform_init) (struct platform_device *);
 	void (*platform_uninit) (struct fsl_usb2_platform_data *);
 	void __iomem *regs;	/* ioremap'd register base */
+	void *ehci_regs_save;	/* Save ehci registers for resume */
 	u32 xcvr_type;		/* PORTSC_PTS_* */
 	char *transceiver;	/* transceiver name */
 	unsigned power_budget;	/* for hcd->power_budget */

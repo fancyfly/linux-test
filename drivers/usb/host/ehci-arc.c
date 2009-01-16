@@ -279,6 +279,8 @@ static void usb_hcd_fsl_remove(struct usb_hcd *hcd,
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
 
+	kfree(pdata->ehci_regs_save);
+	pdata->ehci_regs_save = NULL;
 	/*
 	 * do platform specific un-initialization:
 	 * release iomux pins, etc.
@@ -443,6 +445,8 @@ static int ehci_fsl_drv_suspend(struct platform_device *pdev,
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	struct fsl_usb2_platform_data *pdata = pdev->dev.platform_data;
+	struct ehci_regs *ehci_regs_ptr;
 	u32 tmp;
 
 	hcd->state = HC_STATE_SUSPENDED;
@@ -456,20 +460,28 @@ static int ehci_fsl_drv_suspend(struct platform_device *pdev,
 	tmp &= ~CMD_RUN;
 	ehci_writel(ehci, tmp, &ehci->regs->command);
 
-	/* save EHCI registers */
-	usb_ehci_regs.command = ehci_readl(ehci, &ehci->regs->command);
-	usb_ehci_regs.status = ehci_readl(ehci, &ehci->regs->status);
-	usb_ehci_regs.intr_enable = ehci_readl(ehci, &ehci->regs->intr_enable);
-	usb_ehci_regs.frame_index = ehci_readl(ehci, &ehci->regs->frame_index);
-	usb_ehci_regs.segment = ehci_readl(ehci, &ehci->regs->segment);
-	usb_ehci_regs.frame_list = ehci_readl(ehci, &ehci->regs->frame_list);
-	usb_ehci_regs.async_next = ehci_readl(ehci, &ehci->regs->async_next);
-	usb_ehci_regs.configured_flag =
-		ehci_readl(ehci, &ehci->regs->configured_flag);
-	usb_ehci_portsc = ehci_readl(ehci, &ehci->regs->port_status[0]);
+	if (!pdata->ehci_regs_save) {
+		ehci_regs_ptr = kmalloc(sizeof(struct ehci_regs), GFP_KERNEL);
+		if (!ehci_regs_ptr)
+			return -ENOMEM;
+	} else
+		ehci_regs_ptr = (struct ehci_regs *)pdata->ehci_regs_save;
 
-	/* clear the W1C bits */
-	usb_ehci_portsc &= cpu_to_hc32(ehci, ~PORT_RWC_BITS);
+	/* save EHCI registers */
+	ehci_regs_ptr->command = ehci_readl(ehci, &ehci->regs->command);
+	ehci_regs_ptr->status = ehci_readl(ehci, &ehci->regs->status);
+	ehci_regs_ptr->intr_enable = ehci_readl(ehci, &ehci->regs->intr_enable);
+	ehci_regs_ptr->frame_index = ehci_readl(ehci, &ehci->regs->frame_index);
+	ehci_regs_ptr->segment = ehci_readl(ehci, &ehci->regs->segment);
+	ehci_regs_ptr->frame_list = ehci_readl(ehci, &ehci->regs->frame_list);
+	ehci_regs_ptr->async_next = ehci_readl(ehci, &ehci->regs->async_next);
+	ehci_regs_ptr->configured_flag =
+		ehci_readl(ehci, &ehci->regs->configured_flag);
+	ehci_regs_ptr->port_status[0] =
+		ehci_readl(ehci, &ehci->regs->port_status[0]);
+	ehci_regs_ptr->port_status[0] &= cpu_to_hc32(ehci, ~PORT_RWC_BITS);
+
+	pdata->ehci_regs_save = (void *)ehci_regs_ptr;
 
 	/* clear PP to cut power to the port */
 	tmp = ehci_readl(ehci, &ehci->regs->port_status[0]);
@@ -485,22 +497,29 @@ static int ehci_fsl_drv_resume(struct platform_device *pdev)
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	u32 tmp;
 	struct fsl_usb2_platform_data *pdata = pdev->dev.platform_data;
+	struct ehci_regs *ehci_regs_ptr;
 
 	/* set host mode */
 	tmp = USBMODE_CM_HOST | (pdata->es ? USBMODE_ES : 0);
 	ehci_writel(ehci, tmp, hcd->regs + FSL_SOC_USB_USBMODE);
 
+	if (!pdata->ehci_regs_save)
+		return -EFAULT;
+
+	ehci_regs_ptr = (struct ehci_regs *)pdata->ehci_regs_save;
+
 	/* restore EHCI registers */
-	ehci_writel(ehci, usb_ehci_regs.command, &ehci->regs->command);
-	ehci_writel(ehci, usb_ehci_regs.intr_enable, &ehci->regs->intr_enable);
-	ehci_writel(ehci, usb_ehci_regs.frame_index, &ehci->regs->frame_index);
-	ehci_writel(ehci, usb_ehci_regs.segment, &ehci->regs->segment);
-	ehci_writel(ehci, usb_ehci_regs.frame_list, &ehci->regs->frame_list);
-	ehci_writel(ehci, usb_ehci_regs.async_next, &ehci->regs->async_next);
-	ehci_writel(ehci, usb_ehci_regs.configured_flag,
+	ehci_writel(ehci, ehci_regs_ptr->command, &ehci->regs->command);
+	ehci_writel(ehci, ehci_regs_ptr->intr_enable, &ehci->regs->intr_enable);
+	ehci_writel(ehci, ehci_regs_ptr->frame_index, &ehci->regs->frame_index);
+	ehci_writel(ehci, ehci_regs_ptr->segment, &ehci->regs->segment);
+	ehci_writel(ehci, ehci_regs_ptr->frame_list, &ehci->regs->frame_list);
+	ehci_writel(ehci, ehci_regs_ptr->async_next, &ehci->regs->async_next);
+	ehci_writel(ehci, ehci_regs_ptr->configured_flag,
 		    &ehci->regs->configured_flag);
-	ehci_writel(ehci, usb_ehci_regs.frame_list, &ehci->regs->frame_list);
-	ehci_writel(ehci, usb_ehci_portsc, &ehci->regs->port_status[0]);
+	ehci_writel(ehci, ehci_regs_ptr->status, &ehci->regs->status);
+	ehci_writel(ehci, ehci_regs_ptr->port_status[0],
+			&ehci->regs->port_status[0]);
 
 	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 	hcd->state = HC_STATE_RUNNING;

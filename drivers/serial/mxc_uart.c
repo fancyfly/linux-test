@@ -1804,10 +1804,11 @@ static int mxcuart_suspend(struct platform_device *pdev, pm_message_t state)
 	if (umxc == NULL)
 		return 0;	/* skip disabled ports */
 
-	if (umxc->port.info && umxc->port.info->flags & UIF_INITIALIZED) {
+	if (umxc->port.info && umxc->port.info->flags & UIF_INITIALIZED)
 		uart_suspend_port(&mxc_reg, &umxc->port);
+
+	if (umxc->port.info && umxc->port.info->flags & UIF_SUSPENDED)
 		umxc->port.info->tty->hw_stopped = 1;
-	}
 
 	return 0;
 }

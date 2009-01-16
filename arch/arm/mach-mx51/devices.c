@@ -747,7 +747,7 @@ static inline void mxc_init_tve(void)
 static struct resource dvfs_core_resources[] = {
 	[0] = {
 	       .start = MXC_DVFS_CORE_BASE,
-	       .end = MXC_DVFS_CORE_BASE + 8 * SZ_16 - 1,
+	       .end = MXC_DVFS_CORE_BASE + 4 * SZ_16 - 1,
 	       .flags = IORESOURCE_MEM,
 	       },
 	[1] = {

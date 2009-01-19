@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -218,6 +218,42 @@ static int tsc2007ts_thread(void *v)
 	return 0;
 }
 
+/*!
+ * This function puts the touch screen controller in low-power mode/state.
+ *
+ * @param   pdev  the device structure used to give information on touch screen
+ *                to suspend
+ * @param   state the power state the device is entering
+ *
+ * @return  The function always returns 0.
+ */
+static int tsc2007_suspend(struct i2c_client *client, pm_message_t state)
+{
+	struct tsc2007_data *d = i2c_get_clientdata(client);
+
+	if (!IS_ERR(d->tstask))
+		kthread_stop(d->tstask);
+
+	return 0;
+}
+
+/*!
+ * This function brings the touch screen controller back from low-power state.
+ *
+ * @param   pdev  the device structure used to give information on touch screen
+ *                to resume
+ *
+ * @return  The function always returns 0.
+ */
+static int tsc2007_resume(struct i2c_client *client)
+{
+	struct tsc2007_data *d = i2c_get_clientdata(client);
+
+	d->tstask = kthread_run(tsc2007ts_thread, d, DRIVER_NAME "tsd");
+
+	return 0;
+}
+
 static int tsc2007_idev_open(struct input_dev *idev)
 {
 	struct tsc2007_data *d = input_get_drvdata(idev);
@@ -375,6 +411,8 @@ static struct i2c_driver tsc2007_driver = {
 		   },
 	.probe = tsc2007_i2c_probe,
 	.remove = tsc2007_i2c_remove,
+	.suspend = tsc2007_suspend,
+	.resume = tsc2007_resume,
 	.command = NULL,
 	.id_table = tsc2007_id,
 };

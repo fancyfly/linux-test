@@ -206,6 +206,42 @@ static int mpr084ts_thread(void *v)
 	return 0;
 }
 
+/*!
+ * This function puts the Keypad controller in low-power mode/state.
+ *
+ * @param   pdev  the device structure used to give information on Keypad
+ *                to suspend
+ * @param   state the power state the device is entering
+ *
+ * @return  The function always returns 0.
+ */
+static int mpr084_suspend(struct i2c_client *client, pm_message_t state)
+{
+	struct mpr084_data *d = i2c_get_clientdata(client);
+
+	if (!IS_ERR(d->tstask))
+		kthread_stop(d->tstask);
+
+	return 0;
+}
+
+/*!
+ * This function brings the Keypad controller back from low-power state.
+ *
+ * @param   pdev  the device structure used to give information on Keypad
+ *                to resume
+ *
+ * @return  The function always returns 0.
+ */
+static int mpr084_resume(struct i2c_client *client)
+{
+	struct mpr084_data *d = i2c_get_clientdata(client);
+
+	d->tstask = kthread_run(mpr084ts_thread, d, DRIVER_NAME "kpd");
+
+	return 0;
+}
+
 static int mpr084_idev_open(struct input_dev *idev)
 {
 	struct mpr084_data *d = input_get_drvdata(idev);
@@ -441,6 +477,8 @@ static struct i2c_driver mpr084_driver = {
 		   },
 	.probe = mpr084_i2c_probe,
 	.remove = mpr084_i2c_remove,
+	.suspend = mpr084_suspend,
+	.resume = mpr084_resume,
 	.command = NULL,
 	.id_table = mpr084_id,
 };

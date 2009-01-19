@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -32,7 +32,11 @@
 #endif
 
 /* Size of contiguous memory for DMA and other h/w blocks */
+#ifdef CONFIG_ARCH_MX51
+#define CONSISTENT_DMA_SIZE	(64 * SZ_1M)
+#else
 #define CONSISTENT_DMA_SIZE	(32 * SZ_1M)
+#endif
 
 #ifndef __ASSEMBLY__
 

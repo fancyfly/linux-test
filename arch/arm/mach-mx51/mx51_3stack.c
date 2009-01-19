@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -216,7 +216,8 @@ static inline void mxc_init_keypad(void)
 	|| defined(CONFIG_MTD_NAND_MXC_MODULE) \
 	|| defined(CONFIG_MTD_NAND_MXC_V2) \
 	|| defined(CONFIG_MTD_NAND_MXC_V2_MODULE) \
-	|| defined(CONFIG_MTD_NAND_MXC_V3)
+	|| defined(CONFIG_MTD_NAND_MXC_V3) \
+	|| defined(CONFIG_MTD_NAND_MXC_V3_MODULE)
 
 static struct mtd_partition mxc_nand_partitions[] = {
 	{
@@ -313,6 +314,11 @@ static struct platform_device mxc_fb_device[] = {
 	 },
 };
 
+static void lcd_reset_to2(void)
+{
+	return;
+}
+
 static void lcd_reset(void)
 {
 	static int first;
@@ -350,6 +356,10 @@ extern void gpio_lcd_active(void);
 static void mxc_init_fb(void)
 {
 	gpio_lcd_active();
+
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0)
+		lcd_data.reset = lcd_reset_to2;
+
 	(void)platform_device_register(&mxc_lcd_device);
 
 	(void)platform_device_register(&mxc_fb_device[0]);
@@ -388,6 +398,10 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	 .type = "wm8903-i2c",
 	 .addr = 0x1a,
 	 },
+	 {
+	.type = "sgtl5000-i2c",
+	.addr = 0x0a,
+	},
 	{
 	 .type = "tsc2007",
 	 .addr = 0x48,
@@ -648,6 +662,17 @@ static void expio_unmask_irq(u32 irq)
 	__raw_writew(reg, brd_io + INTR_MASK_REG);
 }
 
+static void mxc_init_iram()
+{
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0) {
+		if (TOTAL_IRAM_NEEDED > (12*SZ_8K))
+			pr_err("IRAM exceeded\n");
+	} else {
+		if (TOTAL_IRAM_NEEDED > (16*SZ_8K))
+			pr_err("IRAM exceeded\n");
+	}
+}
+
 static struct irq_chip expio_irq_chip = {
 	.ack = expio_ack_irq,
 	.mask = expio_mask_irq,
@@ -846,6 +871,51 @@ static void __init mxc_init_audio(void)
 }
 #endif
 
+#if defined(CONFIG_SND_SOC_IMX_3STACK_SGTL5000) \
+    || defined(CONFIG_SND_SOC_IMX_3STACK_SGTL5000_MODULE)
+
+static struct mxc_sgtl5000_platform_data sgtl5000_data = {
+	.ssi_num = 1,
+	.src_port = 2,
+	.ext_port = 3,
+	.hp_irq = IOMUX_TO_IRQ(MX51_PIN_EIM_A26),
+	.hp_status = headphone_det_status,
+	.amp_gpo = "GPO2",
+	.vddio = 1800000,
+	.vdda = 1800000,
+	.vddd = 12000000,
+	.sysclk = 12000000,
+};
+
+static struct platform_device sgtl5000_device = {
+	.name = "sgtl5000-imx",
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &sgtl5000_data,
+	},
+};
+
+static void mxc_sgtl5000_init(void)
+{
+	int err, pin;
+
+	pin = MX51_PIN_EIM_A26;
+	err = mxc_request_iomux(pin, IOMUX_CONFIG_GPIO);
+	if (err) {
+		sgtl5000_data.hp_irq = -1;
+		printk(KERN_ERR "Error: sgtl5000_init request gpio failed!\n");
+		return;
+	}
+	mxc_iomux_set_pad(pin, PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU);
+	mxc_set_gpio_direction(pin, 1);
+
+	platform_device_register(&sgtl5000_device);
+}
+#else
+static inline void mxc_sgtl5000_init(void)
+{
+}
+#endif
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -884,6 +954,7 @@ static void __init mxc_board_init(void)
 	early_console_setup(saved_command_line);
 	mxc_init_devices();
 
+	mxc_init_iram();
 	mxc_expio_init();
 	mxc_init_enet();
 	mxc_init_pata();
@@ -912,6 +983,8 @@ static void __init mxc_board_init(void)
 #endif
 	mxc_init_touchscreen();
 	mxc_init_audio();
+
+	mxc_sgtl5000_init();
 }
 
 /*

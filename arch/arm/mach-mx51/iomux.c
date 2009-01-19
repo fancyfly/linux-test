@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -35,20 +35,68 @@
 enum iomux_reg_addr {
 	IOMUXGPR0 = IO_ADDRESS(IOMUXC_BASE_ADDR),
 	IOMUXGPR1 = IO_ADDRESS(IOMUXC_BASE_ADDR) + 0x004,
-	IOMUXSW_MUX_CTL = IO_ADDRESS(IOMUXC_BASE_ADDR) + MUX_I_START,
+	IOMUXSW_MUX_CTL = IO_ADDRESS(IOMUXC_BASE_ADDR),
 	IOMUXSW_MUX_END = IO_ADDRESS(IOMUXC_BASE_ADDR) + MUX_I_END,
 	IOMUXSW_PAD_CTL = IO_ADDRESS(IOMUXC_BASE_ADDR) + PAD_I_START,
-	IOMUXSW_PAD_END = IO_ADDRESS(IOMUXC_BASE_ADDR) + PAD_I_END,
-	IOMUXSW_INPUT_CTL = IO_ADDRESS(IOMUXC_BASE_ADDR) + INPUT_CTL_START,
-	IOMUXSW_INPUT_END = IO_ADDRESS(IOMUXC_BASE_ADDR) + INPUT_CTL_END,
+	IOMUXSW_INPUT_CTL = IO_ADDRESS(IOMUXC_BASE_ADDR),
 };
 
-#define MUX_PIN_NUM_MAX	(((IOMUXSW_MUX_END - IOMUXSW_MUX_CTL) >> 2) + 1)
-#define MUX_INPUT_NUM_MUX	(((IOMUXSW_INPUT_END - IOMUXSW_INPUT_CTL)>> \
-				    2) + 1)
+#define MUX_PIN_NUM_MAX	(((MUX_I_END - MUX_I_START) >> 2) + 1)
 
 static u8 iomux_pin_res_table[MUX_PIN_NUM_MAX];
 static DEFINE_SPINLOCK(gpio_mux_lock);
+
+static inline u32 _get_mux_reg(iomux_pin_name_t pin)
+{
+	u32 mux_reg = PIN_TO_IOMUX_MUX(pin);
+
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0) {
+		if ((pin == MX51_PIN_NANDF_RB5) ||
+			(pin == MX51_PIN_NANDF_RB6) ||
+			(pin == MX51_PIN_NANDF_RB7))
+			; /* Do nothing */
+		else if (mux_reg >= 0x2FC)
+			mux_reg += 8;
+		else if (mux_reg >= 0x130)
+			mux_reg += 0xC;
+	}
+	mux_reg += IOMUXSW_MUX_CTL;
+	return mux_reg;
+}
+
+static inline u32 _get_pad_reg(iomux_pin_name_t pin)
+{
+	u32 pad_reg = PIN_TO_IOMUX_PAD(pin);
+
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0) {
+		if ((pin == MX51_PIN_NANDF_RB5) ||
+			(pin == MX51_PIN_NANDF_RB6) ||
+			(pin == MX51_PIN_NANDF_RB7))
+			; /* Do nothing */
+		else if (pad_reg == 0x4D0 - PAD_I_START)
+			pad_reg += 0x4C;
+		else if (pad_reg == 0x860 - PAD_I_START)
+			pad_reg += 0x9C;
+		else if (pad_reg >= 0x804 - PAD_I_START)
+			pad_reg += 0xB0;
+		else if (pad_reg >= 0x7FC - PAD_I_START)
+			pad_reg += 0xB4;
+		else if (pad_reg >= 0x4E4 - PAD_I_START)
+			pad_reg += 0xCC;
+		else
+			pad_reg += 8;
+	}
+	pad_reg += IOMUXSW_PAD_CTL;
+	return pad_reg;
+}
+
+static inline u32 _get_mux_end()
+{
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0)
+		return(IO_ADDRESS(IOMUXC_BASE_ADDR) + (0x3F8 - 4));
+	else
+		return(IO_ADDRESS(IOMUXC_BASE_ADDR) + (0x3F0 - 4));
+}
 
 /*!
  * This function is used to configure a pin through the IOMUX module.
@@ -61,11 +109,11 @@ static int iomux_config_mux(iomux_pin_name_t pin, iomux_pin_cfg_t config)
 {
 	u32 ret = 0;
 	u32 pin_index = PIN_TO_IOMUX_INDEX(pin);
-	u32 mux_reg = IOMUXSW_MUX_CTL + PIN_TO_IOMUX_MUX(pin);
+	u32 mux_reg = _get_mux_reg(pin);
 	u32 mux_data = 0;
 	u8 *rp;
 
-	BUG_ON((mux_reg > IOMUXSW_MUX_END) || (mux_reg < IOMUXSW_MUX_CTL));
+	BUG_ON((mux_reg > _get_mux_end()) || (mux_reg < IOMUXSW_MUX_CTL));
 	spin_lock(&gpio_mux_lock);
 
 	if (config == IOMUX_CONFIG_GPIO)
@@ -148,24 +196,18 @@ EXPORT_SYMBOL(mxc_free_iomux);
  */
 void mxc_iomux_set_pad(iomux_pin_name_t pin, u32 config)
 {
-	u32 pad_reg = IOMUXSW_PAD_CTL + PIN_TO_IOMUX_PAD(pin);
+	u32 pad_reg = _get_pad_reg(pin);
 
-	BUG_ON((pad_reg > IOMUXSW_PAD_END) || (pad_reg < IOMUXSW_PAD_CTL));
-	spin_lock(&gpio_mux_lock);
+	BUG_ON(pad_reg < IOMUXSW_PAD_CTL);
 	__raw_writel(config, pad_reg);
-	spin_unlock(&gpio_mux_lock);
 }
 EXPORT_SYMBOL(mxc_iomux_set_pad);
 
 unsigned int mxc_iomux_get_pad(iomux_pin_name_t pin)
 {
-	u32 pad_reg = IOMUXSW_PAD_CTL + PIN_TO_IOMUX_PAD(pin);
-	u32 val;
+	u32 pad_reg = _get_pad_reg(pin);
 
-	spin_lock(&gpio_mux_lock);
-	val = __raw_readl(pad_reg);
-	spin_unlock(&gpio_mux_lock);
-	return val;
+	return __raw_readl(pad_reg);
 }
 EXPORT_SYMBOL(mxc_iomux_get_pad);
 
@@ -178,6 +220,28 @@ EXPORT_SYMBOL(mxc_iomux_get_pad);
 void mxc_iomux_set_input(iomux_input_select_t input, u32 config)
 {
 	u32 reg = IOMUXSW_INPUT_CTL + (input << 2);
+
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0) {
+		if (input == MUX_IN_IPU_IPP_DI_0_IND_DISPB_SD_D_SELECT_INPUT)
+			input -= 4;
+		else if (input == MUX_IN_IPU_IPP_DI_1_IND_DISPB_SD_D_SELECT_INPUT)
+			input -= 3;
+		else if (input >= MUX_IN_KPP_IPP_IND_COL_6_SELECT_INPUT)
+			input -= 2;
+		else if (input >= MUX_IN_HSC_MIPI_MIX_PAR_SISG_TRIG_SELECT_INPUT)
+			input -= 5;
+		else if (input >= MUX_IN_HSC_MIPI_MIX_IPP_IND_SENS1_DATA_EN_SELECT_INPUT)
+			input -= 3;
+		else if (input >= MUX_IN_ECSPI2_IPP_IND_SS_B_3_SELECT_INPUT)
+			input -= 2;
+		else if (input >= MUX_IN_CCM_PLL1_BYPASS_CLK_SELECT_INPUT)
+			input -= 1;
+
+		reg += INPUT_CTL_START_TO1;
+	} else {
+		reg += INPUT_CTL_START;
+	}
+
 
 	BUG_ON(input >= MUX_INPUT_NUM_MUX);
 	__raw_writel(config, reg);

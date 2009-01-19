@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -69,8 +69,8 @@
  */
 #define IRAM_BASE_ADDR		0x1FFE8000	/* internal ram */
 #define IRAM_BASE_ADDR_VIRT	0xFA3E8000
-#define IRAM_PARTITIONS		12
-#define IRAM_SIZE		(IRAM_PARTITIONS*SZ_8K)	/* 96KB */
+
+#define IRAM_SIZE		(16*SZ_8K)
 
 #if defined(CONFIG_MXC_SECURITY_SCC2) \
     || defined(CONFIG_MXC_SECURITY_SCC2_MODULE)
@@ -97,16 +97,14 @@
 #define VPU_IRAM_SIZE 0
 #endif
 
-#if (IRAM_SIZE < (SDMA_IRAM_SIZE + SND_RAM_SIZE + VPU_IRAM_SIZE + \
-	SCC_IRAM_SIZE))
-#error "IRAM size exceeded"
-#endif
+#define TOTAL_IRAM_NEEDED	(SDMA_IRAM_SIZE + SND_RAM_SIZE + VPU_IRAM_SIZE + \
+	SCC_IRAM_SIZE)
 
-#define SCC_IRAM_BASE_ADDR	(IRAM_BASE_ADDR + IRAM_SIZE - SCC_IRAM_SIZE)
 #define SDMA_RAM_BASE_ADDR	(IRAM_BASE_ADDR)
 #define SND_RAM_BASE_ADDR	(IRAM_BASE_ADDR + SDMA_IRAM_SIZE)
 #define VPU_IRAM_BASE_ADDR	(SND_RAM_BASE_ADDR + SND_RAM_SIZE)
-#define IRAM_AVAILABLE_ADDR     (VPU_IRAM_BASE_ADDR + VPU_IRAM_SIZE)
+#define SCC_IRAM_BASE_ADDR	(VPU_IRAM_BASE_ADDR + VPU_IRAM_SIZE)
+#define IRAM_AVAILABLE_ADDR	(SCC_IRAM_BASE_ADDR + SCC_IRAM_SIZE)
 
 /*
  * NFC
@@ -122,7 +120,7 @@
 
 #define TZIC_BASE_ADDR		0x8FFFC000
 #define TZIC_BASE_ADDR_VIRT	0xFA100000
-#define TZIC_SIZE		SZ_1M
+#define TZIC_SIZE		SZ_16K
 
 #define DEBUG_BASE_ADDR	0x60000000
 #define DEBUG_BASE_ADDR_VIRT	0xFA200000
@@ -482,8 +480,8 @@
 #define MXC_INT_MCG_ERR		81
 #define MXC_INT_MCG_TMR		82
 #define MXC_INT_MCG_FUNC		83
-#define MXC_INT_RESV84		84
-#define MXC_INT_RESV85		85
+#define MXC_INT_GPU2_IRQ	84
+#define MXC_INT_GPU2_BUSY	85
 #define MXC_INT_RESV86		86
 #define MXC_INT_FEC		87
 #define MXC_INT_OWIRE		88
@@ -495,11 +493,11 @@
 #define MXC_INT_PWM2			94
 #define MXC_INT_SLIM_EXP		95
 #define MXC_INT_SSI3			96
-#define MXC_INT_RESV97			97
+#define MXC_INT_EMI_BOOT		97
 #define MXC_INT_CTI1_TG3		98
 #define MXC_INT_SMC_RX			99
 #define MXC_INT_VPU_IDLE		100
-#define MXC_INT_RESV101		101
+#define MXC_INT_EMI_NFC		101
 #define MXC_INT_GPU_IDLE		102
 
 #define MXC_MAX_INT_LINES       128

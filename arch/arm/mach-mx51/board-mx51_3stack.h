@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -123,5 +123,6 @@
 extern unsigned int sdhc_get_card_det_status(struct device *dev);
 extern int sdhc_write_protect(struct device *dev);
 extern int sdhc_init_card_det(int id);
+extern int headphone_det_status(void);
 
 #endif				/* __ASM_ARCH_MXC_BOARD_MX51_3STACK_H__ */

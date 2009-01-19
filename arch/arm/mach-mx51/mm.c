@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -73,5 +73,12 @@ static struct map_desc mxc_io_desc[] __initdata = {
  */
 void __init mxc_map_io(void)
 {
+	u32 tzic_addr;
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0)
+		tzic_addr = 0x8FFFC000;
+	else
+		tzic_addr = 0xE0003000;
+
+	mxc_io_desc[2].pfn =  __phys_to_pfn(tzic_addr);
 	iotable_init(mxc_io_desc, ARRAY_SIZE(mxc_io_desc));
 }

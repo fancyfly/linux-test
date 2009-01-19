@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -239,17 +239,34 @@ void gpio_spi_active(int cspi_mod)
 				  PAD_CTL_DRV_HIGH | PAD_CTL_PUE_KEEPER |
 				  PAD_CTL_PKE_ENABLE);
 
-		mxc_request_iomux(MX51_PIN_NANDF_RB4, IOMUX_CONFIG_ALT2);
-		mxc_iomux_set_pad(MX51_PIN_NANDF_RB4, PAD_CTL_HYS_ENABLE |
-				  PAD_CTL_DRV_HIGH | PAD_CTL_PUE_KEEPER |
-				  PAD_CTL_PKE_ENABLE);
+		if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0) {
+			mxc_request_iomux(MX51_PIN_NANDF_RB4, IOMUX_CONFIG_ALT2);
+			mxc_iomux_set_pad(MX51_PIN_NANDF_RB4, PAD_CTL_HYS_ENABLE |
+					  PAD_CTL_DRV_HIGH | PAD_CTL_PUE_KEEPER |
+					  PAD_CTL_PKE_ENABLE);
 
-		mxc_request_iomux(MX51_PIN_NANDF_RB7, IOMUX_CONFIG_ALT2);
-		mxc_iomux_set_pad(MX51_PIN_NANDF_RB7, PAD_CTL_DRV_VOT_HIGH |
-				  PAD_CTL_HYS_ENABLE | PAD_CTL_PKE_ENABLE |
-				  PAD_CTL_PUE_KEEPER | PAD_CTL_100K_PU |
-				  PAD_CTL_ODE_OPENDRAIN_NONE |
-				  PAD_CTL_DRV_HIGH);
+			mxc_request_iomux(MX51_PIN_NANDF_RB7, IOMUX_CONFIG_ALT2);
+			mxc_iomux_set_pad(MX51_PIN_NANDF_RB7, PAD_CTL_DRV_VOT_HIGH |
+					  PAD_CTL_HYS_ENABLE | PAD_CTL_PKE_ENABLE |
+					  PAD_CTL_PUE_KEEPER | PAD_CTL_100K_PU |
+					  PAD_CTL_ODE_OPENDRAIN_NONE |
+					  PAD_CTL_DRV_HIGH);
+		} else {
+			mxc_request_iomux(MX51_PIN_NANDF_RDY_INT, IOMUX_CONFIG_ALT2);
+			mxc_iomux_set_pad(MX51_PIN_NANDF_RDY_INT, PAD_CTL_HYS_ENABLE |
+					  PAD_CTL_DRV_HIGH | PAD_CTL_PUE_KEEPER |
+					  PAD_CTL_PKE_ENABLE);
+
+			mxc_request_iomux(MX51_PIN_NANDF_D15, IOMUX_CONFIG_ALT2);
+			mxc_iomux_set_pad(MX51_PIN_NANDF_D15, PAD_CTL_HYS_ENABLE |
+					  PAD_CTL_DRV_HIGH | PAD_CTL_PKE_ENABLE |
+					  PAD_CTL_PUE_KEEPER);
+
+			mxc_request_iomux(MX51_PIN_NANDF_D12, IOMUX_CONFIG_ALT2);
+			mxc_iomux_set_pad(MX51_PIN_NANDF_D12, PAD_CTL_HYS_ENABLE |
+					  PAD_CTL_DRV_HIGH | PAD_CTL_PUE_KEEPER |
+					  PAD_CTL_PKE_ENABLE);
+		}
 		break;
 	case 2:
 		/* SPI3 */
@@ -290,28 +307,32 @@ void gpio_spi_inactive(int cspi_mod)
 	switch (cspi_mod) {
 	case 0:
 		/* SPI1 */
+		mxc_free_iomux(MX51_PIN_CSPI1_MISO, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX51_PIN_CSPI1_MOSI, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX51_PIN_CSPI1_RDY, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX51_PIN_CSPI1_SCLK, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX51_PIN_CSPI1_SS0, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX51_PIN_CSPI1_SS1, IOMUX_CONFIG_ALT0);
 		break;
 	case 1:
 		/* SPI2 */
-		mxc_request_iomux(MX51_PIN_NANDF_RB2, IOMUX_CONFIG_ALT0);
-		mxc_iomux_set_pad(MX51_PIN_NANDF_RB2, PAD_CTL_PUE_KEEPER |
-				  PAD_CTL_PKE_ENABLE);
-
-		mxc_request_iomux(MX51_PIN_NANDF_RB3, IOMUX_CONFIG_ALT0);
-		mxc_iomux_set_pad(MX51_PIN_NANDF_RB3, PAD_CTL_PUE_KEEPER |
-				  PAD_CTL_PKE_ENABLE);
-
-		mxc_request_iomux(MX51_PIN_NANDF_RB4, IOMUX_CONFIG_ALT0);
-		mxc_iomux_set_pad(MX51_PIN_NANDF_RB4, PAD_CTL_PUE_KEEPER |
-				  PAD_CTL_PKE_ENABLE);
-
-		mxc_request_iomux(MX51_PIN_NANDF_RB7, IOMUX_CONFIG_ALT0);
-		mxc_iomux_set_pad(MX51_PIN_NANDF_RB7, PAD_CTL_DRV_VOT_HIGH |
-				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
-				  PAD_CTL_100K_PU);
+		mxc_free_iomux(MX51_PIN_NANDF_RB2, IOMUX_CONFIG_ALT2);
+		mxc_free_iomux(MX51_PIN_NANDF_RB3, IOMUX_CONFIG_ALT2);
+		if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0) {
+			mxc_free_iomux(MX51_PIN_NANDF_RB4, IOMUX_CONFIG_ALT2);
+			mxc_free_iomux(MX51_PIN_NANDF_RB7, IOMUX_CONFIG_ALT2);
+		} else {
+			mxc_free_iomux(MX51_PIN_NANDF_RDY_INT, IOMUX_CONFIG_ALT2);
+			mxc_free_iomux(MX51_PIN_NANDF_D15, IOMUX_CONFIG_ALT2);
+			mxc_free_iomux(MX51_PIN_NANDF_D12, IOMUX_CONFIG_ALT2);
+		}
 		break;
 	case 2:
 		/* SPI3 */
+		mxc_free_iomux(MX51_PIN_USBH1_NXT, IOMUX_CONFIG_ALT1);
+		mxc_free_iomux(MX51_PIN_USBH1_DIR, IOMUX_CONFIG_ALT1);
+		mxc_free_iomux(MX51_PIN_USBH1_CLK, IOMUX_CONFIG_ALT1);
+		mxc_free_iomux(MX51_PIN_USBH1_DATA5, IOMUX_CONFIG_ALT1);
 		break;
 	default:
 		break;
@@ -679,9 +700,18 @@ EXPORT_SYMBOL(sdhc_write_protect);
  */
 void gpio_lcd_active(void)
 {
-	mxc_request_iomux(MX51_PIN_DISP2_DAT15, IOMUX_CONFIG_ALT5);
-	mxc_request_iomux(MX51_PIN_DI_GP2, IOMUX_CONFIG_ALT0);
-	mxc_request_iomux(MX51_PIN_DI_GP3, IOMUX_CONFIG_ALT0);
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0) {
+		mxc_request_iomux(MX51_PIN_DI1_D1_CS, IOMUX_CONFIG_ALT4);
+		mxc_set_gpio_direction(MX51_PIN_DI1_D1_CS, 0);
+		mxc_request_iomux(MX51_PIN_DI1_D0_CS, IOMUX_CONFIG_ALT1);
+		mxc_request_iomux(MX51_PIN_DI1_PIN11, IOMUX_CONFIG_ALT1);
+		mxc_request_iomux(MX51_PIN_DI1_PIN12, IOMUX_CONFIG_ALT1);
+		mxc_request_iomux(MX51_PIN_DI1_PIN13, IOMUX_CONFIG_ALT1);
+	} else {
+		mxc_request_iomux(MX51_PIN_DISP2_DAT15, IOMUX_CONFIG_ALT5);
+		mxc_request_iomux(MX51_PIN_DI_GP2, IOMUX_CONFIG_ALT0);
+		mxc_request_iomux(MX51_PIN_DI_GP3, IOMUX_CONFIG_ALT0);
+	}
 }
 
 /*!
@@ -740,13 +770,34 @@ void gpio_sensor_active(unsigned int csi)
 
 		mxc_iomux_set_pad(MX51_PIN_CSI1_PIXCLK, PAD_CTL_HYS_NONE);
 
-		mxc_request_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_ALT1);
-		mxc_iomux_set_pad(MX51_PIN_EIM_EB2, PAD_CTL_HYS_NONE |
-				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
-				  PAD_CTL_100K_PD | PAD_CTL_ODE_OPENDRAIN_NONE |
-				  PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW);
-		mxc_set_gpio_direction(MX51_PIN_EIM_EB2, 0);
-		mxc_set_gpio_dataout(MX51_PIN_EIM_EB2, 0);
+		if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0) {
+			/* Camera low power */
+			mxc_request_iomux(MX51_PIN_CSI1_D8, IOMUX_CONFIG_ALT3);
+			mxc_iomux_set_pad(MX51_PIN_CSI1_D8, PAD_CTL_HYS_NONE |
+					  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+					  PAD_CTL_SRE_SLOW);
+			mxc_iomux_set_input
+			    (MUX_IN_GPIO3_IPP_IND_G_IN_12_SELECT_INPUT,
+			     INPUT_CTL_PATH1);
+			mxc_set_gpio_direction(MX51_PIN_CSI1_D8, 0);
+			mxc_set_gpio_dataout(MX51_PIN_CSI1_D8, 0);
+
+			/* Camera reset */
+			mxc_request_iomux(MX51_PIN_CSI1_D9, IOMUX_CONFIG_ALT3);
+			mxc_iomux_set_pad(MX51_PIN_CSI1_D9, PAD_CTL_HYS_NONE |
+					  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+					  PAD_CTL_SRE_SLOW);
+			mxc_set_gpio_direction(MX51_PIN_CSI1_D9, 0);
+			mxc_set_gpio_dataout(MX51_PIN_CSI1_D9, 1);
+		} else {
+			mxc_request_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_ALT1);
+			mxc_iomux_set_pad(MX51_PIN_EIM_EB2, PAD_CTL_HYS_NONE |
+					  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+					  PAD_CTL_100K_PD | PAD_CTL_ODE_OPENDRAIN_NONE |
+					  PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW);
+			mxc_set_gpio_direction(MX51_PIN_EIM_EB2, 0);
+			mxc_set_gpio_dataout(MX51_PIN_EIM_EB2, 0);
+		}
 
 		mxc_request_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT5);
 		mxc_iomux_set_input
@@ -824,8 +875,16 @@ void gpio_sensor_inactive(unsigned int csi)
 {
 	switch (csi) {
 	case 0:
-		mxc_free_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_GPIO);
-		mxc_request_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_ALT0);
+		if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0) {
+			mxc_free_iomux(MX51_PIN_CSI1_D8, IOMUX_CONFIG_GPIO);
+			mxc_request_iomux(MX51_PIN_CSI1_D8, IOMUX_CONFIG_ALT0);
+
+			mxc_free_iomux(MX51_PIN_CSI1_D9, IOMUX_CONFIG_GPIO);
+			mxc_request_iomux(MX51_PIN_CSI1_D9, IOMUX_CONFIG_ALT0);
+		} else {
+			mxc_free_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_GPIO);
+			mxc_request_iomux(MX51_PIN_EIM_EB2, IOMUX_CONFIG_ALT0);
+		}
 		mxc_request_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT0);
 		break;
 	case 1:
@@ -892,8 +951,13 @@ void gpio_ata_active(void)
 	mxc_iomux_set_pad(MX51_PIN_NANDF_WP_B, ATA_PAD_CONFIG);
 
 	/*PATA_INTRQ */
-	mxc_request_iomux(MX51_PIN_NANDF_RB5, IOMUX_CONFIG_ALT1);
-	mxc_iomux_set_pad(MX51_PIN_NANDF_RB5, ATA_PAD_CONFIG);
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0) {
+		mxc_request_iomux(MX51_PIN_GPIO_NAND, IOMUX_CONFIG_ALT1);
+		mxc_iomux_set_pad(MX51_PIN_GPIO_NAND, ATA_PAD_CONFIG);
+	} else {
+		mxc_request_iomux(MX51_PIN_NANDF_RB5, IOMUX_CONFIG_ALT1);
+		mxc_iomux_set_pad(MX51_PIN_NANDF_RB5, ATA_PAD_CONFIG);
+	}
 
 	/*PATA_IORDY */
 	mxc_request_iomux(MX51_PIN_NANDF_RB1, IOMUX_CONFIG_ALT1);
@@ -1004,7 +1068,11 @@ void gpio_ata_inactive(void)
 	mxc_request_iomux(MX51_PIN_NANDF_WP_B, IOMUX_CONFIG_ALT0);
 
 	/*PATA_INTRQ */
-	mxc_request_iomux(MX51_PIN_NANDF_RB5, IOMUX_CONFIG_ALT0);
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0) {
+		mxc_request_iomux(MX51_PIN_GPIO_NAND, IOMUX_CONFIG_ALT0);
+	} else {
+		mxc_request_iomux(MX51_PIN_NANDF_RB5, IOMUX_CONFIG_ALT0);
+	}
 
 	/*PATA_IORDY */
 	mxc_request_iomux(MX51_PIN_NANDF_RB1, IOMUX_CONFIG_ALT0);
@@ -1583,3 +1651,10 @@ void gpio_spdif_inactive(void)
 }
 
 EXPORT_SYMBOL(gpio_spdif_inactive);
+
+int headphone_det_status(void)
+{
+	return mxc_get_gpio_datain(MX51_PIN_EIM_A26);
+}
+
+EXPORT_SYMBOL(headphone_det_status);

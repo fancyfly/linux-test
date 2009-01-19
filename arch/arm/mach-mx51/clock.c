@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -43,6 +43,7 @@ static struct clk ddr_clk;
 static struct clk ipu_clk[];
 static struct clk axi_a_clk;
 static struct clk axi_b_clk;
+static struct clk ddr_hf_clk;
 static int cpu_wp_nr;
 static int cpu_curr_wp;
 static struct cpu_wp *cpu_wp_tbl;
@@ -125,6 +126,28 @@ static inline u32 _get_mux(struct clk *parent, struct clk *m0,
 		return 2;
 	else if (parent == m3)
 		return 3;
+	else
+		BUG();
+
+	return 0;
+}
+
+/*
+ * For the ddr muxed input clock
+ */
+static inline u32 _get_mux_ddr(struct clk *parent, struct clk *m0,
+			   struct clk *m1, struct clk *m2, struct clk *m3, struct clk *m4)
+{
+	if (parent == m0)
+		return 0;
+	else if (parent == m1)
+		return 1;
+	else if (parent == m2)
+		return 2;
+	else if (parent == m3)
+		return 3;
+	else if (parent == m4)
+		return 4;
 	else
 		BUG();
 
@@ -519,6 +542,23 @@ static struct clk axi_a_clk = {
 	.name = "axi_a_clk",
 	.parent = &main_bus_clk,
 	.recalc = _clk_axi_a_recalc,
+	.flags = RATE_PROPAGATES,
+};
+
+static void _clk_ddr_hf_recalc(struct clk *clk)
+{
+	u32 reg, div;
+
+	reg = __raw_readl(MXC_CCM_CBCDR);
+	div = ((reg & MXC_CCM_CBCDR_DDR_PODF_MASK) >>
+	       MXC_CCM_CBCDR_DDR_PODF_OFFSET) + 1;
+	clk->rate = clk->parent->rate / div;
+}
+
+static struct clk ddr_hf_clk = {
+	.name = "ddr_hf_clk",
+	.parent = &pll1_sw_clk,
+	.recalc = _clk_ddr_hf_recalc,
 	.flags = RATE_PROPAGATES,
 };
 
@@ -2330,19 +2370,26 @@ static struct clk spdif1_clk[] = {
 
 static int _clk_ddr_set_parent(struct clk *clk, struct clk *parent)
 {
-	u32 reg, mux;
+	u32 reg, reg2, mux;
 	reg = __raw_readl(MXC_CCM_CBCMR);
-	mux = _get_mux(parent, &axi_a_clk, &axi_b_clk, &emi_slow_clk, &ahb_clk);
-	reg = (reg & ~MXC_CCM_CBCMR_DDR_CLK_SEL_MASK) |
-	    (mux << MXC_CCM_CBCMR_DDR_CLK_SEL_OFFSET);
-	__raw_writel(reg, MXC_CCM_CBCMR);
+	reg2 = __raw_readl(MXC_CCM_CBCDR);
+	mux = _get_mux_ddr(parent, &axi_a_clk, &axi_b_clk, &emi_slow_clk, &ahb_clk, &ddr_hf_clk);
+	if (mux < 4) {
+		reg = (reg & ~MXC_CCM_CBCMR_DDR_CLK_SEL_MASK) |
+		    (mux << MXC_CCM_CBCMR_DDR_CLK_SEL_OFFSET);
+		__raw_writel(reg, MXC_CCM_CBCMR);
+	} else {
+		reg2 = (reg2 & ~MXC_CCM_CBCDR_DDR_HF_SEL) |
+			(MXC_CCM_CBCDR_DDR_HF_SEL);
+		__raw_writel(reg2, MXC_CCM_CBCDR);
+	}
 
 	return 0;
 }
 
 static struct clk ddr_clk = {
 	.name = "ddr_clk",
-	.parent = &axi_a_clk,
+	.parent = &ddr_hf_clk,
 	.set_parent = _clk_ddr_set_parent,
 	.flags = RATE_PROPAGATES,
 };
@@ -2384,7 +2431,6 @@ static int _clk_vpu_set_parent(struct clk *clk, struct clk *parent)
 static struct clk vpu_clk[] = {
 	{
 	 .name = "vpu_clk",
-	 .parent = &ahb_clk,
 	 .set_parent = _clk_vpu_set_parent,
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR5,
@@ -2394,7 +2440,6 @@ static struct clk vpu_clk[] = {
 	 },
 	{
 	 .name = "vpu_core_clk",
-	 .parent = &ahb_clk,
 	 .set_parent = _clk_vpu_set_parent,
 	 .enable = _clk_enable,
 	 .enable_reg = MXC_CCM_CCGR5,
@@ -2686,11 +2731,12 @@ static struct clk *mxc_clks[] = {
 	&gpu3d_clk,
 	&garb_clk,
 	&emi_garb_clk,
+	&ddr_hf_clk,
 };
 
 static void clk_tree_init(void)
 {
-	u32 reg, dp_ctl;
+	u32 reg, reg2, dp_ctl;
 
 	/* set pll1_main_clk parent */
 	pll1_main_clk.parent = &osc_clk;
@@ -2727,14 +2773,21 @@ static void clk_tree_init(void)
 	/* set DDR clock parent */
 	reg = __raw_readl(MXC_CCM_CBCMR) & MXC_CCM_CBCMR_DDR_CLK_SEL_MASK;
 	reg >>= MXC_CCM_CBCMR_DDR_CLK_SEL_OFFSET;
-	if (reg == 0) {
-		ddr_clk.parent = &axi_a_clk;
-	} else if (reg == 1) {
-		ddr_clk.parent = &axi_b_clk;
-	} else if (reg == 2) {
-		ddr_clk.parent = &emi_slow_clk;
+	reg2 = __raw_readl(MXC_CCM_CBCDR) & MXC_CCM_CBCDR_DDR_HF_SEL;
+	reg2 >>= MXC_CCM_CBCDR_DDR_HF_SEL_OFFSET;
+
+	if (reg2) {
+		ddr_clk.parent = &ddr_hf_clk;
 	} else {
-		ddr_clk.parent = &ahb_clk;
+		if (reg == 0) {
+			ddr_clk.parent = &axi_a_clk;
+		} else if (reg == 1) {
+			ddr_clk.parent = &axi_b_clk;
+		} else if (reg == 2) {
+			ddr_clk.parent = &emi_slow_clk;
+		} else {
+			ddr_clk.parent = &ahb_clk;
+		}
 	}
 }
 
@@ -2802,7 +2855,21 @@ int __init mxc_clocks_init(void)
 	clk_enable(&main_bus_clk);
 	clk_enable(&gpt_clk[1]);
 
-	clk_set_parent(&ddr_clk, &axi_a_clk);
+	reg = __raw_readl(MXC_CCM_CBCDR) & MXC_CCM_CBCDR_DDR_HF_SEL;
+	reg >>= MXC_CCM_CBCDR_DDR_HF_SEL_OFFSET;
+
+	if (reg)
+		clk_set_parent(&ddr_clk, &ddr_hf_clk);
+	else
+		clk_set_parent(&ddr_clk, &axi_a_clk);
+
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0) {
+		clk_set_parent(&vpu_clk[0], &ahb_clk);
+		clk_set_parent(&vpu_clk[1], &ahb_clk);
+	} else {
+		clk_set_parent(&vpu_clk[0], &axi_a_clk);
+		clk_set_parent(&vpu_clk[1], &axi_a_clk);
+	}
 
 	/* Set the current working point. */
 	cpu_wp_tbl = get_cpu_wp(&cpu_wp_nr);

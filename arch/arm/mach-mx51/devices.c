@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -235,6 +235,10 @@ static void mxc_init_ipu(void)
 	struct clk *clk;
 	uint32_t temp;
 
+	/* Select IPUv3 h/w version */
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0)
+		mxc_ipu_data.rev = 2;
+
 	mxc_ipu_data.di_clk[1] = clk_get(NULL, "ipu_di_clk");
 	clk = clk_get(NULL, "tve_clk");
 	clk_set_parent(mxc_ipu_data.di_clk[1], clk);
@@ -251,6 +255,11 @@ static void mxc_init_ipu(void)
 		/* CSI mode reserved*/
 		temp = __raw_readl(reg_hsc_mxt_conf);
 		__raw_writel(temp | 0x0FF, reg_hsc_mxt_conf);
+
+		if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0) {
+			temp = __raw_readl(reg_hsc_mxt_conf);
+			__raw_writel(temp | 0x10000, reg_hsc_mxt_conf);
+		}
 
 		clk_disable(clk);
 		clk_put(clk);
@@ -319,6 +328,10 @@ static inline void mxc_init_scc(void)
 	uint32_t scc_partno;
 	void *scm_ram_base;
 	void *scc_base;
+	uint8_t iram_partitions = 16;
+
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0)
+		iram_partitions = 12;
 
 	scc_base = ioremap((uint32_t) SCC_BASE_ADDR, 0x140);
 	if (scc_base == NULL) {
@@ -331,7 +344,7 @@ static inline void mxc_init_scc(void)
 		return;
 	}
 
-	for (partition_no = 0; partition_no < IRAM_PARTITIONS; partition_no++) {
+	for (partition_no = 0; partition_no < iram_partitions; partition_no++) {
 		reg_value = ((partition_no << SCM_ZCMD_PART_SHIFT) &
 			     SCM_ZCMD_PART_MASK) | ((0x03 <<
 						     SCM_ZCMD_CCMD_SHIFT)
@@ -356,7 +369,7 @@ static inline void mxc_init_scc(void)
 		return;
 	}
 
-	for (partition_no = 0; partition_no < IRAM_PARTITIONS; partition_no++) {
+	for (partition_no = 0; partition_no < iram_partitions; partition_no++) {
 		MAP_base = scm_ram_base + (partition_no * 0x2000);
 		UMID_base = (uint8_t *) MAP_base + 0x10;
 
@@ -370,8 +383,8 @@ static inline void mxc_init_scc(void)
 	}
 
 	/* Freeing 2 partitions for SCC2 */
-	scc_partno = IRAM_PARTITIONS - (SCC_IRAM_SIZE / SZ_8K);
-	for (partition_no = scc_partno; partition_no < IRAM_PARTITIONS;
+	scc_partno = iram_partitions - (SCC_IRAM_SIZE / SZ_8K);
+	for (partition_no = scc_partno; partition_no < iram_partitions;
 	     partition_no++) {
 		reg_value = ((partition_no << SCM_ZCMD_PART_SHIFT) &
 			     SCM_ZCMD_PART_MASK) | ((0x03 <<

@@ -389,6 +389,28 @@ static struct mxc_fm_platform_data si4702_data = {
 	.clock_ctl = si4702_clock_ctl,
 };
 
+static void adv7180_pwdn(int pwdn)
+{
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 1, pwdn);
+}
+
+static void adv7180_reset(void)
+{
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 6, 0);
+	msleep(5);
+	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_1, 6, 1);
+	msleep(5);
+}
+
+static struct mxc_tvin_platform_data adv7180_data = {
+	.dvddio_reg = NULL,
+	.dvdd_reg = "SW3",
+	.avdd_reg = "PWGT2",
+	.pvdd_reg = NULL,
+	.pwdn = adv7180_pwdn,
+	.reset = adv7180_reset,
+};
+
 static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	{
 	 .type = "mc9sdz60",
@@ -431,6 +453,7 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	{
 	 .type = "adv7180",
 	 .addr = 0x21,
+	 .platform_data = (void *)&adv7180_data,
 	 },
 	{
 	 .type = "mc13892",
@@ -955,6 +978,11 @@ static void mx35_3stack_fixup_for_board_v1(void)
 	camera_data.io_regulator = NULL;
 	camera_data.gpo_regulator = NULL;
 	camera_data.mclk = 20000000;
+
+	adv7180_data.dvddio_reg = NULL;
+	adv7180_data.dvdd_reg = NULL;
+	adv7180_data.avdd_reg = NULL;
+	adv7180_data.pvdd_reg = NULL;
 
 #if defined(CONFIG_GPS_IOCTRL) || defined(CONFIG_GPS_IOCTRL_MODULE)
 	gps_data.core_reg = "SW1";

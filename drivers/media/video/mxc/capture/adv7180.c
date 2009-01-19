@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -30,9 +30,15 @@
 #include <linux/wait.h>
 #include <linux/videodev2.h>
 #include <linux/workqueue.h>
+#include <linux/regulator/regulator.h>
 #include <media/v4l2-int-device.h>
 #include <linux/regulator/mcu_max8660-bus.h>
 #include "mxc_v4l2_capture.h"
+
+static struct regulator *dvddio_regulator;
+static struct regulator *dvdd_regulator;
+static struct regulator *avdd_regulator;
+static struct regulator *pvdd_regulator;
 
 extern void gpio_sensor_active(void);
 extern void gpio_sensor_inactive(void);
@@ -791,8 +797,57 @@ static int adv7180_probe(struct i2c_client *client,
 {
 	int rev_id;
 	int ret = 0;
+	struct mxc_tvin_platform_data *plat_data = client->dev.platform_data;
 
 	dev_dbg(&adv7180_data.i2c_client->dev, "In adv7180_probe\n");
+
+	if (plat_data->dvddio_reg) {
+		dvddio_regulator =
+		    regulator_get(&client->dev, plat_data->dvddio_reg);
+		if (!IS_ERR_VALUE((unsigned long)dvddio_regulator)) {
+			regulator_set_voltage(dvddio_regulator, 3300000);
+			if (regulator_enable(dvddio_regulator) != 0)
+				return -ENODEV;
+		}
+	}
+
+	if (plat_data->dvdd_reg) {
+		dvdd_regulator =
+		    regulator_get(&client->dev, plat_data->dvdd_reg);
+		if (!IS_ERR_VALUE((unsigned long)dvdd_regulator)) {
+			regulator_set_voltage(dvdd_regulator, 1800000);
+			if (regulator_enable(dvdd_regulator) != 0)
+				return -ENODEV;
+		}
+	}
+
+	if (plat_data->avdd_reg) {
+		avdd_regulator =
+		    regulator_get(&client->dev, plat_data->avdd_reg);
+		if (!IS_ERR_VALUE((unsigned long)avdd_regulator)) {
+			regulator_set_voltage(avdd_regulator, 1800000);
+			if (regulator_enable(avdd_regulator) != 0)
+				return -ENODEV;
+		}
+	}
+
+	if (plat_data->pvdd_reg) {
+		pvdd_regulator =
+		    regulator_get(&client->dev, plat_data->pvdd_reg);
+		if (!IS_ERR_VALUE((unsigned long)pvdd_regulator)) {
+			regulator_set_voltage(pvdd_regulator, 1800000);
+			if (regulator_enable(pvdd_regulator) != 0)
+				return -ENODEV;
+		}
+	}
+
+	if (plat_data->reset)
+		plat_data->reset();
+
+	if (plat_data->pwdn)
+		plat_data->pwdn(1);
+
+	msleep(1);
 
 	/* Set initial values for the sensor struct. */
 	memset(&adv7180_data, 0, sizeof(adv7180_data));
@@ -807,10 +862,6 @@ static int adv7180_probe(struct i2c_client *client,
 	adv7180_data.pix.priv = 1;  /* 1 is used to indicate TV in */
 
 	gpio_sensor_active();
-
-	/*! Put device into normal operational mode. */
-	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 1, 1);
-	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 4, 1);
 
 	dev_dbg(&adv7180_data.i2c_client->dev,
 		"%s:adv7180 probe i2c address is 0x%02X \n",
@@ -848,15 +899,34 @@ static int adv7180_probe(struct i2c_client *client,
  */
 static int adv7180_detach(struct i2c_client *client)
 {
+	struct mxc_tvin_platform_data *plat_data = client->dev.platform_data;
+
 	dev_dbg(&adv7180_data.i2c_client->dev,
 		"%s:Removing %s video decoder @ 0x%02X from adapter %s \n",
 		__func__, IF_NAME, client->addr << 1, client->adapter->name);
 
-	/*! Put device into power down mode. */
-	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 4, 0);
+	if (plat_data->pwdn)
+		plat_data->pwdn(0);
 
-	/*! Disable TVIN module. */
-	pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_1, 1, 0);
+	if (dvddio_regulator) {
+		regulator_disable(dvddio_regulator);
+		regulator_put(dvddio_regulator, &client->dev);
+	}
+
+	if (dvdd_regulator) {
+		regulator_disable(dvdd_regulator);
+		regulator_put(dvdd_regulator, &client->dev);
+	}
+
+	if (avdd_regulator) {
+		regulator_disable(avdd_regulator);
+		regulator_put(avdd_regulator, &client->dev);
+	}
+
+	if (pvdd_regulator) {
+		regulator_disable(pvdd_regulator);
+		regulator_put(pvdd_regulator, &client->dev);
+	}
 
 	v4l2_int_device_unregister(&adv7180_int_device);
 

@@ -187,6 +187,15 @@ struct mxc_tvout_platform_data {
 	u32 detect_line;
 };
 
+struct mxc_tvin_platform_data {
+	char *dvddio_reg;
+	char *dvdd_reg;
+	char *avdd_reg;
+	char *pvdd_reg;
+	void (*pwdn) (int pwdn);
+	void (*reset) (void);
+};
+
 /*! Platform data for the IDE drive structure. */
 struct mxc_ide_platform_data {
 	char *power_drive;	/*!< The power pointer */

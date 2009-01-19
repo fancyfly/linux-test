@@ -333,6 +333,7 @@ struct snd_soc_dai {
 	struct list_head codec_list;
 	enum snd_soc_bus_device_type type;
 	int id;
+	u8 usecount;
 
 	/* ops */
 	const struct snd_soc_ops *audio_ops;
@@ -381,6 +382,7 @@ struct snd_soc_codec {
 	struct list_head list;
 	struct list_head dai_list;
 	enum snd_soc_bus_device_type type;
+	s8 usecount;
 
 	/* runtime */
 	unsigned int active;
@@ -429,6 +431,7 @@ struct snd_soc_platform {
 	struct module *owner;
 	struct list_head list;
 	enum snd_soc_bus_device_type type;
+	s8 usecount;
 
 	/* platform ops */
 	const struct snd_pcm_ops *pcm_ops;

@@ -769,7 +769,7 @@ int snd_soc_resume(struct snd_soc_machine *machine)
 EXPORT_SYMBOL_GPL(snd_soc_suspend);
 EXPORT_SYMBOL_GPL(snd_soc_resume);
 
-static void soc_match_components(void)
+static int soc_match_components(void)
 {
 	struct snd_soc_codec *codec;
 	struct snd_soc_dai *codec_dai, *cpu_dai;
@@ -777,6 +777,7 @@ static void soc_match_components(void)
 	struct snd_soc_pcm_link *pcm_link, *tmp;
 	struct snd_soc_machine *machine = NULL;
 	int probe = 0;
+	int ret = 0;
 
 	mutex_lock(&list_mutex);
 	list_for_each_entry_safe(pcm_link, tmp, &soc_pcm_link_list, all_list) {
@@ -830,13 +831,15 @@ static void soc_match_components(void)
 				&pcm_link->codec_dai->codec_list);
 			list_add(&pcm_link->active_list, &machine->active_list);
 			pcm_link->codec_dai->codec = pcm_link->codec;
-		}
+		} else
+			ret = -ENODEV;
 	}
 
 	/* are all pcm_links now created ? */
 	if (probe && machine && machine->pcm_links == machine->pcm_links_total)
 		machine->ops->mach_probe(machine);
 	mutex_unlock(&list_mutex);
+	return ret;
 }
 
 static void soc_pcm_link_remove(struct snd_soc_pcm_link *pcm_link)
@@ -1238,12 +1241,7 @@ EXPORT_SYMBOL_GPL(snd_soc_register_card);
  */
 void snd_soc_machine_free(struct snd_soc_machine *machine)
 {
-	struct snd_soc_codec* codec, *codec_tmp;
-	struct snd_soc_dai *dai, *dai_tmp;
-	struct snd_soc_platform *platform, *platform_tmp;
-#ifdef CONFIG_SND_SOC_AC97_BUS	
 	struct snd_soc_pcm_link *pcm_link, *pcm_link_tmp;
-#endif
 
 	mutex_lock(&machine->mutex);
 #ifdef CONFIG_SND_SOC_AC97_BUS
@@ -1257,25 +1255,31 @@ void snd_soc_machine_free(struct snd_soc_machine *machine)
 		snd_card_free(machine->card);
 
 	mutex_unlock(&machine->mutex);
-	
-	list_for_each_entry_safe(codec, codec_tmp, &soc_codec_list, list) {
-		if (device_is_registered(&codec->dev)) {
-			device_remove_file(&codec->dev, &dev_attr_codec_reg);
-			device_unregister(&codec->dev);
+
+	/* Only unregister the devices that are linked to this
+	   machine and are not being used by another machine. */
+	list_for_each_entry_safe(pcm_link, pcm_link_tmp,
+		&machine->active_list, active_list) {
+		if (pcm_link->codec) {
+			pcm_link->codec->usecount--;
+			if (pcm_link->codec->usecount <= 0)
+				device_unregister(&pcm_link->codec->dev);
 		}
-	}
-	list_for_each_entry_safe(dai, dai_tmp, &soc_codec_dai_list, list) {
-		if (device_is_registered(&dai->dev))
-			device_unregister(&dai->dev);
-	}
-	list_for_each_entry_safe(dai, dai_tmp, &soc_cpu_dai_list, list) {
-		if (device_is_registered(&dai->dev))
-			device_unregister(&dai->dev);
-	}
-	list_for_each_entry_safe(platform, platform_tmp, 
-		&soc_platform_list, list) {
-		if (device_is_registered(&platform->dev))
-			device_unregister(&platform->dev);
+		if (pcm_link->cpu_dai) {
+			pcm_link->cpu_dai->usecount--;
+			if (pcm_link->cpu_dai->usecount <= 0)
+				device_unregister(&pcm_link->cpu_dai->dev);
+		}
+		if (pcm_link->codec_dai) {
+			pcm_link->codec_dai->usecount--;
+			if (pcm_link->codec_dai->usecount <= 0)
+				device_unregister(&pcm_link->codec_dai->dev);
+		}
+		if (pcm_link->platform) {
+			pcm_link->platform->usecount--;
+			if (pcm_link->platform->usecount <= 0)
+				device_unregister(&pcm_link->platform->dev);
+		}
 	}
 }
 EXPORT_SYMBOL_GPL(snd_soc_machine_free);
@@ -1744,10 +1748,12 @@ struct snd_soc_platform *snd_soc_new_platform (struct device *parent,
 		platform->dev.bus = &asoc_bus_type;
 		platform->dev.parent = parent;
 		platform->dev.release = soc_platform_dev_release;
+		platform->usecount = 1;
 		err = device_register(&platform->dev);
 		if (err < 0)
 			goto dev_err;
-	}
+	} else
+		platform->usecount++;
 	soc_match_components();
 	return platform;
 dev_err:
@@ -1785,10 +1791,12 @@ struct snd_soc_codec *snd_soc_new_codec (struct device *parent,
 		codec->dev.bus = &asoc_bus_type;
 		codec->dev.parent = parent;
 		codec->dev.release = soc_codec_dev_release;
+		codec->usecount = 1;
 		err = device_register(&codec->dev);
 		if (err < 0)
 			goto dev_err;
-	}
+	} else
+		codec->usecount++;
 	soc_match_components();
 	return codec;
 dev_err:
@@ -1833,10 +1841,12 @@ out:
 		dai->dev.bus = &asoc_bus_type;
 		dai->dev.parent = parent;
 		dai->dev.release = soc_dai_dev_release;
+		dai->usecount = 1;
 		err = device_register(&dai->dev);
 		if (err < 0)
 			goto dev_err;
-	}
+	} else
+		dai->usecount++;
 	soc_match_components();
 	return dai;
 dev_err:
@@ -1905,15 +1915,27 @@ int snd_soc_pcm_link_attach(struct snd_soc_pcm_link *pcm_link)
 	if (codec == NULL)
 		goto codec_new_err;
 		
-	soc_match_components();	
+	if (soc_match_components() < 0)
+		goto match_err;
+
 	return 0;
 
+match_err:
+	codec->usecount--;
+	if (codec->usecount <= 0)
+		device_unregister(&codec->dev);
 codec_new_err:
-	device_unregister(&cpu_dai->dev);
+	cpu_dai->usecount--;
+	if (cpu_dai->usecount <= 0)
+		device_unregister(&cpu_dai->dev);
 cpu_dai_new_err:
-	device_unregister(&codec_dai->dev);
+	codec_dai->usecount--;
+	if (codec_dai->usecount <= 0)
+		device_unregister(&codec_dai->dev);
 codec_dai_new_err:
-	device_unregister(&platform->dev);
+	platform->usecount--;
+	if (platform->usecount <= 0)
+		device_unregister(&platform->dev);
 platform_new_err:
 	printk(KERN_ERR "asoc: failed to create pcm link\n");
 	return -ENODEV;

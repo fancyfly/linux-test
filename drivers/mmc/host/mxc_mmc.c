@@ -13,7 +13,7 @@
  */
 
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -789,6 +789,14 @@ static irqreturn_t mxcmci_gpio_irq(int irq, void *devid)
 		 card_gpio_status, card_gpio_status ? "removed" : "inserted");
 
 	if (card_gpio_status == host->plat_data->card_inserted_state) {
+		/*
+		 * Reinitialized the controller to clear the unknown
+		 * error state when a card is inserted.
+		 */
+		mxcmci_softreset(host);
+		__raw_writel(READ_TO_VALUE, host->base + MMC_READ_TO);
+		__raw_writel(INT_CNTR_END_CMD_RES, host->base + MMC_INT_CNTR);
+
 		mmc_detect_change(host->mmc, msecs_to_jiffies(100));
 	} else {
 		mxcmci_cmd_done(host, STATUS_TIME_OUT_RESP);

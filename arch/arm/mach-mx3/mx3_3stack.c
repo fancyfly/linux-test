@@ -657,7 +657,7 @@ static struct mxc_mmc_platform_data mmc0_data = {
 	.ocr_mask = MMC_VDD_32_33,
 	.min_clk = 150000,
 	.max_clk = 25000000,
-	.card_inserted_state = 1,
+	.card_inserted_state = 0,
 	.status = sdhc_get_card_det_status,
 	.wp_status = sdhc_write_protect,
 	.power_mmc = "GPO1",
@@ -690,7 +690,7 @@ static struct mxc_mmc_platform_data mmc1_data = {
 	.min_clk = 150000,
 	.max_clk = 25000000,
 	.card_fixed = 1,
-	.card_inserted_state = 1,
+	.card_inserted_state = 0,
 	.status = sdhc_get_card_det_status,
 	.power_mmc = "VMMC2",
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -31,6 +31,8 @@
 						== NAND_PAGESIZE_4KB)
 #define IS_LARGE_PAGE_NAND      ((mtd->writesize / num_of_interleave) > 512)
 
+#define GET_NAND_OOB_SIZE	(mtd->oobsize / num_of_interleave)
+
 #define NAND_PAGESIZE_2KB	2048
 #define NAND_PAGESIZE_4KB	4096
 
@@ -52,8 +54,8 @@
 #define NFC_CONFIG2			(nfc_ip_base + 0x14)
 #define NFC_IPC				(nfc_ip_base + 0x18)
 #elif defined(CONFIG_ARCH_MXC_HAS_NFC_V3_2)	/* mx51 */
+#define MXC_INT_NANDFC			MXC_INT_NFC
 #define NFC_AUTO_MODE_ENABLE
-#define MXC_INT_NANDFC			MXC_INT_EMI
 #define NFC_FLASH_CMD			(nfc_axi_base + 0x1E00)
 #define NFC_FLASH_ADDR0      		(nfc_axi_base + 0x1E04)
 #define NFC_FLASH_ADDR8			(nfc_axi_base + 0x1E24)
@@ -102,24 +104,41 @@
     defined(CONFIG_ARCH_MXC_HAS_NFC_V3_2)
 #define NFC_SPAS_WIDTH 8
 #define NFC_SPAS_SHIFT 16
-#define IS_4BIT_ECC			\
-	((raw_read(NFC_CONFIG2) & NFC_ECC_MODE_4) >> 6)
+
+#define IS_4BIT_ECC \
+( \
+	cpu_is_mx51_rev(CHIP_REV_2_0) == 1 ? \
+		!((raw_read(NFC_CONFIG2) & NFC_ECC_MODE_4) >> 6) : \
+		((raw_read(NFC_CONFIG2) & NFC_ECC_MODE_4) >> 6) \
+)
 
 #define NFC_SET_SPAS(v)			\
 	raw_write((((raw_read(NFC_CONFIG2) & \
 	NFC_FIELD_RESET(NFC_SPAS_WIDTH, NFC_SPAS_SHIFT)) | ((v) << 16))), \
 	NFC_CONFIG2)
 
-#define NFC_SET_ECC_MODE(v) 		 	\
-	do {					\
-		if ((v) == NFC_SPAS_218)  {	\
-			raw_write((raw_read(NFC_CONFIG2) & NFC_ECC_MODE_8) , \
-			 NFC_CONFIG2);	\
-		} else {				\
-			raw_write((raw_read(NFC_CONFIG2) | NFC_ECC_MODE_4) , \
-			NFC_CONFIG2);	\
-		}				\
-	} while(0)
+#define NFC_SET_ECC_MODE(v)		\
+do { \
+	if (cpu_is_mx51_rev(CHIP_REV_2_0) == 1) { \
+		if ((v) == NFC_SPAS_218 || (v) == NFC_SPAS_112) \
+			raw_write(((raw_read(NFC_CONFIG2) & \
+					NFC_ECC_MODE_MASK) | \
+					NFC_ECC_MODE_4), NFC_CONFIG2); \
+		else \
+			raw_write(((raw_read(NFC_CONFIG2) & \
+					NFC_ECC_MODE_MASK) & \
+					NFC_ECC_MODE_8), NFC_CONFIG2); \
+	} else { \
+		if ((v) == NFC_SPAS_218 || (v) == NFC_SPAS_112) \
+			raw_write(((raw_read(NFC_CONFIG2) & \
+					NFC_ECC_MODE_MASK) & \
+					NFC_ECC_MODE_8), NFC_CONFIG2); \
+		else \
+			raw_write(((raw_read(NFC_CONFIG2) & \
+					NFC_ECC_MODE_MASK) | \
+					NFC_ECC_MODE_4), NFC_CONFIG2); \
+	} \
+} while (0)
 
 #define WRITE_NFC_IP_REG(val,reg) 			\
 	do {	 					\
@@ -166,6 +185,7 @@
 #define NFC_OPS_STAT			(1 << 31)
 
 #ifdef CONFIG_ARCH_MXC_HAS_NFC_V3_2	/* mx51 */
+#define NFC_OP_DONE			(1 << 30)
 #define NFC_RB				(1 << 28)
 #define NFC_PS_WIDTH 			2
 #define NFC_PS_SHIFT 			0
@@ -240,6 +260,8 @@
 #define NFC_ADD_OP_WIDTH		2
 #define NFC_FW_8 			1
 #define NFC_FW_16			0
+#define NFC_ST_CMD_SHITF		24
+#define NFC_ST_CMD_WIDTH		8
 #endif
 
 #define NFC_PPB_32			(0 << 7)
@@ -260,9 +282,11 @@
     defined(CONFIG_ARCH_MXC_HAS_NFC_V3_2)
 #define NFC_ECC_MODE_4    		(1 << 6)
 #define NFC_ECC_MODE_8			~(1 << 6)
+#define NFC_ECC_MODE_MASK 		~(1 << 6)
 #define NFC_SPAS_16			8
 #define NFC_SPAS_64		 	32
 #define NFC_SPAS_128			64
+#define NFC_SPAS_112			56
 #define NFC_SPAS_218		 	109
 #define NFC_IPC_CREQ			(1 << 0)
 #define NFC_IPC_ACK			(1 << 1)
@@ -382,6 +406,12 @@
 	NFC_SET_NUM_OF_DEVICE(this->numchips - 1); \
 }
 
+#define NFC_SET_ST_CMD(val) \
+	raw_write((raw_read(NFC_CONFIG2) & \
+	(NFC_FIELD_RESET(NFC_ST_CMD_WIDTH, \
+	NFC_ST_CMD_SHITF))) | \
+	((val) << NFC_ST_CMD_SHITF), NFC_CONFIG2);
+
 #define NFMS_NF_DWIDTH 0
 #define NFMS_NF_PG_SZ  1
 #define NFC_CMD_1_SHIFT 8
@@ -396,23 +426,23 @@ do {	\
 		NFC_SET_FW(NFC_FW_16);	\
 	if (((v) & (1 << NFMS_NF_PG_SZ))) {	\
 		if (IS_2K_PAGE_NAND) {	\
-			NFC_SET_SPAS(NFC_SPAS_64);	\
 			NFC_SET_PS(NFC_PS_2K);	\
 			NFC_SET_NFC_NUM_ADDR_PHASE1(NUM_OF_ADDR_CYCLE); \
 			NFC_SET_NFC_NUM_ADDR_PHASE0(NFC_TWO_LESS_PHASE1); \
 		} else if (IS_4K_PAGE_NAND) {       \
-			NFC_SET_SPAS(NFC_SPAS_128);	\
 			NFC_SET_PS(NFC_PS_4K);	\
 			NFC_SET_NFC_NUM_ADDR_PHASE1(NUM_OF_ADDR_CYCLE); \
 			NFC_SET_NFC_NUM_ADDR_PHASE0(NFC_TWO_LESS_PHASE1); \
 		} else {	\
-			NFC_SET_SPAS(NFC_SPAS_16);	\
 			NFC_SET_PS(NFC_PS_512);	\
 			NFC_SET_NFC_NUM_ADDR_PHASE1(NUM_OF_ADDR_CYCLE - 1); \
 			NFC_SET_NFC_NUM_ADDR_PHASE0(NFC_ONE_LESS_PHASE1); \
 		}	\
-		NFC_SET_ADD_CS_MODE(1) \
-		NFC_SET_ECC_MODE(NFC_SPAS_128); \
+		NFC_SET_ADD_CS_MODE(1); \
+		NFC_SET_SPAS(GET_NAND_OOB_SIZE >> 1);	\
+		NFC_SET_ECC_MODE(GET_NAND_OOB_SIZE >> 1); \
+		NFC_SET_ST_CMD(0x70); \
+		raw_write(raw_read(NFC_CONFIG3) | 1 << 20, NFC_CONFIG3); \
 	} \
 } while (0)
 #endif
@@ -506,7 +536,7 @@ do {	\
 
 #define NFC_SET_ECC_MODE(v) 		 \
 do {	\
-	if ((v) == NFC_SPAS_218)  {	\
+	if ((v) == NFC_SPAS_218 || (v) == NFC_SPAS_112)  {	\
 		raw_write((raw_read(REG_NFC_ECC_MODE) & NFC_ECC_MODE_8), \
 							REG_NFC_ECC_MODE); \
 	} else {	\
@@ -520,15 +550,9 @@ do {	\
 do {	\
 	(NFMS |= (v));	\
 	if (((v) & (1 << NFMS_NF_PG_SZ))) {	\
-		if (IS_2K_PAGE_NAND) {	\
-			NFC_SET_SPAS(NFC_SPAS_64);	\
-		} else if (IS_4K_PAGE_NAND) {       \
-			NFC_SET_SPAS(NFC_SPAS_128);	\
-		} else {	\
-			NFC_SET_SPAS(NFC_SPAS_16);	\
-		}	\
-		NFC_SET_ECC_MODE(NFC_SPAS_128); \
-	}	\
+		NFC_SET_SPAS(GET_NAND_OOB_SIZE >> 1);	\
+		NFC_SET_ECC_MODE(GET_NAND_OOB_SIZE >> 1); \
+	} \
 } while (0)
 #else
 #define IS_4BIT_ECC			(1)
@@ -578,6 +602,7 @@ do {	\
 #define NFC_ECC_MODE_8			 ~(1<<0)
 #define NFC_SPAS_16			 8
 #define NFC_SPAS_64			 32
+#define NFC_SPAS_112			 56
 #define NFC_SPAS_128			 64
 #define NFC_SPAS_218			 109
 #endif

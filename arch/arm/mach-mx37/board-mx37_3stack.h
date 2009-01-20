@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -110,6 +110,8 @@ extern struct tve_platform_data tve_data;
 extern struct mxc_dptc_data dptc_lp_data;
 extern struct mxc_dptc_data dptc_gp_data;
 extern struct mxc_dvfs_platform_data dvfs_core_data;
+extern char *gp_reg_id;
+extern char *lp_reg_id;
 
 extern int headphone_det_status(void);
 #endif				/* __ASM_ARCH_MXC_BOARD_MX37_3STACK_H__ */

@@ -26,6 +26,9 @@ obj-$(CONFIG_ARCH_MX51) += usb_common.o utmixc.o dvfs_core.o
 # LEDs support
 obj-$(CONFIG_LEDS) += leds.o
 
+# CPU FREQ support
+obj-$(CONFIG_CPU_FREQ_IMX)    += cpufreq.o
+
 # USB support
 obj-$(CONFIG_ISP1504_MXC) += isp1504xc.o
 obj-$(CONFIG_ISP1301_MXC) += isp1301xc.o

@@ -872,7 +872,10 @@ void gpio_spdif_active(void)
 			  | PAD_CTL_100K_PU | PAD_CTL_HYS_SCHMITZ);
 	/* SPDIF ext clock */
 	mxc_request_iomux(MX35_PIN_SCK5, MUX_CONFIG_ALT1);
-	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_2, 0, 1);
+	if (board_is_mx35(BOARD_REV_2))
+		pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 5, 1);
+	else
+		pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_2, 0, 1);
 }
 
 EXPORT_SYMBOL(gpio_spdif_active);
@@ -934,7 +937,10 @@ void gpio_activate_bt_audio_port(void)
 	mxc_iomux_set_pad(MX35_PIN_SRXD5, pad_val);
 	mxc_iomux_set_pad(MX35_PIN_SCK5, pad_val);
 	mxc_iomux_set_pad(MX35_PIN_STXFS5, pad_val);
-	pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_2, 0, 0);
+	if (board_is_mx35(BOARD_REV_2))
+		pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 5, 0);
+	else
+		pmic_gpio_set_bit_val(MCU_GPIO_REG_RESET_2, 0, 0);
 }
 
 EXPORT_SYMBOL(gpio_activate_bt_audio_port);

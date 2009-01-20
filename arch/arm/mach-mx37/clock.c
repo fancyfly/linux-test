@@ -59,27 +59,6 @@ extern void board_ref_clk_rate(unsigned long *ckil, unsigned long *osc,
 			       unsigned long *ckih);
 static int cpu_clk_set_wp(int wp);
 
-
-static int _clk_enable_normal(struct clk *clk)
-{
-	u32 reg;
-
-	reg = __raw_readl(clk->enable_reg);
-	reg |= 1 << clk->enable_shift;
-	__raw_writel(reg, clk->enable_reg);
-
-	return 0;
-}
-
-static void _clk_disable_normal(struct clk *clk)
-{
-	u32 reg;
-
-	reg = __raw_readl(clk->enable_reg);
-	reg &= ~(1 << clk->enable_shift);
-	__raw_writel(reg, clk->enable_reg);
-}
-
 static int _clk_enable(struct clk *clk)
 {
 	u32 reg;
@@ -1776,18 +1755,11 @@ static int _clk_usboh2_set_parent(struct clk *clk, struct clk *parent)
 	return 0;
 }
 
-static struct clk usboh2_clk[] = {
-	{
-	 .name = "usboh2_clk",
-	 .parent = &pll3_sw_clk,
-	 .set_parent = _clk_usboh2_set_parent,
-	 .recalc = _clk_usboh2_recalc,
-	 .enable = _clk_enable,
-	 .enable_reg = MXC_CCM_CCGR2,
-	 .enable_shift = MXC_CCM_CCGR2_CG12_OFFSET,
-	 .disable = _clk_disable,
-	 .secondary = &usboh2_clk[1],
-	 },
+/*
+ * This is USB core clock.
+ ** need access DDR/iram, TMAX
+ */
+static struct clk usb_core_clk[] = {
 	{
 	 .name = "usb_ahb_clk",
 	 .parent = &ipg_clk,
@@ -1795,13 +1767,37 @@ static struct clk usboh2_clk[] = {
 	 .enable_reg = MXC_CCM_CCGR2,
 	 .enable_shift = MXC_CCM_CCGR2_CG11_OFFSET,
 	 .disable = _clk_disable,
-	 .secondary = &usboh2_clk[2],
+	 .secondary = &usb_core_clk[1],
 	 },
 	{
-	 .name = "usb_sec_clk",
+	 .name = "usb_tmax_clk",
 	 .parent = &tmax1_clk,
-	 .secondary = &emi_fast_clk,
+	 .secondary = &usb_core_clk[2],
 	 },
+	{
+	 .name = "usb_ddr_clk",
+	 .parent = &emi_fast_clk,
+#if defined CONFIG_USB_STATIC_IRAM_PPH || defined CONFIG_USB_STATIC_IRAM
+	.secondary = &usb_core_clk[3],
+#endif
+	 },
+	/* iram patch, need access internal ram */
+	{
+	 .name = "usb_iram_clk",
+	 .parent = &emi_intr_clk,
+	 },
+};
+
+/* used for connecting external PHY */
+static struct clk usboh2_clk = {
+	.name = "usboh2_clk",
+	.parent = &pll3_sw_clk,
+	.set_parent = _clk_usboh2_set_parent,
+	.recalc = _clk_usboh2_recalc,
+	.enable = _clk_enable,
+	.enable_reg = MXC_CCM_CCGR2,
+	.enable_shift = MXC_CCM_CCGR2_CG12_OFFSET,
+	.disable = _clk_disable,
 };
 
 static void _clk_usb_phy_recalc(struct clk *clk)
@@ -1839,14 +1835,13 @@ static int _clk_usb_phy_set_parent(struct clk *clk, struct clk *parent)
 
 static struct clk usb_phy_clk = {
 	.name = "usb_phy_clk",
-	.parent = &pll3_sw_clk,
+	.parent = &osc_clk,
 	.set_parent = _clk_usb_phy_set_parent,
 	.recalc = _clk_usb_phy_recalc,
 	.enable = _clk_enable,
 	.enable_reg = MXC_CCM_CCGR0,
 	.enable_shift = MXC_CCM_CCGR0_CG6_OFFSET,
 	.disable = _clk_disable,
-	.secondary = &tmax1_clk,
 };
 
 static struct clk esdhc_dep_clks = {
@@ -2476,19 +2471,6 @@ static struct clk usb_clk = {
 	.rate = 60000000,
 };
 
-static struct clk usb_utmi_clk = {
-	.name = "usb_utmi_clk",
-#if defined CONFIG_USB_STATIC_IRAM_PPH || defined CONFIG_USB_STATIC_IRAM
-	.secondary = &emi_intr_clk,
-#else
-	.secondary = &emi_fast_clk,
-#endif
-	.enable = _clk_enable_normal,
-	.enable_reg = MXC_CCM_CSCMR1,
-	.enable_shift = MXC_CCM_CSCMR1_USB_PHY_CLK_SEL_OFFSET,
-	.disable = _clk_disable_normal,
-};
-
 static struct clk rtc_clk = {
 	.name = "rtc_clk",
 	.parent = &ckil_clk,
@@ -2684,11 +2666,12 @@ static struct clk *mxc_clks[] = {
 	&tmax2_clk,
 	&ahbmux1_clk,
 	&ahbmux2_clk,
-	&usboh2_clk[0],
-	&usboh2_clk[1],
-	&usboh2_clk[2],
+	&usb_core_clk[0],
+	&usb_core_clk[1],
+	&usb_core_clk[2],
+	&usb_core_clk[3],
+	&usboh2_clk,
 	&usb_phy_clk,
-	&usb_utmi_clk,
 	&usb_clk,
 	&esdhc1_clk[0],
 	&esdhc1_clk[1],
@@ -2896,6 +2879,7 @@ int __init mxc_clocks_init(void)
 	clk_set_parent(&arm_axi_clk, &emi_core_clk);
 	clk_set_parent(&vpu_clk[0], &emi_core_clk);
 	clk_set_parent(&vpu_clk[1], &emi_core_clk);
+	clk_set_parent(&usb_phy_clk, &osc_clk);
 
 	clk_set_parent(&cko1_clk, &ipg_perclk);
 

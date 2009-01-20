@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -76,31 +76,28 @@ static struct platform_device dr_udc_device = {
 /* Notes: configure USB clock*/
 static int usbotg_init_ext(struct platform_device *pdev)
 {
-	struct clk *usb_clk;
+	struct clk *usb_clk, *usboh2_clk;
+	int ret;
 
-	usb_clk = clk_get(NULL, "usboh2_clk");
-	clk_enable(usb_clk);
-	clk_put(usb_clk);
+	usboh2_clk = clk_get(NULL, "usboh2_clk");
+	clk_enable(usboh2_clk);
 
 	usb_clk = clk_get(NULL, "usb_phy_clk");
 	clk_enable(usb_clk);
 	clk_put(usb_clk);
 
-	/*derive clock from oscillator */
-	usb_clk = clk_get(NULL, "usb_utmi_clk");
-	clk_disable(usb_clk);
-	clk_put(usb_clk);
+	ret = usbotg_init(pdev);
 
-	return usbotg_init(pdev);
+	/* this clock is no use after set portsc PTS bit */
+	clk_disable(usboh2_clk);
+	clk_put(usboh2_clk);
+
+	return ret;
 }
 
 static void usbotg_uninit_ext(struct fsl_usb2_platform_data *pdata)
 {
 	struct clk *usb_clk;
-
-	usb_clk = clk_get(NULL, "usboh2_clk");
-	clk_disable(usb_clk);
-	clk_put(usb_clk);
 
 	usb_clk = clk_get(NULL, "usb_phy_clk");
 	clk_disable(usb_clk);

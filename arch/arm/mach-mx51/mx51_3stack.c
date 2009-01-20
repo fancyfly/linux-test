@@ -224,7 +224,7 @@ static struct mtd_partition mxc_nand_partitions[] = {
 	{
 	 .name = "bootloader",
 	 .offset = 0,
-	 .size = 1024 * 1024},
+	 .size = 3 * 1024 * 1024},
 	{
 	 .name = "nand.kernel",
 	 .offset = MTDPART_OFS_APPEND,

@@ -552,26 +552,51 @@ EXPORT_SYMBOL(gpio_activate_audio_ports);
  */
 void gpio_sdhc_active(int module)
 {
-	int pad_val = PAD_CTL_DRV_MAX | PAD_CTL_22K_PU | PAD_CTL_SRE_FAST;
-
 	switch (module) {
 	case 0:
 		mxc_request_iomux(MX51_PIN_SD1_CMD,
 				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
 		mxc_request_iomux(MX51_PIN_SD1_CLK,
 				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
-		mxc_request_iomux(MX51_PIN_SD1_DATA0, IOMUX_CONFIG_ALT0);
-		mxc_request_iomux(MX51_PIN_SD1_DATA1, IOMUX_CONFIG_ALT0);
-		mxc_request_iomux(MX51_PIN_SD1_DATA2, IOMUX_CONFIG_ALT0);
-		mxc_request_iomux(MX51_PIN_SD1_DATA3, IOMUX_CONFIG_ALT0);
 
-		mxc_iomux_set_pad(MX51_PIN_SD1_CLK, pad_val);
-		mxc_iomux_set_pad(MX51_PIN_SD1_CMD, pad_val);
-		mxc_iomux_set_pad(MX51_PIN_SD1_DATA0, pad_val);
-		mxc_iomux_set_pad(MX51_PIN_SD1_DATA1, pad_val);
-		mxc_iomux_set_pad(MX51_PIN_SD1_DATA2, pad_val);
-		mxc_iomux_set_pad(MX51_PIN_SD1_DATA3, pad_val);
-
+		mxc_request_iomux(MX51_PIN_SD1_DATA0,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX51_PIN_SD1_DATA1,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX51_PIN_SD1_DATA2,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_request_iomux(MX51_PIN_SD1_DATA3,
+				  IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_iomux_set_pad(MX51_PIN_SD1_CMD,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_ENABLE | PAD_CTL_47K_PU |
+				  PAD_CTL_PUE_PULL |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX51_PIN_SD1_CLK,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_NONE | PAD_CTL_47K_PU |
+				  PAD_CTL_PUE_PULL |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA0,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_ENABLE | PAD_CTL_47K_PU |
+				  PAD_CTL_PUE_PULL |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA1,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_ENABLE | PAD_CTL_47K_PU |
+				  PAD_CTL_PUE_PULL |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA2,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_ENABLE | PAD_CTL_47K_PU |
+				  PAD_CTL_PUE_PULL |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
+		mxc_iomux_set_pad(MX51_PIN_SD1_DATA3,
+				  PAD_CTL_DRV_MAX | PAD_CTL_DRV_VOT_HIGH |
+				  PAD_CTL_HYS_ENABLE | PAD_CTL_100K_PD |
+				  PAD_CTL_PUE_PULL |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_SRE_FAST);
 		/* Write Protected Pin */
 		mxc_request_iomux(MX51_PIN_GPIO1_1, IOMUX_CONFIG_ALT0 |
 				  IOMUX_CONFIG_SION);
@@ -603,10 +628,14 @@ void gpio_sdhc_inactive(int module)
 			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
 		mxc_free_iomux(MX51_PIN_SD1_CLK,
 			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
-		mxc_free_iomux(MX51_PIN_SD1_DATA0, IOMUX_CONFIG_ALT0);
-		mxc_free_iomux(MX51_PIN_SD1_DATA1, IOMUX_CONFIG_ALT0);
-		mxc_free_iomux(MX51_PIN_SD1_DATA2, IOMUX_CONFIG_ALT0);
-		mxc_free_iomux(MX51_PIN_SD1_DATA3, IOMUX_CONFIG_ALT0);
+		mxc_free_iomux(MX51_PIN_SD1_DATA0,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX51_PIN_SD1_DATA1,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX51_PIN_SD1_DATA2,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
+		mxc_free_iomux(MX51_PIN_SD1_DATA3,
+			       IOMUX_CONFIG_ALT0 | IOMUX_CONFIG_SION);
 
 		mxc_iomux_set_pad(MX51_PIN_SD1_CLK,
 				  (PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW));

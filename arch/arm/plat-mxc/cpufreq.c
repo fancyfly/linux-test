@@ -337,6 +337,8 @@ static int __init mxc_cpufreq_driver_init(struct cpufreq_policy *policy)
 	if (IS_ERR(axi_c_clk)) {
 		axi_c_clk_support = 0;
 		printk(KERN_ERR "%s: failed to get axi_c_clk\n", __func__);
+		if (cpu_is_mx51_rev(CHIP_REV_2_0) >= 0)
+			return PTR_ERR(axi_c_clk);
 	} else {
 		axi_c_clk_support = 1;
 		main_bus_clk = clk_get(NULL, "main_bus_clk");

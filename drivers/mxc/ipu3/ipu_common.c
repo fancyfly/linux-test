@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -128,6 +128,8 @@ static int ipu_probe(struct platform_device *pdev)
 	unsigned long ipu_base;
 
 	spin_lock_init(&ipu_lock);
+
+	g_ipu_hw_rev = plat_data->rev;
 
 	g_ipu_dev = &pdev->dev;
 
@@ -1379,6 +1381,30 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 		__raw_writel(reg & ~idma_mask(out_dma), IDMAC_CHA_EN(out_dma));
 		__raw_writel(idma_mask(out_dma), IPU_CHA_CUR_BUF(out_dma));
 	}
+
+	/* Set channel buffers NOT to be ready */
+	__raw_writel(0xF0000000, IPU_GPR); /* write one to clear */
+	if (idma_is_valid(in_dma)) {
+		if (idma_is_set(IPU_CHA_BUF0_RDY, in_dma)) {
+			__raw_writel(idma_mask(in_dma),
+				     IPU_CHA_BUF0_RDY(in_dma));
+		}
+		if (idma_is_set(IPU_CHA_BUF1_RDY, in_dma)) {
+			__raw_writel(idma_mask(in_dma),
+				     IPU_CHA_BUF1_RDY(in_dma));
+		}
+	}
+	if (idma_is_valid(out_dma)) {
+		if (idma_is_set(IPU_CHA_BUF0_RDY, out_dma)) {
+			__raw_writel(idma_mask(out_dma),
+				     IPU_CHA_BUF0_RDY(out_dma));
+		}
+		if (idma_is_set(IPU_CHA_BUF1_RDY, out_dma)) {
+			__raw_writel(idma_mask(out_dma),
+				     IPU_CHA_BUF1_RDY(out_dma));
+		}
+	}
+	__raw_writel(0x0, IPU_GPR); /* write one to set */
 
 	spin_unlock_irqrestore(&ipu_lock, lock_flags);
 

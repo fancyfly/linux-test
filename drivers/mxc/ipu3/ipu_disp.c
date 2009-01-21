@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -1104,3 +1104,18 @@ void ipu_disp_direct_write(ipu_channel_t channel, u32 value, u32 offset)
 		__raw_writel(value, ipu_disp_base[1] + offset);
 }
 EXPORT_SYMBOL(ipu_disp_direct_write);
+
+void ipu_reset_disp_panel(void)
+{
+	uint32_t tmp;
+
+	tmp = __raw_readl(DI_GENERAL(1));
+	__raw_writel(tmp | 0x08, DI_GENERAL(1));
+	msleep(10); /* tRES >= 100us */
+	tmp = __raw_readl(DI_GENERAL(1));
+	__raw_writel(tmp & ~0x08, DI_GENERAL(1));
+	msleep(60);
+
+	return;
+}
+EXPORT_SYMBOL(ipu_reset_disp_panel);

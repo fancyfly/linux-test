@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -27,6 +27,7 @@ extern struct clk *g_ipu_clk;
 extern struct clk *g_di_clk[2];
 extern struct clk *g_csi_clk[2];
 extern unsigned char g_dc_di_assignment[];
+extern int g_ipu_hw_rev;
 
 #define IDMA_CHAN_INVALID	0xFF
 

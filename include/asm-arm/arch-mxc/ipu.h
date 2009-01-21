@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc.
  */
 
 /*
@@ -898,6 +898,7 @@ int32_t ipu_disp_set_color_key(ipu_channel_t channel, bool enable,
 int ipu_init_async_panel(int disp, int type, uint32_t cycle_time,
 			 uint32_t pixel_fmt, ipu_adc_sig_cfg_t sig);
 void ipu_disp_direct_write(ipu_channel_t channel, u32 value, u32 offset);
+void ipu_reset_disp_panel(void);
 
 /* ADC API */
 int32_t ipu_adc_write_template(display_port_t disp, uint32_t * pCmd,

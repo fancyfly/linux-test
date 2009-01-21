@@ -1247,6 +1247,18 @@ EXPORT_SYMBOL(gpio_keypad_inactive);
  */
 int gpio_usbotg_hs_active(void)
 {
+	/* USB_PWR */
+	mxc_request_iomux(MX51_PIN_GPIO1_8, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_GPIO1_8, PAD_CTL_SRE_FAST |
+			  PAD_CTL_DRV_HIGH | PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_PKE_NONE | PAD_CTL_HYS_ENABLE);
+
+	/* USB_OC */
+	mxc_request_iomux(MX51_PIN_GPIO1_9, IOMUX_CONFIG_ALT1);
+	mxc_iomux_set_pad(MX51_PIN_GPIO1_9, PAD_CTL_SRE_SLOW |
+			  PAD_CTL_DRV_LOW | PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_PUE_KEEPER | PAD_CTL_PKE_ENABLE |
+			  PAD_CTL_HYS_ENABLE);
 	return 0;
 }
 
@@ -1254,6 +1266,11 @@ EXPORT_SYMBOL(gpio_usbotg_hs_active);
 
 void gpio_usbotg_hs_inactive(void)
 {
+	mxc_request_gpio(MX51_PIN_GPIO1_8);
+	mxc_request_gpio(MX51_PIN_GPIO1_9);
+
+	mxc_free_iomux(MX51_PIN_GPIO1_8, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_GPIO1_9, IOMUX_CONFIG_GPIO);
 }
 
 EXPORT_SYMBOL(gpio_usbotg_hs_inactive);

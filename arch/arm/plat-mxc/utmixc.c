@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -62,6 +62,13 @@ static void set_power(struct fsl_xcvr_ops *this,
 #if defined(CONFIG_MXC_PMIC_MC13892_MODULE) || defined(CONFIG_MXC_PMIC_MC13892)
 	} else if (machine_is_mx51_3ds()) {
 		unsigned int value;
+
+		usbotg_regux = regulator_get(dev, "SWBST");
+		if (on)
+			regulator_enable(usbotg_regux);
+		else
+			regulator_disable(usbotg_regux);
+		regulator_put(usbotg_regux, dev);
 
 		/* VUSBIN */
 		pmic_read_reg(REG_USB1, &value, 0xffffff);

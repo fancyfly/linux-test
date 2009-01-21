@@ -45,6 +45,7 @@
 #include <asm/arch/gpio.h>
 #include <asm/arch/mmc.h>
 #include <asm/arch/pmic_external.h>
+#include <asm/arch/ipu.h>
 
 #include "board-mx51_3stack.h"
 #include "iomux.h"
@@ -316,6 +317,8 @@ static struct platform_device mxc_fb_device[] = {
 
 static void lcd_reset_to2(void)
 {
+	ipu_reset_disp_panel();
+
 	return;
 }
 

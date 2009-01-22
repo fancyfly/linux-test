@@ -178,7 +178,6 @@ void mxc_free_iomux(iomux_pin_name_t pin, iomux_pin_cfg_t config)
 	u8 *rp = iomux_pin_res_table + pin_index;
 	int gpio_port = GPIO_TO_PORT(IOMUX_TO_GPIO(pin));
 
-	BUG_ON(pin_index > MUX_PIN_NUM_MAX);
 	*rp = 0;
 	if ((gpio_port != NON_GPIO_PORT)
 	    && ((config == IOMUX_CONFIG_GPIO)

@@ -233,6 +233,7 @@
 #define OTG_BASE_ADDR       USBOTG_BASE_ADDR
 #define CSI_BASE_ADDR       (AIPS2_BASE_ADDR + 0x000F8000)
 #define DRYICE_BASE_ADDR    (AIPS2_BASE_ADDR + 0x000FC000)
+#define SRTC_BASE_ADDR      (DRYICE_BASE_ADDR)
 
 /*
  * ROMP and ASIC
@@ -407,7 +408,7 @@
 #define MXC_INT_RNG                 22
 #define MXC_INT_GPIO4               23
 #define MXC_INT_KPP                 24
-#define MXC_INT_DRYICE_RTC          25
+#define MXC_INT_DRYICE_NORM         25
 #define MXC_INT_PWM                 26
 #define MXC_INT_EPIT2               27
 #define MXC_INT_EPIT1               28
@@ -437,7 +438,7 @@
 #define MXC_INT_GPT2                53
 #define MXC_INT_GPT1                54
 #define MXC_INT_WDOG                55
-#define MXC_INT_DRYICE              56
+#define MXC_INT_DRYICE_SEC          56
 #define MXC_INT_FEC                 57
 #define MXC_INT_EXT_INT5            58
 #define MXC_INT_EXT_INT4            59

@@ -1002,6 +1002,7 @@ CONFIG_RTC_INTF_DEV=y
 #
 # CONFIG_RTC_MXC is not set
 # CONFIG_RTC_DRV_MXC_V2 is not set
+CONFIG_RTC_DRV_IMXDI=y
 # CONFIG_UIO is not set
 
 #

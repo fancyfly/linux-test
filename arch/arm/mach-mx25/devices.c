@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -79,6 +79,37 @@ static void mxc_nop_release(struct device *dev)
 {
 	/* Nothing */
 }
+
+#if defined(CONFIG_RTC_DRV_IMXDI) || defined(CONFIG_RTC_DRV_IMXDI_MODULE)
+static struct resource rtc_resources[] = {
+	{
+	 .start = SRTC_BASE_ADDR,
+	 .end = SRTC_BASE_ADDR + 0x40,
+	 .flags = IORESOURCE_MEM,
+	 },
+	{
+	 .start = MXC_INT_DRYICE_NORM,
+	 .flags = IORESOURCE_IRQ,
+	 },
+};
+static struct platform_device imxdi_rtc_device = {
+	.name = "imxdi_rtc",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		},
+	.num_resources = ARRAY_SIZE(rtc_resources),
+	.resource = rtc_resources,
+};
+static void mxc_init_rtc(void)
+{
+	(void)platform_device_register(&imxdi_rtc_device);
+}
+#else
+static inline void mxc_init_rtc(void)
+{
+}
+#endif
 
 #if defined(CONFIG_MXC_WATCHDOG) || defined(CONFIG_MXC_WATCHDOG_MODULE)
 static struct resource wdt_resources[] = {
@@ -424,6 +455,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_i2c();
 	mxc_init_dma();
 	mxc_init_ssi();
+	mxc_init_rtc();
 
 	return 0;
 }

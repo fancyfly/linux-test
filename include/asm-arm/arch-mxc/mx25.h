@@ -95,6 +95,14 @@
 #define IRAM_BASE_ADDR_VIRT  0xFC500000
 #define IRAM_SIZE            SZ_128K
 
+#ifdef CONFIG_SND_MXC_SOC_IRAM
+#define SND_RAM_SIZE 0x10000
+#else
+#define SND_RAM_SIZE 0
+#endif
+
+#define SND_RAM_BASE_ADDR	IRAM_BASE_ADDR
+
 /*
  * AIPS 1
  */

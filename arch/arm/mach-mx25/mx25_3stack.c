@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -224,7 +224,67 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	 .type = "mc34704",
 	 .addr = 0x54,
 	 },
+	{
+	 .type = "sgtl5000-i2c",
+	 .addr = 0x0a,
+	 },
 };
+
+#if defined(CONFIG_SND_SOC_IMX_3STACK_SGTL5000) \
+    || defined(CONFIG_SND_SOC_IMX_3STACK_SGTL5000_MODULE)
+static struct mxc_sgtl5000_platform_data sgtl5000_data = {
+	.ssi_num = 2,
+	.src_port = 1,
+	.ext_port = 4,
+	.hp_irq = IOMUX_TO_IRQ(MX25_PIN_A10),
+	.hp_status = headphone_det_status,
+	.vddio = 1800000,
+	.vdda = 3300000,
+	.vddd = 0,
+	.sysclk = 8300000,
+};
+
+static struct platform_device sgtl5000_device = {
+	.name = "sgtl5000-imx",
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &sgtl5000_data,
+		},
+};
+
+static void mxc_sgtl5000_init(void)
+{
+	struct clk *cko1, *parent;
+	unsigned long rate;
+
+	/* cko1 clock */
+	mxc_request_iomux(MX25_PIN_CLKO, MUX_CONFIG_FUNC);
+
+	cko1 = clk_get(NULL, "clko_clk");
+	if (IS_ERR(cko1))
+		return;
+	parent = clk_get(NULL, "ipg_clk");
+	if (IS_ERR(parent))
+		return;
+	clk_set_parent(cko1, parent);
+	rate = clk_round_rate(cko1, 13000000);
+	if (rate < 8000000 || rate > 27000000) {
+		pr_err("Error: SGTL5000 mclk freq %ld out of range!\n", rate);
+		clk_put(parent);
+		clk_put(cko1);
+		return;
+	}
+	clk_set_rate(cko1, rate);
+	clk_enable(cko1);
+	sgtl5000_data.sysclk = rate;
+	sgtl5000_enable_amp();
+	platform_device_register(&sgtl5000_device);
+}
+#else
+static inline void mxc_sgtl5000_init(void)
+{
+}
+#endif
 
 #if  defined(CONFIG_SMSC911X) || defined(CONFIG_SMSC911X_MODULE)
 static struct resource smsc911x_resources[] = {
@@ -315,6 +375,7 @@ static void __init mxc_board_init(void)
 	mxc_init_fb();
 	mxc_init_bl();
 	mxc_init_nand_mtd();
+	mxc_sgtl5000_init();
 }
 
 /*

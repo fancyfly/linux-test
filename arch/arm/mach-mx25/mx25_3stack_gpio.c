@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -1368,3 +1368,61 @@ void gpio_can_inactive(int id)
 	}
 }
 EXPORT_SYMBOL(gpio_can_inactive);
+
+/*!
+ * This function activates DAM port 4 to enable
+ * audio I/O.
+ */
+void gpio_activate_audio_ports(void)
+{
+	mxc_request_iomux(MX25_PIN_EB0, MUX_CONFIG_ALT4); /*SSI4_STXD*/
+	mxc_request_iomux(MX25_PIN_EB1, MUX_CONFIG_ALT4); /*SSI4_SRXD*/
+	mxc_request_iomux(MX25_PIN_RW, MUX_CONFIG_ALT4); /*SSI4_STXFS*/
+	mxc_request_iomux(MX25_PIN_OE, MUX_CONFIG_ALT4); /*SSI4_SCK*/
+	mxc_request_iomux(MX25_PIN_A10, MUX_CONFIG_ALT5); /*HP_DEC*/
+	mxc_request_iomux(MX25_PIN_D13, MUX_CONFIG_ALT5); /*AMP_SHUTDOWN*/
+
+	mxc_iomux_set_pad(MX25_PIN_EB0, PAD_CTL_SRE_FAST);
+	mxc_iomux_set_pad(MX25_PIN_EB1, PAD_CTL_SRE_FAST);
+	mxc_iomux_set_pad(MX25_PIN_RW, PAD_CTL_SRE_FAST);
+	mxc_iomux_set_pad(MX25_PIN_OE, PAD_CTL_SRE_FAST);
+	mxc_iomux_set_pad(MX25_PIN_D13, PAD_CTL_DRV_3_3V);
+
+	mxc_set_gpio_direction(MX25_PIN_A10, 1);
+	mxc_set_gpio_direction(MX25_PIN_D13, 0);
+}
+EXPORT_SYMBOL(gpio_activate_audio_ports);
+
+/*!
+ * This function inactivates DAM port 4 for
+ * audio I/O
+ */
+void gpio_inactive_audio_ports(void)
+{
+	mxc_request_gpio(MX25_PIN_EB0); /*SSI4_STXD*/
+	mxc_request_gpio(MX25_PIN_EB1); /*SSI4_SRXD*/
+	mxc_request_gpio(MX25_PIN_RW); /*SSI4_STXFS*/
+	mxc_request_gpio(MX25_PIN_OE); /*SSI4_SCK*/
+	mxc_request_gpio(MX25_PIN_A10); /*HP_DEC*/
+	mxc_request_gpio(MX25_PIN_D13); /*AMP_SHUTDOWN*/
+
+	mxc_free_iomux(MX25_PIN_EB0, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_EB1, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_RW, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_OE, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_A10, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_D13, MUX_CONFIG_GPIO);
+}
+EXPORT_SYMBOL(gpio_inactive_audio_ports);
+
+int headphone_det_status(void)
+{
+	return mxc_get_gpio_datain(MX25_PIN_A10);
+}
+EXPORT_SYMBOL(headphone_det_status);
+
+void sgtl5000_enable_amp(void)
+{
+	mxc_set_gpio_dataout(MX25_PIN_D13, 1);
+}
+EXPORT_SYMBOL(sgtl5000_enable_amp);

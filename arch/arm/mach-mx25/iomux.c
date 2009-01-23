@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -50,14 +50,15 @@ enum iomux_reg_addr {
 };
 
 #define MUX_PIN_NUM_MAX		\
-		(((IOMUXSW_PAD_END - IOMUXSW_PAD_CTL) >> 2) + 1)
+		(((IOMUXSW_MUX_END - IOMUXSW_MUX_CTL) >> 2) + 1)
 #define MUX_INPUT_NUM_MUX	\
 		(((IOMUXSW_INPUT_END - IOMUXSW_INPUT_CTL) >> 2) + 1)
 
-#define PIN_TO_IOMUX_INDEX(pin) ((PIN_TO_IOMUX_PAD(pin) - 0x22C) >> 2)
+#define PIN_TO_IOMUX_INDEX(pin) (PIN_TO_IOMUX_MUX(pin) >> 2)
 
 static DEFINE_SPINLOCK(gpio_mux_lock);
 static u8 iomux_pin_res_table[MUX_PIN_NUM_MAX];
+#define MUX_USED 0x80
 
 /*!
  * This function is used to configure a pin through the IOMUX module.
@@ -85,7 +86,7 @@ static int iomux_config_mux(iomux_pin_name_t pin, iomux_pin_cfg_t cfg)
 		 * Log a warning if a pin changes ownership
 		 */
 		rp = iomux_pin_res_table + pin_index;
-		if ((cfg & *rp) && (*rp != cfg)) {
+		if (*rp && *rp != (cfg | MUX_USED)) {
 			/*Console: how to do */
 			printk(KERN_ERR "iomux_config_mux: Warning: iomux pin"
 			       " config changed, index=%d register=%d, "
@@ -93,7 +94,7 @@ static int iomux_config_mux(iomux_pin_name_t pin, iomux_pin_cfg_t cfg)
 			       *rp, cfg);
 			ret = -EINVAL;
 		}
-		*rp = cfg;
+		*rp = cfg | MUX_USED;
 		spin_unlock(&gpio_mux_lock);
 	}
 

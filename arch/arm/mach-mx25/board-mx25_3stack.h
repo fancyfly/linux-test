@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -163,6 +163,8 @@ extern struct sys_timer mxc_timer;
 extern void mxc_cpu_common_init(void);
 extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
+extern int headphone_det_status(void);
+extern void sgtl5000_enable_amp(void);
 
 #endif				/* CONFIG_MACH_MX25_3DS */
 #endif				/* __ASM_ARCH_MXC_BOARD_MX25_3STACK_H__ */

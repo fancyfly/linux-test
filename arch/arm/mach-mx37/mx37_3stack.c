@@ -73,7 +73,7 @@ static struct cpu_wp cpu_wp_auto[] = {
 	 .mfi = 5,
 	 .mfd = 23,
 	 .mfn = 13,
-	 .cpu_voltage = 1050000,},
+	 .cpu_voltage = 1000000,},
 	{
 	 .pll_rate = 400000000,
 	 .cpu_rate = 400000000,
@@ -81,7 +81,7 @@ static struct cpu_wp cpu_wp_auto[] = {
 	 .mfi = 8,
 	 .mfd = 2,
 	 .mfn = 1,
-	 .cpu_voltage = 950000,},
+	 .cpu_voltage = 900000,},
 	{
 	 .pll_rate = 200000000,
 	 .cpu_rate = 200000000,
@@ -89,7 +89,7 @@ static struct cpu_wp cpu_wp_auto[] = {
 	 .mfi = 8,
 	 .mfd = 2,
 	 .mfn = 1,
-	 .cpu_voltage = 900000,},
+	 .cpu_voltage = 850000,},
 	{
 	 .pll_rate = 600000000,
 	 .cpu_rate = 600000000,
@@ -97,7 +97,7 @@ static struct cpu_wp cpu_wp_auto[] = {
 	 .mfi = 6,
 	 .mfd = 3,
 	 .mfn = 1,
-	 .cpu_voltage = 1250000,},
+	 .cpu_voltage = 1200000,},
 };
 
 struct cpu_wp *get_cpu_wp(int *wp)
@@ -110,6 +110,8 @@ static void mc13892_reg_int(void)
 {
 	int i = 0;
 	struct regulator *regulator;
+	struct cpu_wp *cpu_wp_tbl1;
+	int cpu_wp_nr1;
 	char *reg_name[] = {
 		"SW1",
 		"SW2",
@@ -163,6 +165,11 @@ static void mc13892_reg_int(void)
 			regulator_put(regulator, NULL);
 		}
 	}
+
+	/* Set the current working point. */
+	cpu_wp_tbl1 = get_cpu_wp(&cpu_wp_nr1);
+	for (i = 0; i < cpu_wp_nr1; i++)
+		cpu_wp_tbl1[i].cpu_voltage += 50000;
 }
 
 late_initcall(mc13892_reg_int);
@@ -812,15 +819,6 @@ static inline void mxc_sgtl5000_init(void)
  */
 static void mx37_3stack_fixup_for_board_v1(void)
 {
-	struct cpu_wp *cpu_wp_tbl1;
-	int cpu_wp_nr1;
-	int i;
-
-	/* Set the current working point. */
-	cpu_wp_tbl1 = get_cpu_wp(&cpu_wp_nr1);
-	for (i = 0; i < cpu_wp_nr1; i++)
-		cpu_wp_tbl1[i].cpu_voltage -= 50000;
-
 	dptc_gp_data.reg_id = "DCDC1";
 	dptc_lp_data.reg_id = "DCDC4";
 	gp_reg_id = "DCDC1";

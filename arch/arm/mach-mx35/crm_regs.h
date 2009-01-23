@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -294,12 +294,12 @@
 /*
  * LTR0 register offsets
  */
-#define MXC_CCM_LTR0_DIV3CK_OFFSET              28
-#define MXC_CCM_LTR0_DIV3CK_MASK                (0x3 << 28)
 #define MXC_CCM_LTR0_DNTHR_OFFSET               16
 #define MXC_CCM_LTR0_DNTHR_MASK                 (0x3F << 16)
 #define MXC_CCM_LTR0_UPTHR_OFFSET               22
 #define MXC_CCM_LTR0_UPTHR_MASK                 (0x3F << 22)
+#define MXC_CCM_LTR0_DIV3CK_OFFSET              1
+#define MXC_CCM_LTR0_DIV3CK_MASK                (0x3 << 1)
 
 /*
  * LTR1 register offsets

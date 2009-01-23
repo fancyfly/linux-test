@@ -1,5 +1,5 @@
 /*
- *  Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -40,7 +40,7 @@
 #include "crm_regs.h"
 
 /*
- * With the ARM clocked at 532, this setting yields a DIV_3_CLK of 4.16 kHz.
+ * The frequency of div_3_clk will affect the dvfs sample rate..
  */
 #define DVFS_DIV3CK		(3 << MXC_CCM_LTR0_DIV3CK_OFFSET)
 
@@ -84,7 +84,7 @@
 
 #define DVFS_DVSUP(val)		(val << MXC_CCM_PMCR0_DVSUP_OFFSET)
 
-#define MXC_DVFS_MAX_WP_NUM 4
+#define MXC_DVFS_MAX_WP_NUM 2
 
 enum {
 	FSVAI_FREQ_NOCHANGE = 0x0,
@@ -103,17 +103,13 @@ struct dvfs_wp {
 	u32 upcnt;
 };
 
+/* the default working points for MX35 TO2 DVFS. */
 static struct dvfs_wp dvfs_wp_tbl[MXC_DVFS_MAX_WP_NUM] = {
-	{133000000, 1200000, DVFS_DVSUP(DVSUP_LOW), DVFS_DNTHR(18),
-	 DVFS_UPTHR(31), DVFS_DNCNT(0x33),
-	 DVFS_UPCNT(0x10)},
-	{266000000, 1250000, DVFS_DVSUP(DVSUP_MEDIUM), DVFS_DNTHR(18),
+	{399000000, 1200000, DVFS_DVSUP(DVSUP_LOW), DVFS_DNTHR(18),
 	 DVFS_UPTHR(31), DVFS_DNCNT(0x33),
 	 DVFS_UPCNT(0x33)},
-	{399000000, 1300000, DVFS_DVSUP(DVSUP_HIGH), DVFS_DNTHR(18),
-	 DVFS_UPTHR(31), DVFS_DNCNT(0x33),
-	 DVFS_UPCNT(0x33)},
-	{532000000, 1400000, DVFS_DVSUP(DVSUP_TURBO), DVFS_DNTHR(18),
+/* TBD: Need to set default voltage according to published data sheet */
+	{532000000, 1350000, DVFS_DVSUP(DVSUP_TURBO), DVFS_DNTHR(18),
 	 DVFS_UPTHR(30), DVFS_DNCNT(0x33),
 	 DVFS_UPCNT(0x33)}
 };
@@ -133,7 +129,7 @@ static struct delayed_work dvfs_work;
  * Clock structures
  */
 static struct clk *cpu_clk;
-static struct regulator *sw3_reg;
+static struct regulator *core_reg;
 
 const static u8 ltr_gp_weight[] = {
 	0,			/* 0 */
@@ -288,7 +284,7 @@ static void dvfs_workqueue_handler(struct work_struct *work)
 				/*reduce frequency and then voltage */
 				clk_set_rate(cpu_clk,
 					     dvfs_wp_tbl[curr_dvfs].cpu_rate);
-				regulator_set_voltage(sw3_reg,
+				regulator_set_voltage(core_reg,
 						      dvfs_wp_tbl[curr_dvfs].
 						      core_voltage);
 				pr_info("Decrease frequency to: %ld \n",
@@ -298,7 +294,7 @@ static void dvfs_workqueue_handler(struct work_struct *work)
 				curr_dvfs = dvfs_wp_num - 1;
 				dvfs_nr_up[dvsup]++;
 				/*Increase voltage and then frequency */
-				regulator_set_voltage(sw3_reg,
+				regulator_set_voltage(core_reg,
 						      dvfs_wp_tbl[curr_dvfs].
 						      core_voltage);
 				clk_set_rate(cpu_clk,
@@ -414,7 +410,7 @@ static void stop_dvfs(void)
 					break;
 			}
 			clk_set_rate(cpu_clk, stored_cpu_rate);
-			regulator_set_voltage(sw3_reg,
+			regulator_set_voltage(core_reg,
 					      dvfs_wp_tbl[index].core_voltage);
 		} else if (stored_cpu_rate > curr_cpu) {
 			for (index = 0; index < dvfs_wp_num; index++) {
@@ -422,7 +418,7 @@ static void stop_dvfs(void)
 				    stored_cpu_rate)
 					break;
 			}
-			regulator_set_voltage(sw3_reg,
+			regulator_set_voltage(core_reg,
 					      dvfs_wp_tbl[index].core_voltage);
 			clk_set_rate(cpu_clk, stored_cpu_rate);
 		}
@@ -448,19 +444,22 @@ static ssize_t dvfs_enable_store(struct sys_device *dev, const char *buf,
 
 static ssize_t dvfs_status_show(struct sys_device *dev, char *buf)
 {
-	int size = 0;
+	int size = 0, i;
 
 	if (dvfs_is_active)
 		size = sprintf(buf, "DVFS is enabled\n");
 	else
 		size = sprintf(buf, "DVFS is disabled\n");
 
-	size +=
-	    sprintf((buf + size), "UP:\t%d\t%d\t%d\t%d\n", dvfs_nr_up[0],
-		    dvfs_nr_up[1], dvfs_nr_up[2], dvfs_nr_up[3]);
-	size +=
-	    sprintf((buf + size), "DOWN:\t%d\t%d\t%d\t%d\n\n", dvfs_nr_dn[0],
-		    dvfs_nr_dn[1], dvfs_nr_dn[2], dvfs_nr_dn[3]);
+	size += sprintf((buf + size), "UP:\t");
+	for (i = 0; i < MXC_DVFS_MAX_WP_NUM; i++)
+		size += sprintf((buf + size), "%d\t", dvfs_nr_up[i]);
+	size += sprintf((buf + size), "\n");
+
+	size += sprintf((buf + size), "DOWN:\t");
+	for (i = 0; i < MXC_DVFS_MAX_WP_NUM; i++)
+		size += sprintf((buf + size), "%d\t", dvfs_nr_dn[i]);
+	size += sprintf((buf + size), "\n");
 
 	return size;
 }
@@ -520,21 +519,31 @@ static int __init dvfs_init(void)
 	u8 index;
 	unsigned long curr_cpu;
 
+	if (cpu_is_mx35_rev(CHIP_REV_1_0) == 1) {
+		/*
+		 * Don't support DVFS for auto path in TO1 because
+		 * the voltages under 399M are all 1.2v
+		 */
+		if (!(__raw_readl(MXC_CCM_PDR0) & MXC_CCM_PDR0_AUTO_CON)) {
+			pr_info("MX35 TO1 auto path, no need to use DVFS \n");
+			return -1;
+		}
+	}
+
 	cpu_clk = clk_get(NULL, "cpu_clk");
 	curr_cpu = clk_get_rate(cpu_clk);
-	sw3_reg = regulator_get(NULL, "SW3");
-	dvfs_is_active = 0;
 
-	/* for auto path, only 3 working points are supported */
-	if (!(__raw_readl(MXC_CCM_PDR0) & MXC_CCM_PDR0_AUTO_CON)) {
-		dvfs_wp_num = 3;
-		dvfs_wp_tbl[2].dvsup = DVFS_DVSUP(DVSUP_TURBO);
-	}
+	if (board_is_mx35(BOARD_REV_2))
+		core_reg = regulator_get(NULL, "SW2");
+	else
+		core_reg = regulator_get(NULL, "SW3");
+
+	dvfs_is_active = 0;
 
 	/*Set voltage */
 	for (index = 0; index < dvfs_wp_num; index++) {
 		if (dvfs_wp_tbl[index].cpu_rate == curr_cpu) {
-			regulator_set_voltage(sw3_reg,
+			regulator_set_voltage(core_reg,
 					      dvfs_wp_tbl[index].core_voltage);
 			break;
 		}
@@ -575,7 +584,7 @@ static void __exit dvfs_cleanup(void)
 	dvfs_sysdev_ctrl_exit();
 
 	clk_put(cpu_clk);
-	regulator_put(sw3_reg, NULL);
+	regulator_put(core_reg, NULL);
 }
 
 module_init(dvfs_init);

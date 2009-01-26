@@ -67,15 +67,15 @@ extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
 extern int mxc_init_devices(void);
 
-/* working point(wp): 0 - 665MHz; 1 - 200MHz; */
+/* working point(wp): 0 - 800MHz; 1 - 200MHz; */
 static struct cpu_wp cpu_wp_auto[] = {
 	{
-	 .pll_rate = 665000000,
-	 .cpu_rate = 665000000,
+	 .pll_rate = 800000000,
+	 .cpu_rate = 800000000,
 	 .pdf = 0,
-	 .mfi = 6,
-	 .mfd = 95,
-	 .mfn = 89,
+	 .mfi = 8,
+	 .mfd = 2,
+	 .mfn = 1,
 	 .cpu_voltage = 1050000,},
 	{
 	 .pll_rate = 200000000,

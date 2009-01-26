@@ -65,11 +65,11 @@ static struct clk *lp_apm;
 static struct clk *osc;
 static struct regulator *gp_regulator;
 static struct regulator *lp_regulator;
-static int cpu_wp_nr;
 static struct cpu_wp *cpu_wp_tbl;
 static struct cpufreq_frequency_table imx_freq_table[4];
 
 extern int dvfs_core_is_active;
+extern int cpu_wp_nr;
 
 static int set_cpu_freq(int freq)
 {

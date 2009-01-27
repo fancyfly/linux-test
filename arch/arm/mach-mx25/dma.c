@@ -1,5 +1,5 @@
 /*
- *  Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -17,6 +17,19 @@
 #include <asm/arch/hardware.h>
 
 #include "serial.h"
+
+#ifdef CONFIG_SND_MXC_SOC_IRAM
+#define soc_trans_type	int_2_per
+#else
+#define soc_trans_type	emi_2_per
+#endif
+
+#define MXC_SSI_TX0_REG           0x0
+#define MXC_SSI_TX1_REG           0x4
+#define MXC_SSI_RX0_REG           0x8
+#define MXC_SSI_RX1_REG           0xC
+#define MXC_SSI_TXFIFO_WML        0x4
+#define MXC_SSI_RXFIFO_WML        0x6
 
 struct mxc_sdma_info_entry_s {
 	mxc_dma_device_t device;
@@ -163,6 +176,342 @@ static mxc_sdma_channel_params_t mxc_sdma_uart5_tx_params = {
 	.chnl_priority = MXC_SDMA_DEFAULT_PRIORITY,
 };
 
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_8bit_rx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI1_RX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_8bit_tx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = soc_trans_type,
+			.event_id = DMA_REQ_SSI1_TX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_rx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI1_RX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_tx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = soc_trans_type,
+			.event_id = DMA_REQ_SSI1_TX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_rx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI1_RX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_tx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = soc_trans_type,
+			.event_id = DMA_REQ_SSI1_TX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_8bit_rx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI1_RX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_8bit_tx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = soc_trans_type,
+			.event_id = DMA_REQ_SSI1_TX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_rx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI1_RX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_tx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = soc_trans_type,
+			.event_id = DMA_REQ_SSI1_TX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_rx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI1_RX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_tx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = soc_trans_type,
+			.event_id = DMA_REQ_SSI1_TX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI1_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_8bit_rx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_RX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI2_RX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_8bit_tx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_TX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_SSI2_TX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_16bit_rx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_RX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI2_RX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_16bit_tx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_TX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_SSI2_TX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_rx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_RX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI2_RX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_tx0_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_TX0_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_SSI2_TX0,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_8bit_rx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_RX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI2_RX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_8bit_tx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_TX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_SSI2_TX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_8BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_16bit_rx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_RX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI2_RX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_16bit_tx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_TX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_SSI2_TX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_16BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_TX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_rx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_RX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = per_2_emi,
+			.event_id = DMA_REQ_SSI2_RX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_RX,
+	.chnl_priority = 2,
+};
+
+static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_tx1_params = {
+	.chnl_params = {
+			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.per_address = SSI2_BASE_ADDR + MXC_SSI_TX1_REG,
+			.peripheral_type = SSI_SP,
+			.transfer_type = emi_2_per,
+			.event_id = DMA_REQ_SSI2_TX1,
+			.bd_number = 32,
+			.word_size = TRANSFER_32BIT,
+			},
+	.channel_num = MXC_DMA_CHANNEL_SSI2_TX,
+	.chnl_priority = 2,
+};
+
 static mxc_sdma_channel_params_t mxc_sdma_memory_params = {
 	.chnl_params = {
 			.peripheral_type = MEMORY,
@@ -185,6 +534,30 @@ static struct mxc_sdma_info_entry_s mxc_sdma_active_dma_info[] = {
 	{MXC_DMA_UART4_TX, &mxc_sdma_uart4_tx_params},
 	{MXC_DMA_UART5_RX, &mxc_sdma_uart5_rx_params},
 	{MXC_DMA_UART5_TX, &mxc_sdma_uart5_tx_params},
+	{MXC_DMA_SSI1_8BIT_RX0, &mxc_sdma_ssi1_8bit_rx0_params},
+	{MXC_DMA_SSI1_8BIT_TX0, &mxc_sdma_ssi1_8bit_tx0_params},
+	{MXC_DMA_SSI1_16BIT_RX0, &mxc_sdma_ssi1_16bit_rx0_params},
+	{MXC_DMA_SSI1_16BIT_TX0, &mxc_sdma_ssi1_16bit_tx0_params},
+	{MXC_DMA_SSI1_24BIT_RX0, &mxc_sdma_ssi1_24bit_rx0_params},
+	{MXC_DMA_SSI1_24BIT_TX0, &mxc_sdma_ssi1_24bit_tx0_params},
+	{MXC_DMA_SSI1_8BIT_RX1, &mxc_sdma_ssi1_8bit_rx1_params},
+	{MXC_DMA_SSI1_8BIT_TX1, &mxc_sdma_ssi1_8bit_tx1_params},
+	{MXC_DMA_SSI1_16BIT_RX1, &mxc_sdma_ssi1_16bit_rx1_params},
+	{MXC_DMA_SSI1_16BIT_TX1, &mxc_sdma_ssi1_16bit_tx1_params},
+	{MXC_DMA_SSI1_24BIT_RX1, &mxc_sdma_ssi1_24bit_rx1_params},
+	{MXC_DMA_SSI1_24BIT_TX1, &mxc_sdma_ssi1_24bit_tx1_params},
+	{MXC_DMA_SSI2_8BIT_RX0, &mxc_sdma_ssi2_8bit_rx0_params},
+	{MXC_DMA_SSI2_8BIT_TX0, &mxc_sdma_ssi2_8bit_tx0_params},
+	{MXC_DMA_SSI2_16BIT_RX0, &mxc_sdma_ssi2_16bit_rx0_params},
+	{MXC_DMA_SSI2_16BIT_TX0, &mxc_sdma_ssi2_16bit_tx0_params},
+	{MXC_DMA_SSI2_24BIT_RX0, &mxc_sdma_ssi2_24bit_rx0_params},
+	{MXC_DMA_SSI2_24BIT_TX0, &mxc_sdma_ssi2_24bit_tx0_params},
+	{MXC_DMA_SSI2_8BIT_RX1, &mxc_sdma_ssi2_8bit_rx1_params},
+	{MXC_DMA_SSI2_8BIT_TX1, &mxc_sdma_ssi2_8bit_tx1_params},
+	{MXC_DMA_SSI2_16BIT_RX1, &mxc_sdma_ssi2_16bit_rx1_params},
+	{MXC_DMA_SSI2_16BIT_TX1, &mxc_sdma_ssi2_16bit_tx1_params},
+	{MXC_DMA_SSI2_24BIT_RX1, &mxc_sdma_ssi2_24bit_rx1_params},
+	{MXC_DMA_SSI2_24BIT_TX1, &mxc_sdma_ssi2_24bit_tx1_params},
 	{MXC_DMA_MEMORY, &mxc_sdma_memory_params},
 };
 

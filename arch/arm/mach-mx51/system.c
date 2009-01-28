@@ -67,9 +67,13 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 			    | MXC_CORTEXA8_PLAT_LPC_DBG_DSM;
 		if (mode == WAIT_UNCLOCKED_POWER_OFF) {
 			ccm_clpcr |= (0x1 << MXC_CCM_CLPCR_LPM_OFFSET);
+			ccm_clpcr &= ~MXC_CCM_CLPCR_VSTBY;
 			stop_mode = 0;
 		} else {
 			ccm_clpcr |= (0x2 << MXC_CCM_CLPCR_LPM_OFFSET);
+			ccm_clpcr |= (0x3 << MXC_CCM_CLPCR_STBY_COUNT_OFFSET);
+			ccm_clpcr |= MXC_CCM_CLPCR_VSTBY;
+			ccm_clpcr |= MXC_CCM_CLPCR_SBYOS;
 			stop_mode = 1;
 		}
 

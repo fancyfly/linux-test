@@ -1,5 +1,5 @@
 /*
- *  Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -15,36 +15,53 @@
 #include <linux/kernel.h>
 #include <linux/clk.h>
 #include <linux/platform_device.h>
+#include <linux/regulator/regulator.h>
 #include <linux/suspend.h>
 #include "crm_regs.h"
 
 static struct device *pm_dev;
 struct clk *gpc_dvfs_clk;
 extern void cpu_do_suspend_workaround(void);
+extern void cpu_cortexa8_do_idle(u32);
+
+extern int iram_ready;
 
 static int mx51_suspend_enter(suspend_state_t state)
 {
 	if (tzic_enable_wake(0) != 0)
 		return -EAGAIN;
+
+	if (gpc_dvfs_clk == NULL)
+		gpc_dvfs_clk = clk_get(NULL, "gpc_dvfs_clk");
+	/* gpc clock is needed for SRPG */
+	clk_enable(gpc_dvfs_clk);
 	switch (state) {
-	case PM_SUSPEND_STANDBY:
-		if (gpc_dvfs_clk == NULL)
-			gpc_dvfs_clk = clk_get(NULL, "gpc_dvfs_clk");
-		/* gpc clock is needed for SRPG */
-		clk_enable(gpc_dvfs_clk);
+	case PM_SUSPEND_MEM:
 		mxc_cpu_lp_set(STOP_POWER_OFF);
+		break;
+	case PM_SUSPEND_STANDBY:
+		mxc_cpu_lp_set(WAIT_UNCLOCKED_POWER_OFF);
 		break;
 	default:
 		return -EINVAL;
 	}
-	if ((mxc_cpu_is_rev(CHIP_REV_2_0)) < 0) {
+	if (state == PM_SUSPEND_MEM) {
 		cpu_do_suspend_workaround();
 		/*clear the EMPGC0/1 bits */
 		__raw_writel(0, MXC_SRPG_EMPGC0_SRPGCR);
 		__raw_writel(0, MXC_SRPG_EMPGC1_SRPGCR);
-
 	} else {
-		cpu_do_idle();
+		if ((mxc_cpu_is_rev(CHIP_REV_2_0)) < 0) {
+			/* do cpu_idle_workaround */
+			u32 l2_iram_addr = IRAM_AVAILABLE_ADDR;
+			if (!iram_ready)
+				return;
+			if ((l2_iram_addr + 0x1000) <
+					(IRAM_BASE_ADDR + IRAM_SIZE))
+				cpu_cortexa8_do_idle(IO_ADDRESS(l2_iram_addr));
+		} else {
+			cpu_do_idle();
+		}
 	}
 	clk_disable(gpc_dvfs_clk);
 

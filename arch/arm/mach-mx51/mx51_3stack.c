@@ -97,6 +97,8 @@ static void mc13892_reg_int(void)
 {
 	int i = 0;
 	struct regulator *regulator;
+	struct regulator *gp;
+	struct regulator *lp;
 	char *reg_name[] = {
 		"SW1",
 		"SW2",
@@ -146,6 +148,29 @@ static void mc13892_reg_int(void)
 			regulator_put(regulator, NULL);
 		}
 	}
+
+	gp = regulator_get(NULL, "SW1_STBY");
+	lp = regulator_get(NULL, "SW2_STBY");
+	regulator_enable(gp);
+	regulator_enable(lp);
+
+	if (regulator_set_voltage(gp, 700000))
+		printk(KERN_INFO "cannot set GP STBY voltage\n");
+
+	if ((mxc_cpu_is_rev(CHIP_REV_2_0)) < 0) {
+		if (regulator_set_voltage(lp, 1100000))
+			printk(KERN_INFO "cannot set LP STBY voltage\n");
+	} else {
+		/* Cannot drop voltage for TO2.0 */
+		if (regulator_set_voltage(lp, 1200000))
+			printk(KERN_INFO "cannot set LP STBY voltage\n");
+	}
+
+	regulator_disable(gp);
+	regulator_disable(lp);
+
+	regulator_put(gp, NULL);
+	regulator_put(lp, NULL);
 }
 
 late_initcall(mc13892_reg_int);

@@ -1898,6 +1898,7 @@ int snd_soc_pcm_link_attach(struct snd_soc_pcm_link *pcm_link)
 	struct snd_soc_codec *codec;
 	struct snd_soc_dai *codec_dai, *cpu_dai;
 	struct snd_soc_platform *platform;	
+	struct snd_soc_pcm_link *pcm_link_from_list, *tmp;
 	
 	snd_assert(pcm_link->machine->pdev != NULL, return -EINVAL);
 	parent = &pcm_link->machine->pdev->dev;
@@ -1937,6 +1938,16 @@ codec_dai_new_err:
 	if (platform->usecount <= 0)
 		device_unregister(&platform->dev);
 platform_new_err:
+	/* pcm_link may have been deleted by soc_remove_components.
+	   so pointer pcm_link may no longer be invalid. */
+	list_for_each_entry_safe(pcm_link_from_list, tmp,
+	   &soc_pcm_link_list, all_list) {
+		if (pcm_link == pcm_link_from_list) {
+			list_del(&pcm_link->all_list);
+			kfree(pcm_link);
+			break;
+		}
+	}
 	printk(KERN_ERR "asoc: failed to create pcm link\n");
 	return -ENODEV;
 }

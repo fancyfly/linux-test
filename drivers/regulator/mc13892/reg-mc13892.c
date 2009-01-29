@@ -128,6 +128,9 @@ enum {
 	VVIDEO_2_6V,
 } regulator_voltage_vvideo;
 
+#define STANDBYSECINV_LSH 11
+#define STANDBYSECINV_WID 1
+
 #define VAUDIO_LSH	4
 #define VAUDIO_WID	2
 #define VAUDIO_EN_LSH	15
@@ -422,10 +425,8 @@ static int mc13892_sw_stby_set_voltage(struct regulator *reg, int uV)
 	unsigned int register_val = 0, register_mask = 0;
 	unsigned int register1 = 0;
 	int voltage, sw = reg->id, mV = uV / 1000, hi;
-
 	hi = mc13892_get_sw_hi_bit(sw);
 	voltage = mc13892_get_voltage_value(&hi, mV);
-
 	switch (sw) {
 	case MC13892_SW1:
 		register1 = REG_SW_0;
@@ -450,11 +451,9 @@ static int mc13892_sw_stby_set_voltage(struct regulator *reg, int uV)
 	default:
 		return -EINVAL;
 	}
-
 	register_val |= (hi << SWXHI_LSH);
 	register_mask |= (1 << SWXHI_LSH);
-
-	return (pmic_write_reg(register1, register_val, register_mask));
+       return (pmic_write_reg(register1, register_val, register_mask));
 }
 
 static int mc13892_sw_stby_get_voltage(struct regulator *reg)
@@ -1971,6 +1970,7 @@ int reg_mc13892_probe(void)
 {
 	int ret11 = 0;
 	int i = 0;
+	int register_val = 0, register_mask = 0;
 
 	for (i = 0; i < ARRAY_SIZE(reg_mc13892); i++) {
 		ret11 = regulator_register(&reg_mc13892[i].regulator);
@@ -1989,7 +1989,12 @@ int reg_mc13892_probe(void)
 			return ret11;
 		}
 	}
-
+	/* Set the STANDBYSECINV bit, so that STANDBY pin is
+	 * interpreted as active low.
+	 */
+	register_val = BITFVAL(STANDBYSECINV, 1);
+	register_mask = BITFMASK(STANDBYSECINV);
+	pmic_write_reg(REG_POWER_CTL2, register_val, register_mask);
 	printk(KERN_INFO "MC13892 regulator successfully probed\n");
 
 	return 0;

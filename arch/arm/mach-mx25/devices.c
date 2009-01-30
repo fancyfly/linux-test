@@ -448,6 +448,41 @@ static inline void mxc_init_dma(void)
 	(void)platform_device_register(&mxc_dma_device);
 }
 
+/* imx adc driver */
+#if defined(CONFIG_IMX_ADC) || defined(CONFIG_IMX_ADC_MODULE)
+
+static struct resource imx_adc_resources[] = {
+	[0] = {
+	       .start = MXC_INT_TSC,
+	       .end = MXC_INT_TSC,
+	       .flags = IORESOURCE_IRQ,
+	       },
+	[1] = {
+	       .start = TSC_BASE_ADDR,
+	       .end = TSC_BASE_ADDR + PAGE_SIZE,
+	       .flags = IORESOURCE_MEM,
+	       }
+};
+
+static struct platform_device imx_adc_device = {
+	.name = "imx_adc",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(imx_adc_resources),
+	.resource = imx_adc_resources,
+	.dev = {
+		.release = NULL,
+		},
+};
+static void imx_init_adc(void)
+{
+	(void)platform_device_register(&imx_adc_device);
+}
+#else
+static void imx_init_adc(void)
+{
+}
+#endif
+
 static int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
@@ -456,6 +491,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_dma();
 	mxc_init_ssi();
 	mxc_init_rtc();
+	imx_init_adc();
 
 	return 0;
 }

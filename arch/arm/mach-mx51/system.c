@@ -160,11 +160,12 @@ void arch_idle(void)
 		clk_enable(gpc_dvfs_clk);
 		mxc_cpu_lp_set(arch_idle_mode);
 		if ((mxc_cpu_is_rev(CHIP_REV_2_0)) < 0) {
-			u32 l2_iram_addr = IRAM_AVAILABLE_ADDR;
+			u32 l2_iram_addr = IDLE_IRAM_BASE_ADDR;
+
 			if (!iram_ready)
 				return;
-			if ((l2_iram_addr + 0x1000) <
-					(IRAM_BASE_ADDR + IRAM_SIZE))
+
+			if (l2_iram_addr > 0x1FFE8000)
 				cpu_cortexa8_do_idle(IO_ADDRESS(l2_iram_addr));
 		} else {
 			cpu_do_idle();

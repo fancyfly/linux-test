@@ -690,17 +690,6 @@ static void expio_unmask_irq(u32 irq)
 	__raw_writew(reg, brd_io + INTR_MASK_REG);
 }
 
-static void mxc_init_iram()
-{
-	if (cpu_is_mx51_rev(CHIP_REV_2_0) < 0) {
-		if (TOTAL_IRAM_NEEDED > (12*SZ_8K))
-			pr_err("IRAM exceeded\n");
-	} else {
-		if (TOTAL_IRAM_NEEDED > (16*SZ_8K))
-			pr_err("IRAM exceeded\n");
-	}
-}
-
 static struct irq_chip expio_irq_chip = {
 	.ack = expio_ack_irq,
 	.mask = expio_mask_irq,
@@ -982,7 +971,6 @@ static void __init mxc_board_init(void)
 	early_console_setup(saved_command_line);
 	mxc_init_devices();
 
-	mxc_init_iram();
 	mxc_expio_init();
 	mxc_init_enet();
 	mxc_init_pata();

@@ -61,7 +61,7 @@ config USB_EHCI_ARC_H1
 config USB_EHCI_ARC_H2
 	bool "Support for Host2 port on Freescale controller"
 	depends on USB_EHCI_ARC	&& \
-		   (ARCH_MX27 || ARCH_MX3 || ARCH_MX35)
+		   (ARCH_MX25 || ARCH_MX27 || ARCH_MX3 || ARCH_MX35)
 	---help---
 	  Enable support for the USB Host2 port.
 
@@ -89,12 +89,13 @@ choice
 	depends on USB_EHCI_ARC_OTG
 	default USB_EHCI_FSL_1504 if ARCH_MX3
 	default USB_EHCI_FSL_1301 if ARCH_MX27
-	default USB_EHCI_FSL_UTMI if (ARCH_MX35 || ARCH_MX37 || ARCH_MX51)
+	default USB_EHCI_FSL_UTMI if (ARCH_MX25 || ARCH_MX35 || ARCH_MX37 || ARCH_MX51)
 	---help---
 	  Choose the transceiver to use with the Freescale DR port.
 
 config USB_EHCI_FSL_MC13783
 	bool "Freescale MC13783"
+	depends on !MACH_MX25_3DS
 	---help---
 	  Enable support for the Full Speed Freescale MC13783 transceiver.
 
@@ -103,6 +104,7 @@ config USB_EHCI_FSL_MC13783
 
 config USB_EHCI_FSL_1301
 	bool "Philips ISP1301"
+	depends on !MACH_MX25_3DS
 	---help---
 	  Enable support for the Full Speed Philips ISP1301 transceiver.
 
@@ -121,7 +123,7 @@ config USB_EHCI_FSL_1504
 
 config USB_EHCI_FSL_UTMI
 	bool "Internal UTMI"
-	depends on (ARCH_MX35 || ARCH_MX37 || ARCH_MX51)
+	depends on (ARCH_MX25 || ARCH_MX35 || ARCH_MX37 || ARCH_MX51)
 	---help---
 	  Enable support for the on-chip High Speed UTMI transceiver.
 

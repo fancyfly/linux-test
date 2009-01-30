@@ -343,7 +343,7 @@ static void usbh2_set_serial_xcvr(void)
 
 	USBCTRL &= ~(UCTRL_H2SIC_MASK);	/* Disable bypass mode */
 	USBCTRL &= ~(UCTRL_H2PM);	/* Power Mask */
-	USBCTRL &= ~UCTRL_OCPOL;	/* OverCurrent Polarity is Low Active */
+	USBCTRL &= ~UCTRL_H2OCPOL;	/* OverCurrent Polarity is Low Active */
 	USBCTRL |= UCTRL_H2WIE |	/* Wakeup intr enable */
 	    UCTRL_IP_PUE_DOWN |	/* ipp_pue_pulldwn_dpdm */
 	    UCTRL_USBTE |	/* USBT is enabled */
@@ -360,6 +360,16 @@ static void usbh2_set_serial_xcvr(void)
 		/* i.MX35 2.0 OTG and Host2 have seperate OC/PWR polarity */
 		USBCTRL &= ~UCTRL_H2PP;
 		USBCTRL &= ~UCTRL_H2OCPOL;
+	} else if (cpu_is_mx25()) {
+		/*
+		 * USBH2_PWR and USBH2_OC are active high.
+		 * Must force xcvr clock to "internal" so that
+		 * we can write to PTS field after it's been
+		 * cleared by ehci_turn_off_all_ports().
+		 */
+		USBCTRL |= UCTRL_H2PP | UCTRL_H2OCPOL | UCTRL_XCSH2;
+		/* Disable Host2 bus Lock */
+		USBCTRL |= UCTRL_H2LOCKD;
 	}
 
 	USBCTRL &= ~(UCTRL_PP);
@@ -432,7 +442,8 @@ int fsl_usb_host_init(struct platform_device *pdev)
 			usbh2_set_serial_xcvr();
 			/* Close the internal 60Mhz */
 			USBCTRL &= ~UCTRL_XCSH2;
-		}
+		} else if (cpu_is_mx25())
+			usbh2_set_serial_xcvr();
 		else
 			usbh1_set_serial_xcvr();
 	} else if (xops->xcvr_type == PORTSC_PTS_ULPI) {
@@ -614,6 +625,9 @@ static void otg_set_utmi_xcvr(void)
 		USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_OC_POL;
 		/* Enable OTG Overcurrent Event */
 		USB_PHY_CTR_FUNC &= ~USB_UTMI_PHYCTRL_OC_DIS;
+	} else if (cpu_is_mx25()) {
+		USBCTRL |= UCTRL_OCPOL;
+		USBCTRL &= ~UCTRL_PP;
 	} else {
 		/* USBOTG_PWR low active */
 		USBCTRL &= ~UCTRL_PP;
@@ -638,18 +652,20 @@ static void otg_set_utmi_xcvr(void)
 		USB_PHY_CTR_FUNC2 &= ~USB_UTMI_PHYCTRL2_PLLDIV_MASK;
 		USB_PHY_CTR_FUNC2 |= 0x01;
 	}
-	/* Workaround an IC issue for 2.6.26 kernal:
-	 * when turn off root hub port power, EHCI set
-	 * PORTSC reserved bits to be 0, but PTW with 0
-	 * means 8 bits tranceiver width, here change
-	 * it back to be 16 bits and do PHY diable and
-	 * then enable.
-	 */
-	UOG_PORTSC1 |= PORTSC_PTW;
+	if (!cpu_is_mx25()) {
+		/* Workaround an IC issue for 2.6.26 kernal:
+		 * when turn off root hub port power, EHCI set
+		 * PORTSC reserved bits to be 0, but PTW with 0
+		 * means 8 bits tranceiver width, here change
+		 * it back to be 16 bits and do PHY diable and
+		 * then enable.
+		 */
+		UOG_PORTSC1 |= PORTSC_PTW;
 
-	/* Enable UTMI interface in PHY control Reg */
-	USB_PHY_CTR_FUNC &= ~USB_UTMI_PHYCTRL_UTMI_ENABLE;
-	USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_UTMI_ENABLE;
+		/* Enable UTMI interface in PHY control Reg */
+		USB_PHY_CTR_FUNC &= ~USB_UTMI_PHYCTRL_UTMI_ENABLE;
+		USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_UTMI_ENABLE;
+	}
 
 	if (UOG_HCSPARAMS & HCSPARAMS_PPC)
 		UOG_PORTSC1 |= PORTSC_PORT_POWER;
@@ -668,6 +684,11 @@ static void otg_set_utmi_xcvr(void)
 	 * the ULPI transceiver to reset too.
 	 */
 	msleep(100);
+
+	/* Turn off the usbpll for mx25 UTMI tranceivers */
+	/* DDD: can we do this UTMI xcvrs on all boards? */
+	if (cpu_is_mx25())
+		clk_disable(usb_clk);
 }
 
 static int otg_used = 0;

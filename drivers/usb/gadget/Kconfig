@@ -438,7 +438,7 @@ choice
 
 config USB_GADGET_FSL_MC13783
 	bool "Freescale MC13783"
-	depends on !USB_EHCI_FSL_1301 && !USB_EHCI_FSL_1504 && !USB_EHCI_FSL_UTMI
+	depends on !USB_EHCI_FSL_1301 && !USB_EHCI_FSL_1504 && !USB_EHCI_FSL_UTMI && !MACH_MX25_3DS
 	---help---
 	  Enable support for the Full Speed Freescale MC13783 transceiver.
 
@@ -447,7 +447,7 @@ config USB_GADGET_FSL_MC13783
 
 config USB_GADGET_FSL_1301
 	bool "Philips ISP1301"
-	depends on !USB_EHCI_FSL_MC13783 && !USB_EHCI_FSL_1504 && !USB_EHCI_FSL_UTMI
+	depends on !USB_EHCI_FSL_MC13783 && !USB_EHCI_FSL_1504 && !USB_EHCI_FSL_UTMI && !MACH_MX25_3DS
 	---help---
 	  Enable support for the Full Speed Philips ISP1301 transceiver.
 
@@ -457,7 +457,7 @@ config USB_GADGET_FSL_1301
 
 config USB_GADGET_FSL_1504
 	bool "Philips ISP1504"
-	depends on !USB_EHCI_FSL_MC13783 && !USB_EHCI_FSL_1301 && !USB_EHCI_FSL_UTMI
+	depends on !USB_EHCI_FSL_MC13783 && !USB_EHCI_FSL_1301 && !USB_EHCI_FSL_UTMI && !MACH_MX25_3DS
 	---help---
 	  Enable support for the High Speed Philips ISP1504 transceiver.
 

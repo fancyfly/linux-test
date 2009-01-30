@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -2093,7 +2093,7 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 
 	if (udc_controller->transceiver) {
 		/* Suspend the controller until OTG enable it */
-		udc_suspend(udc_controller);
+		udc_controller->stopped = 1;
 		printk(KERN_INFO "Suspend udc for OTG auto detect\n");
 
 		/* export udc suspend/resume call to OTG */
@@ -2786,6 +2786,35 @@ static int __exit fsl_udc_remove(struct platform_device *pdev)
 
 static int udc_suspend(struct fsl_udc *udc)
 {
+	u32 mode, usbcmd;
+
+	mode = fsl_readl(&dr_regs->usbmode) & USB_MODE_CTRL_MODE_MASK;
+	usbcmd = fsl_readl(&dr_regs->usbcmd);
+
+	pr_debug("%s(): mode 0x%x stopped %d\n", __func__, mode, udc->stopped);
+
+	/*
+	 * If the controller is already stopped, then this must be a
+	 * PM suspend.  Remember this fact, so that we will leave the
+	 * controller stopped at PM resume time.
+	 */
+	if (udc->stopped) {
+		pr_debug("gadget already stopped, leaving early\n");
+		udc->already_stopped = 1;
+		return 0;
+	}
+
+	if (mode != USB_MODE_CTRL_MODE_DEVICE) {
+		pr_debug("gadget not in device mode, leaving early\n");
+		return 0;
+	}
+
+	printk(KERN_INFO "USB Gadget suspended\n");
+
+	/* stop the controller */
+	usbcmd = fsl_readl(&dr_regs->usbcmd) & ~USB_CMD_RUN_STOP;
+	fsl_writel(usbcmd, &dr_regs->usbcmd);
+
 	udc->stopped = 1;
 	return 0;
 }
@@ -2805,6 +2834,19 @@ static int fsl_udc_suspend(struct platform_device *pdev, pm_message_t state)
  *-----------------------------------------------------------------*/
 static int fsl_udc_resume(struct platform_device *pdev)
 {
+	pr_debug("%s(): stopped %d  already_stopped %d\n", __func__,
+		 udc_controller->stopped, udc_controller->already_stopped);
+
+	/*
+	 * If the controller was stopped at suspend time, then
+	 * don't resume it now.
+	 */
+	if (udc_controller->already_stopped) {
+		udc_controller->already_stopped = 0;
+		pr_debug("gadget was already stopped, leaving early\n");
+		return 0;
+	}
+
 	/* Enable DR irq reg and set controller Run */
 	if (udc_controller->stopped) {
 		dr_controller_setup(udc_controller);
@@ -2813,6 +2855,8 @@ static int fsl_udc_resume(struct platform_device *pdev)
 	udc_controller->usb_state = USB_STATE_ATTACHED;
 	udc_controller->ep0_state = WAIT_FOR_SETUP;
 	udc_controller->ep0_dir = 0;
+
+	printk(KERN_INFO "USB Gadget resumed\n");
 	return 0;
 }
 

@@ -109,7 +109,6 @@ struct fsl_usb2_platform_data {
 	int (*platform_init) (struct platform_device *);
 	void (*platform_uninit) (struct fsl_usb2_platform_data *);
 	void __iomem *regs;	/* ioremap'd register base */
-	void *ehci_regs_save;	/* Save ehci registers for resume */
 	u32 xcvr_type;		/* PORTSC_PTS_* */
 	char *transceiver;	/* transceiver name */
 	unsigned power_budget;	/* for hcd->power_budget */
@@ -125,6 +124,19 @@ struct fsl_usb2_platform_data {
 	unsigned			le_setup_buf : 1;
 	unsigned change_ahb_burst:1;
 	unsigned ahb_burst_mode:3;
+	unsigned			suspended : 1;
+	unsigned			already_suspended : 1;
+
+	/* register save area for suspend/resume */
+	u32				pm_command;
+	u32				pm_status;
+	u32				pm_intr_enable;
+	u32				pm_frame_index;
+	u32				pm_segment;
+	u32				pm_frame_list;
+	u32				pm_async_next;
+	u32				pm_configured_flag;
+	u32				pm_portsc;
 };
 
 /* Flags in fsl_usb2_mph_platform_data */

@@ -279,8 +279,6 @@ static void usb_hcd_fsl_remove(struct usb_hcd *hcd,
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
 
-	kfree(pdata->ehci_regs_save);
-	pdata->ehci_regs_save = NULL;
 	/*
 	 * do platform specific un-initialization:
 	 * release iomux pins, etc.
@@ -423,14 +421,6 @@ static int ehci_fsl_drv_remove(struct platform_device *pdev)
 
 
 #ifdef CONFIG_PM
-/*
- * Holding pen for all the EHCI registers except port_status,
- * which is a zero element array and hence takes no space.
- * The port_status register is saved in usb_ehci_portsc.
- */
-volatile static struct ehci_regs usb_ehci_regs;
-static u32 usb_ehci_portsc;
-
 /* suspend/resume, section 4.3 */
 
 /* These routines rely on the bus (pci, platform, etc)
@@ -445,9 +435,33 @@ static int ehci_fsl_drv_suspend(struct platform_device *pdev,
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	struct fsl_usb2_platform_data *pdata = pdev->dev.platform_data;
-	struct ehci_regs *ehci_regs_ptr;
 	u32 tmp;
+	struct fsl_usb2_platform_data *pdata = pdev->dev.platform_data;
+
+#ifdef DEBUG
+	u32 mode = ehci_readl(ehci, hcd->regs + FSL_SOC_USB_USBMODE);
+	mode &= USBMODE_CM_MASK;
+	tmp = ehci_readl(ehci, hcd->regs + 0x140);	/* usbcmd */
+
+	printk(KERN_DEBUG "%s('%s'): suspend=%d already_suspended=%d "
+	       "mode=%d  usbcmd %08x\n", __func__, pdata->name,
+	       pdata->suspended, pdata->already_suspended, mode, tmp);
+#endif
+
+	/*
+	 * If the controller is already suspended, then this must be a
+	 * PM suspend.  Remember this fact, so that we will leave the
+	 * controller suspended at PM resume time.
+	 */
+	if (pdata->suspended) {
+		pr_debug("%s: already suspended, leaving early\n", __func__);
+		pdata->already_suspended = 1;
+		return 0;
+	}
+
+	pr_debug("%s: suspending...\n", __func__);
+
+	printk(KERN_INFO "USB Host suspended\n");
 
 	hcd->state = HC_STATE_SUSPENDED;
 	pdev->dev.power.power_state = PMSG_SUSPEND;
@@ -460,28 +474,23 @@ static int ehci_fsl_drv_suspend(struct platform_device *pdev,
 	tmp &= ~CMD_RUN;
 	ehci_writel(ehci, tmp, &ehci->regs->command);
 
-	if (!pdata->ehci_regs_save) {
-		ehci_regs_ptr = kmalloc(sizeof(struct ehci_regs), GFP_KERNEL);
-		if (!ehci_regs_ptr)
-			return -ENOMEM;
-	} else
-		ehci_regs_ptr = (struct ehci_regs *)pdata->ehci_regs_save;
-
 	/* save EHCI registers */
-	ehci_regs_ptr->command = ehci_readl(ehci, &ehci->regs->command);
-	ehci_regs_ptr->status = ehci_readl(ehci, &ehci->regs->status);
-	ehci_regs_ptr->intr_enable = ehci_readl(ehci, &ehci->regs->intr_enable);
-	ehci_regs_ptr->frame_index = ehci_readl(ehci, &ehci->regs->frame_index);
-	ehci_regs_ptr->segment = ehci_readl(ehci, &ehci->regs->segment);
-	ehci_regs_ptr->frame_list = ehci_readl(ehci, &ehci->regs->frame_list);
-	ehci_regs_ptr->async_next = ehci_readl(ehci, &ehci->regs->async_next);
-	ehci_regs_ptr->configured_flag =
+	pdata->pm_command = ehci_readl(ehci, &ehci->regs->command);
+	pdata->pm_command &= ~CMD_RUN;
+	pdata->pm_status  = ehci_readl(ehci, &ehci->regs->status);
+	pdata->pm_intr_enable  = ehci_readl(ehci, &ehci->regs->intr_enable);
+	pdata->pm_frame_index  = ehci_readl(ehci, &ehci->regs->frame_index);
+	pdata->pm_segment  = ehci_readl(ehci, &ehci->regs->segment);
+	pdata->pm_frame_list  = ehci_readl(ehci, &ehci->regs->frame_list);
+	pdata->pm_async_next  = ehci_readl(ehci, &ehci->regs->async_next);
+	pdata->pm_configured_flag  =
 		ehci_readl(ehci, &ehci->regs->configured_flag);
-	ehci_regs_ptr->port_status[0] =
-		ehci_readl(ehci, &ehci->regs->port_status[0]);
-	ehci_regs_ptr->port_status[0] &= cpu_to_hc32(ehci, ~PORT_RWC_BITS);
+	pdata->pm_portsc = ehci_readl(ehci, &ehci->regs->port_status[0]);
 
-	pdata->ehci_regs_save = (void *)ehci_regs_ptr;
+	/* clear the W1C bits */
+	pdata->pm_portsc &= cpu_to_hc32(ehci, ~PORT_RWC_BITS);
+
+	pdata->suspended = 1;
 
 	/* clear PP to cut power to the port */
 	tmp = ehci_readl(ehci, &ehci->regs->port_status[0]);
@@ -497,29 +506,44 @@ static int ehci_fsl_drv_resume(struct platform_device *pdev)
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	u32 tmp;
 	struct fsl_usb2_platform_data *pdata = pdev->dev.platform_data;
-	struct ehci_regs *ehci_regs_ptr;
+
+	printk(KERN_INFO "USB Host resumed\n");
+
+	pr_debug("%s('%s'): suspend=%d already_suspended=%d\n", __func__,
+		pdata->name, pdata->suspended, pdata->already_suspended);
+
+	/*
+	 * If the controller was already suspended at suspend time,
+	 * then don't resume it now.
+	 */
+	if (pdata->already_suspended) {
+		pr_debug("already suspended, leaving early\n");
+		pdata->already_suspended = 0;
+		return 0;
+	}
+
+	if (!pdata->suspended) {
+		pr_debug("not suspended, leaving early\n");
+		return 0;
+	}
+
+	pdata->suspended = 0;
+
+	pr_debug("%s resuming...\n", __func__);
 
 	/* set host mode */
-	tmp = USBMODE_CM_HOST | (pdata->es ? USBMODE_ES : 0);
-	ehci_writel(ehci, tmp, hcd->regs + FSL_SOC_USB_USBMODE);
-
-	if (!pdata->ehci_regs_save)
-		return -EFAULT;
-
-	ehci_regs_ptr = (struct ehci_regs *)pdata->ehci_regs_save;
+	fsl_platform_set_host_mode(hcd);
 
 	/* restore EHCI registers */
-	ehci_writel(ehci, ehci_regs_ptr->command, &ehci->regs->command);
-	ehci_writel(ehci, ehci_regs_ptr->intr_enable, &ehci->regs->intr_enable);
-	ehci_writel(ehci, ehci_regs_ptr->frame_index, &ehci->regs->frame_index);
-	ehci_writel(ehci, ehci_regs_ptr->segment, &ehci->regs->segment);
-	ehci_writel(ehci, ehci_regs_ptr->frame_list, &ehci->regs->frame_list);
-	ehci_writel(ehci, ehci_regs_ptr->async_next, &ehci->regs->async_next);
-	ehci_writel(ehci, ehci_regs_ptr->configured_flag,
+	ehci_writel(ehci, pdata->pm_command, &ehci->regs->command);
+	ehci_writel(ehci, pdata->pm_intr_enable, &ehci->regs->intr_enable);
+	ehci_writel(ehci, pdata->pm_frame_index, &ehci->regs->frame_index);
+	ehci_writel(ehci, pdata->pm_segment, &ehci->regs->segment);
+	ehci_writel(ehci, pdata->pm_frame_list, &ehci->regs->frame_list);
+	ehci_writel(ehci, pdata->pm_async_next, &ehci->regs->async_next);
+	ehci_writel(ehci, pdata->pm_configured_flag,
 		    &ehci->regs->configured_flag);
-	ehci_writel(ehci, ehci_regs_ptr->status, &ehci->regs->status);
-	ehci_writel(ehci, ehci_regs_ptr->port_status[0],
-			&ehci->regs->port_status[0]);
+	ehci_writel(ehci, pdata->pm_portsc, &ehci->regs->port_status[0]);
 
 	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 	hcd->state = HC_STATE_RUNNING;

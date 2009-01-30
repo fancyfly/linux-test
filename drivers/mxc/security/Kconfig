@@ -48,6 +48,14 @@ config MXC_RNG_DEBUG
         ---help---
          This is an option for use by developers; most people should
          say N here. This enables RNG module debugging.
+ 
+config MXC_DRYICE
+        tristate "MXC DryIce Driver"
+        depends on ARCH_MX25
+        default n
+        ---help---
+          This module contains the core API's for accessing the DryIce module.
+          If you are unsure about this, say N here.
 
 config MXC_SECURITY_CORE
 	tristate

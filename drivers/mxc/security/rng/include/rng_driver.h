@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -38,26 +38,25 @@
 
 #include "rng_rnga.h"
 
-#elif defined(FSL_HAVE_RNGC)
+#elif defined(FSL_HAVE_RNGB) || defined(FSL_HAVE_RNGC)
 
 #include "rng_rngc.h"
 
-#else				/* neither RNGA nor RNGC */
+#else				/* neither RNGA,  RNGB,  nor  RNGC */
 
 #error NO_RNG_TYPE_IDENTIFIED
 
 #endif
 
-/*!****************************************************************************
+/*****************************************************************************
  * Enumerations
  *****************************************************************************/
 
 /*! Values from Version ID register  */
 enum rng_type {
-	/*! Type RNGA. Really is unused bits from the Control Register of the
-	   RNGA. */
+	/*! Type RNGA. */
 	RNG_TYPE_RNGA = 0,
-	/*! Type B.  Unsupported by this driver. */
+	/*! Type RNGB. */
 	RNG_TYPE_RNGB = 1,
 	/*! Type RNGC */
 	RNG_TYPE_RNGC = 2
@@ -71,7 +70,7 @@ typedef enum rng_return {
 	RNG_RET_FAIL		/*!< Non-specific failure */
 } rng_return_t;
 
-/*!****************************************************************************
+/*****************************************************************************
  * Data Structures
  *****************************************************************************/
 /*!
@@ -89,7 +88,7 @@ typedef struct rng_work_entry {
 	unsigned completed;	/*!< Non-zero if job is done.  */
 } rng_work_entry_t;
 
-/*!****************************************************************************
+/*****************************************************************************
  * Function Prototypes
  *****************************************************************************/
 

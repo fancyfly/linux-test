@@ -13,16 +13,17 @@
 
 /*! @file scc2_driver.c
  *
- * This is the driver code for the Security Controller (SCC).  It has no device
- * driver interface, so no user programs may access it.  Its interaction with
- * the Linux kernel is from calls to #scc_init() when the driver is loaded, and
- * #scc_cleanup() should the driver be unloaded.  The driver uses locking and
- * (task-sleep/task-wakeup) functions of the kernel.  It also registers itself
- * to handle the interrupt line(s) from the SCC.
- *
- * Other drivers in the kernel may use the remaining API functions to get at
- * the services of the SCC.  The main service provided is the Secure Memory,
- * which allows encoding and decoding of secrets with a per-chip secret key.
+ * This is the driver code for the Security Controller version 2 (SCC2).  It's
+ * interaction with the Linux kernel is from calls to #scc_init() when the
+ * driver is loaded, and #scc_cleanup() should the driver be unloaded.  The
+ * driver uses locking and (task-sleep/task-wakeup) functions from the kernel.
+ * It also registers itself to handle the interrupt line(s) from the SCC.  New
+ * to this version of the driver is an interface providing access to the secure
+ * partitions.  This is in turn exposed to the API user through the
+ * fsl_shw_smalloc() series of functions.  Other drivers in the kernel may use
+ * the remaining API functions to get at the services of the SCC.  The main
+ * service provided is the Secure Memory, which allows encoding and decoding of
+ * secrets with a per-chip secret key.
  *
  * The SCC is single-threaded, and so is this module.  When the scc_crypt()
  * routine is called, it will lock out other accesses to the function.  If
@@ -33,14 +34,12 @@
  * preventing other kernel work (other than interrupt processing) to get done.
  *
  * The external (kernel module) interface is through the following functions:
- * @li scc_get_configuration()
- * @li scc_crypt()
- * @li scc_zeroize_memories()
- * @li scc_monitor_security_failure()
- * @li scc_stop_monitoring_security_failure()
- * @li scc_set_sw_alarm()
- * @li scc_read_register()
- * @li scc_write_register()
+ * @li scc_get_configuration() @li scc_crypt() @li scc_zeroize_memories() @li
+ * scc_monitor_security_failure() @li scc_stop_monitoring_security_failure()
+ * @li scc_set_sw_alarm() @li scc_read_register() @li scc_write_register() @li
+ * scc_allocate_partition() @li scc_initialize_partition @li
+ * scc_release_partition() @li scc_diminish_permissions @li
+ * scc_encrypt_region() @li scc_decrypt_region() @li scc_virt_to_phys
  *
  * All other functions are internal to the driver.
  */
@@ -125,7 +124,7 @@ uint32_t scm_memory_size_bytes;
 /** Structure returned by #scc_get_configuration() */
 static scc_config_t scc_configuration = {
 	.driver_major_version = SCC_DRIVER_MAJOR_VERSION,
-	.driver_minor_version = SCC_DRIVER_MINOR_VERSION,
+	.driver_minor_version = SCC_DRIVER_MINOR_VERSION_2,
 	.scm_version = -1,
 	.smn_version = -1,
 	.block_size_bytes = -1,

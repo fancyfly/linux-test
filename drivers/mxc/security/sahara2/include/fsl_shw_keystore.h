@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -15,15 +15,14 @@
 #ifndef FSL_SHW_KEYSTORE_H
 #define FSL_SHW_KEYSTORE_H
 
-
-/**
+/*!
  * @file fsl_shw_keystore.h
  *
  * @brief Definition of the User Keystore API.
  *
  */
 
-/** \page user_keystore User Keystore API
+/*! \page user_keystore User Keystore API
  *
  * Definition of the User Keystore API.
  *
@@ -40,7 +39,7 @@
  *
  */
 
-/**
+/*!
  * @defgroup keystore_api User Keystore API
  *
  * Keystore API
@@ -50,7 +49,7 @@
  * keystore.
  */
 
-/**
+/*!
  * @defgroup default_keystore Default Keystore Implementation
  *
  * Default Keystore Implementation
@@ -68,20 +67,17 @@
  * Differences between the two versions are noted below.
  */
 
-
-
-/** @addtogroup keystore_api
+/*! @addtogroup keystore_api
     @{ */
 
 #ifndef KEYSTORE_SLOT_SIZE
-/** Size of each key slot, in octets.  This sets an upper bound on the size
+/*! Size of each key slot, in octets.  This sets an upper bound on the size
  * of a key that can placed in the keystore.
  */
 #define KEYSTORE_SLOT_SIZE 32
 #endif
 
-
-/**
+/*!
  * Initialize a Keystore Object.
  *
  * This function must be called before performing any other operation with the
@@ -119,25 +115,45 @@
  *                           For SCC: Not implemented.
  * @param slot_get_slot_size Get the size of the key slot, in octets.
  */
-extern void fsl_shw_init_keystore(
-    fsl_shw_kso_t *keystore,
-    fsl_shw_return_t (*data_init)        (fsl_shw_uco_t *user_ctx,
-                                          void **user_data),
-    void             (*data_cleanup)     (fsl_shw_uco_t *user_ctx,
-                                          void **user_data),
-    fsl_shw_return_t (*slot_alloc)       (void *user_data, uint32_t size,
-                                          uint64_t owner_id, uint32_t *slot),
-    fsl_shw_return_t (*slot_dealloc)     (void *user_data,
-                                          uint64_t owner_id, uint32_t slot),
-    fsl_shw_return_t (*slot_verify_access)(void *user_data,
-                                          uint64_t owner_id, uint32_t slot),
-    void*            (*slot_get_address) (void *user_data, uint32_t handle),
-    uint32_t         (*slot_get_base)    (void *user_data, uint32_t handle),
-    uint32_t         (*slot_get_offset)  (void *user_data, uint32_t handle),
-    uint32_t         (*slot_get_slot_size) (void *user_data, uint32_t handle));
+extern void fsl_shw_init_keystore(fsl_shw_kso_t * keystore,
+				  fsl_shw_return_t(*data_init) (fsl_shw_uco_t *
+								user_ctx,
+								void
+								**user_data),
+				  void (*data_cleanup) (fsl_shw_uco_t *
+							user_ctx,
+							void **user_data),
+				  fsl_shw_return_t(*slot_alloc) (void
+								 *user_data,
+								 uint32_t size,
+								 uint64_t
+								 owner_id,
+								 uint32_t *
+								 slot),
+				  fsl_shw_return_t(*slot_dealloc) (void
+								   *user_data,
+								   uint64_t
+								   owner_id,
+								   uint32_t
+								   slot),
+				  fsl_shw_return_t(*slot_verify_access) (void
+									 *user_data,
+									 uint64_t
+									 owner_id,
+									 uint32_t
+									 slot),
+				  void *(*slot_get_address) (void *user_data,
+							     uint32_t handle),
+				  uint32_t(*slot_get_base) (void *user_data,
+							    uint32_t handle),
+				  uint32_t(*slot_get_offset) (void *user_data,
+							      uint32_t handle),
+				  uint32_t(*slot_get_slot_size) (void
+								 *user_data,
+								 uint32_t
+								 handle));
 
-
-/**
+/*!
  * Initialize a Keystore Object.
  *
  * This function must be called before performing any other operation with the
@@ -147,10 +163,9 @@ extern void fsl_shw_init_keystore(
  *
  * @param keystore      The Keystore object to operate on.
  */
-extern void fsl_shw_init_keystore_default(fsl_shw_kso_t *keystore);
+extern void fsl_shw_init_keystore_default(fsl_shw_kso_t * keystore);
 
-
-/**
+/*!
  * Establish a Keystore Object.
  *
  * This function establishes a keystore object that has been set up by a call
@@ -163,11 +178,10 @@ extern void fsl_shw_init_keystore_default(fsl_shw_kso_t *keystore);
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-extern fsl_shw_return_t fsl_shw_establish_keystore(fsl_shw_uco_t *user_ctx,
-                        fsl_shw_kso_t* keystore);
+extern fsl_shw_return_t fsl_shw_establish_keystore(fsl_shw_uco_t * user_ctx,
+						   fsl_shw_kso_t * keystore);
 
-
-/**
+/*!
  * Release a Keystore Object.
  *
  * This function releases an established keystore object.  It is a wrapper for
@@ -178,11 +192,10 @@ extern fsl_shw_return_t fsl_shw_establish_keystore(fsl_shw_uco_t *user_ctx,
  *                      to.
  * @param keystore      The Keystore object to operate on.
  */
-extern void fsl_shw_release_keystore(fsl_shw_uco_t *user_ctx,
-                                     fsl_shw_kso_t *keystore);
+extern void fsl_shw_release_keystore(fsl_shw_uco_t * user_ctx,
+				     fsl_shw_kso_t * keystore);
 
-
-/**
+/*!
  * Allocate a slot in the Keystore.
  *
  * This function attempts to allocate a slot to hold a key in the keystore.  It
@@ -198,13 +211,11 @@ extern void fsl_shw_release_keystore(fsl_shw_uco_t *user_ctx,
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-extern fsl_shw_return_t keystore_slot_alloc(fsl_shw_kso_t *keystore,
-                                            uint32_t size,
-                                            uint64_t owner_id,
-                                            uint32_t *slot);
+extern fsl_shw_return_t keystore_slot_alloc(fsl_shw_kso_t * keystore,
+					    uint32_t size,
+					    uint64_t owner_id, uint32_t * slot);
 
-
-/**
+/*!
  * Deallocate a slot in the Keystore.
  *
  * This function attempts to allocate a slot to hold a key in the keystore.
@@ -218,12 +229,10 @@ extern fsl_shw_return_t keystore_slot_alloc(fsl_shw_kso_t *keystore,
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-extern fsl_shw_return_t keystore_slot_dealloc(fsl_shw_kso_t *keystore,
-                                              uint64_t owner_id,
-                                              uint32_t slot);
+extern fsl_shw_return_t keystore_slot_dealloc(fsl_shw_kso_t * keystore,
+					      uint64_t owner_id, uint32_t slot);
 
-
-/**
+/*!
  * Load cleartext key data into a key slot
  *
  * This function loads a key slot with cleartext data.
@@ -236,19 +245,32 @@ extern fsl_shw_return_t keystore_slot_dealloc(fsl_shw_kso_t *keystore,
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-extern fsl_shw_return_t 
-keystore_load_slot(fsl_shw_kso_t *keystore, uint64_t owner_id, uint32_t slot,
-                   const uint8_t *key_data, uint32_t key_length);
+extern fsl_shw_return_t
+keystore_slot_load(fsl_shw_kso_t * keystore, uint64_t owner_id, uint32_t slot,
+		   const uint8_t * key_data, uint32_t key_length);
 
+/*!
+ * Read cleartext key data from a key slot
+ *
+ * This function returns the key in a key slot.
+ *
+ * @param keystore      The Keystore object to operate on.
+ * @param[in]  owner_id   ID of the key owner.
+ * @param[in]  slot       ID of slot where key resides.
+ * @param[in]  key_length Length of the key data (octets).
+ * @param[out] key_data   Pointer to the location of the cleartext key data.
+ *
+ * @return    A return code of type #fsl_shw_return_t.
+ */
+extern fsl_shw_return_t
+keystore_slot_read(fsl_shw_kso_t * keystore, uint64_t owner_id, uint32_t slot,
+		   uint32_t key_length, uint8_t * key_data);
 
-/**
+/*!
  * Encrypt a keyslot
  *
  * This function encrypts a key using the hardware secret key.
- dler. It uses an entire Secure Memory partition, divided in to equal slots of length KEYSTORE_SLOT_SIZE.
-
-
-*
+ *
  * @param user_ctx      User context
  * @param keystore      The Keystore object to operate on.
  * @param[in] owner_id  ID of the key owner.
@@ -260,14 +282,12 @@ keystore_load_slot(fsl_shw_kso_t *keystore, uint64_t owner_id, uint32_t slot,
  * @return    A return code of type #fsl_shw_return_t.
  */
 extern fsl_shw_return_t
-keystore_slot_encrypt(fsl_shw_uco_t *user_ctx,
-                      fsl_shw_kso_t *keystore, uint64_t owner_id,
-                      uint32_t slot, uint32_t length,
-                      uint8_t *destination);
+keystore_slot_encrypt(fsl_shw_uco_t * user_ctx,
+		      fsl_shw_kso_t * keystore, uint64_t owner_id,
+		      uint32_t slot, uint32_t length, uint8_t * destination);
 
-
-/**
- * Encrypt a keyslot
+/*!
+ * Decrypt a keyslot
  *
  * This function decrypts a key using the hardware secret key.
  *
@@ -282,38 +302,34 @@ keystore_slot_encrypt(fsl_shw_uco_t *user_ctx,
  * @return    A return code of type #fsl_shw_return_t.
  */
 extern fsl_shw_return_t
-keystore_slot_decrypt(fsl_shw_uco_t *user_ctx,
-                      fsl_shw_kso_t *keystore, uint64_t owner_id,
-                      uint32_t slot, uint32_t length,
-                      const uint8_t *source);
+keystore_slot_decrypt(fsl_shw_uco_t * user_ctx,
+		      fsl_shw_kso_t * keystore, uint64_t owner_id,
+		      uint32_t slot, uint32_t length, const uint8_t * source);
 
 /* @} */
 
-/** @addtogroup default_keystore
+/*! @addtogroup default_keystore
     @{ */
 
-
-/**
+/*!
  * Data structure to hold per-slot information
  */
 typedef struct keystore_data_slot_info_t {
-    uint8_t     allocated;              /**< Track slot assignments */
-    uint64_t    owner;                  /**< Owner IDs */
-    uint32_t    key_length;             /**< Size of the key */
+	uint8_t allocated;	/*!< Track slot assignments */
+	uint64_t owner;		/*!< Owner IDs */
+	uint32_t key_length;	/*!< Size of the key */
 } keystore_data_slot_info_t;
 
-
-/**
+/*!
  * Data structure to hold keystore information.
  */
 typedef struct keystore_data_t {
-    void*       base_address;           /**< Base of the Secure Partition */
-    uint32_t    slot_count;             /**< Number of slots in the keystore */
-    struct keystore_data_slot_info_t* slot; /**< Per-slot information */
+	void *base_address;	/*!< Base of the Secure Partition */
+	uint32_t slot_count;	/*!< Number of slots in the keystore */
+	struct keystore_data_slot_info_t *slot;	/*!< Per-slot information */
 } keystore_data_t;
 
-
-/**
+/*!
  * Default keystore initialization routine.
  *
  * This function acquires a Secure Partition Object to store the keystore,
@@ -326,11 +342,9 @@ typedef struct keystore_data_t {
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-fsl_shw_return_t shw_kso_init_data     (fsl_shw_uco_t *user_ctx,
-                                        void **user_data);
+fsl_shw_return_t shw_kso_init_data(fsl_shw_uco_t * user_ctx, void **user_data);
 
-
-/**
+/*!
  * Default keystore cleanup routine.
  *
  * This function releases the Secure Partition Object and the memory holding
@@ -341,11 +355,9 @@ fsl_shw_return_t shw_kso_init_data     (fsl_shw_uco_t *user_ctx,
  * @param[in,out] user_data Pointer to the location where the keystore data
  *                          structure is stored.
  */
-void             shw_kso_cleanup_data  (fsl_shw_uco_t *user_ctx,
-                                        void **user_data);
+void shw_kso_cleanup_data(fsl_shw_uco_t * user_ctx, void **user_data);
 
-
-/**
+/*!
  * Default keystore slot access verification
  *
  * This function compares the supplied Owner ID to the registered owner of
@@ -359,10 +371,9 @@ void             shw_kso_cleanup_data  (fsl_shw_uco_t *user_ctx,
  * @return    A return code of type #fsl_shw_return_t.
  */
 fsl_shw_return_t shw_slot_verify_access(void *user_data, uint64_t owner_id,
-                                        uint32_t slot);
+					uint32_t slot);
 
-
-/**
+/*!
  * Default keystore slot allocation
  *
  * This function first checks that the requested size is equal to or less than
@@ -379,11 +390,10 @@ fsl_shw_return_t shw_slot_verify_access(void *user_data, uint64_t owner_id,
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-fsl_shw_return_t shw_slot_alloc        (void *user_data, uint32_t size,
-                                        uint64_t owner_id, uint32_t *slot);
+fsl_shw_return_t shw_slot_alloc(void *user_data, uint32_t size,
+				uint64_t owner_id, uint32_t * slot);
 
-
-/**
+/*!
  * Default keystore slot deallocation
  *
  * This function releases the given key slot in the keystore, making it
@@ -396,11 +406,10 @@ fsl_shw_return_t shw_slot_alloc        (void *user_data, uint32_t size,
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-fsl_shw_return_t shw_slot_dealloc      (void *user_data,
-                                        uint64_t owner_id, uint32_t slot);
+fsl_shw_return_t shw_slot_dealloc(void *user_data,
+				  uint64_t owner_id, uint32_t slot);
 
-
-/**
+/*!
  * Default keystore slot address lookup
  *
  * This function calculates the address where the key data is stored.
@@ -412,10 +421,9 @@ fsl_shw_return_t shw_slot_dealloc      (void *user_data,
  * @return    SCC2: Virtual address (kernel or userspace) of the key data.
  *            SCC: Physical address of the key data.
  */
-void*            shw_slot_get_address  (void *user_data, uint32_t slot);
+void *shw_slot_get_address(void *user_data, uint32_t slot);
 
-
-/**
+/*!
  * Default keystore slot base address lookup
  *
  * This function calculates the base address of the Secure Partition on which
@@ -429,10 +437,9 @@ void*            shw_slot_get_address  (void *user_data, uint32_t slot);
  * @return    SCC2: Secure Partition virtual (kernel or userspace) base address.
  *            SCC: Secure Partition physical base address.
  */
-uint32_t         shw_slot_get_base     (void *user_data, uint32_t slot);
+uint32_t shw_slot_get_base(void *user_data, uint32_t slot);
 
-
-/**
+/*!
  * Default keystore slot offset lookup
  *
  * This function calculates the offset from the base of the Secure Partition
@@ -445,10 +452,9 @@ uint32_t         shw_slot_get_base     (void *user_data, uint32_t slot);
  * @return    SCC2: Key data offset (octets)
  *            SCC: Not implemented
  */
-uint32_t         shw_slot_get_offset   (void *user_data, uint32_t slot);
+uint32_t shw_slot_get_offset(void *user_data, uint32_t slot);
 
-
-/**
+/*!
  * Default keystore slot offset lookup
  *
  * This function returns the size of the given key slot.  In the reference
@@ -462,9 +468,8 @@ uint32_t         shw_slot_get_offset   (void *user_data, uint32_t slot);
  * @return    SCC2: Keystore slot size.
  *            SCC: Not implemented
  */
-uint32_t         shw_slot_get_slot_size (void *user_data, uint32_t slot);
+uint32_t shw_slot_get_slot_size(void *user_data, uint32_t slot);
 
 /* @} */
-
 
 #endif /* FSL_SHW_KEYSTORE_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -27,7 +27,8 @@
 
 #if defined(FSL_HAVE_SAHARA2) || defined(FSL_HAVE_SAHARA4)
 #define DEV_NAME "sahara"
-#elif defined(FSL_HAVE_RNGA) || defined(FSL_HAVE_RNGC)
+#elif defined(FSL_HAVE_RNGA) || defined(FSL_HAVE_RNGB) ||                     \
+      defined(FSL_HAVE_RNGC)
 #define DEV_NAME "shw"
 #endif
 
@@ -40,12 +41,12 @@
 * @return   void
 *
 */
-#if defined DIAG_SECURITY_FUNC || defined DIAG_ADAPTOR
+//#if defined DIAG_SECURITY_FUNC || defined DIAG_ADAPTOR
 #define LOG_DIAG(diag)                                              \
 ({                                                                  \
     const char* fname = strrchr(__FILE__, '/');                           \
                                                                     \
-     sah_Log_Diag (fname ? fname+1 : __FILE__, __LINE__, diag);     \
+     sah_Log_Diag(fname ? fname+1 : __FILE__, __LINE__, diag);     \
 })
 
 #ifdef __KERNEL__
@@ -99,12 +100,12 @@ void sah_Log_Diag(char *source_name, int source_line, char *diag);
 })
 
 #define LOG_KDIAG(diag)                                                       \
-    os_printk (KERN_ALERT "sahara (%s:%i): %s\n",                             \
-               strrchr(__FILE__, '/')+1, __LINE__, diag);
+    os_printk (KERN_ALERT "%s (%s:%i): %s\n",                             \
+               DEV_NAME, strrchr(__FILE__, '/')+1, __LINE__, diag);
 
 #define sah_Log_Diag(n, l, d)                                                 \
-    os_printk("%s:%i: %s\n", n, l, d)
-#endif
+    os_printk(KERN_ALERT "%s:%i: %s\n", n, l, d)
+
 #else				/* not KERNEL */
 
 #define sah_Log_Diag(n, l, d)                                                 \

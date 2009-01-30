@@ -15,3 +15,4 @@ obj-$(CONFIG_MXC_SECURITY_SCC) += mxc_scc.o
 obj-$(CONFIG_MXC_SECURITY_RNG) += rng/
 obj-$(CONFIG_MXC_SECURITY_CORE) += mxc_sec_mod.o
 obj-$(CONFIG_MXC_SAHARA) += sahara2/
+obj-$(CONFIG_MXC_DRYICE) += dryice.o

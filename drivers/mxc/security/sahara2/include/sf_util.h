@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -384,6 +384,8 @@ extern const uint32_t sah_insert_skha_modulus[];
 #define sah_insert_pkha_rtn_f2m_mult1_mont     0x80000026
 #define sah_insert_pkha_rtn_f2m_mult2_deconv   0x00000027
 #define sah_insert_pkha_rtn_miller_rabin       0x00000028
+#define sah_insert_pkha_rtn_mod_amodn          0x00000029
+#define sah_insert_pkha_rtn_f2m_amodn          0x8000002A
 /*! @} */
 
 /*! Add a descriptor with two input pointers */

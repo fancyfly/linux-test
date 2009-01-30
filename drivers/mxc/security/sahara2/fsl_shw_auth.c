@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -33,14 +33,17 @@ EXPORT_SYMBOL(fsl_shw_auth_decrypt);
 /*!
  * Compute the size, in bytes, of the encoded auth length
  *
- * @param l    The actual auth length
+ * @param l    The actual associated data length
  *
  * @return The encoded length
  */
 #define COMPUTE_NIST_AUTH_LEN_SIZE(l)                                         \
 ({                                                                            \
     unsigned val;                                                             \
-    if ((uint32_t)(l) < 65280) {                                              \
+    uint32_t len = l;                                                         \
+    if (len == 0) {                                                           \
+        val = 0;                                                              \
+    } else if (len < 65280) {                                                 \
         val = 2;                                                              \
     } else {                    /* cannot handle >= 2^32 */                   \
         val = 6;                                                              \
@@ -74,9 +77,9 @@ EXPORT_SYMBOL(fsl_shw_auth_decrypt);
     }                                                                         \
 }
 
-/*! Buffer to repetively sink useless CBC output */
 #if defined (FSL_HAVE_SAHARA2) || defined (USE_S2_CCM_DECRYPT_CHAIN)          \
     || defined (USE_S2_CCM_ENCRYPT_CHAIN)
+/*! Buffer to repetively sink useless CBC output */
 static uint8_t cbc_buffer[CBC_BUF_LEN];
 #endif
 
@@ -143,33 +146,36 @@ static inline fsl_shw_return_t process_assoc_from_nist_params(sah_Link ** link1,
 				 auth_ctx->auth_info.CCM_ctx_info.
 				 block_size_bytes, SAH_USES_LINK_DATA);
 
-	if (status == FSL_RETURN_OK_S) {
-		/* Add on length preamble to auth data */
-		STORE_NIST_AUTH_LEN(auth_data_length, *temp_buf);
-		status = sah_Append_Link(user_ctx->mem_util, *link1,
-					 *temp_buf, auth_size_length,
-					 SAH_OWNS_LINK_DATA);
-		*temp_buf += auth_size_length;	/* 2, 6, or 10 bytes */
-	}
+	if (auth_data_length != 0) {
+		if (status == FSL_RETURN_OK_S) {
+			/* Add on length preamble to auth data */
+			STORE_NIST_AUTH_LEN(auth_data_length, *temp_buf);
+			status = sah_Append_Link(user_ctx->mem_util, *link1,
+						 *temp_buf, auth_size_length,
+						 SAH_OWNS_LINK_DATA);
+			*temp_buf += auth_size_length;	/* 2, 6, or 10 bytes */
+		}
 
-	if (status == FSL_RETURN_OK_S) {
-		/* Add in auth data */
-		status = sah_Append_Link(user_ctx->mem_util, *link1,
-					 (uint8_t *) auth_data,
-					 auth_data_length, SAH_USES_LINK_DATA);
-	}
+		if (status == FSL_RETURN_OK_S) {
+			/* Add in auth data */
+			status = sah_Append_Link(user_ctx->mem_util, *link1,
+						 (uint8_t *) auth_data,
+						 auth_data_length,
+						 SAH_USES_LINK_DATA);
+		}
 
-	if ((status == FSL_RETURN_OK_S) && (auth_pad_length > 0)) {
-		status = sah_Append_Link(user_ctx->mem_util, *link1,
-					 block_zeros, auth_pad_length,
-					 SAH_USES_LINK_DATA);
+		if ((status == FSL_RETURN_OK_S) && (auth_pad_length > 0)) {
+			status = sah_Append_Link(user_ctx->mem_util, *link1,
+						 block_zeros, auth_pad_length,
+						 SAH_USES_LINK_DATA);
+		}
 	}
-
+	/* ... if auth_data_length != 0 */
 	*data_len = auth_ctx->auth_info.CCM_ctx_info.block_size_bytes +
 	    auth_data_length + auth_size_length + auth_pad_length;
 
 	return status;
-}
+}				/* end fn process_assoc_from_nist_params */
 
 /*!
  * Add a Descriptor which will process with CBC the NIST preamble data
@@ -199,7 +205,7 @@ static inline fsl_shw_return_t add_assoc_preamble(sah_Head_Desc ** desc_chain,
 	uint32_t header = SAH_HDR_SKHA_ENC_DEC;
 	uint32_t temp_buf_flag;
 	unsigned chain_s2 = 1;
-	
+
 #if defined (FSL_HAVE_SAHARA4) && !defined (USE_S2_CCM_DECRYPT_CHAIN)
 	if (!encrypt) {
 		chain_s2 = 0;
@@ -210,7 +216,6 @@ static inline fsl_shw_return_t add_assoc_preamble(sah_Head_Desc ** desc_chain,
 		chain_s2 = 0;
 	}
 #endif
-
 	/* Grab a block big enough for multiple uses so that only one allocate
 	 * request needs to be made.
 	 */
@@ -223,65 +228,61 @@ static inline fsl_shw_return_t add_assoc_preamble(sah_Head_Desc ** desc_chain,
 	if (temp_buf == NULL) {
 		status = FSL_RETURN_NO_RESOURCE_S;
 		goto out;
-	} 
+	}
 
-		if (auth_ctx->flags & FSL_ACCO_NIST_CCM) {
-			status = process_assoc_from_nist_params(&link1,
-								&cbc_data_length,
-								user_ctx,
-								auth_ctx,
-								auth_data,
-								auth_data_length,
-								&temp_buf);
-			
-			if (status != FSL_RETURN_OK_S) {
-				goto out;
-			}
-			/* temp_buf has been referenced (and incremented).  Only 'own' it
-			 * once, at its first value.  Since the nist routine called above
-			 * bumps it...
-			 */
-			temp_buf_flag = SAH_USES_LINK_DATA;
-		} else {	/* if NIST */
-			status =
-			    sah_Create_Link(user_ctx->mem_util, &link1,
-					    (uint8_t *) auth_data,
-					    auth_data_length,
-					    SAH_USES_LINK_DATA);
-			if (status != FSL_RETURN_OK_S) {
-				goto out;
-			}
-			/* for next/first use of temp_buf */
-			temp_buf_flag = SAH_OWNS_LINK_DATA;
-			
-			cbc_data_length = auth_data_length;
-		}		/* else not NIST */
+	if (auth_ctx->flags & FSL_ACCO_NIST_CCM) {
+		status = process_assoc_from_nist_params(&link1,
+							&cbc_data_length,
+							user_ctx,
+							auth_ctx,
+							auth_data,
+							auth_data_length,
+							&temp_buf);
+		if (status != FSL_RETURN_OK_S) {
+			goto out;
+		}
+		/* temp_buf has been referenced (and incremented).  Only 'own' it
+		 * once, at its first value.  Since the nist routine called above
+		 * bumps it...
+		 */
+		temp_buf_flag = SAH_USES_LINK_DATA;
+	} else {		/* if NIST */
+		status = sah_Create_Link(user_ctx->mem_util, &link1,
+					 (uint8_t *) auth_data,
+					 auth_data_length, SAH_USES_LINK_DATA);
+		if (status != FSL_RETURN_OK_S) {
+			goto out;
+		}
+		/* for next/first use of temp_buf */
+		temp_buf_flag = SAH_OWNS_LINK_DATA;
+		cbc_data_length = auth_data_length;
+	}			/* else not NIST */
+
 #if defined (FSL_HAVE_SAHARA2) || defined (USE_S2_CCM_ENCRYPT_CHAIN)   \
-	|| defined (USE_S2_CCM_DECRYPT_CHAIN)
-		
+    || defined (USE_S2_CCM_DECRYPT_CHAIN)
+
 	if (!chain_s2) {
 		header = SAH_HDR_SKHA_CBC_ICV
-				^ sah_insert_skha_mode_cbc ^ sah_insert_skha_aux0
-				^ sah_insert_skha_encrypt;
+		    ^ sah_insert_skha_mode_cbc ^ sah_insert_skha_aux0
+		    ^ sah_insert_skha_encrypt;
 	} else {
-
 		/*
 		 * Auth data links have been created.  Now create link for the
 		 * useless output of the CBC calculation.
 		 */
 		status = sah_Create_Link(user_ctx->mem_util, &link2,
-				 temp_buf,
-				 auth_ctx->auth_info.CCM_ctx_info.block_size_bytes,
-				 temp_buf_flag | SAH_OUTPUT_LINK);
-
+					 temp_buf,
+					 auth_ctx->auth_info.CCM_ctx_info.
+					 block_size_bytes,
+					 temp_buf_flag | SAH_OUTPUT_LINK);
 		if (status != FSL_RETURN_OK_S) {
 			goto out;
 		}
+
 		temp_buf += auth_ctx->auth_info.CCM_ctx_info.block_size_bytes;
 
 		cbc_data_length -=
 		    auth_ctx->auth_info.CCM_ctx_info.block_size_bytes;
-
 		if (cbc_data_length != 0) {
 			while ((status == FSL_RETURN_OK_S)
 			       && (cbc_data_length != 0)) {
@@ -301,31 +302,29 @@ static inline fsl_shw_return_t add_assoc_preamble(sah_Head_Desc ** desc_chain,
 				cbc_data_length -= linklen;
 			}
 		}
-   }
+	}
 #else
-			header = SAH_HDR_SKHA_CBC_ICV
-				^ sah_insert_skha_mode_cbc ^ sah_insert_skha_aux0
-				^ sah_insert_skha_encrypt;
+	header = SAH_HDR_SKHA_CBC_ICV
+	    ^ sah_insert_skha_mode_cbc ^ sah_insert_skha_aux0
+	    ^ sah_insert_skha_encrypt;
 #endif
-		/* Crank through auth data */
-		status = sah_Append_Desc(user_ctx->mem_util, desc_chain,
-					 header, link1, link2);
-		
-out:
+	/* Crank through auth data */
+	status = sah_Append_Desc(user_ctx->mem_util, desc_chain,
+				 header, link1, link2);
 
-		if (status != FSL_RETURN_OK_S) {
-			if (link1 != NULL) {
-				sah_Destroy_Link(user_ctx->mem_util, link1);
-			}
-			if (link2 != NULL) {
-				sah_Destroy_Link(user_ctx->mem_util, link2);
-			}
-		} 
-	
-    (void)encrypt;
+      out:
+	if (status != FSL_RETURN_OK_S) {
+		if (link1 != NULL) {
+			sah_Destroy_Link(user_ctx->mem_util, link1);
+		}
+		if (link2 != NULL) {
+			sah_Destroy_Link(user_ctx->mem_util, link2);
+		}
+	}
 
+	(void)encrypt;
 	return status;
-}
+}				/* add_assoc_preamble() */
 
 #if SUPPORT_SSL
 /*!
@@ -470,7 +469,7 @@ fsl_shw_return_t fsl_shw_gen_encrypt(fsl_shw_uco_t * user_ctx,
 				     uint8_t * ct, uint8_t * auth_value)
 {
 	SAH_SF_DCLS;
-    printk("Entering fsl_shw_gen_encrypt \n");
+
 	SAH_SF_USER_CHECK();
 
 	if (auth_ctx->mode == FSL_ACC_MODE_SSL) {
@@ -496,7 +495,7 @@ fsl_shw_return_t fsl_shw_gen_encrypt(fsl_shw_uco_t * user_ctx,
 		ret = FSL_RETURN_BAD_FLAG_S;
 		goto out;
 	}
-	
+
 	/* Load CTR0 and Key */
 	header = (SAH_HDR_SKHA_SET_MODE_IV_KEY
 		  ^ sah_insert_skha_mode_ctr
@@ -506,29 +505,26 @@ fsl_shw_return_t fsl_shw_gen_encrypt(fsl_shw_uco_t * user_ctx,
 		    auth_ctx->cipher_ctx_info.context, cipher_key_info);
 
 	/* Encrypt dummy data to bump to CTR1 */
-
 	header = SAH_HDR_SKHA_ENC_DEC;
 	DESC_IN_OUT(header, auth_ctx->mac_length, garbage_output,
-		auth_ctx->mac_length, garbage_output);
-	
+		    auth_ctx->mac_length, garbage_output);
+
 #if defined(FSL_HAVE_SAHARA2) || defined(USE_S2_CCM_ENCRYPT_CHAIN)
 #ifndef NO_ZERO_IV_LOAD
 	header = (SAH_HDR_SKHA_SET_MODE_IV_KEY
 		  ^ sah_insert_skha_encrypt ^ sah_insert_skha_mode_cbc);
 	DESC_IN_IN(header,
-			    auth_ctx->auth_info.CCM_ctx_info.block_size_bytes,
-				block_zeros, 0, NULL);
-#endif	
+		   auth_ctx->auth_info.CCM_ctx_info.block_size_bytes,
+		   block_zeros, 0, NULL);
+#endif
 #endif
 
-	if (auth_data_length > 0) {
-		ret = add_assoc_preamble(&desc_chain, user_ctx,
-					 auth_ctx, 1, auth_data, auth_data_length);
-		if (ret != FSL_RETURN_OK_S) {
-			goto out;
-		}
+	ret = add_assoc_preamble(&desc_chain, user_ctx,
+				 auth_ctx, 1, auth_data, auth_data_length);
+	if (ret != FSL_RETURN_OK_S) {
+		goto out;
 	}
-	/* if auth_data_length > 0 */
+
 	/* Process the payload */
 	header = (SAH_HDR_SKHA_SET_MODE_ENC_DEC
 		  ^ sah_insert_skha_mode_ccm
@@ -536,32 +532,34 @@ fsl_shw_return_t fsl_shw_gen_encrypt(fsl_shw_uco_t * user_ctx,
 #if defined (FSL_HAVE_SAHARA4) && !defined (USE_S2_CCM_ENCRYPT_CHAIN)
 	header ^= sah_insert_skha_aux0;
 #endif
-	DESC_IN_OUT(header, payload_length, payload, payload_length, ct);
+	if (payload_length != 0) {
+		DESC_IN_OUT(header, payload_length, payload, payload_length,
+			    ct);
+	} else {
+		DESC_IN_OUT(header, 0, NULL, 0, NULL);
+	}			/* if payload_length */
 
 #if defined (FSL_HAVE_SAHARA4) && !defined (USE_S2_CCM_ENCRYPT_CHAIN)
-
 	/* Pull out the CBC-MAC value. */
-	
 	DESC_OUT_OUT(SAH_HDR_SKHA_READ_CONTEXT_IV, 0, NULL,
-				 auth_ctx->mac_length, auth_value);
+		     auth_ctx->mac_length, auth_value);
 #else
-		/* Pull out the unencrypted CBC-MAC value. */
+	/* Pull out the unencrypted CBC-MAC value. */
 	DESC_OUT_OUT(SAH_HDR_SKHA_READ_CONTEXT_IV,
-		0, NULL, auth_ctx->mac_length, auth_ctx->unencrypted_mac);
+		     0, NULL, auth_ctx->mac_length, auth_ctx->unencrypted_mac);
 
 	/* Now load CTR0 in, and encrypt the MAC */
-	
 	header = SAH_HDR_SKHA_SET_MODE_IV_KEY
-			^ sah_insert_skha_encrypt
-			^ sah_insert_skha_mode_ctr ^ sah_insert_skha_modulus_128;
-		DESC_IN_IN(header,
-			   auth_ctx->cipher_ctx_info.block_size_bytes,
-			   auth_ctx->cipher_ctx_info.context, 0, NULL);
-	
-		header = SAH_HDR_SKHA_ENC_DEC;	/* Desc. #4 SKHA Enc/Dec */
-		DESC_IN_OUT(header,
-				auth_ctx->mac_length, auth_ctx->unencrypted_mac,
-					  auth_ctx->mac_length, auth_value);
+	    ^ sah_insert_skha_encrypt
+	    ^ sah_insert_skha_mode_ctr ^ sah_insert_skha_modulus_128;
+	DESC_IN_IN(header,
+		   auth_ctx->cipher_ctx_info.block_size_bytes,
+		   auth_ctx->cipher_ctx_info.context, 0, NULL);
+
+	header = SAH_HDR_SKHA_ENC_DEC;	/* Desc. #4 SKHA Enc/Dec */
+	DESC_IN_OUT(header,
+		    auth_ctx->mac_length, auth_ctx->unencrypted_mac,
+		    auth_ctx->mac_length, auth_value);
 #endif
 
 	SAH_SF_EXECUTE();
@@ -608,12 +606,11 @@ fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t * user_ctx,
 
 	SAH_SF_USER_CHECK();
 
-	/* Only support CCM. */
+	/* Only support CCM */
 	if (auth_ctx->mode != FSL_ACC_MODE_CCM) {
 		ret = FSL_RETURN_BAD_MODE_S;
 		goto out;
 	}
-	
 	/* Only support INIT and FINALIZE flags right now. */
 	if ((auth_ctx->flags & (FSL_ACCO_CTX_INIT | FSL_ACCO_CTX_LOAD |
 				FSL_ACCO_CTX_SAVE | FSL_ACCO_CTX_FINALIZE))
@@ -621,6 +618,7 @@ fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t * user_ctx,
 		ret = FSL_RETURN_BAD_FLAG_S;
 		goto out;
 	}
+
 	/* Load CTR0 and Key */
 	header = SAH_HDR_SKHA_SET_MODE_IV_KEY
 	    ^ sah_insert_skha_mode_ctr ^ sah_insert_skha_modulus_128;
@@ -629,42 +627,44 @@ fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t * user_ctx,
 #endif
 	DESC_IN_KEY(header,
 		    auth_ctx->cipher_ctx_info.block_size_bytes,
-			auth_ctx->cipher_ctx_info.context, cipher_key_info);
-	
+		    auth_ctx->cipher_ctx_info.context, cipher_key_info);
+
 	/* Decrypt the MAC which the user passed in */
 	header = SAH_HDR_SKHA_ENC_DEC;
 	DESC_IN_OUT(header,
 		    auth_ctx->mac_length, auth_value,
 		    auth_ctx->mac_length, auth_ctx->unencrypted_mac);
+
 #if defined(FSL_HAVE_SAHARA2) || defined(USE_S2_CCM_DECRYPT_CHAIN)
 #ifndef NO_ZERO_IV_LOAD
 	header = (SAH_HDR_SKHA_SET_MODE_IV_KEY
-			  ^ sah_insert_skha_encrypt ^ sah_insert_skha_mode_cbc);
+		  ^ sah_insert_skha_encrypt ^ sah_insert_skha_mode_cbc);
 	DESC_IN_IN(header,
-			    auth_ctx->auth_info.CCM_ctx_info.block_size_bytes,
-			    block_zeros, 0, NULL);
+		   auth_ctx->auth_info.CCM_ctx_info.block_size_bytes,
+		   block_zeros, 0, NULL);
 #endif
 #endif
 
-	if (auth_data_length > 0) {
-		ret = add_assoc_preamble(&desc_chain, user_ctx,
-					 auth_ctx, 0, auth_data, auth_data_length);
-		if (ret != FSL_RETURN_OK_S) {
-			goto out;
-		}
+	ret = add_assoc_preamble(&desc_chain, user_ctx,
+				 auth_ctx, 0, auth_data, auth_data_length);
+	if (ret != FSL_RETURN_OK_S) {
+		goto out;
 	}
-	/* if auth_data_length > 0 */
-	
+
 	/* Process the payload */
 	header = (SAH_HDR_SKHA_SET_MODE_ENC_DEC
-		^ sah_insert_skha_mode_ccm ^ sah_insert_skha_modulus_128);
+		  ^ sah_insert_skha_mode_ccm ^ sah_insert_skha_modulus_128);
 #if defined (FSL_HAVE_SAHARA4) && !defined (USE_S2_CCM_DECRYPT_CHAIN)
 	header ^= sah_insert_skha_aux0;
 #endif
-	DESC_IN_OUT(header, payload_length, ct, payload_length, payload);
-	
-#if defined (FSL_HAVE_SAHARA2) || defined (USE_S2_CCM_DECRYPT_CHAIN)
+	if (payload_length != 0) {
+		DESC_IN_OUT(header, payload_length, ct, payload_length,
+			    payload);
+	} else {
+		DESC_IN_OUT(header, 0, NULL, 0, NULL);
+	}
 
+#if defined (FSL_HAVE_SAHARA2) || defined (USE_S2_CCM_DECRYPT_CHAIN)
 	/* Now pull CBC context (unencrypted MAC) out for comparison. */
 	/* Need to allocate a place for it, to handle non-blocking mode
 	 * when this stack frame will disappear!
@@ -672,7 +672,6 @@ fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t * user_ctx,
 	calced_auth = DESC_TEMP_ALLOC(auth_ctx->mac_length);
 	header = SAH_HDR_SKHA_READ_CONTEXT_IV;
 	DESC_OUT_OUT(header, 0, NULL, auth_ctx->mac_length, calced_auth);
-	
 	if (!blocking) {
 		/* get_results will need this for comparison */
 		desc_chain->out1_ptr = calced_auth;
@@ -684,7 +683,6 @@ fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t * user_ctx,
 	SAH_SF_EXECUTE();
 
 #if defined (FSL_HAVE_SAHARA2) || defined (USE_S2_CCM_DECRYPT_CHAIN)
-
 	if (blocking && (ret == FSL_RETURN_OK_S)) {
 		unsigned i;
 		/* Validate the auth code */
@@ -695,13 +693,14 @@ fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t * user_ctx,
 			}
 		}
 	}
-
 #endif
-out:
+
+      out:
 	SAH_SF_DESC_CLEAN();
 #if defined (FSL_HAVE_SAHARA2) || defined (USE_S2_CCM_DECRYPT_CHAIN)
 	DESC_TEMP_FREE(calced_auth);
 #endif
+
 	(void)auth_key_info;
 	return ret;
 }				/* fsl_shw_gen_decrypt() */

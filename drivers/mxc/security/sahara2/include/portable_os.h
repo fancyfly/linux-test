@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -40,7 +40,7 @@
 
 /***************************************************************************/
 
-/**
+/*!
  * @file portable_os.h
  *
  * This file should be included by portable driver code in order to gain access
@@ -53,7 +53,7 @@
  *
  */
 
-/**
+/*!
  * @if USE_MAINPAGE
  * @mainpage Generic OS API for STC Drivers
  * @endif
@@ -115,7 +115,7 @@
  * logical devices to access, because the design usually calls for some sort of
  * indication to the #OS_DEV_TASK() function or OS_DEV_ISR() to indicate which
  * channel is to be serviced by that instance of the task/function.  This sort
- * of argument is missing in this API for functions like os_schedule_task() and
+ * of argument is missing in this API for functions like os_dev_schedule_task() and
  * os_register_interrupt().
  *
  *
@@ -170,7 +170,6 @@
  *
  */
 
-
 /***************************************************************************
  * Compile flags
  **************************************************************************/
@@ -181,7 +180,7 @@
  */
 #ifdef DOXYGEN_PORTABLE_OS_DOC
 
-/**
+/*!
  * @todo module_init()/module_cleanup() for Linux need to be added to OS
  * abstractions.  Also need EXPORT_SYMBOL() equivalent??
  *
@@ -189,15 +188,14 @@
 
 /* Drop OS differentation documentation here */
 
-
-/**
+/*!
  * \#define this flag to build your driver as a Linux driver
  */
 #define LINUX
 
 /* end OS differentation documentation */
 
-/**
+/*!
  * Symbol to give version number of the implementation file.  Earliest
  * definition is in version 1.1, with value 101 (to mean version 1.1)
  */
@@ -213,27 +211,25 @@
  * DOXYGEN_PORTABLE_OS_DOC flag.
  */
 
-
 /***************************************************************************
  * Type definitions
  **************************************************************************/
 
-/**
+/*!
  * Type used for registering and deregistering interrupts.
  *
  * This is typically an interrupt channel number.
  */
 typedef int os_interrupt_id_t;
 
-/**
+/*!
  * Type used as handle for a process
  *
  * See #os_get_process_handle() and #os_send_signal().
  */
 typedef int os_process_handle_t;
 
-
-/**
+/*!
  * Generic return code for functions which need such a thing.
  *
  * No knowledge should be assumed of the value of any of these symbols except
@@ -243,63 +239,55 @@ typedef int os_process_handle_t;
  * too Linux/Unix-specific read()/write() return values) ?
  */
 typedef enum {
-    OS_ERROR_OK_S = 0,          /**< Success  */
-    OS_ERROR_FAIL_S,            /**< Generic driver failure */
-    OS_ERROR_NO_MEMORY_S,       /**< Failure to acquire/use memory  */
-    OS_ERROR_BAD_ADDRESS_S,     /**< Bad address  */
-    OS_ERROR_BAD_ARG_S          /**< Bad input argument */
+	OS_ERROR_OK_S = 0,	/*!< Success  */
+	OS_ERROR_FAIL_S,	/*!< Generic driver failure */
+	OS_ERROR_NO_MEMORY_S,	/*!< Failure to acquire/use memory  */
+	OS_ERROR_BAD_ADDRESS_S,	/*!< Bad address  */
+	OS_ERROR_BAD_ARG_S	/*!< Bad input argument */
 } os_error_code;
 
-
-/**
+/*!
  * Handle to a lock.
  */
-typedef int* os_lock_t;
+typedef int *os_lock_t;
 
-
-/**
+/*!
  * Context while locking.
  */
 typedef int os_lock_context_t;
 
-
-/**
+/*!
  * An object which can be slept on and later used to wake any/all sleepers.
  */
 typedef int os_sleep_object_t;
 
-
-/**
+/*!
  * Driver registration handle
  */
-typedef void* os_driver_reg_t;
+typedef void *os_driver_reg_t;
 
-
-/**
+/*!
  * Function signature for an #OS_DEV_INIT() function.
  *
  * @return  A call to os_dev_init_return() function.
  */
-typedef void (*os_init_function_t)(void);
+typedef void (*os_init_function_t) (void);
 
-
-/**
+/*!
  * Function signature for an #OS_DEV_SHUTDOWN() function.
  *
  * @return  A call to os_dev_shutdown_return() function.
  */
-typedef void (*os_shutdown_function_t)(void);
+typedef void (*os_shutdown_function_t) (void);
 
-
-/**
+/*!
  * Function signature for a user-driver function.
  *
  * @return  A call to the appropriate os_dev_xxx_return() function.
  */
-typedef void (*os_user_function_t)(void);
+typedef void (*os_user_function_t) (void);
 
-
-/**
+/*!
  * Function signature for the portable interrupt handler
  *
  * While it would be nice to know which interrupt is being serviced, the
@@ -307,10 +295,9 @@ typedef void (*os_user_function_t)(void);
  *
  * @return  A call to #os_dev_isr_return()
  */
-typedef void (*os_interrupt_handler_t)(void);
+typedef void (*os_interrupt_handler_t) (void);
 
-
-/**
+/*!
  * Function signature for a task function
  *
  * Many task function definitions get some sort of generic argument so that the
@@ -320,40 +307,38 @@ typedef void (*os_interrupt_handler_t)(void);
  * This function must be structured as documented by #OS_DEV_TASK().
  *
  */
-typedef void (*os_task_fn_t)(void);
+typedef void (*os_task_fn_t) (void);
 
-
-/**
+/*!
  *  Function types which can be associated with driver entry points.  These are
  *  used in os_driver_add_registration().
  *
  *  Note that init and shutdown are absent.
  */
 typedef enum {
-    OS_FN_OPEN,                 /**< open() operation handler. */
-    OS_FN_CLOSE,                /**< close() operation handler. */
-    OS_FN_READ,                 /**< read() operation handler. */
-    OS_FN_WRITE,                /**< write() operation handler. */
-    OS_FN_IOCTL,                /**< ioctl() operation handler. */
-    OS_FN_MMAP                  /**< mmap() operation handler. */
+	OS_FN_OPEN,		/*!< open() operation handler. */
+	OS_FN_CLOSE,		/*!< close() operation handler. */
+	OS_FN_READ,		/*!< read() operation handler. */
+	OS_FN_WRITE,		/*!< write() operation handler. */
+	OS_FN_IOCTL,		/*!< ioctl() operation handler. */
+	OS_FN_MMAP		/*!< mmap() operation handler. */
 } os_driver_fn_t;
-
 
 /***************************************************************************
  * Driver-to-Kernel Operations
  **************************************************************************/
 
-/**
+/*!
  * @defgroup dkops Driver-to-Kernel Operations
  *
  * These are the operations which drivers should call to get the OS to perform
  * services.
  */
 
-/** @addtogroup dkops */
-/** @{ */
+/*! @addtogroup dkops */
+/*! @{ */
 
-/**
+/*!
  * Register an interrupt handler.
  *
  * @param driver_name    The name of the driver
@@ -363,12 +348,11 @@ typedef enum {
  *
  * @return #os_error_code
  */
-os_error_code os_register_interrupt(char* driver_name,
-                                    os_interrupt_id_t interrupt_id,
-                                    os_interrupt_handler_t function);
+os_error_code os_register_interrupt(char *driver_name,
+				    os_interrupt_id_t interrupt_id,
+				    os_interrupt_handler_t function);
 
-
-/**
+/*!
  * Deregister an interrupt handler.
  *
  * @param interrupt_id   The interrupt line to stop monitoring
@@ -377,8 +361,7 @@ os_error_code os_register_interrupt(char* driver_name,
  */
 os_error_code os_deregister_interrupt(os_interrupt_id_t interrupt_id);
 
-
-/**
+/*!
  * Initialize driver registration.
  *
  * If the driver handles open(), close(), ioctl(), read(), write(), or mmap()
@@ -393,8 +376,7 @@ os_error_code os_deregister_interrupt(os_interrupt_id_t interrupt_id);
  */
 os_error_code os_driver_init_registration(os_driver_reg_t handle);
 
-
-/**
+/*!
  * Add a function registration to driver registration.
  *
  * @param handle    The handle used with #os_driver_init_registration().
@@ -405,10 +387,9 @@ os_error_code os_driver_init_registration(os_driver_reg_t handle);
  * @return void
  */
 void os_driver_add_registration(os_driver_reg_t handle, os_driver_fn_t name,
-                                void* function);
+				void *function);
 
-
-/**
+/*!
  * Finalize the driver registration with the kernel.
  *
  * Upon return from this call, the driver may begin receiving calls at the
@@ -425,11 +406,9 @@ void os_driver_add_registration(os_driver_reg_t handle, os_driver_fn_t name,
  * @return  An error code
  */
 os_error_code os_driver_complete_registration(os_driver_reg_t handle,
-                                              int major,
-                                              char* driver_name);
+					      int major, char *driver_name);
 
-
-/**
+/*!
  * Get driver Major Number from handle after a successful registration.
  *
  * @param   handle  A handle which has completed registration.
@@ -438,8 +417,7 @@ os_error_code os_driver_complete_registration(os_driver_reg_t handle,
  */
 uint32_t os_driver_get_major(os_driver_reg_t handle);
 
-
-/**
+/*!
  * Remove the driver's registration with the kernel.
  *
  * Upon return from this call, the driver not receive any more calls at the
@@ -450,10 +428,9 @@ uint32_t os_driver_get_major(os_driver_reg_t handle);
  *
  * @return  An error code.
  */
-os_error_code os_driver_remove_registration(int major, char* driver_name);
+os_error_code os_driver_remove_registration(int major, char *driver_name);
 
-
-/**
+/*!
  * Print a message to console / into log file.  After the @c msg argument a
  * number of printf-style arguments may be added.  Types should be limited to
  * printf string, char, octal, decimal, and hexadecimal types.  (This excludes
@@ -463,10 +440,9 @@ os_error_code os_driver_remove_registration(int major, char* driver_name);
  *
  * @return (void)
  */
-void os_printk(char* msg, ...);
+void os_printk(char *msg, ...);
 
-
-/**
+/*!
  * Allocate some kernel memory
  *
  * @param amount   Number of 8-bit bytes to allocate
@@ -474,10 +450,9 @@ void os_printk(char* msg, ...);
  *
  * @return  Pointer to allocated memory, or NULL if failed.
  */
-void* os_alloc_memory(unsigned amount, int flags);
+void *os_alloc_memory(unsigned amount, int flags);
 
-
-/**
+/*!
  * Free some kernel memory
  *
  * @param location  The beginning of the region to be freed.
@@ -487,10 +462,9 @@ void* os_alloc_memory(unsigned amount, int flags);
  * size of the buffer being freed?  Perhaps separate routines for each
  * alloc/free pair (DMAable, etc.)?
  */
-void os_free_memory(void* location);
+void os_free_memory(void *location);
 
-
-/**
+/*!
  * Allocate cache-coherent memory
  *
  * @param       amount     Number of bytes to allocate
@@ -502,10 +476,9 @@ void os_free_memory(void* location);
  * @return (virtual space) pointer to allocated memory, or NULL if failed.
  *
  */
-void* os_alloc_coherent(unsigned amount, uint32_t* dma_addrp, int flags);
+void *os_alloc_coherent(unsigned amount, uint32_t * dma_addrp, int flags);
 
-
-/**
+/*!
  * Free cache-coherent memory
  *
  * @param       size       Number of bytes which were allocated.
@@ -517,10 +490,9 @@ void* os_alloc_coherent(unsigned amount, uint32_t* dma_addrp, int flags);
  * @return void
  *
  */
-void os_free_coherent(unsigned size, void* virt_addr, uint32_t dma_addr);
+void os_free_coherent(unsigned size, void *virt_addr, uint32_t dma_addr);
 
-
-/**
+/*!
  * Map an I/O space into kernel memory space
  *
  * @param start       The starting address of the (physical / io space) region
@@ -528,11 +500,9 @@ void os_free_coherent(unsigned size, void* virt_addr, uint32_t dma_addr);
  *
  * @return A pointer to the mapped area, or NULL on failure
  */
-void* os_map_device(uint32_t start, unsigned range_bytes);
+void *os_map_device(uint32_t start, unsigned range_bytes);
 
-
-
-/**
+/*!
  * Unmap an I/O space from kernel memory space
  *
  * @param start       The starting address of the (virtual) region
@@ -540,10 +510,9 @@ void* os_map_device(uint32_t start, unsigned range_bytes);
  *
  * @return None
  */
-void os_unmap_device(void* start, unsigned range_bytes);
+void os_unmap_device(void *start, unsigned range_bytes);
 
-
-/**
+/*!
  * Copy data from Kernel space to User space
  *
  * @param to   The target location in user memory
@@ -552,10 +521,9 @@ void os_unmap_device(void* start, unsigned range_bytes);
  *
  * @return #os_error_code
  */
-os_error_code os_copy_to_user(void* to, void* from, unsigned size);
+os_error_code os_copy_to_user(void *to, void *from, unsigned size);
 
-
-/**
+/*!
  * Copy data from User space to Kernel space
  *
  * @param to   The target location in kernel memory
@@ -564,81 +532,73 @@ os_error_code os_copy_to_user(void* to, void* from, unsigned size);
  *
  * @return #os_error_code
  */
-os_error_code os_copy_from_user(void* to, void* from, unsigned size);
+os_error_code os_copy_from_user(void *to, void *from, unsigned size);
 
-
-/**
+/*!
  * Read an 8-bit device register
  *
  * @param register_address  The (bus) address of the register to write to
  * @return                  The value in the register
  */
-uint8_t os_read8(uint8_t* register_address);
+uint8_t os_read8(uint8_t * register_address);
 
-
-/**
+/*!
  * Write an 8-bit device register
  *
  * @param register_address  The (bus) address of the register to write to
  * @param value             The value to write into the register
  */
-void os_write8(uint8_t* register_address, uint8_t value);
+void os_write8(uint8_t * register_address, uint8_t value);
 
-
-/**
+/*!
  * Read a 16-bit device register
  *
  * @param register_address  The (bus) address of the register to write to
  * @return                  The value in the register
  */
-uint16_t os_read16(uint16_t* register_address);
+uint16_t os_read16(uint16_t * register_address);
 
-
-/**
+/*!
  * Write a 16-bit device register
  *
  * @param register_address  The (bus) address of the register to write to
  * @param value             The value to write into the register
  */
-void os_write16(uint16_t* register_address, uint16_t value);
+void os_write16(uint16_t * register_address, uint16_t value);
 
-/**
+/*!
  * Read a 32-bit device register
  *
  * @param register_address  The (bus) address of the register to write to
  * @return                  The value in the register
  */
-uint32_t os_read32(uint32_t* register_address);
+uint32_t os_read32(uint32_t * register_address);
 
-
-/**
+/*!
  * Write a 32-bit device register
  *
  * @param register_address  The (bus) address of the register to write to
  * @param value             The value to write into the register
  */
-void os_write32(uint32_t* register_address, uint32_t value);
+void os_write32(uint32_t * register_address, uint32_t value);
 
-
-/**
+/*!
  * Read a 64-bit device register
  *
  * @param register_address  The (bus) address of the register to write to
  * @return                  The value in the register
  */
-uint64_t os_read64(uint64_t* register_address);
+uint64_t os_read64(uint64_t * register_address);
 
-
-/**
+/*!
  * Write a 64-bit device register
  *
  * @param register_address  The (bus) address of the register to write to
  * @param value             The value to write into the register
  */
-void os_write64(uint64_t* register_address, uint64_t value);
+void os_write64(uint64_t * register_address, uint64_t value);
 
-
-/**
+/*!
  * Prepare a task to execute the given function.  This should only be done once
  * per task, during the driver's initialization routine.
  *
@@ -646,10 +606,9 @@ void os_write64(uint64_t* register_address, uint64_t value);
  *
  * @return an OS ERROR code.
  */
-os_error os_create_task(os_task_fn_t* task_fn);
+os_error os_create_task(os_task_fn_t * task_fn);
 
-
-/**
+/*!
  * Run the task associated with an #OS_DEV_TASK() function
  *
  * The task will begin execution sometime after or during this call.
@@ -658,9 +617,9 @@ os_error os_create_task(os_task_fn_t* task_fn);
  *
  * @return void
  */
-void os_schedule_task(os_task_fn_t* task_fn);
+void os_dev_schedule_task(os_task_fn_t * task_fn);
 
-/**
+/*!
  * Make sure that task is no longer running and will no longer run.
  *
  * This function will not return until both are true.  This is useful when
@@ -669,10 +628,9 @@ void os_schedule_task(os_task_fn_t* task_fn);
  * @param task_fn   Name of the OS_DEV_TASK() funciton to be stopped.
  *
  */
-void os_stop_task(os_task_fn_t* task_fn);
+void os_stop_task(os_task_fn_t * task_fn);
 
-
-/**
+/*!
  * Delay some number of microseconds
  *
  * Note that this is a busy-loop, not a suspension of the task/process.
@@ -683,8 +641,7 @@ void os_stop_task(os_task_fn_t* task_fn);
  */
 void os_mdelay(unsigned long msecs);
 
-
-/**
+/*!
  * Calculate virtual address from physical address
  *
  * @param pa    Physical address
@@ -695,8 +652,7 @@ void os_mdelay(unsigned long msecs);
  */
 void *os_va(uint32_t pa);
 
-
-/**
+/*!
  * Calculate physical address from virtual address
  *
  *
@@ -706,10 +662,9 @@ void *os_va(uint32_t pa);
  *
  * @note this assumes that addresses are 32 bits wide
  */
-uint32_t os_pa(void* va);
+uint32_t os_pa(void *va);
 
-
-/**
+/*!
  * Allocate and initialize a lock, returning a lock handle.
  *
  * The lock state will be initialized to 'unlocked'.
@@ -718,8 +673,7 @@ uint32_t os_pa(void* va);
  */
 os_lock_t os_lock_alloc_init(void);
 
-
-/**
+/*!
  * Acquire a lock.
  *
  * This function should only be called from an interrupt service routine.
@@ -730,8 +684,7 @@ os_lock_t os_lock_alloc_init(void);
  */
 void os_lock(os_lock_t lock_handle);
 
-
-/**
+/*!
  * Unlock a lock.  Lock must have been acquired by #os_lock().
  *
  * @param   lock_handle  A handle to the lock to unlock.
@@ -740,7 +693,7 @@ void os_lock(os_lock_t lock_handle);
  */
 void os_unlock(os_lock_t lock_handle);
 
-/**
+/*!
  * Acquire a lock in non-ISR context
  *
  * This function will spin until the lock is available.
@@ -752,7 +705,7 @@ void os_unlock(os_lock_t lock_handle);
  */
 void os_lock_save_context(os_lock_t lock_handle, os_lock_context_t context);
 
-/**
+/*!
  * Release a lock in non-ISR context
  *
  * @param lock_handle  A handle of the lock to release.
@@ -761,9 +714,9 @@ void os_lock_save_context(os_lock_t lock_handle, os_lock_context_t context);
  * @return void
  */
 void os_unlock_restore_context(os_lock_t lock_handle,
-                               os_lock_context_t context);
+			       os_lock_context_t context);
 
-/**
+/*!
  * Deallocate a lock handle.
  *
  * @param lock_handle   An #os_lock_t that has been allocated.
@@ -772,8 +725,7 @@ void os_unlock_restore_context(os_lock_t lock_handle,
  */
 void os_lock_deallocate(os_lock_t lock_handle);
 
-
-/**
+/*!
  * Determine process handle
  *
  * The process handle of the current user is returned.
@@ -782,8 +734,7 @@ void os_lock_deallocate(os_lock_t lock_handle);
  */
 os_process_handle_t os_get_process_handle();
 
-
-/**
+/*!
  * Send a signal to a process
  *
  * @param  proc   A handle to the target process.
@@ -791,8 +742,7 @@ os_process_handle_t os_get_process_handle();
  */
 void os_send_signal(os_process_handle_t proc, int sig);
 
-
-/**
+/*!
  * Get some random bytes
  *
  * @param buf    The location to store the random data.
@@ -800,9 +750,9 @@ void os_send_signal(os_process_handle_t proc, int sig);
  *
  * @return  void
  */
-void os_get_random_bytes(void* buf, unsigned count);
+void os_get_random_bytes(void *buf, unsigned count);
 
-/**
+/*!
  * Go to sleep on an object.
  *
  * Example: code = os_sleep(my_queue, available_count == 0, 0);
@@ -816,10 +766,9 @@ void os_get_random_bytes(void* buf, unsigned count);
  * @return error code -- OK or sleep interrupted??
  */
 os_error_code os_sleep(os_sleep_object_t object, unsigned condition,
-                       unsigned atomic);
+		       unsigned atomic);
 
-
-/**
+/*!
  * Wake up whatever is sleeping on sleep object
  *
  * @param object  The object on which things might be sleeping
@@ -828,15 +777,13 @@ os_error_code os_sleep(os_sleep_object_t object, unsigned condition,
  */
 void os_wake_sleepers(os_sleep_object_t object);
 
-
-/** @} */ /* dkops */
-
+	  /*! @} *//* dkops */
 
 /*****************************************************************************
  *  Function-signature-generating macros
  *****************************************************************************/
 
-/**
+/*!
  * @defgroup drsigs Driver Function Signatures
  *
  * These macros will define the entry point signatures for interrupt handlers;
@@ -887,10 +834,10 @@ void os_wake_sleepers(os_sleep_object_t object);
  * @endcode
  */
 
-/** @addtogroup drsigs */
-/** @{ */
+/*! @addtogroup drsigs */
+/*! @{ */
 
-/**
+/*!
  * Define a function which will handle device initialization
  *
  * This is tne driver initialization routine.  This is normally where the
@@ -904,8 +851,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_INIT(function_name)
 
-
-/**
+/*!
  * Define a function which will handle device shutdown
  *
  * This is the reverse of the #OS_DEV_INIT() routine.
@@ -916,8 +862,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_SHUTDOWN(function_name)
 
-
-/**
+/*!
  * Define a function which will open the device for a user.
  *
  * @param function_name The name of the driver open() function
@@ -926,8 +871,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_OPEN(function_name)
 
-
-/**
+/*!
  * Define a function which will handle a user's ioctl() request
  *
  * @param function_name The name of the driver ioctl() function
@@ -936,8 +880,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_IOCTL(function_name)
 
-
-/**
+/*!
  * Define a function which will handle a user's read() request
  *
  * @param function_name The name of the driver read() function
@@ -946,8 +889,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_READ(function_name)
 
-
-/**
+/*!
  * Define a function which will handle a user's write() request
  *
  * @param function_name The name of the driver write() function
@@ -956,8 +898,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_WRITE(function_name)
 
-
-/**
+/*!
  * Define a function which will handle a user's mmap() request
  *
  * The mmap() function requests the driver to map some memory into user space.
@@ -970,8 +911,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_MMAP(function_name)
 
-
-/**
+/*!
  * Define a function which will close the device - opposite of OS_DEV_OPEN()
  *
  * @param function_name The name of the driver close() function
@@ -980,8 +920,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_CLOSE(function_name)
 
-
-/**
+/*!
  * Define a function which will handle an interrupt
  *
  * No arguments are available to the generic function.  It must not invoke any
@@ -1002,8 +941,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_ISR(function_name)
 
-
-/**
+/*!
  * Define a function which will operate as a background task / bottom half.
  *
  * The function implementation must be structured in the following manner:
@@ -1027,27 +965,25 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_TASK(function_name)
 
-/** @} */ /* drsigs */
+	  /*! @} *//* drsigs */
 
-
-/** @defgroup dclsigs Routines to declare Driver Signature routines
+/*! @defgroup dclsigs Routines to declare Driver Signature routines
  *
  * These macros drop prototypes suitable for forward-declaration of
  * @ref drsigs "function signatures".
  */
 
-/** @addtogroup dclsigs */
-/** @{ */
+/*! @addtogroup dclsigs */
+/*! @{ */
 
-/**
+/*!
  * Declare prototype for the device initialization function
  *
  * @param function_name   The name of the portable initialization function.
  */
 #define OS_DEV_INIT_DCL(function_name)
 
-
-/**
+/*!
  * Declare prototype for the device shutdown function
  *
  * @param function_name   The name of the portable driver shutdown routine.
@@ -1056,8 +992,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_SHUTDOWN_DCL(function_name)
 
-
-/**
+/*!
  * Declare prototype for the open() function.
  *
  * @param function_name The name of the driver open() function
@@ -1066,8 +1001,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_OPEN_DCL(function_name)
 
-
-/**
+/*!
  * Declare prototype for the user's ioctl() request function
  *
  * @param function_name The name of the driver ioctl() function
@@ -1076,32 +1010,28 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_IOCTL_DCL(function_name)
 
-
-/**
+/*!
  * Declare prototype for the function a user's read() request
  *
  * @param function_name The name of the driver read() function
  */
 #define OS_DEV_READ_DCL(function_name)
 
-
-/**
+/*!
  * Declare prototype for the user's write() request function
  *
  * @param function_name The name of the driver write() function
  */
 #define OS_DEV_WRITE_DCL(function_name)
 
-
-/**
+/*!
  * Declare prototype for the user's mmap() request function
  *
  * @param function_name The name of the driver mmap() function
  */
 #define OS_DEV_MMAP_DCL(function_name)
 
-
-/**
+/*!
  * Declare prototype for the close function
  *
  * @param function_name The name of the driver close() function
@@ -1110,37 +1040,34 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 #define OS_DEV_CLOSE_DCL(function_name)
 
-
-/**
+/*!
  * Declare prototype for the interrupt handling function
  *
  * @param function_name The name of the driver ISR function
  */
 #define OS_DEV_ISR_DCL(function_name)
 
-
-/**
+/*!
  * Declare prototype for a background task / bottom half function
  *
  * @param function_name The name of this background task function
  */
 #define OS_DEV_TASK_DCL(function_name)
 
-/** @} */ /* dclsigs */
-
+	  /*! @} *//* dclsigs */
 
 /*****************************************************************************
  *  Functions for Returning Values from Driver Signature routines
  *****************************************************************************/
 
-/**
+/*!
  * @defgroup retfns Functions to Return Values from Driver Signature routines
  */
 
-/** @addtogroup retfns */
-/** @{ */
+/*! @addtogroup retfns */
+/*! @{ */
 
-/**
+/*!
  * Return from the #OS_DEV_INIT() function
  *
  * @param code    An error code to report success or failure.
@@ -1148,8 +1075,7 @@ void os_wake_sleepers(os_sleep_object_t object);
  */
 void os_dev_init_return(os_error_code code);
 
-
-/**
+/*!
  * Return from the #OS_DEV_SHUTDOWN() function
  *
  * @param code    An error code to report success or failure.
@@ -1157,8 +1083,7 @@ void os_dev_init_return(os_error_code code);
  */
 void os_dev_shutdown_return(os_error_code code);
 
-
-/**
+/*!
  * Return from the #OS_DEV_ISR() function
  *
  * The function should verify that it really was supposed to be called,
@@ -1170,8 +1095,7 @@ void os_dev_shutdown_return(os_error_code code);
  */
 void os_dev_isr_return(int code);
 
-
-/**
+/*!
  * Return from the #OS_DEV_OPEN() function
  *
  * @param code    An error code to report success or failure.
@@ -1179,8 +1103,7 @@ void os_dev_isr_return(int code);
  */
 void os_dev_open_return(os_error_code code);
 
-
-/**
+/*!
  * Return from the #OS_DEV_IOCTL() function
  *
  * @param code    An error code to report success or failure.
@@ -1188,8 +1111,7 @@ void os_dev_open_return(os_error_code code);
  */
 void os_dev_ioctl_return(os_error_code code);
 
-
-/**
+/*!
  * Return from the #OS_DEV_READ() function
  *
  * @param code    Number of bytes read, or an error code to report failure.
@@ -1197,8 +1119,7 @@ void os_dev_ioctl_return(os_error_code code);
  */
 void os_dev_read_return(os_error_code code);
 
-
-/**
+/*!
  * Return from the #OS_DEV_WRITE() function
  *
  * @param code    Number of bytes written, or an error code to report failure.
@@ -1206,8 +1127,7 @@ void os_dev_read_return(os_error_code code);
  */
 void os_dev_write_return(os_error_code code);
 
-
-/**
+/*!
  * Return from the #OS_DEV_MMAP() function
  *
  * @param code    Number of bytes written, or an error code to report failure.
@@ -1215,8 +1135,7 @@ void os_dev_write_return(os_error_code code);
  */
 void os_dev_mmap_return(os_error_code code);
 
-
-/**
+/*!
  * Return from the #OS_DEV_CLOSE() function
  *
  * @param code    An error code to report success or failure.
@@ -1224,7 +1143,7 @@ void os_dev_mmap_return(os_error_code code);
  */
 void os_dev_close_return(os_error_code code);
 
-/**
+/*!
  * Start the #OS_DEV_TASK() function
  *
  * In some implementations, this could be turned into a label for
@@ -1237,8 +1156,7 @@ void os_dev_close_return(os_error_code code);
  */
 void os_dev_task_begin(void);
 
-
-/**
+/*!
  * Return from the #OS_DEV_TASK() function
  *
  * In some implementations, this could be turned into a sleep followed
@@ -1249,37 +1167,33 @@ void os_dev_task_begin(void);
  */
 void os_dev_task_return(os_error_code code);
 
-
-/** @} */ /* retfns */
-
+	  /*! @} *//* retfns */
 
 /*****************************************************************************
  *  Functions/Macros for accessing arguments from Driver Signature routines
  *****************************************************************************/
 
-/** @defgroup drsigargs Functions for Getting Arguments in Signature functions
+/*! @defgroup drsigargs Functions for Getting Arguments in Signature functions
  *
  */
 /* @addtogroup @drsigargs */
-/** @{ */
+/*! @{ */
 
-/**
+/*!
  * Check whether user is requesting read (permission) on the file/device.
  * Usable in #OS_DEV_OPEN(), #OS_DEV_CLOSE(), #OS_DEV_IOCTL(), #OS_DEV_READ()
  * and #OS_DEV_WRITE() routines.
  */
 int os_dev_is_flag_read(void);
 
-
-/**
+/*!
  * Check whether user is requesting write (permission) on the file/device.
  * Usable in #OS_DEV_OPEN(), #OS_DEV_CLOSE(), #OS_DEV_IOCTL(), #OS_DEV_READ()
  * and #OS_DEV_WRITE() routines.
  */
 int os_dev_is_flag_write(void);
 
-
-/**
+/*!
  * Check whether user is requesting non-blocking I/O.  Usable in
  * #OS_DEV_OPEN(), #OS_DEV_CLOSE(), #OS_DEV_IOCTL(), #OS_DEV_READ() and
  * #OS_DEV_WRITE() routines.
@@ -1290,22 +1204,19 @@ int os_dev_is_flag_write(void);
  */
 int os_dev_is_flag_nonblock(void);
 
-
-/**
+/*!
  * Determine which major device is being accessed.  Usable in #OS_DEV_OPEN()
  * and #OS_DEV_CLOSE().
  */
 int os_dev_get_major(void);
 
-
-/**
+/*!
  * Determine which minor device is being accessed.  Usable in #OS_DEV_OPEN()
  * and #OS_DEV_CLOSE().
  */
 int os_dev_get_minor(void);
 
-
-/**
+/*!
  * Determine which operation the user wants performed.  Usable in
  * #OS_DEV_IOCTL().
  *
@@ -1315,8 +1226,7 @@ int os_dev_get_minor(void);
  */
 unsigned os_dev_get_ioctl_op(void);
 
-
-/**
+/*!
  * Retrieve the associated argument for the desired operation.  Usable in
  * #OS_DEV_IOCTL().
  *
@@ -1325,8 +1235,7 @@ unsigned os_dev_get_ioctl_op(void);
  */
 os_dev_ioctl_arg_t os_dev_get_ioctl_arg(void);
 
-
-/**
+/*!
  * Determine the requested byte count. This should be the size of buffer at
  * #os_dev_get_user_buffer(). Usable in OS_DEV_READ() and OS_DEV_WRITE()
  * routines.
@@ -1335,18 +1244,16 @@ os_dev_ioctl_arg_t os_dev_get_ioctl_arg(void);
  */
 unsigned os_dev_get_count(void);
 
-
-/**
+/*!
  * Get the pointer to the user's data buffer. Usable in OS_DEV_READ(),
  * OS_DEV_WRITE(), and OS_DEV_MMAP() routines.
  *
  * @return   Pointer to user buffer (in user space).  See #os_copy_to_user()
  *           and #os_copy_from_user().
  */
-void* os_dev_get_user_buffer(void);
+void *os_dev_get_user_buffer(void);
 
-
-/**
+/*!
  * Get the POSIX flags field for the associated open file.  Usable in
  * OS_DEV_READ(), OS_DEV_WRITE(), and OS_DEV_IOCTL() routines.
  *
@@ -1354,7 +1261,7 @@ void* os_dev_get_user_buffer(void);
  */
 unsigned os_dev_get_file_flags(void);
 
-/**
+/*!
  * Set the driver's private structure associated with this file/open.
  *
  * Generally used during #OS_DEV_OPEN().  May also be used during
@@ -1363,10 +1270,9 @@ unsigned os_dev_get_file_flags(void);
  *
  * @param  struct_p   The driver data structure to associate with this user.
  */
-void os_dev_set_user_private(void* struct_p);
+void os_dev_set_user_private(void *struct_p);
 
-
-/**
+/*!
  * Get the driver's private structure associated with this file.
  *
  * May be used during #OS_DEV_OPEN(), #OS_DEV_READ(), #OS_DEV_WRITE(),
@@ -1375,24 +1281,22 @@ void os_dev_set_user_private(void* struct_p);
  *
  * @return   The driver data structure to associate with this user.
  */
-void* os_dev_get_user_private(void);
+void *os_dev_get_user_private(void);
 
-
-/**
+/*!
  * Get the IRQ associated with this call to the #OS_DEV_ISR() function.
  *
  * @return  The IRQ (integer) interrupt number.
  */
 int os_dev_get_irq(void);
 
-/** @} */ /* drsigargs */
-
+	  /*! @} *//* drsigargs */
 
 /*****************************************************************************
  *  Functions for Generating References to Driver Routines
  *****************************************************************************/
 
-/**
+/*!
  * @defgroup drref Functions for Generating References to Driver Routines
  *
  * These functions will most likely be implemented as macros.  They are a
@@ -1405,10 +1309,10 @@ int os_dev_get_irq(void);
  * passing a pointer to the function.
  */
 
-/** @addtogroup drref */
-/** @{ */
+/*! @addtogroup drref */
+/*! @{ */
 
-/**
+/*!
  * Generate a reference to an #OS_DEV_INIT() function
  *
  * @param function_name   The name of the init function being referenced.
@@ -1417,8 +1321,7 @@ int os_dev_get_irq(void);
  */
 os_init_function_t OS_DEV_INIT_REF(symbol function_name);
 
-
-/**
+/*!
  * Generate a reference to an #OS_DEV_SHUTDOWN() function
  *
  * @param function_name   The name of the shutdown function being referenced.
@@ -1427,8 +1330,7 @@ os_init_function_t OS_DEV_INIT_REF(symbol function_name);
  */
 os_shutdown_function_t OS_DEV_SHUTDOWN_REF(symbol function_name);
 
-
-/**
+/*!
  * Generate a reference to an #OS_DEV_OPEN() function
  *
  * @param function_name   The name of the open function being referenced.
@@ -1437,8 +1339,7 @@ os_shutdown_function_t OS_DEV_SHUTDOWN_REF(symbol function_name);
  */
 os_user_function_t OS_DEV_OPEN_REF(symbol function_name);
 
-
-/**
+/*!
  * Generate a reference to an #OS_DEV_CLOSE() function
  *
  * @param function_name   The name of the close function being referenced.
@@ -1447,8 +1348,7 @@ os_user_function_t OS_DEV_OPEN_REF(symbol function_name);
  */
 os_user_function_t OS_DEV_CLOSE_REF(symbol function_name);
 
-
-/**
+/*!
  * Generate a reference to an #OS_DEV_READ() function
  *
  * @param function_name   The name of the read function being referenced.
@@ -1457,8 +1357,7 @@ os_user_function_t OS_DEV_CLOSE_REF(symbol function_name);
  */
 os_user_function_t OS_DEV_READ_REF(symbol function_name);
 
-
-/**
+/*!
  * Generate a reference to an #OS_DEV_WRITE() function
  *
  * @param function_name   The name of the write function being referenced.
@@ -1467,8 +1366,7 @@ os_user_function_t OS_DEV_READ_REF(symbol function_name);
  */
 os_user_function_t OS_DEV_WRITE_REF(symbol function_name);
 
-
-/**
+/*!
  * Generate a reference to an #OS_DEV_IOCTL() function
  *
  * @param function_name   The name of the ioctl function being referenced.
@@ -1477,8 +1375,7 @@ os_user_function_t OS_DEV_WRITE_REF(symbol function_name);
  */
 os_user_function_t OS_DEV_IOCTL_REF(symbol function_name);
 
-
-/**
+/*!
  * Generate a reference to an #OS_DEV_MMAP() function
  *
  * @param function_name   The name of the mmap function being referenced.
@@ -1487,8 +1384,7 @@ os_user_function_t OS_DEV_IOCTL_REF(symbol function_name);
  */
 os_user_function_t OS_DEV_MMAP_REF(symbol function_name);
 
-
-/**
+/*!
  * Generate a reference to an #OS_DEV_ISR() function
  *
  * @param function_name   The name of the isr being referenced.
@@ -1497,43 +1393,61 @@ os_user_function_t OS_DEV_MMAP_REF(symbol function_name);
  */
 os_interrupt_handler_t OS_DEV_ISR_REF(symbol function_name);
 
+	  /*! @} *//* drref */
 
-/** @} */ /* drref */
-
-
-/**
+/*!
  * Flush and invalidate all cache lines.
  */
 void os_flush_cache_all(void);
 
-
-/**
+/*!
  * Flush a range of addresses from the cache
  *
  * @param  start    Starting virtual address
  * @param  len      Number of bytes to flush
  */
-void os_cache_flush_range(void* start, uint32_t len);
+void os_cache_flush_range(void *start, uint32_t len);
 
-
-/**
+/*!
  * Invalidate a range of addresses in the cache
  *
  * @param  start    Starting virtual address
  * @param  len      Number of bytes to flush
  */
-void os_cache_inv_range(void* start, uint32_t len);
+void os_cache_inv_range(void *start, uint32_t len);
 
-
-/**
+/*!
  * Clean a range of addresses from the cache
  *
  * @param  start    Starting virtual address
  * @param  len      Number of bytes to flush
  */
-void os_cache_clean_range(void* start, uint32_t len);
+void os_cache_clean_range(void *start, uint32_t len);
 
-#endif /* DOXYGEN_PORTABLE_OS_DOC */
+/*!
+  * @example widget.h
+  */
 
+/*!
+  * @example widget.c
+  */
+
+/*!
+  * @example rng_driver.h
+  */
+
+/*!
+  * @example rng_driver.c
+  */
+
+/*!
+  * @example shw_driver.h
+  */
+
+/*!
+  * @example shw_driver.c
+  */
+
+#endif				/* DOXYGEN_PORTABLE_OS_DOC */
 
 #endif				/* PORTABLE_OS_H */

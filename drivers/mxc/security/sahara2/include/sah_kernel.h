@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -80,6 +80,7 @@
 
 #define SAHARA_SCC_SSTATUS  _IOWR(SAH_IOC_MAGIC, 25, scc_partition_info_t)
 
+#define SAHARA_SK_READ      _IOWR(SAH_IOC_MAGIC, 29, scc_slot_t)
 
 /*! This is the name that will appear in /proc/interrupts */
 #define SAHARA_NAME         "SAHARA"

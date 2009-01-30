@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -40,14 +40,14 @@
 #define RELEASE_LOCK
 #endif	/* __KERNEL__ */
 
-/**
+/*!
  * Calculates the byte offset into a word
  *  @param   bp  The byte (char*) pointer
  *  @return      The offset (0, 1, 2, or 3)
  */
 #define SCC_BYTE_OFFSET(bp) ((uint32_t)(bp) % sizeof(uint32_t))
 
-/**
+/*!
  * Converts (by rounding down) a byte pointer into a word pointer
  *  @param  bp  The byte (char*) pointer
  *  @return     The word (uint32_t) as though it were an aligned (uint32_t*)
@@ -61,6 +61,7 @@
  * available in kernel mode, so they should be stubbed out in user mode.
  */
 #if defined(FSL_HAVE_SCC2) || (defined(FSL_HAVE_SCC) && defined(__KERNEL__))
+EXPORT_SYMBOL(fsl_shw_init_keystore);
 void fsl_shw_init_keystore(
 			    fsl_shw_kso_t *keystore,
 			    fsl_shw_return_t(*data_init) (fsl_shw_uco_t *user_ctx,
@@ -100,6 +101,8 @@ void fsl_shw_init_keystore(
 	keystore->slot_get_offset = slot_get_offset;
 	keystore->slot_get_slot_size = slot_get_slot_size;
 }
+
+EXPORT_SYMBOL(fsl_shw_init_keystore_default);
 void fsl_shw_init_keystore_default(fsl_shw_kso_t *keystore)
 {
 	keystore->data_init = shw_kso_init_data;
@@ -113,9 +116,10 @@ void fsl_shw_init_keystore_default(fsl_shw_kso_t *keystore)
 	keystore->slot_get_slot_size = shw_slot_get_slot_size;
 }
 
-/**
+/*!
  * Do any keystore specific initializations
  */
+EXPORT_SYMBOL(fsl_shw_establish_keystore);
 fsl_shw_return_t fsl_shw_establish_keystore(fsl_shw_uco_t *user_ctx,
 						fsl_shw_kso_t *keystore)
 {
@@ -126,6 +130,8 @@ fsl_shw_return_t fsl_shw_establish_keystore(fsl_shw_uco_t *user_ctx,
     /* Call the data_init function for any user setup */
     return keystore->data_init(user_ctx, &(keystore->user_data));
 }
+
+EXPORT_SYMBOL(fsl_shw_release_keystore);
 void fsl_shw_release_keystore(fsl_shw_uco_t *user_ctx,
 				 fsl_shw_kso_t *keystore)
 {
@@ -181,7 +187,7 @@ out:RELEASE_LOCK;
 }
 
 fsl_shw_return_t
-keystore_load_slot(fsl_shw_kso_t * keystore, uint64_t owner_id, uint32_t slot,
+keystore_slot_load(fsl_shw_kso_t * keystore, uint64_t owner_id, uint32_t slot,
 		   const uint8_t * key_data, uint32_t key_length)
 {
 
@@ -236,6 +242,56 @@ out:RELEASE_LOCK;
 
 #endif	/* FSL_HAVE_SCC2 */
 }
+
+fsl_shw_return_t
+keystore_slot_read(fsl_shw_kso_t * keystore, uint64_t owner_id, uint32_t slot,
+		   uint32_t key_length, uint8_t * key_data)
+{
+#ifdef FSL_HAVE_SCC2
+	fsl_shw_return_t retval = FSL_RETURN_ERROR_S;
+	uint8_t *slot_addr;
+	uint32_t slot_size;
+
+	slot_addr = keystore->slot_get_address(keystore->user_data, slot);
+	slot_size = keystore->slot_get_slot_size(keystore->user_data, slot);
+
+	if (key_length > slot_size) {
+		retval = FSL_RETURN_BAD_KEY_LENGTH_S;
+		goto out;
+	}
+
+	memcpy(key_data, slot_addr, key_length);
+	retval = FSL_RETURN_OK_S;
+
+      out:
+	return retval;
+
+#else				/* Have SCC2 */
+	fsl_shw_return_t retval = FSL_RETURN_ERROR_S;
+	scc_return_t scc_ret;
+	printk("keystore SCC \n");
+
+	scc_ret =
+	    scc_read_slot(owner_id, slot, key_length, (uint8_t *) key_data);
+	printk("keystore SCC Ret value: %d \n", scc_ret);
+	switch (scc_ret) {
+	case SCC_RET_OK:
+		retval = FSL_RETURN_OK_S;
+		break;
+	case SCC_RET_VERIFICATION_FAILED:
+		retval = FSL_RETURN_AUTH_FAILED_S;
+		break;
+	case SCC_RET_INSUFFICIENT_SPACE:
+		retval = FSL_RETURN_BAD_DATA_LENGTH_S;
+		break;
+	default:
+		retval = FSL_RETURN_ERROR_S;
+	}
+
+	return retval;
+
+#endif				/* FSL_HAVE_SCC2 */
+}/* end fn keystore_slot_read */
 
 fsl_shw_return_t
 keystore_slot_encrypt(fsl_shw_uco_t *user_ctx, fsl_shw_kso_t *keystore,
@@ -421,7 +477,7 @@ fsl_shw_return_t keystore_slot_dealloc(fsl_shw_kso_t *keystore,
 }
 
 fsl_shw_return_t
-keystore_load_slot(fsl_shw_kso_t *keystore, uint64_t owner_id, uint32_t slot,
+keystore_slot_load(fsl_shw_kso_t *keystore, uint64_t owner_id, uint32_t slot,
 		   const uint8_t *key_data, uint32_t key_length)
 {
 	(void)keystore;
@@ -429,6 +485,19 @@ keystore_load_slot(fsl_shw_kso_t *keystore, uint64_t owner_id, uint32_t slot,
 	(void)slot;
 	(void)key_data;
 	(void)key_length;
+	return FSL_RETURN_NO_RESOURCE_S;
+}
+
+fsl_shw_return_t
+keystore_slot_read(fsl_shw_kso_t * keystore, uint64_t owner_id, uint32_t slot,
+		   uint32_t key_length, uint8_t * key_data)
+{
+	(void)keystore;
+	(void)owner_id;
+	(void)slot;
+	(void)key_length;
+	(void)key_data;
+
 	return FSL_RETURN_NO_RESOURCE_S;
 }
 
@@ -610,6 +679,9 @@ fsl_shw_return_t shw_slot_dealloc(void *user_data, uint64_t owner_id,
 	if (slot >= data->slot_count)
 		return FSL_RETURN_ERROR_S;
 	if (data->slot[slot].allocated == 1) {
+		/* Forcibly remove the data from the keystore */
+		memset(shw_slot_get_address(user_data, slot), 0,
+		       KEYSTORE_SLOT_SIZE);
 		data->slot[slot].allocated = 0;
 		return FSL_RETURN_OK_S;
 	}

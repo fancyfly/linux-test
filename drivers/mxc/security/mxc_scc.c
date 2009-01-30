@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -14,7 +14,7 @@
 /*!
  * @file mxc_scc.c
  *
- * @brief This is the driver code for the Security Controller (SCC).  It has no device
+ * This is the driver code for the Security Controller (SCC).  It has no device
  * driver interface, so no user programs may access it.  Its interaction with
  * the Linux kernel is from calls to #scc_init() when the driver is loaded, and
  * #scc_cleanup() should the driver be unloaded.  The driver uses locking and
@@ -47,6 +47,7 @@
  *
  * @ingroup MXCSCC
 */
+#include "sahara2/include/fsl_platform.h"
 #include "sahara2/include/portable_os.h"
 #include "mxc_scc_internals.h"
 
@@ -65,7 +66,7 @@
 
 #endif
 
-/**
+/*!
  * This is the set of errors which signal that access to the SCM RAM has
  * failed or will fail.
  */
@@ -108,7 +109,7 @@ static void (*scc_callbacks[SCC_CALLBACK_SIZE]) (void);
 /*! Structure returned by #scc_get_configuration() */
 static scc_config_t scc_configuration = {
 	.driver_major_version = SCC_DRIVER_MAJOR_VERSION_1,
-	.driver_minor_version = SCC_DRIVER_MINOR_VERSION_6,
+	.driver_minor_version = SCC_DRIVER_MINOR_VERSION_8,
 	.scm_version = -1,
 	.smn_version = -1,
 	.block_size_bytes = -1,
@@ -155,9 +156,12 @@ static uint32_t scc_memory_size_bytes;
 static uint32_t scm_highest_memory_address;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18))
-/** Pointer to SCC's clock information.  Initialized during scc_init(). */
+#ifndef SCC_CLOCK_NOT_GATED
+/*! Pointer to SCC's clock information.  Initialized during scc_init(). */
 static struct clk *scc_clk = NULL;
 #endif
+#endif
+
 /*! The lookup table for an 8-bit value.  Calculated once
  * by #scc_init_ccitt_crc().
  */
@@ -264,7 +268,7 @@ static int scc_init(void)
 				if (scc_availability == SCC_STATUS_OK) {
 					if (setup_interrupt_handling() != 0) {
 						unsigned condition;
-			/**
+			/*!
 			 * The error could be only that the SCM interrupt was
 			 * not set up.  This interrupt is always masked, so
 			 * that is not an issue.
@@ -392,11 +396,6 @@ static void scc_cleanup(void)
 
 }				/* scc_cleanup */
 
-/*static void scc_cleanup(void)
-{
-	 platform_driver_unregister(&mxc_scc_driver);
-}*/
-
 /*****************************************************************************/
 /* fn scc_get_configuration()                                                */
 /*****************************************************************************/
@@ -410,7 +409,7 @@ scc_config_t *scc_get_configuration(void)
 		scc_init();
 	}
 
-    /**
+  /*!
      * If there is no SCC, yet the driver exists, the value -1 will be in
      * the #scc_config_t fields for other than the driver versions.
      */
@@ -473,10 +472,12 @@ scc_return_t scc_zeroize_memories(void)
 /* fn scc_crypt()                                                            */
 /*****************************************************************************/
 scc_return_t
-scc_crypt(unsigned long count_in_bytes, uint8_t * data_in,
-	  uint8_t * init_vector, scc_enc_dec_t direction,
-	  scc_crypto_mode_t crypto_mode, scc_verify_t check_mode,
-	  uint8_t * data_out, unsigned long *count_out_bytes)
+scc_crypt(unsigned long count_in_bytes, const uint8_t * data_in,
+	  const uint8_t * init_vector,
+	  scc_enc_dec_t direction, scc_crypto_mode_t crypto_mode,
+	  scc_verify_t check_mode, uint8_t * data_out,
+	  unsigned long *count_out_bytes)
+
 {
 	scc_return_t return_code = SCC_RET_FAIL;
 
@@ -500,6 +501,24 @@ scc_crypt(unsigned long count_in_bytes, uint8_t * data_in,
 		count_in_bytes % SCC_BLOCK_SIZE_BYTES() != 0)
 	    || (check_mode != SCC_VERIFY_MODE_NONE &&
 		check_mode != SCC_VERIFY_MODE_CCITT_CRC)) {
+		pr_debug
+		    ("SCC: scc_crypt() count_in_bytes_ok = %d; data_in_ok = %d;"
+		     " data_out_ok = %d; iv_ok = %d\n", !(count_in_bytes == 0),
+		     !(data_in == 0), !(data_out == 0),
+		     !(crypto_mode == SCC_CBC_MODE && init_vector == NULL));
+		pr_debug("SCC: scc_crypt() mode_ok=%d; direction_ok=%d;"
+			 " size_ok=%d, check_mode_ok=%d\n",
+			 !(crypto_mode != SCC_CBC_MODE
+			   && crypto_mode != SCC_ECB_MODE),
+			 !(direction != SCC_ENCRYPT
+			   && direction != SCC_DECRYPT),
+			 !((check_mode == SCC_VERIFY_MODE_NONE
+			    && count_in_bytes % SCC_BLOCK_SIZE_BYTES() != 0)
+			   || (direction == SCC_DECRYPT
+			       && count_in_bytes % SCC_BLOCK_SIZE_BYTES() !=
+			       0)), !(check_mode != SCC_VERIFY_MODE_NONE
+				      && check_mode !=
+				      SCC_VERIFY_MODE_CCITT_CRC));
 		pr_debug("SCC: scc_crypt() detected bad argument\n");
 	} else {
 		/* Start settings for write to SCM_CONTROL register  */
@@ -951,7 +970,7 @@ copy_to_scc(const uint8_t * from, uint32_t to, unsigned long count_bytes,
 	for (i = 0; i < count_bytes; i++) {
 		uint8_t byte = *from++;	/* value from plaintext */
 
-#ifdef __BIG_ENDIAN
+#if defined(__BIG_ENDIAN) || defined(FSL_HAVE_DRYICE)
 		scm_word = (scm_word << 8) | byte;	/* add byte to SCM word */
 #else
 		scm_word = (byte << 24) | (scm_word >> 8);
@@ -1038,7 +1057,7 @@ copy_from_scc(const uint32_t from, uint8_t * to, unsigned long count_bytes,
 
 	/* If necessary, move the 'first' byte into place */
 	if (SCC_BYTE_OFFSET(running_from) != 0) {
-#ifdef __BIG_ENDIAN
+#if defined(__BIG_ENDIAN) || defined(FSL_HAVE_DRYICE)
 		scm_word <<= 8 * SCC_BYTE_OFFSET(running_from);
 #else
 		scm_word >>= 8 * SCC_BYTE_OFFSET(running_from);
@@ -1049,7 +1068,7 @@ copy_from_scc(const uint32_t from, uint8_t * to, unsigned long count_bytes,
 	while (count_bytes--) {
 		uint8_t byte;	/* value from plaintext */
 
-#ifdef __BIG_ENDIAN
+#if defined(__BIG_ENDIAN) || defined(FSL_HAVE_DRYICE)
 		byte = (scm_word & 0xff000000) >> 24;	/* pull byte out of SCM word */
 		scm_word <<= 8;	/* shift over to remove the just-pulled byte */
 #else
@@ -1446,8 +1465,10 @@ static uint32_t scc_do_crypto(int byte_count, uint32_t scm_control)
  * @param[in,out] count_out_bytes Number of bytes available at @c data_out
  */
 static scc_return_t
-scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
+scc_encrypt(uint32_t count_in_bytes, const uint8_t * data_in,
+	    uint32_t scm_control,
 	    uint8_t * data_out, int add_crc, unsigned long *count_out_bytes)
+
 {
 	scc_return_t return_code = SCC_RET_FAIL;	/* initialised for failure */
 	uint32_t input_bytes_left = count_in_bytes;	/* local copy */
@@ -1455,11 +1476,19 @@ scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
 	uint32_t bytes_to_process;	/* multi-purpose byte counter */
 	uint16_t crc = CRC_CCITT_START;	/* running CRC value */
 	crc_t *crc_ptr = NULL;	/* Reset if CRC required */
-	uint32_t scm_location = SCM_RED_MEMORY + SCM_NON_RESERVED_OFFSET;	/* byte address  into SCM RAM */
-	uint32_t scm_bytes_remaining = scc_memory_size_bytes;	/* free RED RAM */
-	uint8_t padding_buffer[PADDING_BUFFER_MAX_BYTES];	/* CRC+padding holder */
+	/* byte address  into SCM RAM */
+	uint32_t scm_location = SCM_RED_MEMORY + SCM_NON_RESERVED_OFFSET;
+	/* free RED RAM */
+	uint32_t scm_bytes_remaining = scc_memory_size_bytes;
+	/* CRC+padding holder */
+	uint8_t padding_buffer[PADDING_BUFFER_MAX_BYTES];
 	unsigned padding_byte_count = 0;	/* Reset if padding required */
 	uint32_t scm_error_status = 0;	/* No known SCM error initially */
+	uint32_t i; 	/* Counter for clear data loop */
+	uint32_t dirty_bytes;	/* Number of bytes of memory used
+					   temporarily during encryption,
+					   which need to be wiped after
+					   completion of the operation. */
 
 	/* Set location of CRC and prepare padding bytes if required */
 	if (add_crc != 0) {
@@ -1536,6 +1565,16 @@ scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
 		scm_bytes_remaining = scc_memory_size_bytes;
 
 	}			/* input_bytes_left > 0 */
+	/* Clear all red and black memory used during ephemeral encryption */
+	dirty_bytes = (count_in_bytes > scc_memory_size_bytes) ?
+			scc_memory_size_bytes : count_in_bytes;
+	
+	for (i = 0; i < dirty_bytes; i += 4) {
+		SCC_WRITE_REGISTER(SCM_RED_MEMORY + SCM_NON_RESERVED_OFFSET + i,
+					   0);
+		SCC_WRITE_REGISTER(SCM_BLACK_MEMORY + SCM_NON_RESERVED_OFFSET +
+					   i, 0);
+	}
 
 	/* If no SCM error, set OK status and save ouput byte count */
 	if (scm_error_status == 0) {
@@ -1563,7 +1602,8 @@ scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
 
  */
 static scc_return_t
-scc_decrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
+scc_decrypt(uint32_t count_in_bytes, const uint8_t * data_in,
+	    uint32_t scm_control,
 	    uint8_t * data_out, int verify_crc, unsigned long *count_out_bytes)
 {
 	scc_return_t return_code = SCC_RET_FAIL;
@@ -1571,10 +1611,16 @@ scc_decrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
 	uint32_t bytes_copied = 0;	/* running total of bytes going to user */
 	uint32_t bytes_to_copy = 0;	/* Number in this encryption 'chunk' */
 	uint16_t crc = CRC_CCITT_START;	/* running CRC value */
-	uint32_t scm_location = SCM_BLACK_MEMORY + SCM_NON_RESERVED_OFFSET;	/* next target for  ctext */
+	/* next target for	ctext */
+	uint32_t scm_location = SCM_BLACK_MEMORY + SCM_NON_RESERVED_OFFSET;
 	unsigned padding_byte_count;	/* number of bytes of padding stripped */
 	uint8_t last_two_blocks[2 * SCC_BLOCK_SIZE_BYTES()];	/* temp */
 	uint32_t scm_error_status = 0;	/* register value */
+	uint32_t i; 	/* Counter for clear data loop */
+	uint32_t dirty_bytes;	/* Number of bytes of memory used
+					   temporarily during decryption,
+					   which need to be wiped after
+					   completion of the operation. */
 
 	scm_control |= SCM_DECRYPT_MODE;
 
@@ -1713,6 +1759,16 @@ scc_decrypt(uint32_t count_in_bytes, uint8_t * data_in, uint32_t scm_control,
 	}
 
 	/* scm_error_status == 0 */
+	/* Clear all red and black memory used during ephemeral decryption */
+	dirty_bytes = (count_in_bytes > scc_memory_size_bytes) ?
+	    scc_memory_size_bytes : count_in_bytes;
+
+	for (i = 0; i < dirty_bytes; i += 4) {
+		SCC_WRITE_REGISTER(SCM_RED_MEMORY + SCM_NON_RESERVED_OFFSET + i,
+				   0);
+		SCC_WRITE_REGISTER(SCM_BLACK_MEMORY + SCM_NON_RESERVED_OFFSET +
+				   i, 0);
+	}
 	return return_code;
 }				/* scc_decrypt */
 
@@ -1741,8 +1797,8 @@ scc_alloc_slot(uint32_t value_size_bytes, uint64_t owner_id, uint32_t * slot)
 	/* ACQUIRE LOCK to prevent others from using SCC crypto */
 	spin_lock_irqsave(&scc_crypto_lock, irq_flags);
 
-	pr_debug("SCC: Allocating %d-byte slot for 0x%Lx\n", value_size_bytes,
-		 owner_id);
+	pr_debug("SCC: Allocating %d-byte slot for 0x%Lx\n",
+		 value_size_bytes, owner_id);
 
 	if ((value_size_bytes != 0) && (value_size_bytes <= SCC_MAX_KEY_SIZE)) {
 		int i;
@@ -1775,8 +1831,8 @@ scc_alloc_slot(uint32_t value_size_bytes, uint64_t owner_id, uint32_t * slot)
 /*****************************************************************************/
 /* fn verify_slot_access()                                                   */
 /*****************************************************************************/
-static inline scc_return_t verify_slot_access(uint64_t owner_id, uint32_t slot,
-					      uint32_t access_len)
+inline static scc_return_t
+verify_slot_access(uint64_t owner_id, uint32_t slot, uint32_t access_len)
 {
 	scc_return_t status = SCC_RET_FAIL;
 	if (scc_availability != SCC_STATUS_OK) {
@@ -1860,7 +1916,7 @@ scc_return_t scc_dealloc_slot(uint64_t owner_id, uint32_t slot)
  * if @c key_length exceeds the size of the slot.
  */
 scc_return_t
-scc_load_slot(uint64_t owner_id, uint32_t slot, uint8_t * key_data,
+scc_load_slot(uint64_t owner_id, uint32_t slot, const uint8_t * key_data,
 	      uint32_t key_length)
 {
 	scc_return_t status;
@@ -1886,6 +1942,17 @@ scc_load_slot(uint64_t owner_id, uint32_t slot, uint8_t * key_data,
 				pr_debug("SCC: RED copy_to_scc() failed for"
 					 " scc_load_slot()\n");
 			} else {
+				if ((key_length % 4) != 0) {
+					uint32_t zeros = 0;
+
+					/* zero-pad to get remainder bytes in correct place */
+					copy_to_scc((uint8_t *) & zeros,
+						    SCM_RED_MEMORY
+						    +
+						    scc_key_info[slot].offset +
+						    key_length,
+						    4 - (key_length % 4), NULL);
+				}
 				status = SCC_RET_OK;
 			}
 		}
@@ -1896,11 +1963,47 @@ scc_load_slot(uint64_t owner_id, uint32_t slot, uint8_t * key_data,
 	return status;
 }				/* scc_load_slot */
 
+scc_return_t
+scc_read_slot(uint64_t owner_id, uint32_t slot, uint32_t key_length,
+	      uint8_t * key_data)
+{
+	scc_return_t status;
+	unsigned long irq_flags;
+
+	/* ACQUIRE LOCK to prevent others from using SCC crypto */
+	spin_lock_irqsave(&scc_crypto_lock, irq_flags);
+
+	status = verify_slot_access(owner_id, slot, key_length);
+	if ((status == SCC_RET_OK) && (key_data != NULL)) {
+		status = SCC_RET_FAIL;	/* reset expectations */
+
+		if (key_length > SCC_KEY_SLOT_SIZE) {
+			pr_debug
+			    ("SCC: scc_read_slot() rejecting key of %d bytes.\n",
+			     key_length);
+			status = SCC_RET_INSUFFICIENT_SPACE;
+		} else {
+			if (copy_from_scc
+			    (SCM_RED_MEMORY + scc_key_info[slot].offset,
+			     key_data, key_length, NULL)) {
+				pr_debug("SCC: RED copy_from_scc() failed for"
+					 " scc_read_slot()\n");
+			} else {
+				status = SCC_RET_OK;
+			}
+		}
+	}
+
+	spin_unlock_irqrestore(&scc_crypto_lock, irq_flags);
+
+	return status;
+}				/* scc_read_slot */
+
 /*****************************************************************************/
 /* fn scc_encrypt_slot()                                                     */
 /*****************************************************************************/
 /*!
- * Allocate a key slot to fit the requested size.
+ * Encrypt the key data stored in a slot.
  *
  * @param owner_id      Value of owner of slot
  * @param slot          Handle of slot
@@ -2064,7 +2167,7 @@ scc_get_slot_info(uint64_t owner_id, uint32_t slot, uint32_t * address,
  *
  * @internal
  *
- * Crypto under 230 or so bytes is done after the first loop, all
+ * On a Tahiti, crypto under 230 or so bytes is done after the first loop, all
  * the way up to five sets of spins for 1024 bytes.  (8- and 16-byte functions
  * are done when we first look.  Zeroizing takes one pass around.
  */
@@ -2074,7 +2177,6 @@ static void scc_wait_completion(void)
 
 	/* check for completion by polling */
 	while (!is_cipher_done() && (i++ < SCC_CIPHER_MAX_POLL_COUNT)) {
-		/* kill time if loop not optimized away */
 		udelay(10);
 	}
 	pr_debug("SCC: Polled DONE %d times\n", i);

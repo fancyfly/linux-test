@@ -26,7 +26,10 @@ endif
 EXTRA_CFLAGS += -Idrivers/mxc/security/rng/include -Idrivers/mxc/security/sahara2/include
 
 obj-$(CONFIG_MXC_SECURITY_RNG)	+= shw.o
-shw-objs := shw_driver.o shw_memory_mapper.o ../sahara2/fsl_shw_keystore.o
-
+#shw-objs := shw_driver.o shw_memory_mapper.o ../sahara2/fsl_shw_keystore.o
+shw-objs := shw_driver.o shw_memory_mapper.o ../sahara2/fsl_shw_keystore.o  \
+            fsl_shw_sym.o  fsl_shw_wrap.o shw_dryice.o  des_key.o           \
+            shw_hash.o  shw_hmac.o
+            
 obj-$(CONFIG_MXC_SECURITY_RNG)	+= rng.o
 rng-objs :=	rng_driver.o

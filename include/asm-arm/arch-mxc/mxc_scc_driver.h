@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -41,7 +41,7 @@ extern "C" {
 /*!
  * @file arch-mxc/mxc_scc_driver.h
  *
- * @brief Header file to use the SCC driver.
+ * @brief (Header file to use the SCC driver.)
  *
  * The SCC driver will only be available to other kernel modules.  That is,
  * there will be no node file in /dev, no way for a user-mode program to access
@@ -100,9 +100,31 @@ extern "C" {
  * - SCM - Secure Memory.  The part of the SCC which handles the cryptography.
  * - SCC - Security Controller.  Central security mechanism for PISA.
  * - PISA - Platform-Independent Security Architecture.
- *
- * @ingroup MXCSCC
  */
+
+/* Temporarily define compile-time flags to make Doxygen happy. */
+#ifdef DOXYGEN_HACK
+/*! @defgroup scccompileflags SCC Driver compile-time flags
+ *
+ * These preprocessor flags should be set, if desired, in a makefile so
+ * that they show up on the compiler command line.
+ */
+/*! @addtogroup scccompileflags */
+
+/*! @{ */
+/*!
+ * Compile-time flag to change @ref smnregs and @ref scmregs
+ * offset values for the SCC's implementation on the MX.21 board.
+ *
+ * This must also be set properly for any code which calls the
+ * scc_read_register() or scc_write_register() functions or references the
+ * register offsets.
+ */
+#define TAHITI
+/*! @} */
+#undef TAHITI
+
+#endif				/* DOXYGEN_HACK */
 
 /*! Major Version of the driver.  Used for
     scc_configuration->driver_major_version */
@@ -113,13 +135,15 @@ extern "C" {
 #define SCC_DRIVER_MINOR_VERSION_4 4
 /*! Old Minor Version of the driver. */
 #define SCC_DRIVER_MINOR_VERSION_5 5
+/*! Old Minor Version of the driver. */
+#define SCC_DRIVER_MINOR_VERSION_6 6
 /*! Minor Version of the driver.  Used for
     scc_configuration->driver_minor_version */
-#define SCC_DRIVER_MINOR_VERSION_6 6
+#define SCC_DRIVER_MINOR_VERSION_8 8
 
 
 /*!
- * @typedef scc_return_t (enum scc_return)
+ * @typedef scc_return_t 
  */
 /*! Common status return values from SCC driver functions. */
 	typedef enum scc_return_t {
@@ -134,10 +158,7 @@ extern "C" {
 	} scc_return_t;
 
 /*!
- * @typedef scc_config_t (struct scc_config)
- **/
-/*!
- * @brief Configuration information about SCC and the driver.
+ * Configuration information about SCC and the driver.
  *
  * This struct/typedef contains information from the SCC and the driver to
  * allow the user of the driver to determine the size of the SCC's memories and
@@ -155,7 +176,7 @@ extern "C" {
 	} scc_config_t;
 
 /*!
- * @typedef scc_enc_dec_t (enum scc_enc_dec)
+ * @typedef scc_enc_dec_t 
  */
 /*!
  * Determine whether SCC will run its cryptographic
@@ -167,8 +188,8 @@ extern "C" {
 		SCC_DECRYPT	/*!< Decrypt (from Black to Red) */
 	} scc_enc_dec_t;
 
-/*!
- * @typedef scc_crypto_mode_t (enum scc_crypto_mode)
+/*
+ * @typedef scc_crypto_mode_t 
  */
 /*!
  * Determine whether SCC will run its cryptographic function in ECB (electronic
@@ -181,7 +202,7 @@ extern "C" {
 	} scc_crypto_mode_t;
 
 /*!
- * @typedef scc_verify_t (enum scc_verify)
+ * @typedef scc_verify_t 
  */
 /*!
  * Tell the driver whether it is responsible for verifying the integrity of a
@@ -301,25 +322,27 @@ extern "C" {
  * #scc_encrypt or #scc_decrypt routine will be called to do the actual work.
  * The crypto lock will then be released.
  */
-	extern scc_return_t scc_crypt(unsigned long count_in_bytes,
-				      uint8_t * data_in, uint8_t * init_vector,
+extern scc_return_t scc_crypt(unsigned long count_in_bytes,
+				      const uint8_t * data_in,
+				      const uint8_t * init_vector,
 				      scc_enc_dec_t direction,
 				      scc_crypto_mode_t crypto_mode,
 				      scc_verify_t check_mode,
 				      uint8_t * data_out,
 				      unsigned long *count_out_bytes);
 
+
 /*!
  * Allocate a key slot for a stored key (or other stored value).
  *
- * This feature is to allow decrypted secret values to be kept in RED RAM.  This
- * can all visibility of the data only by Sahara.
+ * This feature is to allow decrypted secret values to be kept in RED RAM.
+ * This can all visibility of the data only by Sahara.
  *
  * @param   value_size_bytes  Size, in bytes, of RED key/value.  Currently only
  *                            a size up to 32 bytes is supported.
  *
- * @param      owner_id       A value which will control access to the slot.  It
- *                            must be passed into to any subsequent calls to
+ * @param      owner_id       A value which will control access to the slot.
+ *                            It must be passed into to any subsequent calls to
  *                            use the assigned slot.
  *
  * @param[out] slot           The slot number for the key.
@@ -353,8 +376,23 @@ extern "C" {
  * if @c key_length exceeds the size of the slot.
  */
 	extern scc_return_t scc_load_slot(uint64_t owner_id, uint32_t slot,
-					  uint8_t * key_data,
+					  const uint8_t * key_data,
 					  uint32_t key_length);
+/*!
+ * Read a value from a slot.
+ *
+ * @param owner_id      Value of owner of slot
+ * @param slot          Handle of slot
+ * @param key_length    Length, in bytes, of @c key_data to copy from SCC.
+ * @param key_data      Location to write the key
+ *
+ * @return SCC_RET_OK on success.  SCC_RET_FAIL will be returned if slot
+ * specified cannot be accessed for any reason, or SCC_RET_INSUFFICIENT_SPACE
+ * if @c key_length exceeds the size of the slot.
+ */
+	extern scc_return_t scc_read_slot(uint64_t owner_id, uint32_t slot,
+					  uint32_t key_length,
+					  uint8_t * key_data);
 
 /*!
  * Allocate a key slot to fit the requested size.
@@ -474,11 +512,6 @@ extern "C" {
 	extern scc_return_t scc_read_register(int register_offset,
 					      uint32_t * value);
 
-/* Make Partition for VPU in Secure RAM */
-        extern uint8_t make_vpu_partition(void);
-
-
-
 /*!
  * Write a new value into an SCC register.
  * The offset will be checked for validity (range) as well as whether it is
@@ -581,7 +614,7 @@ extern "C" {
  * information.
  */
 
-/** @def SMN_COMMAND
+/*! @def SMN_COMMAND
  * Command register for SMN. See
  * @ref smncommandregdefs "Command Register Definitions" for further
  * information.
@@ -685,6 +718,7 @@ extern "C" {
 /*!
  * @defgroup smnstatusregdefs SMN Status Register definitions (SMN_STATUS)
  */
+/*! @addtogroup smnstatusregdefs */
 /*! @{ */
 /*! SMN version id. */
 #define SMN_STATUS_VERSION_ID_MASK        0xfc000000
@@ -787,8 +821,9 @@ extern "C" {
  */
 /*! @addtogroup smncommandregdefs */
 /*! @{ */
-#define SMN_COMMAND_ZEROS_MASK   0xfffffff0	/*!< These bits are unimplemented
+#define SMN_COMMAND_ZEROS_MASK   0xffffff70	/*!< These bits are unimplemented
 						   or reserved */
+#define SMN_COMMAND_TAMPER_LOCK         0x10 /*!< Lock Tamper Detect Bit */
 #define SMN_COMMAND_CLEAR_INTERRUPT     0x8	/*!< Clear SMN Interrupt */
 #define SMN_COMMAND_CLEAR_BIT_BANK      0x4	/*!< Clear SMN Bit Bank */
 #define SMN_COMMAND_ENABLE_INTERRUPT    0x2	/*!< Enable SMN Interrupts */
@@ -815,6 +850,7 @@ extern "C" {
  *
  * These are the bit definitions for the #SCM_INTERRUPT_CTRL register.
  */
+/*! @addtogroup scminterruptcontroldefs */ 
 /*! @{ */
 /*! Clear SCM memory */
 #define SCM_INTERRUPT_CTRL_ZEROIZE_MEMORY      0x4
@@ -825,26 +861,28 @@ extern "C" {
 /*! @} */
 
 /*!
- * @name SCM Control Register definitions (SCM_CONTROL).
+ * @defgroup scmcontrolregdefs SCM Control Register definitions (SCM_CONTROL).
  * These values are used with the #SCM_CONTROL register.
  */
+/*! @addtogroup scmcontrolregdefs */
 /*! @{ */
 /*! These bits are zero or reserved */
 #define SCM_CONTROL_ZEROS_MASK    0xfffffff8
 /*! Setting this will start encrypt/decrypt */
 #define SCM_CONTROL_START_CIPHER        0x04
 /*! CBC/ECB flag.
- * See "Chaining Mode bit definitions."
+ * See @ref scmchainmodedefs "Chaining Mode bit definitions."
  */
 #define SCM_CONTROL_CHAINING_MODE_MASK  0x02
 /*! Encrypt/decrypt choice.
- * See "Cipher Mode bit definitions." */
+ * See @ref scmciphermodedefs "Cipher Mode bit definitions." */
 #define SCM_CONTROL_CIPHER_MODE_MASK    0x01
 /*! @} */
 
 /*!
- * @name SCM_CHAINING_MODE_MASK - Bit definitions
+ * @defgroup scmchainmodedefs  SCM_CHAINING_MODE_MASK - Bit definitions
  */
+/*! @addtogroup scmchainmodedefs */
 /*! @{ */
 #define SCM_CBC_MODE            0x2	/*!< Cipher block chaining */
 #define SCM_ECB_MODE            0x0	/*!< Electronic codebook. */
@@ -852,7 +890,7 @@ extern "C" {
 
 /* Bit definitions in the SCM_CIPHER_MODE_MASK */
 /*!
- * @name SCM_CIPHER_MODE_MASK - Bit definitions
+ * @defgroup scmciphermodedefs SCM_CIPHER_MODE_MASK - Bit definitions
  */
 /*! @{ */
 #define SCM_DECRYPT_MODE        0x1	/*!< decrypt from black to red memory */
@@ -860,9 +898,10 @@ extern "C" {
 /*! @} */
 
 /*!
- * @name SCM Status Register (SCM_STATUS).
+ * @defgroup scmstatusregdefs  SCM Status Register (SCM_STATUS).
  * Bit and field definitions of the SCM_STATUS register.
  */
+/*! @addtogroup scmstatusregdefs */
 /*! @{ */
 /*! These bits are zero or reserved */
 #define SCM_STATUS_ZEROS_MASK        0xffffe000
@@ -897,11 +936,12 @@ extern "C" {
 /*! @} */
 
 /*!
- * @name SCM Error Status Register (SCM_ERROR_STATUS)
+ * @defgroup scmerrstatdefs SCM Error Status Register (SCM_ERROR_STATUS)
  *
  * These definitions are associated with the SCM Error Status Register
  * (SCM_ERROR_STATUS).
  */
+/*! @addtogroup scmerrstatdefs */
 /*! @{ */
 /*! These bits are zero or reserved */
 #define SCM_ERR_ZEROS_MASK      0xffffc000
@@ -936,8 +976,10 @@ extern "C" {
 /*! @} */
 
 /*!
- * @name SMN Debug Detector Status Register (SCM_DEBUG_DETECT_STAT)
+ * @defgroup smndbgdetdefs SMN Debug Detector Status Register
+ * (SCM_DEBUG_DETECT_STAT)
  */
+/*! @addtogroup smndbgdetdefs */
 /*! @{ */
 #define SMN_DBG_ZEROS_MASK  0xfffff000	/*!< These bits are zero or reserved */
 #define SMN_DBG_D12             0x0800	/*!< Error detected on Debug Port D12 */

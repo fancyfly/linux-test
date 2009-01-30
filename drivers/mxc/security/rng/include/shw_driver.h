@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -28,7 +28,7 @@
 #include "../../sahara2/include/fsl_platform.h"
 
 /*! @file shw_driver.h
-
+ *
  * @brief Header file to use the SHW driver.
  *
  * The SHW driver is used in two modes: By a user, from the FSL SHW API in user
@@ -38,9 +38,8 @@
  *
  * Testing is performed by using the apitest and kernel api test routines
  * developed for the Sahara2 driver.
- *  @ingroup RNG
- */
-
+  */
+/*#define DIAG_SECURITY_FUNC*/
 /*! Perform a security function.  */
 #define SHW_IOCTL_REQUEST 21
 
@@ -50,41 +49,41 @@
 #define copy_bytes(out, in, len) memcpy(out, in, len)
 
 
-/**
+/*!
  * This is part of the IOCTL request type passed between kernel and user space.
  * It is added to #SHW_IOCTL_REQUEST to generate the actual value.
  */
 typedef enum shw_user_request_t {
-    SHW_USER_REQ_REGISTER_USER,    /**< Initialize user-kernel discussion. */
-    SHW_USER_REQ_DEREGISTER_USER,  /**< Terminate user-kernel discussion. */
-    SHW_USER_REQ_GET_RESULTS,      /**< Get information on outstanding
+    SHW_USER_REQ_REGISTER_USER,    /*!< Initialize user-kernel discussion. */
+    SHW_USER_REQ_DEREGISTER_USER,  /*!< Terminate user-kernel discussion. */
+    SHW_USER_REQ_GET_RESULTS,      /*!< Get information on outstanding
                                       results. */
-    SHW_USER_REQ_GET_CAPABILITIES, /**< Get information on hardware support. */
-    SHW_USER_REQ_GET_RANDOM,       /**< Get random data from RNG. */
-    SHW_USER_REQ_ADD_ENTROPY,      /**< Add entropy to hardware RNG. */
-    SHW_USER_REQ_DROP_PERMS,       /**< Diminish the permissions of a block of
+    SHW_USER_REQ_GET_CAPABILITIES, /*!< Get information on hardware support. */
+    SHW_USER_REQ_GET_RANDOM,       /*!< Get random data from RNG. */
+    SHW_USER_REQ_ADD_ENTROPY,      /*!< Add entropy to hardware RNG. */
+    SHW_USER_REQ_DROP_PERMS,       /*!< Diminish the permissions of a block of
                                       secure memory */
-    SHW_USER_REQ_SSTATUS,          /**< Check the status of a block of secure 
+    SHW_USER_REQ_SSTATUS,          /*!< Check the status of a block of secure 
                                       memory */
-    SHW_USER_REQ_SFREE,            /**< Free a block of secure memory */
-    SHW_USER_REQ_SCC_ENCRYPT,      /**< Encrypt a region of user-owned secure
+    SHW_USER_REQ_SFREE,            /*!< Free a block of secure memory */
+    SHW_USER_REQ_SCC_ENCRYPT,      /*!< Encrypt a region of user-owned secure
                                      memory */
-    SHW_USER_REQ_SCC_DECRYPT,     /**< Decrypt a region of user-owned secure
+    SHW_USER_REQ_SCC_DECRYPT,     /*!< Decrypt a region of user-owned secure
                                      memory */
 } shw_user_request_t;
 
 
-/**
+/*!
  * @typedef scc_partition_status_t
  */
 /** Partition status information. */
 typedef enum fsl_shw_partition_status_t {
-    FSL_PART_S_UNUSABLE,          /**< Partition not implemented */
-    FSL_PART_S_UNAVAILABLE,       /**< Partition owned by other host */
-    FSL_PART_S_AVAILABLE,         /**< Partition available */
-    FSL_PART_S_ALLOCATED,         /**< Partition owned by host but not engaged
+    FSL_PART_S_UNUSABLE,          /*!< Partition not implemented */
+    FSL_PART_S_UNAVAILABLE,       /*!< Partition owned by other host */
+    FSL_PART_S_AVAILABLE,         /*!< Partition available */
+    FSL_PART_S_ALLOCATED,         /*!< Partition owned by host but not engaged
                                    */
-    FSL_PART_S_ENGAGED,           /**< Partition owned by host and engaged */
+    FSL_PART_S_ENGAGED,           /*!< Partition owned by host and engaged */
 } fsl_shw_partition_status_t;
 
 
@@ -92,57 +91,57 @@ typedef enum fsl_shw_partition_status_t {
  * Structure passed during user ioctl() calls to manage secure partitions.
  */
 typedef struct scc_partition_info_t {
-    uint32_t user_base;            /**< Userspace pointer to base of partition */
-    uint32_t permissions;          /**< Permissions to give the partition (only
+    uint32_t user_base;            /*!< Userspace pointer to base of partition */
+    uint32_t permissions;          /*!< Permissions to give the partition (only
                                         used in call to _DROP_PERMS) */
-    fsl_shw_partition_status_t status;  /**< Status of the partition */
+    fsl_shw_partition_status_t status;  /*!< Status of the partition */
 } scc_partition_info_t;
 
 
 /******************************************************************************
  * Enumerations
  *****************************************************************************/
-/**
+/*!
  * Flags for the state of the User Context Object (#fsl_shw_uco_t).
  */
 typedef enum fsl_shw_user_ctx_flags_t
 {
-    /**
+  /*!
      * API will block the caller until operation completes.  The result will be
      * available in the return code.  If this is not set, user will have to get
      * results using #fsl_shw_get_results().
      */
     FSL_UCO_BLOCKING_MODE = 0x01,
-    /**
+  /*!
      * User wants callback (at the function specified with
      * #fsl_shw_uco_set_callback()) when the operation completes.  This flag is
      * valid only if #FSL_UCO_BLOCKING_MODE is not set.
      */
     FSL_UCO_CALLBACK_MODE = 0x02,
-    /** Do not free descriptor chain after driver (adaptor) finishes */
+    /*! Do not free descriptor chain after driver (adaptor) finishes */
     FSL_UCO_SAVE_DESC_CHAIN = 0x04,
-    /**
+  /*!
      * User has made at least one request with callbacks requested, so API is
      * ready to handle others.
      */
     FSL_UCO_CALLBACK_SETUP_COMPLETE = 0x08,
-    /**
+  /*!
      * (virtual) pointer to descriptor chain is completely linked with physical
      * (DMA) addresses, ready for the hardware.  This flag should not be used
      * by FSL SHW API programs.
      */
     FSL_UCO_CHAIN_PREPHYSICALIZED = 0x10,
-    /**
+  /*!
      * The user has changed the context but the changes have not been copied to
      * the kernel driver.
      */
     FSL_UCO_CONTEXT_CHANGED = 0x20,
-    /** Internal Use.  This context belongs to a user-mode API user. */
+    /*! Internal Use.  This context belongs to a user-mode API user. */
     FSL_UCO_USERMODE_USER = 0x40,
 } fsl_shw_user_ctx_flags_t;
 
 
-/**
+/*!
  * Return code for FSL_SHW library.
  *
  * These codes may be returned from a function call.  In non-blocking mode,
@@ -151,63 +150,63 @@ typedef enum fsl_shw_user_ctx_flags_t
 /* REQ-FSLSHW-ERR-001 */
 typedef enum fsl_shw_return_t
 {
-    /**
+  /*!
      * No error.  As a function return code in Non-blocking mode, this may
      * simply mean that the operation was accepted for eventual execution.
      */
     FSL_RETURN_OK_S = 0,
-    /** Failure for non-specific reason. */
+   	/*! Failure for non-specific reason. */
     FSL_RETURN_ERROR_S,
-   /**
+ /*!
     * Operation failed because some resource was not able to be allocated.
     */
     FSL_RETURN_NO_RESOURCE_S,
-    /** Crypto algorithm unrecognized or improper. */
+    /*! Crypto algorithm unrecognized or improper. */
     FSL_RETURN_BAD_ALGORITHM_S,
-    /** Crypto mode unrecognized or improper. */
+    /*! Crypto mode unrecognized or improper. */
     FSL_RETURN_BAD_MODE_S,
-    /** Flag setting unrecognized or inconsistent. */
+    /*! Flag setting unrecognized or inconsistent. */
     FSL_RETURN_BAD_FLAG_S,
-    /** Improper or unsupported key length for algorithm. */
+    /*! Improper or unsupported key length for algorithm. */
     FSL_RETURN_BAD_KEY_LENGTH_S,
-    /** Improper parity in a (DES, TDES) key. */
+    /*! Improper parity in a (DES, TDES) key. */
     FSL_RETURN_BAD_KEY_PARITY_S,
-    /**
+  /*!
      * Improper or unsupported data length for algorithm or internal buffer.
      */
     FSL_RETURN_BAD_DATA_LENGTH_S,
-    /** Authentication / Integrity Check code check failed. */
+    /*! Authentication / Integrity Check code check failed. */
     FSL_RETURN_AUTH_FAILED_S,
-    /** A memory error occurred. */
+    /*! A memory error occurred. */
     FSL_RETURN_MEMORY_ERROR_S,
-    /** An error internal to the hardware occurred. */
+    /*! An error internal to the hardware occurred. */
     FSL_RETURN_INTERNAL_ERROR_S,
-    /** ECC detected Point at Infinity */
+    /*! ECC detected Point at Infinity */
     FSL_RETURN_POINT_AT_INFINITY_S,
-    /** ECC detected No Point at Infinity */
+    /*! ECC detected No Point at Infinity */
     FSL_RETURN_POINT_NOT_AT_INFINITY_S,
-    /** GCD is One */
+    /*! GCD is One */
     FSL_RETURN_GCD_IS_ONE_S,
-    /** GCD is not One */
+    /*! GCD is not One */
     FSL_RETURN_GCD_IS_NOT_ONE_S,
-    /** Candidate is Prime */
+    /*! Candidate is Prime */
     FSL_RETURN_PRIME_S,
-    /** Candidate is not Prime */
+    /*! Candidate is not Prime */
     FSL_RETURN_NOT_PRIME_S,
-    /** N register loaded improperly with even value */
+    /*! N register loaded improperly with even value */
     FSL_RETURN_EVEN_MODULUS_ERROR_S,
-    /** Divisor is zero. */
+    /*! Divisor is zero. */
     FSL_RETURN_DIVIDE_BY_ZERO_ERROR_S,
-    /** Bad Exponent or Scalar value for Point Multiply */
+    /*! Bad Exponent or Scalar value for Point Multiply */
     FSL_RETURN_BAD_EXPONENT_ERROR_S,
-    /** RNG hardware problem. */
+    /*! RNG hardware problem. */
     FSL_RETURN_OSCILLATOR_ERROR_S,
-    /** RNG hardware problem. */
+    /*! RNG hardware problem. */
     FSL_RETURN_STATISTICS_ERROR_S,
 } fsl_shw_return_t;
 
 
-/**
+/*!
  * Algorithm Identifier.
  *
  * Selection of algorithm will determine how large the block size of the
@@ -216,28 +215,28 @@ typedef enum fsl_shw_return_t
  */
 typedef enum fsl_shw_key_alg_t
 {
-    /**
+  /*!
      * Key will be used to perform an HMAC.  Key size is 1 to 64 octets.  Block
      * size is 64 octets.
      */
     FSL_KEY_ALG_HMAC,
-    /**
+  /*!
      * Advanced Encryption Standard (Rijndael).  Block size is 16 octets.  Key
      * size is 16 octets.  (The single choice of key size is a Sahara platform
      * limitation.)
      */
     FSL_KEY_ALG_AES,
-    /**
+  /*!
      * Data Encryption Standard.  Block size is 8 octets.  Key size is 8
      * octets.
      */
     FSL_KEY_ALG_DES,
-    /**
+  /*!
      * 2- or 3-key Triple DES.  Block size is 8 octets.  Key size is 16 octets
      * for 2-key Triple DES, and 24 octets for 3-key.
      */
     FSL_KEY_ALG_TDES,
-    /**
+  /*!
      * ARC4.  No block size.  Context size is 259 octets.  Allowed key size is
      * 1-16 octets.  (The choices for key size are a Sahara platform
      * limitation.)
@@ -246,7 +245,7 @@ typedef enum fsl_shw_key_alg_t
 } fsl_shw_key_alg_t;
 
 
-/**
+/*!
  * Mode selector for Symmetric Ciphers.
  *
  * The selection of mode determines how a cryptographic algorithm will be
@@ -265,28 +264,28 @@ typedef enum fsl_shw_key_alg_t
  */
 typedef enum fsl_shw_sym_mode_t
 {
-    /**
+  /*!
      * Stream.  There is no associated block size.  Any request to process data
      * may be of any length.  This mode is only for ARC4 operations, and is
      * also the only mode used for ARC4.
      */
     FSL_SYM_MODE_STREAM,
 
-    /**
+  /*!
      * Electronic Codebook.  Each block of data is encrypted/decrypted.  The
      * length of the data stream must be a multiple of the block size.  This
      * mode may be used for DES, 3DES, and AES.  The block size is determined
      * by the algorithm.
      */
     FSL_SYM_MODE_ECB,
-    /**
+  /*!
      * Cipher-Block Chaining.  Each block of data is encrypted/decrypted and
      * then "chained" with the previous block by an XOR function.  Requires
      * context to start the XOR (previous block).  This mode may be used for
      * DES, 3DES, and AES.  The block size is determined by the algorithm.
      */
     FSL_SYM_MODE_CBC,
-    /**
+  /*!
      * Counter.  The counter is encrypted, then XORed with a block of data.
      * The counter is then incremented (using modulus arithmetic) for the next
      * block. The final operation may be non-multiple of block size.  This mode
@@ -296,7 +295,7 @@ typedef enum fsl_shw_sym_mode_t
 } fsl_shw_sym_mode_t;
 
 
-/**
+/*!
  * Algorithm selector for Cryptographic Hash functions.
  *
  * Selection of algorithm determines how large the context and digest will be.
@@ -305,27 +304,27 @@ typedef enum fsl_shw_sym_mode_t
  */
 typedef enum fsl_shw_hash_alg_t
 {
-    FSL_HASH_ALG_MD5,           /**< MD5 algorithm.  Digest is 16 octets. */
-    FSL_HASH_ALG_SHA1,          /**< SHA-1 (aka SHA or SHA-160) algorithm.
+    FSL_HASH_ALG_MD5,           /*!< MD5 algorithm.  Digest is 16 octets. */
+    FSL_HASH_ALG_SHA1,          /*!< SHA-1 (aka SHA or SHA-160) algorithm.
                                    Digest is 20 octets. */
-    FSL_HASH_ALG_SHA224,        /**< SHA-224 algorithm.  Digest is 28 octets,
+    FSL_HASH_ALG_SHA224,        /*!< SHA-224 algorithm.  Digest is 28 octets,
                                    though context is 32 octets. */
-    FSL_HASH_ALG_SHA256         /**< SHA-256 algorithm.  Digest is 32
+    FSL_HASH_ALG_SHA256         /*!< SHA-256 algorithm.  Digest is 32
                                    octets. */
 } fsl_shw_hash_alg_t;
 
 
-/**
+/*!
  * The type of Authentication-Cipher function which will be performed.
  */
 typedef enum fsl_shw_acc_mode_t
 {
-    /**
+  /*!
      * CBC-MAC for Counter.  Requires context and modulus.  Final operation may
      * be non-multiple of block size.  This mode may be used for AES.
      */
     FSL_ACC_MODE_CCM,
-    /**
+  /*!
      * SSL mode.  Not supported.  Combines HMAC and encrypt (or decrypt).
      * Needs one key object for encryption, another for the HMAC.  The usual
      * hashing and symmetric encryption algorithms are supported.
@@ -335,29 +334,29 @@ typedef enum fsl_shw_acc_mode_t
 
 
 /* REQ-FSLSHW-PINTFC-COA-HCO-001 */
-/**
+/*!
  * Flags which control a Hash operation.
  */
 typedef enum fsl_shw_hash_ctx_flags_t
 {
-    FSL_HASH_FLAGS_INIT = 0x01,     /**< Context is empty.  Hash is started
+    FSL_HASH_FLAGS_INIT = 0x01,     /*!< Context is empty.  Hash is started
                                        from scratch, with a message-processed
                                        count of zero. */
-    FSL_HASH_FLAGS_SAVE = 0x02,     /**< Retrieve context from hardware after
+    FSL_HASH_FLAGS_SAVE = 0x02,     /*!< Retrieve context from hardware after
                                        hashing.  If used with the
                                        #FSL_HASH_FLAGS_FINALIZE flag, the final
                                        digest value will be saved in the
                                        object. */
-    FSL_HASH_FLAGS_LOAD = 0x04,     /**< Place context into hardware before
+    FSL_HASH_FLAGS_LOAD = 0x04,     /*!< Place context into hardware before
                                        hashing. */
-    FSL_HASH_FLAGS_FINALIZE = 0x08, /**< PAD message and perform final digest
+    FSL_HASH_FLAGS_FINALIZE = 0x08, /*!< PAD message and perform final digest
                                        operation.  If user message is
                                        pre-padded, this flag should not be
                                        used. */
 } fsl_shw_hash_ctx_flags_t;
 
 
-/**
+/*!
  * Flags which control an HMAC operation.
  *
  * These may be combined by ORing them together.  See #fsl_shw_hmco_set_flags()
@@ -427,15 +426,19 @@ typedef enum fsl_shw_sym_ctx_flags_t
  */
 typedef enum fsl_shw_key_flags_t
 {
-    FSL_SKO_KEY_IGNORE_PARITY = 1, /**< If algorithm is DES or 3DES, do not
+    FSL_SKO_KEY_IGNORE_PARITY = 1, /*!< If algorithm is DES or 3DES, do not
                                       validate the key parity bits. */
-    FSL_SKO_KEY_PRESENT = 2,       /**< Clear key is present in the object. */
-    FSL_SKO_KEY_ESTABLISHED = 4,   /**< Key has been established for use.  This
+    FSL_SKO_KEY_PRESENT = 2,       /*!< Clear key is present in the object. */
+    FSL_SKO_KEY_ESTABLISHED = 4,   /*!< Key has been established for use.  This
                                        feature is not available for all
                                        platforms, nor for all algorithms and
                                        modes.*/
-    FSL_SKO_USE_SECRET_KEY = 8,    /**< Use device-unique key.  Not always
+    FSL_SKO_USE_SECRET_KEY = 8,    /*!< Use device-unique key.  Not always
                                        available. */
+    FSL_SKO_KEY_SW_KEY = 16,	/*!< Clear key can be provided to the user */
+	FSL_SKO_KEY_SELECT_PF_KEY = 32,	/*!< Internal flag to show that this key
+					   references one of the hardware keys, and
+					   its value is in pf_key. */
 } fsl_shw_key_flags_t;
 
 
@@ -545,26 +548,59 @@ typedef enum fsl_shw_permission_t
     FSL_PERM_OT_X =             0x00000001,
 } fsl_shw_permission_t;
 
-
+/*!
+ * Select the cypher mode to use for partition cover/uncover operations.
+ *
+ * They currently map directly to the values used in the SCC2 driver, but this
+ * is not guarinteed behavior.
+ */
 typedef enum fsl_shw_cypher_mode_t
 {
-    FSL_SHW_CYPHER_MODE_ECB = 1,       /**< ECB mode */
-    FSL_SHW_CYPHER_MODE_CBC = 2,       /**< CBC mode */
+    FSL_SHW_CYPHER_MODE_ECB = 1,       /*!< ECB mode */
+    FSL_SHW_CYPHER_MODE_CBC = 2,       /*!< CBC mode */
 } fsl_shw_cypher_mode_t;
 
+/*!
+ * Which platform key should be presented for cryptographic use.
+ */
+typedef enum fsl_shw_pf_key_t {
+	FSL_SHW_PF_KEY_IIM,	/*!< Present fused IIM key */
+	FSL_SHW_PF_KEY_PRG,	/*!< Present Program key */
+	FSL_SHW_PF_KEY_IIM_PRG,	/*!< Present IIM ^ Program key */
+	FSL_SHW_PF_KEY_IIM_RND,	/*!< Present Random key */
+	FSL_SHW_PF_KEY_RND,	/*!< Present IIM ^ Random key */
+} fsl_shw_pf_key_t;
+
+/*!
+ * The various security tamper events
+ */
+typedef enum fsl_shw_tamper_t {
+	FSL_SHW_TAMPER_NONE,	/*!< No error detected */
+	FSL_SHW_TAMPER_WTD,	/*!< wire-mesh tampering det */
+	FSL_SHW_TAMPER_ETBD,	/*!< ext tampering det: input B */
+	FSL_SHW_TAMPER_ETAD,	/*!< ext tampering det: input A */
+	FSL_SHW_TAMPER_EBD,	/*!< external boot detected */
+	FSL_SHW_TAMPER_SAD,	/*!< security alarm detected */
+	FSL_SHW_TAMPER_TTD,	/*!< temperature tampering det */
+	FSL_SHW_TAMPER_CTD,	/*!< clock tampering det */
+	FSL_SHW_TAMPER_VTD,	/*!< voltage tampering det */
+	FSL_SHW_TAMPER_MCO,	/*!< monotonic counter overflow */
+	FSL_SHW_TAMPER_TCO,	/*!< time counter overflow */
+} fsl_shw_tamper_t;
 
 /*
  * Structure passed during user ioctl() calls to manage data stored in secure
  * partitions.
  */
+
 typedef struct scc_region_t {
-    uint32_t            partition_base;
-    uint32_t            offset;
-    uint32_t            length;
-    uint8_t*            black_data;
-    uint64_t            owner_id;
-    fsl_shw_cypher_mode_t   cypher_mode;
-    uint32_t            IV[4];
+	uint32_t partition_base;	/*!< Base address of partition */
+	uint32_t offset;	/*!< Byte offset into partition */
+	uint32_t length;	/*!< Number of bytes in request */
+	uint8_t *black_data;	/*!< Address of cipher text */
+	uint64_t owner_id;	/*!< user's secret */
+	fsl_shw_cypher_mode_t cypher_mode;	/*!< ECB or CBC */
+	uint32_t IV[4];		/*!< IV for CBC mode */
 } scc_region_t;
 
 /******************************************************************************
@@ -641,6 +677,7 @@ typedef struct fsl_shw_uco_t
     struct fsl_shw_uco_t* next; /**< To allow user-mode chaining of contexts,
                                  for signalling and in kernel, to link user
                                  contexts.  */
+    fsl_shw_pf_key_t wrap_key;	/*!< What key for ciphering T */
 } fsl_shw_uco_t;
 
 
@@ -699,6 +736,11 @@ typedef struct fsl_shw_sko_t
     uint16_t          key_length;  /**< Length of stored key, in bytes. */
     uint8_t           key[64];  /**< Bytes of stored key. */
     struct fsl_shw_kso_t*   keystore;   /**< If present, key is in keystore */
+	fsl_shw_pf_key_t pf_key;	/*!< What key to select for use when this key
+					   is doing ciphering.  If FSL_SHW_PF_KEY_PRG
+					   or FSL_SHW_PF_KEY_PRG_IIM is the value, then
+					   a 'present' or 'established' key will be
+					   programed into the PK. */
 } fsl_shw_sko_t;
 
 
@@ -738,7 +780,7 @@ typedef struct fsl_shw_pco_t
             int partition_size_bytes;   /**< Number of bytes in each partition */
             int partition_count;        /**< Number of partitions on this platform */
         } scc2_info;
-    };
+    } u;
 } fsl_shw_pco_t;
 
 
@@ -791,8 +833,8 @@ typedef struct fsl_shw_scco_t
     /* Could put modulus plus 16-octet context in union with arc4
        sbox+ptrs... */
     fsl_shw_ctr_mod_t       modulus_exp; /**< Exponent value for CTR modulus */
-    uint8_t                 context[259]; /**< Stored context.  Large enough
-                                             for ARC4.  */
+    uint8_t                 context[8]; /**< Stored context.  Large enough
+                                             for 3DES.  */
 } fsl_shw_scco_t;
 
 
@@ -976,9 +1018,13 @@ do {                                                                          \
  *
  * @return 0 if combination is not supported, non-zero if supported.
  */
+#if defined(FSL_HAVE_DRYICE) && defined(__KERNEL__)
+#define fsl_shw_pco_check_sym_supported(pcobject, pcalg, pcmode)              \
+    ((pcobject)->sym_support[pcalg][pcmode])
+#else
 #define fsl_shw_pco_check_sym_supported(pcobject, pcalg, pcmode)              \
     0
-
+#endif
 
 /**
  * Determine whether a given Encryption-Authentication mode is supported.
@@ -999,11 +1045,46 @@ do {                                                                          \
  *
  * @return 0 if wrapping is not supported, non-zero if supported.
  */
+#if defined(FSL_HAVE_DRYICE) && defined(__KERNEL__)
+#define fsl_shw_pco_check_black_key_supported(pcobject)                       \
+    1
+#else
 #define fsl_shw_pco_check_black_key_supported(pcobject)                       \
     0
 
+#endif
 
-/**
+/*!
+ * Determine whether Programmed Key features are available
+ *
+ * @param pcobject          The Platform Capabilities Object to query.
+ *
+ * @return  1 if Programmed Key features are available, otherwise zero.
+ */
+#if defined(FSL_HAVE_DRYICE) && defined(__KERNEL__)
+#define fsl_shw_pco_check_pk_supported(pcobject)        \
+    1
+#else
+#define fsl_shw_pco_check_pk_supported(pcobject)        \
+    0
+#endif
+
+/*!
+ * Determine whether Software Key features are available
+ *
+ * @param pc_info          The Platform Capabilities Object to query.
+ *
+ * @return  1 if Software key features are available, otherwise zero.
+ */
+#if defined(FSL_HAVE_DRYICE) && defined(__KERNEL__)
+#define fsl_shw_pco_check_sw_keys_supported(pcobject)        \
+    1
+#else
+#define fsl_shw_pco_check_sw_keys_supported(pcobject)        \
+    0
+#endif
+
+/*!
  * Get FSL SHW SCC driver version
  *
  * @param      pcobject  The Platform Capababilities Object to query.
@@ -1061,8 +1142,8 @@ do {                                                                          \
 #define fsl_shw_pco_get_smn_size(pcobject, black_size, red_size)              \
 {                                                                             \
     if ((pcobject)->scm_version == 1) {                                       \
-        *(black_size) = (pcobject)->scc_info.black_ram_size_blocks;           \
-        *(red_size)   = (pcobject)->scc_info.red_ram_size_blocks;             \
+        *(black_size) = (pcobject)->u.scc_info.black_ram_size_blocks;           \
+        *(red_size)   = (pcobject)->u.scc_info.red_ram_size_blocks;             \
     } else {                                                                  \
         *(black_size) = 0;                                                    \
         *(red_size)   = 0;                                                    \
@@ -1090,7 +1171,7 @@ do {                                                                          \
  */
 #define fsl_shw_pco_get_spo_size_bytes(pcobject)                            \
     (((pcobject)->scm_version == 2) ?                                       \
-        ((pcobject)->scc2_info.partition_size_bytes) : 0 )                  \
+        ((pcobject)->u.scc2_info.partition_size_bytes) : 0 )                  \
 
 
 /**
@@ -1104,10 +1185,10 @@ do {                                                                          \
  */
 #define fsl_shw_pco_get_spo_count(pcobject)                                 \
     (((pcobject)->scm_version == 2) ?                                       \
-        ((pcobject)->scc2_info.partition_count) : 0 )                       \
+        ((pcobject)->u.scc2_info.partition_count) : 0 )                       \
 
 
-/**
+/*!
  * Initialize a Secret Key Object.
  *
  * This function must be called before performing any other operation with
@@ -1117,15 +1198,49 @@ do {                                                                          \
  * @param skalgorithm  DES, AES, etc.
  *
  */
-#define fsl_shw_sko_init(skobject,skalgorithm)                               \
-{                                                                            \
-       (skobject)->algorithm = skalgorithm;                                  \
-       (skobject)->flags = 0;                                                \
-       (skobject)->keystore = NULL;                                          \
+#define fsl_shw_sko_init(skobject,skalgorithm)                          \
+{                                                                       \
+    fsl_shw_sko_t* skop = skobject;                                     \
+                                                                        \
+    skop->algorithm = skalgorithm;                                      \
+    skop->flags = 0;                                                    \
+    skop->keystore = NULL;                                              \
+    skop->pf_key = FSL_SHW_PF_KEY_PRG;                                  \
 }
 
+/*!
+ * Initialize a Secret Key Object to use a Platform Key register.
+ *
+ * This function must be called before performing any other operation with
+ * the Object.
+ *
+ * @param skobject     The Secret Key Object to be initialized.
+ * @param skalgorithm  DES, AES, etc.
+ * @param skhwkey      one of the fsl_shw_pf_key_t values.
+ *
+ */
+#define fsl_shw_sko_init_pf_key(skobject,skalgorithm,skhwkey)           \
+{                                                                       \
+    fsl_shw_sko_t* skop = skobject;                                     \
+    fsl_shw_key_alg_t alg = skalgorithm;                                \
+    fsl_shw_pf_key_t key = skhwkey;                                     \
+                                                                        \
+    skop->algorithm = alg;                                              \
+    if (alg == FSL_KEY_ALG_TDES) {                                      \
+        skop->key_length = 21;                                          \
+    }                                                                   \
+    skop->keystore = NULL;                                              \
+    skop->flags = FSL_SKO_KEY_SELECT_PF_KEY;                            \
+    skop->pf_key = key;                                                 \
+    if ((key == FSL_SHW_PF_KEY_IIM) || (key == FSL_SHW_PF_KEY_PRG)      \
+        || (key == FSL_SHW_PF_KEY_IIM_PRG)                              \
+        || (key == FSL_SHW_PF_KEY_IIM_RND)                              \
+        || (key == FSL_SHW_PF_KEY_RND)) {                               \
+        skop->flags |= FSL_SKO_KEY_ESTABLISHED;                         \
+    }                                                                   \
+}
 
-/**
+/*!
  * Store a cleartext key in the key object.
  *
  * This has the side effect of setting the #FSL_SKO_KEY_PRESENT flag and
@@ -1245,7 +1360,7 @@ do {                                                                          \
 }
 
 
-/**
+/*!
  * Determine the size of a wrapped key based upon the cleartext key's length.
  *
  * This function can be used to calculate the number of octets that
@@ -1258,17 +1373,22 @@ do {                                                                          \
  * @param      wkeylen          Location to store the length of a wrapped
  *                              version of the key in @a key_info.
  */
-#define fsl_shw_sko_calculate_wrapped_size(wkeyinfo, wkeylen)                 \
-{                                                                             \
-     if ((wkeyinfo)->key_length > 32) {                                       \
-         *(wkeylen) = 0;                                                      \
-     } else {                                                                 \
-         *(wkeylen) = 66;                                                     \
-     }                                                                        \
+#define fsl_shw_sko_calculate_wrapped_size(wkeyinfo, wkeylen)           \
+{                                                                       \
+    register fsl_shw_sko_t* kp = wkeyinfo;                              \
+    register uint32_t kl = kp->key_length;                              \
+    int key_blocks;                                                     \
+    int base_size = 35; /* ICV + T' + ALG + LEN + FLAGS */              \
+                                                                        \
+    if (kp->flags & FSL_SKO_KEY_SELECT_PF_KEY) {                        \
+        kl = 21;  /* 168-bit 3DES key */                                \
+    }                                                                   \
+    key_blocks = (kl + 7) / 8;                                          \
+    /* Round length up to 3DES block size for CBC mode */               \
+    *(wkeylen) = base_size + 8 * key_blocks;                            \
 }
 
-
-/**
+/*!
  * Set some flags in the key object.
  *
  * Turns on the flags specified in @a flags.  Other flags are untouched.
@@ -1324,6 +1444,7 @@ do {                                                                          \
     (uco)->openfd = -1;                                                       \
     (uco)->callback = NULL;                                                   \
     (uco)->partition = NULL;                                                  \
+    (uco)->wrap_key = FSL_SHW_PF_KEY_IIM;                                     \
 } while (0)
 
 #else /* __KERNEL__ */
@@ -1336,6 +1457,7 @@ do {                                                                          \
     (uco)->flags = FSL_UCO_BLOCKING_MODE | FSL_UCO_CONTEXT_CHANGED;           \
     (uco)->openfd = -1;                                                       \
     (uco)->callback = NULL;                                                   \
+    (uco)->wrap_key = FSL_SHW_PF_KEY_IIM;                                     \
 } while (0)
 
 #endif /* __KERNEL__ */
@@ -2036,6 +2158,21 @@ extern fsl_shw_return_t fsl_shw_extract_key(fsl_shw_uco_t* user_ctx,
                                 fsl_shw_sko_t* key_info,
                                 uint8_t* covered_key);
 
+/*!
+ * Read the key value from a key object.
+ *
+ * Only a key marked as a software key (#FSL_SKO_KEY_SW_KEY) can be read with
+ * this call.  It has no effect on the status of the key store.
+ *
+ * @param      user_ctx         A user context from #fsl_shw_register_user().
+ * @param      key_info         The referenced key.
+ * @param[out] key              The location to store the key value.
+ *
+ * @return    A return code of type #fsl_shw_return_t.
+ */
+extern fsl_shw_return_t fsl_shw_read_key(fsl_shw_uco_t * user_ctx,
+					 fsl_shw_sko_t * key_info,
+					 uint8_t * key);
 
 /**
  * De-establish a key so that it can no longer be accessed.
@@ -2533,6 +2670,59 @@ extern fsl_shw_return_t fsl_shw_auth_decrypt(
                                 const uint8_t* auth_value,
                                 uint8_t* payload);
 
+/*!
+ * Cause the hardware to create a new random key for secure memory use.
+ *
+ * Have the hardware use the secure hardware random number generator to load a
+ * new secret key into the hardware random key register.  It will not be made
+ * active without a call to #fsl_shw_select_pf_key().
+ *
+ * @param      user_ctx         A user context from #fsl_shw_register_user().
+ *
+ * @return    A return code of type #fsl_shw_return_t.
+ */
+#ifdef __KERNEL__
+
+extern fsl_shw_return_t fsl_shw_gen_random_pf_key(fsl_shw_uco_t * user_ctx);
+
+#else
+
+#define fsl_shw_gen_random_pf_key(user_ctx) FSL_RETURN_NO_RESOURCE_S
+
+#endif				/* __KERNEL__ */
+
+/*!
+ * Retrieve the detected tamper event.
+ *
+ * Note that if more than one event was detected, this routine will only ever
+ * return one of them.
+ *
+ * @param[in]  user_ctx         A user context from #fsl_shw_register_user().
+ * @param[out] tamperp          Location to store the tamper information.
+ * @param[out] timestampp       Locate to store timestamp from hardwhare when
+ *                              an event was detected.
+ *
+ *
+ * @return    A return code of type #fsl_shw_return_t (for instance, if the platform
+ *            is not in a fail state.
+ */
+#ifdef __KERNEL__
+
+extern fsl_shw_return_t fsl_shw_read_tamper_event(fsl_shw_uco_t * user_ctx,
+						  fsl_shw_tamper_t * tamperp,
+						  uint64_t * timestampp);
+#else
+
+#define fsl_shw_read_tamper_event(user_ctx,tamperp,timestampp)         \
+    FSL_RETURN_NO_RESOURCE_S
+
+#endif				/* __KERNEL__ */
+
+/*****************************************************************************
+ *
+ * Functions internal to SHW driver.
+ *
+*****************************************************************************/
 
 fsl_shw_return_t 
 do_scc_encrypt_region(fsl_shw_uco_t* user_ctx,
@@ -2545,6 +2735,7 @@ do_scc_decrypt_region(fsl_shw_uco_t* user_ctx,
                       void* partition_base, uint32_t offset_bytes,
                       uint32_t byte_count, const uint8_t* black_data,
                       uint32_t* IV, fsl_shw_cypher_mode_t cypher_mode);
+
 
 /*****************************************************************************
  *
@@ -2752,5 +2943,29 @@ inline static fsl_shw_return_t send_req(shw_user_request_t type,
 
 
 #endif				/* no __KERNEL__ */
+
+#if defined(FSL_HAVE_DRYICE)
+/* Some kernel functions */
+void fsl_shw_permute1_bytes(const uint8_t * key, uint8_t * permuted_key,
+			    int key_count);
+void fsl_shw_permute1_bytes_to_words(const uint8_t * key,
+				     uint32_t * permuted_key, int key_count);
+
+#define PFKEY_TO_STR(key_in)                                    \
+({                                                              \
+    di_key_t key = key_in;                                      \
+                                                                \
+    ((key == DI_KEY_FK) ? "IIM" :                               \
+     ((key == DI_KEY_PK) ? "PRG" :                              \
+      ((key == DI_KEY_RK) ? "RND" :                             \
+       ((key == DI_KEY_FPK) ? "IIM_PRG" :                       \
+        ((key == DI_KEY_FRK) ? "IIM_RND" : "unk")))));          \
+})
+
+#ifdef DIAG_SECURITY_FUNC
+extern const char *di_error_string(int code);
+#endif
+
+#endif				/* HAVE DRYICE */
 
 #endif				/* SHW_DRIVER_H */

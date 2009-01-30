@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -43,6 +43,7 @@ EXPORT_SYMBOL(do_scc_decrypt_region);
 EXPORT_SYMBOL(do_system_keystore_slot_alloc);
 EXPORT_SYMBOL(do_system_keystore_slot_dealloc);
 EXPORT_SYMBOL(do_system_keystore_slot_load);
+EXPORT_SYMBOL(do_system_keystore_slot_read);
 EXPORT_SYMBOL(do_system_keystore_slot_encrypt);
 EXPORT_SYMBOL(do_system_keystore_slot_decrypt);
 
@@ -63,8 +64,8 @@ DECLARE_WAIT_QUEUE_HEAD(Wait_queue_km);
 
 /*! This matches Sahara2 capabilities... */
 fsl_shw_pco_t sahara2_capabilities = {
-	1, 2,			/* api version number - major & minor */
-	1, 4,			/* driver version number - major & minor */
+	1, 3,			/* api version number - major & minor */
+	1, 6,			/* driver version number - major & minor */
 	{
 	 FSL_KEY_ALG_AES,
 	 FSL_KEY_ALG_DES,
@@ -455,8 +456,19 @@ fsl_shw_return_t do_system_keystore_slot_load(fsl_shw_uco_t * user_ctx,
 					      uint32_t key_length)
 {
 	(void)user_ctx;
-	return keystore_load_slot(&system_keystore, ownerid, slot,
+	return keystore_slot_load(&system_keystore, ownerid, slot,
 				  (void *)key, key_length);
+}
+
+fsl_shw_return_t do_system_keystore_slot_read(fsl_shw_uco_t * user_ctx,
+					      uint64_t ownerid,
+					      uint32_t slot,
+					      uint32_t key_length,
+					      const uint8_t * key)
+{
+	(void)user_ctx;
+	return keystore_slot_read(&system_keystore, ownerid, slot,
+				  key_length, (void *)key);
 }
 
 fsl_shw_return_t do_system_keystore_slot_encrypt(fsl_shw_uco_t * user_ctx,
@@ -587,7 +599,7 @@ do_scc_encrypt_region(fsl_shw_uco_t * user_ctx,
 #ifdef FSL_HAVE_SCC2
 
 #ifdef DIAG_ADAPTOR
-	//uint32_t *owner_32 = (uint32_t *) & (owner_id);
+	uint32_t *owner_32 = (uint32_t *) & (owner_id);
 
 	LOG_KDIAG_ARGS
 	    ("partition base: %p, offset: %i, count: %i, black data: %p\n",
@@ -649,7 +661,7 @@ do_scc_decrypt_region(fsl_shw_uco_t * user_ctx,
 #ifdef FSL_HAVE_SCC2
 
 #ifdef DIAG_ADAPTOR
-	//uint32_t *owner_32 = (uint32_t *) & (owner_id);
+	uint32_t *owner_32 = (uint32_t *) & (owner_id);
 
 	LOG_KDIAG_ARGS
 	    ("partition base: %p, offset: %i, count: %i, black data: %p\n",

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -23,16 +23,12 @@
  *
  */
 
+#define _DIAG_DRV_IF
+#define _DIAG_SECURITY_FUNC
+#define _DIAG_ADAPTOR
+
 #ifndef SAHARA2_API_H
 #define SAHARA2_API_H
-
-/* Sahara Debug Flags */
-#if 0
-#define DIAG_DRV_IF
-#define DIAG_SECURITY_FUNC
-#define DIAG_ADAPTOR
-#define DO_DBG
-#endif
 
 #ifdef DIAG_SECURITY_FUNC
 #include <diagnostic.h>
@@ -124,9 +120,9 @@
 * it can be removed during DePhysicalise, thereby returning to the caller an
 * intact chain.
 ******************************************************************************/
-#define SAH_LINK_INSERTED_LINK 0x80
+#define SAH_LINK_INSERTED_LINK      0x80
 
-/*! 
+/*!
 *******************************************************************************
 * The Data field points to the location of the key, which is in a secure
 * partition held by the user.  The memory address needs to be converted to
@@ -287,7 +283,6 @@ typedef enum fsl_shw_return_t {
 	FSL_RETURN_OSCILLATOR_ERROR_S,
 	/*! RNG hardware problem. */
 	FSL_RETURN_STATISTICS_ERROR_S,
-	
 } fsl_shw_return_t;
 
 /*!
@@ -325,6 +320,10 @@ typedef enum fsl_shw_key_alg_t {
 	 * limitation.)
 	 */
 	FSL_KEY_ALG_ARC4,
+	/*!
+	 * Private key of a public-private key-pair.  Max is 512 bits...
+	 */
+	FSL_KEY_PK_PRIVATE,
 } fsl_shw_key_alg_t;
 
 /*!
@@ -517,6 +516,11 @@ typedef enum fsl_shw_key_flags_t {
 	 * platforms, nor for all algorithms and modes.
 	 */
 	FSL_SKO_KEY_ESTABLISHED = 4,
+	/*!
+	 * Key intended for user (software) use; can be read cleartext from the
+	 * keystore.
+	 */
+	FSL_SKO_KEY_SW_KEY = 8,
 } fsl_shw_key_flags_t;
 
 /*!
@@ -618,6 +622,28 @@ typedef enum fsl_shw_cypher_mode_t {
 	FSL_SHW_CYPHER_MODE_ECB = 1,	/*!< ECB mode */
 	FSL_SHW_CYPHER_MODE_CBC = 2,	/*!< CBC mode */
 } fsl_shw_cypher_mode_t;
+
+typedef enum fsl_shw_pf_key_t {
+	FSL_SHW_PF_KEY_IIM,	/*!< Present fused IIM key */
+	FSL_SHW_PF_KEY_PRG,	/*!< Present Program key */
+	FSL_SHW_PF_KEY_IIM_PRG,	/*!< Present IIM ^ Program key */
+	FSL_SHW_PF_KEY_IIM_RND,	/*!< Present Random key */
+	FSL_SHW_PF_KEY_RND,	/*!< Present IIM ^ Random key */
+} fsl_shw_pf_key_t;
+
+typedef enum fsl_shw_tamper_t {
+	FSL_SHW_TAMPER_NONE,	/*!< No error detected */
+	FSL_SHW_TAMPER_WTD,	/*!< wire-mesh tampering det */
+	FSL_SHW_TAMPER_ETBD,	/*!< ext tampering det: input B */
+	FSL_SHW_TAMPER_ETAD,	/*!< ext tampering det: input A */
+	FSL_SHW_TAMPER_EBD,	/*!< external boot detected */
+	FSL_SHW_TAMPER_SAD,	/*!< security alarm detected */
+	FSL_SHW_TAMPER_TTD,	/*!< temperature tampering det */
+	FSL_SHW_TAMPER_CTD,	/*!< clock tampering det */
+	FSL_SHW_TAMPER_VTD,	/*!< voltage tampering det */
+	FSL_SHW_TAMPER_MCO,	/*!< monotonic counter overflow */
+	FSL_SHW_TAMPER_TCO,	/*!< time counter overflow */
+} fsl_shw_tamper_t;
 
 /******************************************************************************
  * Data Structures
@@ -913,6 +939,7 @@ typedef struct fsl_shw_pco_t {	/* Consider turning these constants into symbols 
 	fsl_shw_sym_mode_t sym_modes[4];
 	fsl_shw_hash_alg_t hash_algorithms[4];
 	uint8_t sym_support[5][4];	/* indexed by key alg then mode */
+
 	int scc_driver_major;
 	int scc_driver_minor;
 	int scm_version;	/*!< Version from SCM Configuration register */
@@ -1129,105 +1156,125 @@ typedef enum fsl_shw_partition_status_t {
  *
  * @return 0 if wrapping is not supported, non-zero if supported.
  */
-#define fsl_shw_pco_check_black_key_supported(pcobject)                       \
+#define fsl_shw_pco_check_black_key_supported(pcobject)                     \
     1
 
 /*!
+ * Determine whether Programmed Key features are available
+ *
+ * @param pc_info          The Platform Capabilities Object to query.
+ *
+ * @return  1 if Programmed Key features are available, otherwise zero.
+ */
+#define fsl_shw_pco_check_pk_supported(pcobject)        \
+    0
+
+/*!
+ * Determine whether Software Key features are available
+ *
+ * @param pc_info          The Platform Capabilities Object to query.
+ *
+ * @return  1 if Software key features are available, otherwise zero.
+ */
+#define fsl_shw_pco_check_sw_keys_supported(pcobject)        \
+    0
+
+/*!
  * Get FSL SHW SCC driver version
-  *
-  * @param		pcobject  The Platform Capabilities Object to query.
-  * @param[out] pcmajor   A pointer to where the major version
-  * 					  of the SCC driver is to be stored.
-  * @param[out] pcminor   A pointer to where the minor version
-  * 					  of the SCC driver is to be stored.
-  */
+ *
+ * @param      pcobject  The Platform Capabilities Object to query.
+ * @param[out] pcmajor   A pointer to where the major version
+ *                       of the SCC driver is to be stored.
+ * @param[out] pcminor   A pointer to where the minor version
+ *                       of the SCC driver is to be stored.
+ */
 #define fsl_shw_pco_get_scc_driver_version(pcobject, pcmajor, pcminor)        \
- {																			   \
-	 *(pcmajor) = (pcobject)->scc_driver_major; 							   \
-	 *(pcminor) = (pcobject)->scc_driver_minor; 							   \
- }
- 
- /*!
-  * Get SCM hardware version
-  *
-  * @param		pcobject  The Platform Capabilities Object to query.
-  * @return 			  The SCM hardware version
-  */
+{                                                                             \
+    *(pcmajor) = (pcobject)->scc_driver_major;                                \
+    *(pcminor) = (pcobject)->scc_driver_minor;                                \
+}
+
+/*!
+ * Get SCM hardware version
+ *
+ * @param      pcobject  The Platform Capabilities Object to query.
+ * @return               The SCM hardware version
+ */
 #define fsl_shw_pco_get_scm_version(pcobject)                                 \
-	 ((pcobject)->scm_version)
- 
- /*!
-  * Get SMN hardware version
-  *
-  * @param		pcobject  The Platform Capabilities Object to query.
-  * @return 			  The SMN hardware version
-  */
+    ((pcobject)->scm_version)
+
+/*!
+ * Get SMN hardware version
+ *
+ * @param      pcobject  The Platform Capabilities Object to query.
+ * @return               The SMN hardware version
+ */
 #define fsl_shw_pco_get_smn_version(pcobject)                                 \
-	 ((pcobject)->smn_version)
- 
- /*!
-  * Get the size of an SCM block, in bytes
-  *
-  * @param		pcobject  The Platform Capabilities Object to query.
-  * @return 			  The size of an SCM block, in bytes.
-  */
+    ((pcobject)->smn_version)
+
+/*!
+ * Get the size of an SCM block, in bytes
+ *
+ * @param      pcobject  The Platform Capabilities Object to query.
+ * @return               The size of an SCM block, in bytes.
+ */
 #define fsl_shw_pco_get_scm_block_size(pcobject)                              \
-	 ((pcobject)->block_size_bytes)
- 
- /*!
-  * Get size of Black and Red RAM memory
-  *
-  * @param		pcobject	The Platform Capabilities Object to query.
-  * @param[out] black_size	A pointer to where the size of the Black RAM, in
-  * 						blocks, is to be placed.
-  * @param[out] red_size	A pointer to where the size of the Red RAM, in 
-  * 						blocks, is to be placed.
-  */
+    ((pcobject)->block_size_bytes)
+
+/*!
+ * Get size of Black and Red RAM memory
+ *
+ * @param      pcobject    The Platform Capabilities Object to query.
+ * @param[out] black_size  A pointer to where the size of the Black RAM, in
+ *                         blocks, is to be placed.
+ * @param[out] red_size    A pointer to where the size of the Red RAM, in 
+ *                         blocks, is to be placed.
+ */
 #define fsl_shw_pco_get_smn_size(pcobject, black_size, red_size)              \
- {																			   \
-	 if ((pcobject)->scm_version == 1) {									   \
-		 *(black_size) = (pcobject)->scc_info.black_ram_size_blocks;		   \
-		 *(red_size)   = (pcobject)->scc_info.red_ram_size_blocks;			   \
-	 } else {																   \
-		 *(black_size) = 0; 												   \
-		 *(red_size)   = 0; 												   \
-	 }																		   \
- }
- 
- /*!
-  * Determine whether Secure Partitions are supported
-  *
-  * @param pcobject   The Platform Capabilities Object to query.
-  *
-  * @return 0 if secure partitions are not supported, non-zero if supported.
-  */
+{                                                                             \
+    if ((pcobject)->scm_version == 1) {                                       \
+        *(black_size) = (pcobject)->scc_info.black_ram_size_blocks;           \
+        *(red_size)   = (pcobject)->scc_info.red_ram_size_blocks;             \
+    } else {                                                                  \
+        *(black_size) = 0;                                                    \
+        *(red_size)   = 0;                                                    \
+    }                                                                         \
+}
+
+/*!
+ * Determine whether Secure Partitions are supported
+ *
+ * @param pcobject   The Platform Capabilities Object to query.
+ *
+ * @return 0 if secure partitions are not supported, non-zero if supported.
+ */
 #define fsl_shw_pco_check_spo_supported(pcobject)                           \
-	 ((pcobject)->scm_version == 2)
- 
- /*!
-  * Get the size of a Secure Partitions
-  *
-  * @param pcobject   The Platform Capabilities Object to query.
-  * 
-  * @return Partition size, in bytes.  0 if Secure Partitions not supported.
-  */
+    ((pcobject)->scm_version == 2)
+
+/*!
+ * Get the size of a Secure Partitions
+ *
+ * @param pcobject   The Platform Capabilities Object to query.
+ * 
+ * @return Partition size, in bytes.  0 if Secure Partitions not supported.
+ */
 #define fsl_shw_pco_get_spo_size_bytes(pcobject)                            \
-	 (((pcobject)->scm_version == 2) ?										 \
-		 ((pcobject)->scc2_info.partition_size_bytes) : 0 )
- 
- /*!
-  * Get the number of Secure Partitions on this platform
-  *
-  * @param pcobject   The Platform Capabilities Object to query.
-  * 
-  * @return Number of partitions. 0 if Secure Paritions not supported.	Note
-  * 		that this returns the total number of partitions, not all may be
-  * 		available to the user.
-  */
+    (((pcobject)->scm_version == 2) ?                                       \
+        ((pcobject)->scc2_info.partition_size_bytes) : 0 )
+
+/*!
+ * Get the number of Secure Partitions on this platform
+ *
+ * @param pcobject   The Platform Capabilities Object to query.
+ * 
+ * @return Number of partitions. 0 if Secure Paritions not supported.  Note
+ *         that this returns the total number of partitions, not all may be
+ *         available to the user.
+ */
 #define fsl_shw_pco_get_spo_count(pcobject)                                 \
-	 (((pcobject)->scm_version == 2) ?										 \
-		 ((pcobject)->scc2_info.partition_count) : 0 )
- 
+    (((pcobject)->scm_version == 2) ?                                       \
+        ((pcobject)->scc2_info.partition_count) : 0 )
+
 /*!
  * Initialize a User Context Object.
  *
@@ -1258,7 +1305,7 @@ typedef enum fsl_shw_partition_status_t {
       (ucontext)->partition = NULL;                                           \
       (ucontext)->callback = NULL;                                            \
 }
-#else 
+#else
 #define fsl_shw_uco_init(ucontext, usize)                                     \
 {                                                                             \
       (ucontext)->pool_size = usize;                                          \
@@ -1345,6 +1392,24 @@ typedef enum fsl_shw_partition_status_t {
        (skobject)->algorithm = skalgorithm;                                  \
        (skobject)->flags = 0;                                                \
        (skobject)->keystore = NULL;                                          \
+}
+
+/*!
+ * Initialize a Secret Key Object to use a Platform Key register.
+ *
+ * This function must be called before performing any other operation with
+ * the Object.  INVALID on this platform.
+ *
+ * @param skobject     The Secret Key Object to be initialized.
+ * @param skalgorithm  DES, AES, etc.
+ * @param skhwkey      one of the fsl_shw_pf_key_t values.
+ *
+ */
+#define fsl_shw_sko_init_pf_key(skobject,skalgorithm,skhwkey)       \
+{                                                                   \
+    (skobject)->algorithm = -1;                                         \
+    (skobject)->flags = -1;                                             \
+    (skobject)->keystore = NULL;                                        \
 }
 
 /*!
@@ -1473,13 +1538,14 @@ typedef enum fsl_shw_partition_status_t {
  * @param      wkeylen          Location to store the length of a wrapped
  *                              version of the key in @a key_info.
  */
-#define fsl_shw_sko_calculate_wrapped_size(wkeyinfo, wkeylen)                 \
-{                                                                             \
-     if ((wkeyinfo)->key_length > 32) {                                       \
-         *(wkeylen) = 0;                                                      \
-     } else {                                                                 \
-         *(wkeylen) = 66;                                                     \
-     }                                                                        \
+#define fsl_shw_sko_calculate_wrapped_size(wkeyinfo, wkeylen)           \
+{                                                                       \
+    register fsl_shw_sko_t* kp = wkeyinfo;                              \
+    register uint32_t kl = kp->key_length;                              \
+    int key_blocks = (kl + 15) / 16;                                    \
+    int base_size = 35; /* ICV + T' + ALG + LEN + FLAGS */              \
+                                                                        \
+    *(wkeylen) = base_size + 16 * key_blocks;                           \
 }
 
 /*!
@@ -2032,6 +2098,12 @@ extern fsl_shw_return_t do_system_keystore_slot_load(fsl_shw_uco_t * user_ctx,
 						     const uint8_t * key,
 						     uint32_t key_length);
 
+extern fsl_shw_return_t do_system_keystore_slot_read(fsl_shw_uco_t * user_ctx,
+						     uint64_t ownerid,
+						     uint32_t slot,
+						     uint32_t key_length,
+						     const uint8_t * key);
+
 extern fsl_shw_return_t do_system_keystore_slot_encrypt(fsl_shw_uco_t *
 							user_ctx,
 							uint64_t ownerid,
@@ -2131,6 +2203,30 @@ extern fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t * user_ctx,
 					     const uint8_t * auth_value,
 					     uint8_t * payload);
 
+extern fsl_shw_return_t fsl_shw_read_key(fsl_shw_uco_t * user_ctx,
+						fsl_shw_sko_t * key_info,
+						uint8_t * key);
+
+static inline fsl_shw_return_t fsl_shw_gen_random_pf_key(fsl_shw_uco_t *
+							 user_ctx)
+{
+	(void)user_ctx;
+
+	return FSL_RETURN_NO_RESOURCE_S;
+}
+
+static inline fsl_shw_return_t fsl_shw_read_tamper_event(fsl_shw_uco_t *
+							 user_ctx,
+							 fsl_shw_tamper_t *
+							 tamperp,
+							 uint64_t * timestampp)
+{
+	(void)user_ctx;
+	(void)tamperp;
+	(void)timestampp;
+
+	return FSL_RETURN_NO_RESOURCE_S;
+}
 
 fsl_shw_return_t sah_Append_Desc(const sah_Mem_Util * mu,
 				 sah_Head_Desc ** desc_head,
@@ -2167,3 +2263,4 @@ void sah_Postprocess_Results(fsl_shw_uco_t * user_ctx,
 			     sah_results * result_info);
 
 #endif				/* SAHARA2_API_H */
+

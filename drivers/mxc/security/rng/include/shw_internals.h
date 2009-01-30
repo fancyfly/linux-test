@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -24,13 +24,10 @@
  *
  *  @li Some sort of platform flag.
  *
- *  @ingroup RNG
  */
 
 #include "portable_os.h"
 #include "shw_driver.h"
-
-//#include <asm/arch/mxc_scc_driver.h>
 
 /*! @defgroup shwcompileflags SHW Compile Flags
  *
@@ -82,6 +79,7 @@
 #define SHW_DRIVER_NAME "fsl_shw"
 /*! @} */
 #endif
+/*#define SHW_DEBUG*/
 
 /*!
  * Add a user context onto the list of registered users.

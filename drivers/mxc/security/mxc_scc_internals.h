@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -32,7 +32,7 @@
  *
  * @ingroup MXCSCC
  */
-
+#if 0
 #include <linux/version.h>	/* Current version Linux kernel */
 #include <linux/module.h>	/* Basic support for loadable modules,
 				   printk */
@@ -42,41 +42,147 @@
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>	/* IRQ / interrupt definitions */
 #include <asm/io.h>		/* ioremap() */
+#endif
 #include <asm/arch/mxc_scc_driver.h>
 
 /* Get handle on certain per-platform symbols */
+#ifdef TAHITI
+#include <asm/arch/mx2.h>
+
+/*
+ * Mark the SCC as always there... as Tahiti is not officially supported by
+ * driver.  Porting opportunity.
+ */
+#define SCC_ENABLED() (1)
+
+#elif defined(MXC)
 
 #include <asm/arch/iim.h>
 #include <asm/arch/mxc_scc.h>
 
-/*!
+#ifdef SCC_FUSE
+
+/*
  * This macro is used to determine whether the SCC is enabled/available
  * on the platform.  This macro may need to be ported.
  */
-#define SCC_FUSE IO_ADDRESS(IIM_BASE_ADDR + MXC_IIMHWV1)
 #define SCC_ENABLED() ((SCC_FUSE & MXC_IIMHWV1_SCC_DISABLE) == 0)
+
+#else
+
+#warning SCC_FUSE not defined, assuming the SCC is enabled.
+#define SCC_ENABLED() (1)
+
+#endif
+
+#else				/* neither TAHITI nor MXC */
+
+#error Do not understand target architecture
+
+#endif				/* TAHITI */
+
+/* Temporarily define compile-time flags to make Doxygen happy. */
+#ifdef DOXYGEN_HACK
+/*! @addtogroup scccompileflags */
+/*! @{ */
+
+/*! @def NO_SMN_INTERRUPT
+ * The SMN interrupt is not wired to the CPU at all.
+ */
+#define NO_SMN_INTERRUPT
+
+/*!
+ * Register an interrupt handler for the SMN as well as
+ * the SCM.  In some implementations, the SMN is not connected at all (see
+ * #NO_SMN_INTERRUPT), and in others, it is on the same interrupt line as the
+ * SCM.  When defining this flag, the SMN interrupt should be on a separate
+ * line from the SCM interrupt.
+ */
+
+#define USE_SMN_INTERRUPT
 
 /*!
  * Turn on generation of run-time operational, debug, and error messages
  */
+#define SCC_DEBUG
 
 /*!
  * Turn on generation of run-time logging of access to the SCM and SMN
  * registers.
  */
-//#define SCC_REGISTER_DEBUG
+#define SCC_REGISTER_DEBUG
 
 /*!
  * Turn on generation of run-time logging of access to the SCM Red and
  * Black memories.  Will only work if #SCC_REGISTER_DEBUG is also defined.
  */
-//#define SCC_RAM_DEBUG
+#define SCC_RAM_DEBUG
 
 /*!
  *  If the driver finds the SCC in HEALTH_CHECK state, go ahead and
  *  run a quick ASC to bring it to SECURE state.
  */
 #define SCC_BRINGUP
+
+/*!
+ * Expected to come from platform header files or compile command line.
+ * This symbol must be the address of the SCC
+ */
+#define SCC_BASE
+
+/*!
+ *  This must be the interrupt line number of the SCM interrupt.
+ */
+#define INT_SCM
+
+/*!
+ *  if #USE_SMN_INTERRUPT is defined, this must be the interrupt line number of
+ *  the SMN interrupt.
+ */
+#define INT_SMN
+
+/*!
+ * Define the number of Stored Keys which the SCC driver will make available.
+ * Value shall be from 0 to 20.  Default is zero (0).
+ */
+#define SCC_KEY_SLOTS 
+
+/*!
+ * Make sure that this flag is defined if compiling for a Little-Endian
+ * platform.  Linux Kernel builds provide this flag.
+ */
+#define __LITTLE_ENDIAN
+
+/*!
+ * Make sure that this flag is defined if compiling for a Big-Endian platform.
+ * Linux Kernel builds provide this flag.
+ */
+#define __BIG_ENDIAN
+
+/*!
+ * Read a 32-bit register value from a 'peripheral'.  Standard Linux/Unix
+ * macro.
+ *
+ * @param offset   Bus address of register to be read
+ *
+ * @return The value of the register
+ */
+#define readl(offset)
+
+/*!
+ * Write a 32-bit value to a register in a 'peripheral'.  Standard Linux/Unix
+ * macro.
+ *
+ * @param value    The 32-bit value to store
+ * @param offset   Bus address of register to be written
+ *
+ * return (none)
+ */
+#define writel(value,offset)
+
+	   /*! @} *//* end group scccompileflags */
+
+#endif				/* DOXYGEN_HACK */
 
 /*!
  * Define the number of Stored Keys which the SCC driver will make available.
@@ -91,8 +197,6 @@
 
 #if (SCC_KEY_SLOTS < 0) || (SCC_KEY_SLOTS > 20)
 #error Bad value for SCC_KEY_SLOTS
-#endif
-
 #endif
 
 /*!
@@ -111,6 +215,8 @@
  *  not used for Stored Keys.
  */
 #define SCM_NON_RESERVED_OFFSET (SCC_KEY_SLOTS * SCC_KEY_SLOT_SIZE)
+
+#endif
 
 /* These come for free with Linux, but may need to be set in a port. */
 #ifndef __BIG_ENDIAN
@@ -133,6 +239,22 @@
 /*! Initial CRC value for CCITT-CRC calculation. */
 #define CRC_CCITT_START 0xFFFF
 
+#ifdef TAHITI
+
+/*!
+ * The SCC_BASE has to be SMN_BASE_ADDR on TAHITI, as the banks of
+ * registers are swapped in place.
+ */
+#define SCC_BASE       SMN_BASE_ADDR
+
+/*! The interrupt number for the SCC (SCM only!) on Tahiti */
+#define INT_SCC_SCM       62
+
+/*! Tahiti does not have the SMN interrupt wired to the CPU.  */
+#define NO_SMN_INTERRUPT
+
+#endif				/* TAHITI */
+
 /*! Number of times to spin between polling of SCC while waiting for cipher
  *  or zeroizing function to complete. See also #SCC_CIPHER_MAX_POLL_COUNT. */
 #define SCC_SPIN_COUNT 1000
@@ -144,7 +266,7 @@
 /*!
  * @def SCC_READ_REGISTER
  * Read a 32-bit value from an SCC register.  Macro which depends upon
- * #scc_base.  Linux __raw_readl()/__raw_writel() macros operate on 32-bit quantities, as
+ * #scc_base.  Linux readl()/writel() macros operate on 32-bit quantities, as
  * do SCC register reads/writes.
  *
  * @param     offset  Register offset within SCC.
@@ -230,6 +352,23 @@
 /*! Name of the driver.  Used (on Linux, anyway) when registering interrupts */
 #define SCC_DRIVER_NAME "scc"
 
+/* Port -- these symbols are defined in Linux 2.6 and later.  They are defined
+ * here for backwards compatibility because this started life as a 2.4
+ * driver, and as a guide to portation to other platforms.
+ */
+
+#if !defined(LINUX_VERSION_CODE) || LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
+
+#define irqreturn_t void	/* Return type of an interrupt handler */
+
+#define IRQ_HANDLED		/* Would be '1' for handled -- as in return IRQ_HANDLED; */
+
+#define IRQ_NONE		/* would be '0' for not handled -- as in return IRQ_NONE; */
+
+#define IRQ_RETVAL(x)		/* Return x==0 (not handled) or non-zero (handled) */
+
+#endif				/* LINUX earlier than 2.5 */
+
 /* These are nice to have around */
 #ifndef FALSE
 #define FALSE 0
@@ -254,10 +393,10 @@ enum scc_status {
  * Information about a key slot.
  */
 struct scc_key_slot {
-	uint64_t owner_id;	/**< Access control value. */
-	uint32_t length;	/**< Length of value in slot. */
-	uint32_t offset;	/**< Offset of value from start of each RAM. */
-	uint32_t status;	/**< 0 = unassigned, 1 = assigned. */
+	uint64_t owner_id;	/*!< Access control value. */
+	uint32_t length;	/*!< Length of value in slot. */
+	uint32_t offset;	/*!< Offset of value from start of each RAM. */
+	uint32_t status;	/*!< 0 = unassigned, 1 = assigned. */
 };
 
 /* Forward-declare a number routines which are not part of user api */
@@ -266,7 +405,7 @@ static void scc_cleanup(void);
 
 /* Forward defines of internal functions */
 OS_DEV_ISR(scc_irq);
-/** Perform callbacks registered by #scc_monitor_security_failure().
+/*! Perform callbacks registered by #scc_monitor_security_failure().
  *
  *  Make sure callbacks only happen once...  Since there may be some reason why
  *  the interrupt isn't generated, this routine could be called from base(task)
@@ -285,7 +424,7 @@ static uint32_t scc_update_state(void);
 static void scc_init_ccitt_crc(void);
 static uint32_t scc_grab_config_values(void);
 static int setup_interrupt_handling(void);
-/**
+/*!
  * Perform an encryption on the input.  If @c verify_crc is true, a CRC must be
  * calculated on the plaintext, and appended, with padding, before computing
  * the ciphertext.
@@ -297,10 +436,12 @@ static int setup_interrupt_handling(void);
  * @param[in]     add_crc         Flag for computing CRC - 0 no, else yes
  * @param[in,out] count_out_bytes Number of bytes available at @c data_out
  */
-static scc_return_t scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in,
+static scc_return_t scc_encrypt(uint32_t count_in_bytes,
+				const uint8_t * data_in,
 				uint32_t scm_control, uint8_t * data_out,
 				int add_crc, unsigned long *count_out_bytes);
-/**
+
+/*!
  * Perform a decryption on the input.  If @c verify_crc is true, the last block
  * (maybe the two last blocks) is special - it should contain a CRC and
  * padding.  These must be stripped and verified.
@@ -313,9 +454,11 @@ static scc_return_t scc_encrypt(uint32_t count_in_bytes, uint8_t * data_in,
  * @param[in,out] count_out_bytes Number of bytes available at @c data_out
 
  */
-static scc_return_t scc_decrypt(uint32_t count_in_bytes, uint8_t * data_in,
+static scc_return_t scc_decrypt(uint32_t count_in_bytes,
+				const uint8_t * data_in,
 				uint32_t scm_control, uint8_t * data_out,
 				int verify_crc, unsigned long *count_out_bytes);
+
 static void scc_wait_completion(void);
 static int is_cipher_done(void);
 static scc_return_t check_register_accessible(uint32_t offset,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -55,7 +55,6 @@
  * fsl_shw_deregister_user(), fsl_shw_get_capabilities(), and
  * fsl_shw_get_results().  Other parts of the API are provided by other
  * drivers, if available, to support the cryptographic functions.
- *  @ingroup RNG
  */
 
 #include "portable_os.h"
@@ -86,28 +85,43 @@ OS_DEV_SHUTDOWN_DCL(shw_shutdown);
 OS_DEV_IOCTL_DCL(shw_ioctl);
 OS_DEV_MMAP_DCL(shw_mmap);
 
-static os_error_code
-shw_handle_scc_sfree(fsl_shw_uco_t *user_ctx, uint32_t info);
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_smalloc);
+EXPORT_SYMBOL(fsl_shw_sfree);
+EXPORT_SYMBOL(fsl_shw_sstatus);
+EXPORT_SYMBOL(fsl_shw_diminish_perms);
+EXPORT_SYMBOL(do_scc_encrypt_region);
+EXPORT_SYMBOL(do_scc_decrypt_region);
+
+EXPORT_SYMBOL(do_system_keystore_slot_alloc);
+EXPORT_SYMBOL(do_system_keystore_slot_dealloc);
+EXPORT_SYMBOL(do_system_keystore_slot_load);
+EXPORT_SYMBOL(do_system_keystore_slot_encrypt);
+EXPORT_SYMBOL(do_system_keystore_slot_decrypt);
+#endif
 
 static os_error_code
-shw_handle_scc_sstatus(fsl_shw_uco_t *user_ctx, uint32_t info);
+shw_handle_scc_sfree(fsl_shw_uco_t * user_ctx, uint32_t info);
 
 static os_error_code
-shw_handle_scc_drop_perms(fsl_shw_uco_t *user_ctx, uint32_t info);
+shw_handle_scc_sstatus(fsl_shw_uco_t * user_ctx, uint32_t info);
 
 static os_error_code
-shw_handle_scc_encrypt(fsl_shw_uco_t *user_ctx, uint32_t info);
+shw_handle_scc_drop_perms(fsl_shw_uco_t * user_ctx, uint32_t info);
 
 static os_error_code
-shw_handle_scc_decrypt(fsl_shw_uco_t *user_ctx, uint32_t info);
+shw_handle_scc_encrypt(fsl_shw_uco_t * user_ctx, uint32_t info);
+
+static os_error_code
+shw_handle_scc_decrypt(fsl_shw_uco_t * user_ctx, uint32_t info);
 
 #ifdef FSL_HAVE_SCC2
-static fsl_shw_return_t register_user_partition(fsl_shw_uco_t *user_ctx,
+static fsl_shw_return_t register_user_partition(fsl_shw_uco_t * user_ctx,
 						uint32_t user_base,
 						void *kernel_base);
-static fsl_shw_return_t deregister_user_partition(fsl_shw_uco_t *user_ctx,
+static fsl_shw_return_t deregister_user_partition(fsl_shw_uco_t * user_ctx,
 						  uint32_t user_base);
-void *lookup_user_partition(fsl_shw_uco_t *user_ctx, uint32_t user_base);
+void *lookup_user_partition(fsl_shw_uco_t * user_ctx, uint32_t user_base);
 
 #endif				/* FSL_HAVE_SCC2 */
 
@@ -117,28 +131,28 @@ void *lookup_user_partition(fsl_shw_uco_t *user_ctx, uint32_t user_base);
  *
  *****************************************************************************/
 
-/**
+/*!
  *  Major node (user/device interaction value) of this driver.
  */
 static int shw_major_node = SHW_MAJOR_NODE;
 
-/**
+/*!
  *  Flag to know whether the driver has been associated with its user device
  *  node (e.g. /dev/shw).
  */
 static int shw_device_registered = 0;
 
-/**
+/*!
  * OS-dependent handle used for registering user interface of a driver.
  */
 static os_driver_reg_t reg_handle;
 
-/**
+/*!
  * Linked List of registered users of the API
  */
 fsl_shw_uco_t *user_list;
 
-/**
+/*!
  * This is the lock for all user request pools.  H/W component drivers may also
  * use it for their own work queues.
  */
@@ -148,23 +162,23 @@ os_lock_t shw_queue_lock = NULL;
 fsl_shw_kso_t system_keystore;
 
 #ifndef FSL_HAVE_SAHARA
-/** Empty list of supported symmetric algorithms. */
+/*! Empty list of supported symmetric algorithms. */
 static fsl_shw_key_alg_t pf_syms[] = {
 };
 
-/** Empty list of supported symmetric modes. */
+/*! Empty list of supported symmetric modes. */
 static fsl_shw_sym_mode_t pf_modes[] = {
 };
 
-/** Empty list of supported hash algorithms. */
+/*! Empty list of supported hash algorithms. */
 static fsl_shw_hash_alg_t pf_hashes[] = {
 };
 #endif				/* no Sahara */
 
-/** This matches SHW capabilities... */
+/*! This matches SHW capabilities... */
 static fsl_shw_pco_t cap = {
-	1, 2,			/* api version number - major & minor */
-	1, 1,			/* driver version number - major & minor */
+	1, 3,			/* api version number - major & minor */
+	2, 3,			/* driver version number - major & minor */
 	sizeof(pf_syms) / sizeof(fsl_shw_key_alg_t),	/* key alg count */
 	pf_syms,		/* key alg list ptr */
 	sizeof(pf_modes) / sizeof(fsl_shw_sym_mode_t),	/* sym mode count */
@@ -182,8 +196,13 @@ static fsl_shw_pco_t cap = {
 	 ,			/* AES  */
 	 {0, 0, 0, 0}
 	 ,			/* DES */
+#ifdef FSL_HAVE_DRYICE
+	 {0, 1, 1, 0}
+	 ,			/* 3DES - ECB and CBC */
+#else
 	 {0, 0, 0, 0}
 	 ,			/* 3DES */
+#endif
 	 {0, 0, 0, 0}		/* ARC4 */
 	 }
 	,
@@ -196,11 +215,11 @@ static fsl_shw_pco_t cap = {
 
 /* These are often handy */
 #ifndef FALSE
-/** Not true.  Guaranteed to be zero. */
+/*! Not true.  Guaranteed to be zero. */
 #define FALSE 0
 #endif
 #ifndef TRUE
-/** True.  Guaranteed to be non-zero. */
+/*! True.  Guaranteed to be non-zero. */
 #define TRUE 1
 #endif
 
@@ -213,7 +232,7 @@ static fsl_shw_pco_t cap = {
 /*****************************************************************************/
 /* fn shw_init()                                                             */
 /*****************************************************************************/
-/**
+/*!
  * Initialize the driver.
  *
  * This routine is called during kernel init or module load (insmod).
@@ -253,19 +272,19 @@ OS_DEV_INIT(shw_init)
 	cap.block_size_bytes = shw_capabilities->block_size_bytes;
 
 #ifdef FSL_HAVE_SCC
-	cap.scc_info.black_ram_size_blocks =
+	cap.u.scc_info.black_ram_size_blocks =
 	    shw_capabilities->black_ram_size_blocks;
-	cap.scc_info.red_ram_size_blocks =
+	cap.u.scc_info.red_ram_size_blocks =
 	    shw_capabilities->red_ram_size_blocks;
 #elif defined(FSL_HAVE_SCC2)
-	cap.scc2_info.partition_size_bytes =
+	cap.u.scc2_info.partition_size_bytes =
 	    shw_capabilities->partition_size_bytes;
-	cap.scc2_info.partition_count = shw_capabilities->partition_count;
+	cap.u.scc2_info.partition_count = shw_capabilities->partition_count;
 #endif
 
-#ifdef FSL_HAVE_SCC2
+#if defined(FSL_HAVE_SCC2) || defined(FSL_HAVE_DRYICE)
 	if (error_code == OS_ERROR_OK_S) {
-/* set up the system keystore, using the default keystore handler */
+		/* set up the system keystore, using the default keystore handler */
 		fsl_shw_init_keystore_default(&system_keystore);
 
 		if (fsl_shw_establish_keystore(NULL, &system_keystore)
@@ -275,7 +294,7 @@ OS_DEV_INIT(shw_init)
 			error_code = OS_ERROR_FAIL_S;
 		}
 
-		if (error_code < OS_ERROR_OK_S) {
+		if (error_code != OS_ERROR_OK_S) {
 #ifdef SHW_DEBUG
 			LOG_KDIAG_ARGS
 			    ("Registering the system keystore failed with error"
@@ -303,7 +322,7 @@ OS_DEV_INIT(shw_init)
 /*****************************************************************************/
 /* fn shw_shutdown()                                                         */
 /*****************************************************************************/
-/**
+/*!
  * Prepare driver for exit.
  *
  * This is called during @c rmmod when the driver is unloading or when the
@@ -326,7 +345,7 @@ OS_DEV_SHUTDOWN(shw_shutdown)
 /*****************************************************************************/
 /* fn shw_cleanup()                                                          */
 /*****************************************************************************/
-/**
+/*!
  * Prepare driver for shutdown.
  *
  * Remove the driver registration.
@@ -352,7 +371,7 @@ static void shw_cleanup(void)
 /*****************************************************************************/
 /* fn shw_open()                                                             */
 /*****************************************************************************/
-/**
+/*!
  * Handle @c open() call from user.
  *
  * @return OS_ERROR_OK_S on success (always!)
@@ -369,7 +388,7 @@ OS_DEV_OPEN(shw_open)
 /*****************************************************************************/
 /* fn shw_ioctl()                                                            */
 /*****************************************************************************/
-/**
+/*!
  * Process an ioctl() request from user-mode API.
  *
  * This code determines which of the API requests the user has made and then
@@ -399,8 +418,10 @@ OS_DEV_IOCTL(shw_ioctl)
 			if (user_ctx == NULL) {
 				code = OS_ERROR_NO_MEMORY_S;
 			} else {
-				code = init_uco(user_ctx, (fsl_shw_uco_t *)
-						os_dev_get_ioctl_arg());
+				code =
+				    init_uco(user_ctx,
+					     (fsl_shw_uco_t *)
+					     os_dev_get_ioctl_arg());
 				if (code == OS_ERROR_OK_S) {
 					os_dev_set_user_private(user_ctx);
 				} else {
@@ -424,7 +445,8 @@ OS_DEV_IOCTL(shw_ioctl)
 #ifdef SHW_DEBUG
 		LOG_KDIAG("SHW: get_results ioctl received");
 #endif
-		code = get_results(user_ctx, (struct results_req *)
+		code = get_results(user_ctx,
+				   (struct results_req *)
 				   os_dev_get_ioctl_arg());
 		break;
 
@@ -432,7 +454,8 @@ OS_DEV_IOCTL(shw_ioctl)
 #ifdef SHW_DEBUG
 		LOG_KDIAG("SHW: get_capabilities ioctl received");
 #endif
-		code = get_capabilities(user_ctx, (fsl_shw_pco_t *)
+		code = get_capabilities(user_ctx,
+					(fsl_shw_pco_t *)
 					os_dev_get_ioctl_arg());
 		break;
 
@@ -440,7 +463,8 @@ OS_DEV_IOCTL(shw_ioctl)
 #ifdef SHW_DEBUG
 		LOG_KDIAG("SHW: get_random ioctl received");
 #endif
-		code = get_random(user_ctx, (struct get_random_req *)
+		code = get_random(user_ctx,
+				  (struct get_random_req *)
 				  os_dev_get_ioctl_arg());
 		break;
 
@@ -448,7 +472,8 @@ OS_DEV_IOCTL(shw_ioctl)
 #ifdef SHW_DEBUG
 		LOG_KDIAG("SHW: add_entropy ioctl received");
 #endif
-		code = add_entropy(user_ctx, (struct add_entropy_req *)
+		code = add_entropy(user_ctx,
+				   (struct add_entropy_req *)
 				   os_dev_get_ioctl_arg());
 		break;
 
@@ -506,12 +531,12 @@ OS_DEV_IOCTL(shw_ioctl)
 /*****************************************************************************/
 uint32_t get_user_smid(void *proc)
 {
-/*
- * A real implementation would have some way to handle signed applications
- * which wouild be assigned distinct SMIDs.  For the reference
- * implementation, we show where this would be determined (here), but
- * always provide a fixed answer, thus not separating users at all.
- */
+	/*
+	 * A real implementation would have some way to handle signed applications
+	 * which wouild be assigned distinct SMIDs.  For the reference
+	 * implementation, we show where this would be determined (here), but
+	 * always provide a fixed answer, thus not separating users at all.
+	 */
 
 	return 0x42eaae42;
 }
@@ -519,21 +544,22 @@ uint32_t get_user_smid(void *proc)
 /* user_base: userspace base address of the partition
  * kernel_base: kernel mode base address of the partition
  */
-static fsl_shw_return_t register_user_partition(fsl_shw_uco_t *user_ctx,
+static fsl_shw_return_t register_user_partition(fsl_shw_uco_t * user_ctx,
 						uint32_t user_base,
 						void *kernel_base)
 {
 	fsl_shw_spo_t *partition_info;
 	fsl_shw_return_t ret = FSL_RETURN_ERROR_S;
 
-	if (user_ctx == NULL)
+	if (user_ctx == NULL) {
 		goto out;
+	}
 
 	partition_info = os_alloc_memory(sizeof(fsl_shw_spo_t), GFP_KERNEL);
 
-	if (partition_info == NULL)
+	if (partition_info == NULL) {
 		goto out;
-
+	}
 
 	/* stuff the partition info, then put it at the front of the chain */
 	partition_info->user_base = user_base;
@@ -550,13 +576,13 @@ static fsl_shw_return_t register_user_partition(fsl_shw_uco_t *user_ctx,
 
 	ret = FSL_RETURN_OK_S;
 
-out:
+      out:
 
 	return ret;
 }
 
 /* if the partition is in the users list, remove it */
-static fsl_shw_return_t deregister_user_partition(fsl_shw_uco_t *user_ctx,
+static fsl_shw_return_t deregister_user_partition(fsl_shw_uco_t * user_ctx,
 						  uint32_t user_base)
 {
 	fsl_shw_spo_t *curr = (fsl_shw_spo_t *) user_ctx->partition;
@@ -592,16 +618,17 @@ static fsl_shw_return_t deregister_user_partition(fsl_shw_uco_t *user_ctx,
 /* Find the kernel-mode address of the partition.
  * This can then be passed to the SCC functions.
  */
-void *lookup_user_partition(fsl_shw_uco_t *user_ctx, uint32_t user_base)
+void *lookup_user_partition(fsl_shw_uco_t * user_ctx, uint32_t user_base)
 {
-/* search through the partition chain to find one that matches the user base
- * address.
- */
+	/* search through the partition chain to find one that matches the user base
+	 * address.
+	 */
 	fsl_shw_spo_t *curr = (fsl_shw_spo_t *) user_ctx->partition;
 
 	while (curr != NULL) {
-		if (curr->user_base == user_base)
+		if (curr->user_base == user_base) {
 			return curr->kernel_base;
+		}
 		curr = (fsl_shw_spo_t *) curr->next;
 	}
 	return NULL;
@@ -609,7 +636,7 @@ void *lookup_user_partition(fsl_shw_uco_t *user_ctx, uint32_t user_base)
 
 #endif				/* FSL_HAVE_SCC2 */
 
-/**
+/*!
 *******************************************************************************
 * This function implements the smalloc() function for userspace programs, by
 * making a call to the SCC2 mmap() function that acquires a region of secure
@@ -654,9 +681,9 @@ OS_DEV_MMAP(shw_mmap)
 		/* Determine the size of a secure partition */
 		scc_configuration = scc_get_configuration();
 
-	/* Check that the memory size requested is equal to the partition
-	 * size, and that the requested destination is on a page boundary.
-	 */
+		/* Check that the memory size requested is equal to the partition
+		 * size, and that the requested destination is on a page boundary.
+		 */
 		if (((os_mmap_user_base() % PAGE_SIZE) != 0) ||
 		    (os_mmap_memory_size() !=
 		     scc_configuration->partition_size_bytes)) {
@@ -690,8 +717,8 @@ OS_DEV_MMAP(shw_mmap)
 
 		if (fsl_ret != FSL_RETURN_OK_S) {
 			pr_debug
-		    ("SCC mmap() request failed to register partition with user"
-		     " context, error: %d\n", fsl_ret);
+			    ("SCC mmap() request failed to register partition with user"
+			     " context, error: %d\n", fsl_ret);
 			status = OS_ERROR_FAIL_S;
 		}
 
@@ -703,21 +730,23 @@ OS_DEV_MMAP(shw_mmap)
 #ifdef SHW_DEBUG
 		if (status == OS_ERROR_OK_S) {
 			LOG_KDIAG_ARGS
-		    ("Partition allocated: user_base=%p, partition_base=%p.",
-		     (void *)user_base, partition_base);
+			    ("Partition allocated: user_base=%p, partition_base=%p.",
+			     (void *)user_base, partition_base);
 		}
 #endif
 
-out:
+	      out:
 		/* If there is an error it has to be handled here */
 		if (status != OS_ERROR_OK_S) {
-		/* if the partition was registered with the user, unregister it. */
-			if (partition_registered == TRUE)
+			/* if the partition was registered with the user, unregister it. */
+			if (partition_registered == TRUE) {
 				deregister_user_partition(user_ctx, user_base);
+			}
 
 			/* if the partition was allocated, deallocate it */
-			if (partition_base != NULL)
+			if (partition_base != NULL) {
 				scc_release_partition(partition_base);
+			}
 		}
 	}
 #endif				/* FSL_HAVE_SCC2 */
@@ -728,7 +757,7 @@ out:
 /*****************************************************************************/
 /* fn shw_release()                                                         */
 /*****************************************************************************/
-/**
+/*!
  * Handle @c close() call from user.
  * This is a Linux device driver interface routine.
  *
@@ -753,7 +782,7 @@ OS_DEV_CLOSE(shw_release)
 /*****************************************************************************/
 /* fn shw_user_callback()                                                    */
 /*****************************************************************************/
-/**
+/*!
  * FSL SHW User callback function.
  *
  * This function is set in the kernel version of the user context as the
@@ -766,7 +795,7 @@ OS_DEV_CLOSE(shw_release)
  *
  * @return void
  */
-static void shw_user_callback(fsl_shw_uco_t *user_ctx)
+static void shw_user_callback(fsl_shw_uco_t * user_ctx)
 {
 #ifdef SHW_DEBUG
 	LOG_KDIAG_ARGS("SHW: Signalling callback user process for context %p\n",
@@ -778,7 +807,7 @@ static void shw_user_callback(fsl_shw_uco_t *user_ctx)
 /*****************************************************************************/
 /* fn setup_user_driver_interaction()                                        */
 /*****************************************************************************/
-/**
+/*!
  * Register the driver with the kernel as the driver for shw_major_node.  Note
  * that this value may be zero, in which case the major number will be assigned
  * by the OS.  shw_major_node is never modified.
@@ -825,7 +854,7 @@ static os_error_code shw_setup_user_driver_interaction(void)
 /* User Mode Support                                              */
 /******************************************************************/
 
-/**
+/*!
  * Initialze kernel User Context Object from User-space version.
  *
  * Copy user UCO into kernel UCO, set flags and fields for operation
@@ -857,7 +886,7 @@ static os_error_code init_uco(fsl_shw_uco_t * user_ctx, void *user_mode_uco)
 	return code;
 }
 
-/**
+/*!
  * Copy array from kernel to user space.
  *
  * This routine will check bounds before trying to copy, and return failure
@@ -887,7 +916,7 @@ inline static void *copy_array(void *userloc, void *userend, void *data_start,
 	return userloc;
 }
 
-/**
+/*!
  * Send an FSL SHW API return code up into the user-space request structure.
  *
  * @param user_header   User address of request block / request header
@@ -906,7 +935,7 @@ inline static os_error_code copy_fsl_code(void *user_header,
 			       &result_code, sizeof(result_code));
 }
 
-static os_error_code shw_handle_scc_drop_perms(fsl_shw_uco_t *user_ctx,
+static os_error_code shw_handle_scc_drop_perms(fsl_shw_uco_t * user_ctx,
 					       uint32_t info)
 {
 	os_error_code status = OS_ERROR_NO_MEMORY_S;
@@ -919,8 +948,9 @@ static os_error_code shw_handle_scc_drop_perms(fsl_shw_uco_t *user_ctx,
 	    os_copy_from_user(&partition_info, (void *)info,
 			      sizeof(partition_info));
 
-	if (status != OS_ERROR_OK_S)
+	if (status != OS_ERROR_OK_S) {
 		goto out;
+	}
 
 	/* validate that the user owns this partition, and look up its handle */
 	kernel_base = lookup_user_partition(user_ctx, partition_info.user_base);
@@ -942,12 +972,12 @@ static os_error_code shw_handle_scc_drop_perms(fsl_shw_uco_t *user_ctx,
 		status = OS_ERROR_FAIL_S;
 	}
 
-out:
+      out:
 #endif				/* FSL_HAVE_SCC2 */
 	return status;
 }
 
-static os_error_code shw_handle_scc_sstatus(fsl_shw_uco_t *user_ctx,
+static os_error_code shw_handle_scc_sstatus(fsl_shw_uco_t * user_ctx,
 					    uint32_t info)
 {
 	os_error_code status = OS_ERROR_NO_MEMORY_S;
@@ -958,8 +988,9 @@ static os_error_code shw_handle_scc_sstatus(fsl_shw_uco_t *user_ctx,
 	status = os_copy_from_user(&partition_info,
 				   (void *)info, sizeof(partition_info));
 
-	if (status != OS_ERROR_OK_S)
+	if (status != OS_ERROR_OK_S) {
 		goto out;
+	}
 
 	/* validate that the user owns this partition, and look up its handle */
 	kernel_base = lookup_user_partition(user_ctx, partition_info.user_base);
@@ -979,12 +1010,12 @@ static os_error_code shw_handle_scc_sstatus(fsl_shw_uco_t *user_ctx,
 	status = os_copy_to_user((void *)info,
 				 &partition_info, sizeof(partition_info));
 
-out:
+      out:
 #endif				/* FSL_HAVE_SCC2 */
 	return status;
 }
 
-static os_error_code shw_handle_scc_sfree(fsl_shw_uco_t *user_ctx,
+static os_error_code shw_handle_scc_sfree(fsl_shw_uco_t * user_ctx,
 					  uint32_t info)
 {
 	os_error_code status = OS_ERROR_NO_MEMORY_S;
@@ -999,10 +1030,11 @@ static os_error_code shw_handle_scc_sfree(fsl_shw_uco_t *user_ctx,
 					   sizeof(partition_info));
 
 		/* check that the copy was successful */
-		if (status != OS_ERROR_OK_S)
+		if (status != OS_ERROR_OK_S) {
 			goto out;
+		}
 
-	/* validate that the user owns this partition, and look up its handle */
+		/* validate that the user owns this partition, and look up its handle */
 		kernel_base =
 		    lookup_user_partition(user_ctx, partition_info.user_base);
 
@@ -1036,12 +1068,12 @@ static os_error_code shw_handle_scc_sfree(fsl_shw_uco_t *user_ctx,
 		}
 
 	}
-out:
+      out:
 #endif				/* FSL_HAVE_SCC2 */
 	return status;
 }
 
-static os_error_code shw_handle_scc_encrypt(fsl_shw_uco_t *user_ctx,
+static os_error_code shw_handle_scc_encrypt(fsl_shw_uco_t * user_ctx,
 					    uint32_t info)
 {
 	os_error_code status = OS_ERROR_FAIL_S;
@@ -1058,10 +1090,11 @@ static os_error_code shw_handle_scc_encrypt(fsl_shw_uco_t *user_ctx,
 		    os_copy_from_user(&region_info, (void *)info,
 				      sizeof(region_info));
 
-		if (status != OS_ERROR_OK_S)
+		if (status != OS_ERROR_OK_S) {
 			goto out;
+		}
 
-	/* validate that the user owns this partition, and look up its handle */
+		/* validate that the user owns this partition, and look up its handle */
 		partition_base = lookup_user_partition(user_ctx,
 						       region_info.
 						       partition_base);
@@ -1098,21 +1131,22 @@ static os_error_code shw_handle_scc_encrypt(fsl_shw_uco_t *user_ctx,
 					  region_info.IV,
 					  region_info.cypher_mode);
 
-		if (retval == FSL_RETURN_OK_S)
+		if (retval == FSL_RETURN_OK_S) {
 			status = OS_ERROR_OK_S;
-		else
+		} else {
 			status = OS_ERROR_FAIL_S;
+		}
 
 		/* release black data */
 		unwire_user_memory(&page_ctx);
 	}
-out:
+      out:
 
 #endif				/* FSL_HAVE_SCC2 */
 	return status;
 }
 
-static os_error_code shw_handle_scc_decrypt(fsl_shw_uco_t *user_ctx,
+static os_error_code shw_handle_scc_decrypt(fsl_shw_uco_t * user_ctx,
 					    uint32_t info)
 {
 	os_error_code status = OS_ERROR_FAIL_S;
@@ -1136,10 +1170,11 @@ static os_error_code shw_handle_scc_decrypt(fsl_shw_uco_t *user_ctx,
 		     region_info.length, (void *)region_info.black_data);
 #endif
 
-		if (status != OS_ERROR_OK_S)
+		if (status != OS_ERROR_OK_S) {
 			goto out;
+		}
 
-	/* validate that the user owns this partition, and look up its handle */
+		/* validate that the user owns this partition, and look up its handle */
 		partition_base = lookup_user_partition(user_ctx,
 						       region_info.
 						       partition_base);
@@ -1176,76 +1211,84 @@ static os_error_code shw_handle_scc_decrypt(fsl_shw_uco_t *user_ctx,
 					  region_info.IV,
 					  region_info.cypher_mode);
 
-		if (retval == FSL_RETURN_OK_S)
+		if (retval == FSL_RETURN_OK_S) {
 			status = OS_ERROR_OK_S;
-		else
+		} else {
 			status = OS_ERROR_FAIL_S;
+		}
 
 		/* release black data */
 		unwire_user_memory(&page_ctx);
 	}
-out:
+      out:
 
 #endif				/* FSL_HAVE_SCC2 */
 	return status;
 }
 
-fsl_shw_return_t do_system_keystore_slot_alloc(fsl_shw_uco_t *user_ctx,
+fsl_shw_return_t do_system_keystore_slot_alloc(fsl_shw_uco_t * user_ctx,
 					       uint32_t key_length,
 					       uint64_t ownerid,
-					       uint32_t *slot)
+					       uint32_t * slot)
 {
 	(void)user_ctx;
 	return keystore_slot_alloc(&system_keystore, key_length, ownerid, slot);
 }
-EXPORT_SYMBOL(do_system_keystore_slot_alloc);
 
-fsl_shw_return_t do_system_keystore_slot_dealloc(fsl_shw_uco_t *user_ctx,
+fsl_shw_return_t do_system_keystore_slot_dealloc(fsl_shw_uco_t * user_ctx,
 						 uint64_t ownerid,
 						 uint32_t slot)
 {
 	(void)user_ctx;
 	return keystore_slot_dealloc(&system_keystore, ownerid, slot);
 }
-EXPORT_SYMBOL(do_system_keystore_slot_dealloc);
 
-fsl_shw_return_t do_system_keystore_slot_load(fsl_shw_uco_t *user_ctx,
+fsl_shw_return_t do_system_keystore_slot_load(fsl_shw_uco_t * user_ctx,
 					      uint64_t ownerid,
 					      uint32_t slot,
-					      const uint8_t *key,
+					      const uint8_t * key,
 					      uint32_t key_length)
 {
 	(void)user_ctx;
-	return keystore_load_slot(&system_keystore, ownerid, slot,
+	return keystore_slot_load(&system_keystore, ownerid, slot,
 				  (void *)key, key_length);
 }
-EXPORT_SYMBOL(do_system_keystore_slot_load);
 
-fsl_shw_return_t do_system_keystore_slot_encrypt(fsl_shw_uco_t *user_ctx,
+fsl_shw_return_t do_system_keystore_slot_encrypt(fsl_shw_uco_t * user_ctx,
 						 uint64_t ownerid,
 						 uint32_t slot,
 						 uint32_t key_length,
-						 uint8_t *black_data)
+						 uint8_t * black_data)
 {
 	(void)user_ctx;
 	return keystore_slot_encrypt(NULL, &system_keystore, ownerid,
 				     slot, key_length, black_data);
 }
-EXPORT_SYMBOL(do_system_keystore_slot_encrypt);
 
-fsl_shw_return_t do_system_keystore_slot_decrypt(fsl_shw_uco_t *user_ctx,
+fsl_shw_return_t do_system_keystore_slot_decrypt(fsl_shw_uco_t * user_ctx,
 						 uint64_t ownerid,
 						 uint32_t slot,
 						 uint32_t key_length,
-						 const uint8_t *black_data)
+						 const uint8_t * black_data)
 {
 	(void)user_ctx;
 	return keystore_slot_decrypt(NULL, &system_keystore, ownerid,
 				     slot, key_length, black_data);
 }
-EXPORT_SYMBOL(do_system_keystore_slot_decrypt);
 
-/**
+fsl_shw_return_t do_system_keystore_slot_read(fsl_shw_uco_t * user_ctx,
+					      uint64_t ownerid,
+					      uint32_t slot,
+					      uint32_t key_length,
+					      uint8_t * key_data)
+{
+	(void)user_ctx;
+
+	return keystore_slot_read(&system_keystore, ownerid,
+				  slot, key_length, key_data);
+}
+
+/*!
  * Handle user-mode Get Capabilities request
  *
  * Right now, this function can only have a failure if the user has failed to
@@ -1259,7 +1302,7 @@ EXPORT_SYMBOL(do_system_keystore_slot_decrypt);
  *
  * @return an os_error_code
  */
-static os_error_code get_capabilities(fsl_shw_uco_t *user_ctx,
+static os_error_code get_capabilities(fsl_shw_uco_t * user_ctx,
 				      void *user_mode_pco_request)
 {
 	os_error_code code;
@@ -1343,7 +1386,7 @@ static os_error_code get_capabilities(fsl_shw_uco_t *user_ctx,
 	return code;
 }
 
-/**
+/*!
  * Handle user-mode Get Results request
  *
  * Get arguments from user space into kernel space, then call
@@ -1355,7 +1398,7 @@ static os_error_code get_capabilities(fsl_shw_uco_t *user_ctx,
  *
  * @return an os_error_code
  */
-static os_error_code get_results(fsl_shw_uco_t *user_ctx,
+static os_error_code get_results(fsl_shw_uco_t * user_ctx,
 				 void *user_mode_results_req)
 {
 	os_error_code code;
@@ -1403,7 +1446,7 @@ static os_error_code get_results(fsl_shw_uco_t *user_ctx,
 	return code;
 }
 
-/**
+/*!
  * Process header of user-mode request.
  *
  * Mark header as User Mode request.  Update UCO's flags and reference fields
@@ -1414,7 +1457,7 @@ static os_error_code get_results(fsl_shw_uco_t *user_ctx,
  *
  * @return void
  */
-static inline void process_hdr(fsl_shw_uco_t *user_ctx,
+inline static void process_hdr(fsl_shw_uco_t * user_ctx,
 			       struct shw_req_header *hdr)
 {
 	hdr->flags |= FSL_UCO_USERMODE_USER;
@@ -1424,7 +1467,7 @@ static inline void process_hdr(fsl_shw_uco_t *user_ctx,
 	return;
 }
 
-/**
+/*!
  * Handle user-mode Get Random request
  *
  * @param user_ctx    The kernel version of user's context
@@ -1432,7 +1475,7 @@ static inline void process_hdr(fsl_shw_uco_t *user_ctx,
  *
  * @return an os_error_code
  */
-static os_error_code get_random(fsl_shw_uco_t *user_ctx,
+static os_error_code get_random(fsl_shw_uco_t * user_ctx,
 				void *user_mode_get_random_req)
 {
 	os_error_code code;
@@ -1461,7 +1504,7 @@ static os_error_code get_random(fsl_shw_uco_t *user_ctx,
 	return code;
 }
 
-/**
+/*!
  * Handle user-mode Add Entropy request
  *
  * @param user_ctx    Pointer to the kernel version of user's context
@@ -1469,7 +1512,7 @@ static os_error_code get_random(fsl_shw_uco_t *user_ctx,
  *
  * @return an os_error_code
  */
-static os_error_code add_entropy(fsl_shw_uco_t *user_ctx,
+static os_error_code add_entropy(fsl_shw_uco_t * user_ctx,
 				 void *user_mode_add_entropy_req)
 {
 	os_error_code code;
@@ -1505,6 +1548,9 @@ static os_error_code add_entropy(fsl_shw_uco_t *user_ctx,
 /* End User Mode Support                                          */
 /******************************************************************/
 
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_register_user);
+#endif
 /* REQ-S2LRD-PINTFC-API-GEN-004 */
 /*
  * Handle user registration.
@@ -1513,7 +1559,7 @@ static os_error_code add_entropy(fsl_shw_uco_t *user_ctx,
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-fsl_shw_return_t fsl_shw_register_user(fsl_shw_uco_t *user_ctx)
+fsl_shw_return_t fsl_shw_register_user(fsl_shw_uco_t * user_ctx)
 {
 	fsl_shw_return_t code = FSL_RETURN_INTERNAL_ERROR_S;
 
@@ -1534,17 +1580,19 @@ fsl_shw_return_t fsl_shw_register_user(fsl_shw_uco_t *user_ctx)
       error_exit:
 	return code;
 }
-EXPORT_SYMBOL(fsl_shw_register_user);
 
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_deregister_user);
+#endif
 /* REQ-S2LRD-PINTFC-API-GEN-005 */
-/**
+/*!
  * Destroy the association between the the user and the provider of the API.
  *
  * @param  user_ctx   The user context which is no longer needed.
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-fsl_shw_return_t fsl_shw_deregister_user(fsl_shw_uco_t *user_ctx)
+fsl_shw_return_t fsl_shw_deregister_user(fsl_shw_uco_t * user_ctx)
 {
 	shw_queue_entry_t *finished_request;
 	fsl_shw_return_t ret = FSL_RETURN_OK_S;
@@ -1581,11 +1629,11 @@ fsl_shw_return_t fsl_shw_deregister_user(fsl_shw_uco_t *user_ctx)
 			     partition);
 #endif
 
-		/* It appears that current->mm is not valid if this is called from a
-		 * close routine (perhaps only if the program raised an exception that
-		 * caused it to close?)  If that is the case, then still free the
-		 * partition, but do not remove it from the memory space (dangerous?)
-		 */
+			/* It appears that current->mm is not valid if this is called from a
+			 * close routine (perhaps only if the program raised an exception that
+			 * caused it to close?)  If that is the case, then still free the 
+			 * partition, but do not remove it from the memory space (dangerous?)
+			 */
 
 			if (mm == NULL) {
 #ifdef SHW_DEBUG
@@ -1594,8 +1642,8 @@ fsl_shw_return_t fsl_shw_deregister_user(fsl_shw_uco_t *user_ctx)
 				     "partition from user memory\n");
 #endif
 			} else {
-			/* Unmap the memory region (see sys_munmap in mmap.c) */
-			/* Note that this assumes a single memory partition */
+				/* Unmap the memory region (see sys_munmap in mmap.c) */
+				/* Note that this assumes a single memory partition */
 				unmap_user_memory(partition->user_base, 8192);
 			}
 
@@ -1616,17 +1664,19 @@ fsl_shw_return_t fsl_shw_deregister_user(fsl_shw_uco_t *user_ctx)
 			}
 		}
 	}
-out:
+      out:
 #endif				/* FSL_HAVE_SCC2 */
 
 	SHW_REMOVE_USER(user_ctx);
 
 	return ret;
 }
-EXPORT_SYMBOL(fsl_shw_deregister_user);
 
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_get_results);
+#endif
 /* REQ-S2LRD-PINTFC-API-GEN-006 */
-fsl_shw_return_t fsl_shw_get_results(fsl_shw_uco_t *user_ctx,
+fsl_shw_return_t fsl_shw_get_results(fsl_shw_uco_t * user_ctx,
 				     unsigned result_size,
 				     fsl_shw_result_t results[],
 				     unsigned *result_count)
@@ -1677,9 +1727,11 @@ fsl_shw_return_t fsl_shw_get_results(fsl_shw_uco_t *user_ctx,
 
 	return FSL_RETURN_OK_S;
 }
-EXPORT_SYMBOL(fsl_shw_get_results);
 
-fsl_shw_pco_t *fsl_shw_get_capabilities(fsl_shw_uco_t *user_ctx)
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_get_capabilities);
+#endif
+fsl_shw_pco_t *fsl_shw_get_capabilities(fsl_shw_uco_t * user_ctx)
 {
 
 	/* Unused */
@@ -1687,11 +1739,13 @@ fsl_shw_pco_t *fsl_shw_get_capabilities(fsl_shw_uco_t *user_ctx)
 
 	return &cap;
 }
-EXPORT_SYMBOL(fsl_shw_get_capabilities);
 
 #if !(defined(FSL_HAVE_SAHARA) || defined(FSL_HAVE_RNGA)                    \
-      || defined(FSL_HAVE_RNGC))
+      || defined(FSL_HAVE_RNGB) || defined(FSL_HAVE_RNGC))
 
+#if defined(LINUX_VERSION_CODE)
+EXPORT_SYMBOL(fsl_shw_get_random);
+#endif
 fsl_shw_return_t fsl_shw_get_random(fsl_shw_uco_t * user_ctx,
 				    uint32_t length, uint8_t * data)
 {
@@ -1703,10 +1757,12 @@ fsl_shw_return_t fsl_shw_get_random(fsl_shw_uco_t * user_ctx,
 
 	return FSL_RETURN_ERROR_S;
 }
-EXPORT_SYMBOL(fsl_shw_get_random);
 
-fsl_shw_return_t fsl_shw_add_entropy(fsl_shw_uco_t *user_ctx,
-				     uint32_t length, uint8_t *data)
+#if defined(LINUX_VERSION_CODE)
+EXPORT_SYMBOL(fsl_shw_add_entropy);
+#endif
+fsl_shw_return_t fsl_shw_add_entropy(fsl_shw_uco_t * user_ctx,
+				     uint32_t length, uint8_t * data)
 {
 
 	/* Unused */
@@ -1716,37 +1772,39 @@ fsl_shw_return_t fsl_shw_add_entropy(fsl_shw_uco_t *user_ctx,
 
 	return FSL_RETURN_ERROR_S;
 }
-EXPORT_SYMBOL(fsl_shw_add_entropy);
-
 #endif
 
-#ifndef FSL_HAVE_SAHARA
-
-fsl_shw_return_t fsl_shw_symmetric_decrypt(fsl_shw_uco_t *user_ctx,
-					   fsl_shw_sko_t *key_info,
-					   fsl_shw_scco_t *sym_ctx,
-					   uint32_t length,
-					   const uint8_t *ct, uint8_t *pt)
-{
-
-	/* Unused */
-	(void)user_ctx;
-	(void)key_info;
-	(void)sym_ctx;
-	(void)length;
-	(void)ct;
-	(void)pt;
-
-	return FSL_RETURN_ERROR_S;
-}
-
+#if !defined(FSL_HAVE_DRYICE) && !defined(FSL_HAVE_SAHARA2)
+#if 0
+#ifdef LINUX_VERSION_CODE
 EXPORT_SYMBOL(fsl_shw_symmetric_decrypt);
-
-fsl_shw_return_t fsl_shw_symmetric_encrypt(fsl_shw_uco_t *user_ctx,
-					   fsl_shw_sko_t *key_info,
-					   fsl_shw_scco_t *sym_ctx,
+#endif
+fsl_shw_return_t fsl_shw_symmetric_decrypt(fsl_shw_uco_t * user_ctx,
+					   fsl_shw_sko_t * key_info,
+					   fsl_shw_scco_t * sym_ctx,
 					   uint32_t length,
-					   const uint8_t *pt, uint8_t *ct)
+					   const uint8_t * ct, uint8_t * pt)
+{
+
+	/* Unused */
+	(void)user_ctx;
+	(void)key_info;
+	(void)sym_ctx;
+	(void)length;
+	(void)ct;
+	(void)pt;
+
+	return FSL_RETURN_ERROR_S;
+}
+
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_symmetric_encrypt);
+#endif
+fsl_shw_return_t fsl_shw_symmetric_encrypt(fsl_shw_uco_t * user_ctx,
+					   fsl_shw_sko_t * key_info,
+					   fsl_shw_scco_t * sym_ctx,
+					   uint32_t length,
+					   const uint8_t * pt, uint8_t * ct)
 {
 
 	/* Unused */
@@ -1759,12 +1817,16 @@ fsl_shw_return_t fsl_shw_symmetric_encrypt(fsl_shw_uco_t *user_ctx,
 
 	return FSL_RETURN_ERROR_S;
 }
-EXPORT_SYMBOL(fsl_shw_symmetric_encrypt);
 
-fsl_shw_return_t fsl_shw_establish_key(fsl_shw_uco_t *user_ctx,
-				       fsl_shw_sko_t *key_info,
+/* DryIce support provided in separate file */
+
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_establish_key);
+#endif
+fsl_shw_return_t fsl_shw_establish_key(fsl_shw_uco_t * user_ctx,
+				       fsl_shw_sko_t * key_info,
 				       fsl_shw_key_wrap_t establish_type,
-				       const uint8_t *key)
+				       const uint8_t * key)
 {
 
 	/* Unused */
@@ -1775,11 +1837,13 @@ fsl_shw_return_t fsl_shw_establish_key(fsl_shw_uco_t *user_ctx,
 
 	return FSL_RETURN_ERROR_S;
 }
-EXPORT_SYMBOL(fsl_shw_establish_key);
 
-fsl_shw_return_t fsl_shw_extract_key(fsl_shw_uco_t *user_ctx,
-				     fsl_shw_sko_t *key_info,
-				     uint8_t *covered_key)
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_extract_key);
+#endif
+fsl_shw_return_t fsl_shw_extract_key(fsl_shw_uco_t * user_ctx,
+				     fsl_shw_sko_t * key_info,
+				     uint8_t * covered_key)
 {
 
 	/* Unused */
@@ -1789,10 +1853,12 @@ fsl_shw_return_t fsl_shw_extract_key(fsl_shw_uco_t *user_ctx,
 
 	return FSL_RETURN_ERROR_S;
 }
-EXPORT_SYMBOL(fsl_shw_extract_key);
 
-fsl_shw_return_t fsl_shw_release_key(fsl_shw_uco_t *user_ctx,
-				     fsl_shw_sko_t *key_info)
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_release_key);
+#endif
+fsl_shw_return_t fsl_shw_release_key(fsl_shw_uco_t * user_ctx,
+				     fsl_shw_sko_t * key_info)
 {
 
 	/* Unused */
@@ -1801,16 +1867,18 @@ fsl_shw_return_t fsl_shw_release_key(fsl_shw_uco_t *user_ctx,
 
 	return FSL_RETURN_ERROR_S;
 }
-EXPORT_SYMBOL(fsl_shw_release_key);
-
 #endif
+#endif				/* SAHARA or DRYICE */
 
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_hash);
+#endif
 #if !defined(FSL_HAVE_SAHARA)
-fsl_shw_return_t fsl_shw_hash(fsl_shw_uco_t *user_ctx,
-			      fsl_shw_hco_t *hash_ctx,
-			      const uint8_t *msg,
+fsl_shw_return_t fsl_shw_hash(fsl_shw_uco_t * user_ctx,
+			      fsl_shw_hco_t * hash_ctx,
+			      const uint8_t * msg,
 			      uint32_t length,
-			      uint8_t *result, uint32_t result_len)
+			      uint8_t * result, uint32_t result_len)
 {
 	fsl_shw_return_t ret = FSL_RETURN_ERROR_S;
 
@@ -1824,16 +1892,16 @@ fsl_shw_return_t fsl_shw_hash(fsl_shw_uco_t *user_ctx,
 
 	return ret;
 }
-EXPORT_SYMBOL(fsl_shw_hash);
-
 #endif
 
 #ifndef FSL_HAVE_SAHARA
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_hmac_precompute);
+#endif
 
-
-fsl_shw_return_t fsl_shw_hmac_precompute(fsl_shw_uco_t *user_ctx,
-					 fsl_shw_sko_t *key_info,
-					 fsl_shw_hmco_t *hmac_ctx)
+fsl_shw_return_t fsl_shw_hmac_precompute(fsl_shw_uco_t * user_ctx,
+					 fsl_shw_sko_t * key_info,
+					 fsl_shw_hmco_t * hmac_ctx)
 {
 	fsl_shw_return_t status = FSL_RETURN_ERROR_S;
 
@@ -1845,14 +1913,16 @@ fsl_shw_return_t fsl_shw_hmac_precompute(fsl_shw_uco_t *user_ctx,
 	return status;
 }
 
-EXPORT_SYMBOL(fsl_shw_hmac_precompute);
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_hmac);
+#endif
 
-fsl_shw_return_t fsl_shw_hmac(fsl_shw_uco_t *user_ctx,
-			      fsl_shw_sko_t *key_info,
-			      fsl_shw_hmco_t *hmac_ctx,
-			      const uint8_t *msg,
+fsl_shw_return_t fsl_shw_hmac(fsl_shw_uco_t * user_ctx,
+			      fsl_shw_sko_t * key_info,
+			      fsl_shw_hmco_t * hmac_ctx,
+			      const uint8_t * msg,
 			      uint32_t length,
-			      uint8_t *result, uint32_t result_len)
+			      uint8_t * result, uint32_t result_len)
 {
 	fsl_shw_return_t status = FSL_RETURN_ERROR_S;
 
@@ -1867,15 +1937,12 @@ fsl_shw_return_t fsl_shw_hmac(fsl_shw_uco_t *user_ctx,
 
 	return status;
 }
-
-EXPORT_SYMBOL(fsl_shw_hmac);
-
 #endif
 
-/**
+/*!
  * Call the proper function to encrypt a region of encrypted secure memory
  *
- * @brief
+ * @brief 
  *
  * @param   user_ctx        User context of the partition owner (NULL in kernel)
  * @param   partition_base  Base address (physical) of the partition
@@ -1889,10 +1956,10 @@ EXPORT_SYMBOL(fsl_shw_hmac);
  * @return  status
  */
 fsl_shw_return_t
-do_scc_encrypt_region(fsl_shw_uco_t *user_ctx,
+do_scc_encrypt_region(fsl_shw_uco_t * user_ctx,
 		      void *partition_base, uint32_t offset_bytes,
-		      uint32_t byte_count, uint8_t *black_data,
-		      uint32_t *IV, fsl_shw_cypher_mode_t cypher_mode)
+		      uint32_t byte_count, uint8_t * black_data,
+		      uint32_t * IV, fsl_shw_cypher_mode_t cypher_mode)
 {
 	fsl_shw_return_t retval = FSL_RETURN_ERROR_S;
 #ifdef FSL_HAVE_SCC2
@@ -1900,7 +1967,7 @@ do_scc_encrypt_region(fsl_shw_uco_t *user_ctx,
 	scc_return_t scc_ret;
 
 #ifdef SHW_DEBUG
-	uint32_t *owner_32 = (uint32_t *) &(owner_id);
+	uint32_t *owner_32 = (uint32_t *) & (owner_id);
 
 	LOG_KDIAG_ARGS
 	    ("partition base: %p, offset: %i, count: %i, black data: %p\n",
@@ -1917,26 +1984,26 @@ do_scc_encrypt_region(fsl_shw_uco_t *user_ctx,
 			       byte_count, __virt_to_phys(black_data), IV,
 			       cypher_mode);
 
-	if (scc_ret == SCC_RET_OK)
+	if (scc_ret == SCC_RET_OK) {
 		retval = FSL_RETURN_OK_S;
-	else
+	} else {
 		retval = FSL_RETURN_ERROR_S;
+	}
 
-	/* The SCC2 DMA engine should have written to the black ram,
-	 * so we need to invalidate that region of memory.  Note that the
-	 * red ram is not an because it is mapped with the cache disabled.
+	/* The SCC2 DMA engine should have written to the black ram, so we need to
+	 * invalidate that region of memory.  Note that the red ram is not an
+	 * because it is mapped with the cache disabled.
 	 */
 	os_cache_inv_range(black_data, byte_count);
 
 #endif				/* FSL_HAVE_SCC2 */
 	return retval;
 }
-EXPORT_SYMBOL(do_scc_encrypt_region);
 
-/**
+/*!
  * Call the proper function to decrypt a region of encrypted secure memory
  *
- * @brief
+ * @brief 
  *
  * @param   user_ctx        User context of the partition owner (NULL in kernel)
  * @param   partition_base  Base address (physical) of the partition
@@ -1951,10 +2018,10 @@ EXPORT_SYMBOL(do_scc_encrypt_region);
  * @return  status
  */
 fsl_shw_return_t
-do_scc_decrypt_region(fsl_shw_uco_t *user_ctx,
+do_scc_decrypt_region(fsl_shw_uco_t * user_ctx,
 		      void *partition_base, uint32_t offset_bytes,
-		      uint32_t byte_count, const uint8_t *black_data,
-		      uint32_t *IV, fsl_shw_cypher_mode_t cypher_mode)
+		      uint32_t byte_count, const uint8_t * black_data,
+		      uint32_t * IV, fsl_shw_cypher_mode_t cypher_mode)
 {
 	fsl_shw_return_t retval = FSL_RETURN_ERROR_S;
 
@@ -1963,7 +2030,7 @@ do_scc_decrypt_region(fsl_shw_uco_t *user_ctx,
 	scc_return_t scc_ret;
 
 #ifdef SHW_DEBUG
-	uint32_t *owner_32 = (uint32_t *) &(owner_id);
+	uint32_t *owner_32 = (uint32_t *) & (owner_id);
 
 	LOG_KDIAG_ARGS
 	    ("partition base: %p, offset: %i, count: %i, black data: %p\n",
@@ -1986,19 +2053,19 @@ do_scc_decrypt_region(fsl_shw_uco_t *user_ctx,
 			       (uint8_t *) __virt_to_phys(black_data), IV,
 			       cypher_mode);
 
-	if (scc_ret == SCC_RET_OK)
+	if (scc_ret == SCC_RET_OK) {
 		retval = FSL_RETURN_OK_S;
-	else
+	} else {
 		retval = FSL_RETURN_ERROR_S;
+	}
 
 #endif				/* FSL_HAVE_SCC2 */
 
 	return retval;
 }
-EXPORT_SYMBOL(do_scc_decrypt_region);
 
-void *fsl_shw_smalloc(fsl_shw_uco_t *user_ctx,
-		      uint32_t size, const uint8_t *UMID, uint32_t permissions)
+void *fsl_shw_smalloc(fsl_shw_uco_t * user_ctx,
+		      uint32_t size, const uint8_t * UMID, uint32_t permissions)
 {
 #ifdef FSL_HAVE_SCC2
 	int part_no;
@@ -2008,22 +2075,23 @@ void *fsl_shw_smalloc(fsl_shw_uco_t *user_ctx,
 
 	/* Check that the memory size requested is correct */
 	scc_configuration = scc_get_configuration();
-	if (size != scc_configuration->partition_size_bytes)
+	if (size != scc_configuration->partition_size_bytes) {
 		return NULL;
+	}
 
 	/* attempt to grab a partition. */
 	if (scc_allocate_partition(0, &part_no, &part_base, &part_phys)
-	    != SCC_RET_OK)
+	    != SCC_RET_OK) {
 		return NULL;
-
+	}
 #ifdef SHW_DEBUG
-	LOG_KDIAG_ARGS("Partition_base:%p, partition_base_phys: %p\n",
+	LOG_KDIAG_ARGS("Partition_base: %p, partition_base_phys: %p\n",
 		       part_base, (void *)part_phys);
 #endif
 
 	if (scc_engage_partition(part_base, UMID, permissions)
 	    != SCC_RET_OK) {
-/* Engagement failed, so the partition needs to be de-allocated */
+		/* Engagement failed, so the partition needs to be de-allocated */
 
 #ifdef SHW_DEBUG
 		LOG_KDIAG_ARGS("Failed to engage partition %p, de-allocating",
@@ -2046,10 +2114,9 @@ void *fsl_shw_smalloc(fsl_shw_uco_t *user_ctx,
 
 #endif				/* FSL_HAVE_SCC2 */
 }
-EXPORT_SYMBOL(fsl_shw_smalloc);
 
 /* Release a block of secure memory */
-fsl_shw_return_t fsl_shw_sfree(fsl_shw_uco_t *user_ctx, void *address)
+fsl_shw_return_t fsl_shw_sfree(fsl_shw_uco_t * user_ctx, void *address)
 {
 	(void)user_ctx;
 
@@ -2061,12 +2128,11 @@ fsl_shw_return_t fsl_shw_sfree(fsl_shw_uco_t *user_ctx, void *address)
 
 	return FSL_RETURN_ERROR_S;
 }
-EXPORT_SYMBOL(fsl_shw_sfree);
 
 /* Check the status of a block of secure memory */
-fsl_shw_return_t fsl_shw_sstatus(fsl_shw_uco_t *user_ctx,
+fsl_shw_return_t fsl_shw_sstatus(fsl_shw_uco_t * user_ctx,
 				 void *address,
-				 fsl_shw_partition_status_t *part_status)
+				 fsl_shw_partition_status_t * part_status)
 {
 	(void)user_ctx;
 
@@ -2078,34 +2144,36 @@ fsl_shw_return_t fsl_shw_sstatus(fsl_shw_uco_t *user_ctx,
 
 	return FSL_RETURN_ERROR_S;
 }
-EXPORT_SYMBOL(fsl_shw_sstatus);
 
 /* Diminish permissions on some secure memory */
-fsl_shw_return_t fsl_shw_diminish_perms(fsl_shw_uco_t *user_ctx,
+fsl_shw_return_t fsl_shw_diminish_perms(fsl_shw_uco_t * user_ctx,
 					void *address, uint32_t permissions)
 {
 
 	(void)user_ctx;		/* unused parameter warning */
 
 #ifdef FSL_HAVE_SCC2
-	if (scc_diminish_permissions(address, permissions) == SCC_RET_OK)
+	if (scc_diminish_permissions(address, permissions) == SCC_RET_OK) {
 		return FSL_RETURN_OK_S;
+	}
 #endif
 	return FSL_RETURN_ERROR_S;
 }
-EXPORT_SYMBOL(fsl_shw_diminish_perms);
 
 #ifndef FSL_HAVE_SAHARA
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_gen_encrypt);
+#endif
 
-fsl_shw_return_t fsl_shw_gen_encrypt(fsl_shw_uco_t *user_ctx,
-				     fsl_shw_acco_t *auth_ctx,
-				     fsl_shw_sko_t *cipher_key_info,
-				     fsl_shw_sko_t *auth_key_info,
+fsl_shw_return_t fsl_shw_gen_encrypt(fsl_shw_uco_t * user_ctx,
+				     fsl_shw_acco_t * auth_ctx,
+				     fsl_shw_sko_t * cipher_key_info,
+				     fsl_shw_sko_t * auth_key_info,
 				     uint32_t auth_data_length,
-				     const uint8_t *auth_data,
+				     const uint8_t * auth_data,
 				     uint32_t payload_length,
-				     const uint8_t *payload,
-				     uint8_t *ct, uint8_t *auth_value)
+				     const uint8_t * payload,
+				     uint8_t * ct, uint8_t * auth_value)
 {
 	volatile fsl_shw_return_t status = FSL_RETURN_ERROR_S;
 
@@ -2124,10 +2192,10 @@ fsl_shw_return_t fsl_shw_gen_encrypt(fsl_shw_uco_t *user_ctx,
 	return status;
 }
 
-EXPORT_SYMBOL(fsl_shw_gen_encrypt);
-
-
-/**
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_auth_decrypt);
+#endif
+/*!
  * @brief Authenticate and decrypt a (CCM) stream.
  *
  * @param user_ctx         The user's context
@@ -2143,15 +2211,15 @@ EXPORT_SYMBOL(fsl_shw_gen_encrypt);
  *
  * @return    A return code of type #fsl_shw_return_t.
  */
-fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t *user_ctx,
-				      fsl_shw_acco_t *auth_ctx,
-				      fsl_shw_sko_t *cipher_key_info,
-				      fsl_shw_sko_t *auth_key_info,
+fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t * user_ctx,
+				      fsl_shw_acco_t * auth_ctx,
+				      fsl_shw_sko_t * cipher_key_info,
+				      fsl_shw_sko_t * auth_key_info,
 				      uint32_t auth_data_length,
-				      const uint8_t *auth_data,
+				      const uint8_t * auth_data,
 				      uint32_t payload_length,
-				      const uint8_t *ct,
-				      const uint8_t *auth_value,
+				      const uint8_t * ct,
+				      const uint8_t * auth_value,
 				      uint8_t * payload)
 {
 	volatile fsl_shw_return_t status = FSL_RETURN_ERROR_S;
@@ -2171,6 +2239,97 @@ fsl_shw_return_t fsl_shw_auth_decrypt(fsl_shw_uco_t *user_ctx,
 	return status;
 }
 
-EXPORT_SYMBOL(fsl_shw_auth_decrypt);
+#endif				/* no SAHARA */
 
+#ifndef FSL_HAVE_DRYICE
+
+#ifdef LINUX_VERSION_CODE
+EXPORT_SYMBOL(fsl_shw_gen_random_pf_key);
 #endif
+/*!
+ * Cause the hardware to create a new random key for secure memory use.
+ *
+ * Have the hardware use the secure hardware random number generator to load a
+ * new secret key into the hardware random key register.
+ *
+ * @param      user_ctx         A user context from #fsl_shw_register_user().
+ *
+ * @return    A return code of type #fsl_shw_return_t.
+ */
+fsl_shw_return_t fsl_shw_gen_random_pf_key(fsl_shw_uco_t * user_ctx)
+{
+	volatile fsl_shw_return_t status = FSL_RETURN_ERROR_S;
+
+	return status;
+}
+
+#endif				/* not have DRYICE */ 
+
+fsl_shw_return_t alloc_slot(fsl_shw_uco_t * user_ctx, fsl_shw_sko_t * key_info)
+{
+	fsl_shw_return_t ret = FSL_RETURN_INTERNAL_ERROR_S;
+
+	if (key_info->keystore == NULL) {
+		/* Key goes in system keystore */
+		ret = do_system_keystore_slot_alloc(user_ctx,
+						    key_info->key_length,
+						    key_info->userid,
+						    &(key_info->handle));
+#ifdef DIAG_SECURITY_FUNC
+		LOG_DIAG_ARGS("key length: %i, handle: %i",
+			      key_info->key_length, key_info->handle);
+#endif
+
+	} else {
+		/* Key goes in user keystore */
+		ret = keystore_slot_alloc(key_info->keystore,
+					  key_info->key_length,
+					  key_info->userid,
+					  &(key_info->handle));
+	}
+
+	return ret;
+}				/* end fn alloc_slot */
+
+fsl_shw_return_t load_slot(fsl_shw_uco_t * user_ctx,
+			   fsl_shw_sko_t * key_info, const uint8_t * key)
+{
+	fsl_shw_return_t ret = FSL_RETURN_INTERNAL_ERROR_S;
+
+	if (key_info->keystore == NULL) {
+		/* Key goes in system keystore */
+		ret = do_system_keystore_slot_load(user_ctx,
+						   key_info->userid,
+						   key_info->handle, key,
+						   key_info->key_length);
+	} else {
+		/* Key goes in user keystore */
+		ret = keystore_slot_load(key_info->keystore,
+					 key_info->userid,
+					 key_info->handle, key,
+					 key_info->key_length);
+	}
+
+	return ret;
+}				/* end fn load_slot */
+
+fsl_shw_return_t dealloc_slot(fsl_shw_uco_t * user_ctx,
+			      fsl_shw_sko_t * key_info)
+{
+	fsl_shw_return_t ret = FSL_RETURN_INTERNAL_ERROR_S;
+
+	if (key_info->keystore == NULL) {
+		/* Key goes in system keystore */
+		do_system_keystore_slot_dealloc(user_ctx,
+						key_info->userid,
+						key_info->handle);
+	} else {
+		/* Key goes in user keystore */
+		keystore_slot_dealloc(key_info->keystore,
+				      key_info->userid, key_info->handle);
+	}
+
+	key_info->flags &= ~(FSL_SKO_KEY_ESTABLISHED | FSL_SKO_KEY_PRESENT);
+
+	return ret;
+}				/* end fn slot_dealloc */

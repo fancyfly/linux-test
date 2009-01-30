@@ -1,6 +1,6 @@
 
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -15,11 +15,6 @@
 #ifndef SCC_DRIVER_H
 #define SCC_DRIVER_H
 
-/* Start marker for C++ compilers */
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*
  * NAMING CONVENTIONS
  * ==================
@@ -32,13 +27,13 @@ extern "C" {
  * scc_write_register, or values passed/retrieved from those routines.
  */
 
-/*! @file scc_driver.h
+/*! @file mxc_scc2_driver.h
  *
- * @brief (Header file to use the SCC driver.)
+ * @brief (Header file to use the SCC2 driver.)
  *
- * The SCC driver will only be available to other kernel modules.  That is,
- * there will be no node file in /dev, no way for a user-mode program to access
- * the driver, no way for a user program to access the device directly.
+ * The SCC2 driver is available to other kernel modules directly.  Secure
+ * Partition functionality is extended to users through the SHW API.  Other
+ * functionality of the SCC2 is limited to kernel-space users.
  *
  * With the exception of #scc_monitor_security_failure(), all routines are
  * 'synchronous', i.e. they will not return to their caller until the requested
@@ -46,29 +41,24 @@ extern "C" {
  * take quite a while to perform, depending upon the request.
  *
  * Routines are provided to:
- * @li encrypt or decrypt secrets - #scc_crypt()
  * @li trigger a security-violation alarm - #scc_set_sw_alarm()
  * @li get configuration and version information - #scc_get_configuration()
  * @li zeroize memory - #scc_zeroize_memories()
- * @li Work on wrapped and stored secret values: #scc_alloc_slot(),
- *     #scc_dealloc_slot(), scc_load_slot(), #scc_decrypt_slot(),
- *     #scc_encrypt_slot(), #scc_get_slot_info()
-
+ * @li Work with secure partitions: #scc_allocate_partition()
+ *     #scc_engage_partition() #scc_diminish_permissions() 
+ *     #scc_release_partition()
+ * @li Encrypt or decrypt regions of data: #scc_encrypt_region()
+ *     #scc_decrypt_region()
  * @li monitor the Security Failure alarm - #scc_monitor_security_failure()
  * @li stop monitoring Security Failure alarm -
  *     #scc_stop_monitoring_security_failure()
  * @li write registers of the SCC - #scc_write_register()
  * @li read registers of the SCC - #scc_read_register()
  *
- * The driver does not allow "storage" of data in either the Red or Black
- * memories.  Any decrypted secret is returned to the user, and if the user
- * wants to use it at a later point, the encrypted form must again be passed
- * to the driver, and it must be decrypted again.
- *
- * The SCC encrypts and decrypts using Triple DES with an internally stored
- * key.  When the SCC is in Secure mode, it uses its secret, unique-per-chip
+ * The SCC2 encrypts and decrypts using Triple DES with an internally stored
+ * key.  When the SCC2 is in Secure mode, it uses its secret, unique-per-chip
  * key.  When it is in Non-Secure mode, it uses a default key.  This ensures
- * that secrets stay secret if the SCC is not in Secure mode.
+ * that secrets stay secret if the SCC2 is not in Secure mode.
  *
  * Not all functions that could be provided in a 'high level' manner have been
  * implemented.  Among the missing are interfaces to the ASC/AIC components and
@@ -76,7 +66,7 @@ extern "C" {
  * #scc_read_register() and #scc_write_register(), using the @c \#define values
  * provided.
  *
- * Here is a glossary of acronyms used in the SCC driver documentation:
+ * Here is a glossary of acronyms used in the SCC2 driver documentation:
  * - CBC - Cipher Block Chaining.  A method of performing a block cipher.
  *    Each block is encrypted using some part of the result of the previous
  *    block's encryption.  It needs an 'initialization vector' to seed the
@@ -84,13 +74,13 @@ extern "C" {
  * - ECB - Electronic Code Book.  A method of performing a block cipher.
  *    With a given key, a given block will always encrypt to the same value.
  * - DES - Data Encryption Standard.  (8-byte) Block cipher algorithm which
- *    uses 56-bit keys.  In SCC, this key is constant and unique to the device.
+ *    uses 56-bit keys.  In SCC2, this key is constant and unique to the device.
  *    SCC uses the "triple DES" form of this algorithm.
  * - AIC - Algorithm Integrity Checker.
  * - ASC - Algorithm Sequence Checker.
- * - SMN - Security Monitor.  The part of the SCC responsible for monitoring
+ * - SMN - Security Monitor.  The part of the SCC2 responsible for monitoring
  *    for security problems and notifying the CPU and other PISA components.
- * - SCM - Secure Memory.  The part of the SCC which handles the cryptography.
+ * - SCM - Secure Memory.  The part of the SCC2 which handles the cryptography.
  * - SCC - Security Controller.  Central security mechanism for PISA.
  * - PISA - Platform-Independent Security Architecture.
  */
@@ -119,12 +109,15 @@ extern "C" {
 
 #endif				/* DOXYGEN_HACK */
 
-/** Major Version of the driver.  Used for
+/*! Major Version of the driver.  Used for
     scc_configuration->driver_major_version */
 #define SCC_DRIVER_MAJOR_VERSION    2
-/** Minor Version of the driver.  Used for
+/*! Old Minor Version of the driver. */
+#define SCC_DRIVER_MINOR_VERSION_0    0
+/*! Minor Version of the driver.  Used for
     scc_configuration->driver_minor_version */
-#define SCC_DRIVER_MINOR_VERSION    0
+#define SCC_DRIVER_MINOR_VERSION_2    2
+
 
 /*!
  *  Interrupt line number of SCM interrupt.
@@ -320,6 +313,9 @@ extern "C" {
  * Calculate the physical address from the kernel virtual address.
  */
 	extern uint32_t scc_virt_to_phys(void *address);
+/*scc_return_t
+scc_verify_slot_access(uint64_t owner_id, uint32_t slot, uint32_t access_len);*/
+
 
 /**
  * Encrypt a region of secure memory.
@@ -972,8 +968,6 @@ extern "C" {
     (#SMN_COMPARE_REG) */
 #define SMN_COMPARE_SIZE_MASK      0x0000003f
 
-/* Close out marker for C++ compilers */
-#ifdef __cplusplus
-}
-#endif
+/*! @} */
+
 #endif				/* SCC_DRIVER_H */

@@ -165,6 +165,8 @@ extern int mxc_clocks_init(void);
 extern void __init early_console_setup(char *);
 extern int headphone_det_status(void);
 extern void sgtl5000_enable_amp(void);
+extern unsigned int sdhc_get_card_det_status(struct device *dev);
+extern int sdhc_write_protect(struct device *dev);
 
 #endif				/* CONFIG_MACH_MX25_3DS */
 #endif				/* __ASM_ARCH_MXC_BOARD_MX25_3STACK_H__ */

@@ -778,20 +778,8 @@ void gpio_sdhc_active(int module)
 		mxc_request_iomux(MX25_PIN_SD1_DATA1, MUX_CONFIG_FUNC);
 		mxc_request_iomux(MX25_PIN_SD1_DATA2, MUX_CONFIG_FUNC);
 		mxc_request_iomux(MX25_PIN_SD1_DATA3, MUX_CONFIG_FUNC);
-		mxc_request_iomux(MX25_PIN_D15, MUX_CONFIG_ALT6); /*DAT7*/
-		mxc_request_iomux(MX25_PIN_D14, MUX_CONFIG_ALT6); /*DAT6*/
-		mxc_request_iomux(MX25_PIN_D13, MUX_CONFIG_ALT6); /*DAT5*/
-		mxc_request_iomux(MX25_PIN_D12, MUX_CONFIG_ALT6); /*DAT4*/
 		mxc_request_iomux(MX25_PIN_A14, MUX_CONFIG_ALT5); /*SD1_WP*/
 		mxc_request_iomux(MX25_PIN_A15, MUX_CONFIG_ALT5); /*SD1_DET*/
-
-#if 0
-		/* Or if UART2 pins are not in use */
-		mxc_request_iomux(MX25_PIN_UART2_RXD, MUX_CONFIG_ALT1); /*DAT7*/
-		mxc_request_iomux(MX25_PIN_UART2_TXD, MUX_CONFIG_ALT1); /*DAT6*/
-		mxc_request_iomux(MX25_PIN_UART2_RTS, MUX_CONFIG_ALT1); /*DAT5*/
-		mxc_request_iomux(MX25_PIN_UART2_CTS, MUX_CONFIG_ALT1); /*DAT4*/
-#endif
 
 		mxc_iomux_set_pad(MX25_PIN_SD1_CMD, SDHC_PAD_CTL);
 		mxc_iomux_set_pad(MX25_PIN_SD1_CLK, SDHC_PAD_CTL);
@@ -799,10 +787,8 @@ void gpio_sdhc_active(int module)
 		mxc_iomux_set_pad(MX25_PIN_SD1_DATA1, SDHC_PAD_CTL);
 		mxc_iomux_set_pad(MX25_PIN_SD1_DATA2, SDHC_PAD_CTL);
 		mxc_iomux_set_pad(MX25_PIN_SD1_DATA3, SDHC_PAD_CTL);
-		mxc_iomux_set_pad(MX25_PIN_D15, SDHC_PAD_CTL);
-		mxc_iomux_set_pad(MX25_PIN_D14, SDHC_PAD_CTL);
-		mxc_iomux_set_pad(MX25_PIN_D13, SDHC_PAD_CTL);
-		mxc_iomux_set_pad(MX25_PIN_D12, SDHC_PAD_CTL);
+		mxc_iomux_set_pad(MX25_PIN_A14, PAD_CTL_DRV_NORMAL);
+		mxc_iomux_set_pad(MX25_PIN_A15, PAD_CTL_DRV_NORMAL);
 
 		/* Set write protect and card detect gpio as inputs */
 		mxc_set_gpio_direction(MX25_PIN_A14, 1); /*SD1_WP*/
@@ -819,21 +805,6 @@ void gpio_sdhc_active(int module)
 		mxc_request_iomux(MX25_PIN_LD11, MUX_CONFIG_ALT6); /*DAT1*/
 		mxc_request_iomux(MX25_PIN_LD12, MUX_CONFIG_ALT6); /*DAT2*/
 		mxc_request_iomux(MX25_PIN_LD13, MUX_CONFIG_ALT6); /*DAT3*/
-		mxc_request_iomux(MX25_PIN_CSI_D2, MUX_CONFIG_ALT2); /*DAT4*/
-		mxc_request_iomux(MX25_PIN_CSI_D3, MUX_CONFIG_ALT2); /*DAT5*/
-		mxc_request_iomux(MX25_PIN_CSI_D4, MUX_CONFIG_ALT2); /*DAT6*/
-		mxc_request_iomux(MX25_PIN_CSI_D5, MUX_CONFIG_ALT2); /*DAT7*/
-
-#if 0
-		/* Or if CSI pins are not in use */
-		mxc_request_iomux(MX25_PIN_CSI_D6, MUX_CONFIG_ALT2); /*CMD*/
-		mxc_request_iomux(MX25_PIN_CSI_D7, MUX_CONFIG_ALT2); /*CLK*/
-		mxc_request_iomux(MX25_PIN_CSI_MCLK, MUX_CONFIG_ALT2); /*DAT0*/
-		mxc_request_iomux(MX25_PIN_CSI_VSYNC, MUX_CONFIG_ALT2); /*DAT1*/
-		mxc_request_iomux(MX25_PIN_CSI_HSYNC, MUX_CONFIG_ALT2); /*DAT2*/
-		/*DAT3*/
-		mxc_request_iomux(MX25_PIN_CSI_PIXCLK, MUX_CONFIG_ALT2);
-#endif
 
 		mxc_iomux_set_pad(MX25_PIN_LD8, SDHC_PAD_CTL);
 		mxc_iomux_set_pad(MX25_PIN_LD9, SDHC_PAD_CTL);
@@ -868,10 +839,6 @@ void gpio_sdhc_inactive(int module)
 		mxc_request_gpio(MX25_PIN_SD1_DATA1);
 		mxc_request_gpio(MX25_PIN_SD1_DATA2);
 		mxc_request_gpio(MX25_PIN_SD1_DATA3);
-		mxc_request_gpio(MX25_PIN_D15); /*DAT7*/
-		mxc_request_gpio(MX25_PIN_D14); /*DAT6*/
-		mxc_request_gpio(MX25_PIN_D13); /*DAT5*/
-		mxc_request_gpio(MX25_PIN_D12); /*DAT4*/
 
 		mxc_free_iomux(MX25_PIN_SD1_CMD, MUX_CONFIG_GPIO);
 		mxc_free_iomux(MX25_PIN_SD1_CLK, MUX_CONFIG_GPIO);
@@ -879,10 +846,6 @@ void gpio_sdhc_inactive(int module)
 		mxc_free_iomux(MX25_PIN_SD1_DATA1, MUX_CONFIG_GPIO);
 		mxc_free_iomux(MX25_PIN_SD1_DATA2, MUX_CONFIG_GPIO);
 		mxc_free_iomux(MX25_PIN_SD1_DATA3, MUX_CONFIG_GPIO);
-		mxc_free_iomux(MX25_PIN_D15, MUX_CONFIG_GPIO);
-		mxc_free_iomux(MX25_PIN_D14, MUX_CONFIG_GPIO);
-		mxc_free_iomux(MX25_PIN_D13, MUX_CONFIG_GPIO);
-		mxc_free_iomux(MX25_PIN_D12, MUX_CONFIG_GPIO);
 		break;
 	case 1:
 		/* SDHC2 */
@@ -913,6 +876,30 @@ void gpio_sdhc_inactive(int module)
 	}
 }
 EXPORT_SYMBOL(gpio_sdhc_inactive);
+
+/*
+ * Probe for the card. If present the GPIO data would be set.
+ */
+unsigned int sdhc_get_card_det_status(struct device *dev)
+{
+	unsigned int ret = 0;
+
+	ret = mxc_get_gpio_datain(MX25_PIN_A15);
+	return ret;
+}
+EXPORT_SYMBOL(sdhc_get_card_det_status);
+
+/*!
+ * Get pin value to detect write protection
+ */
+int sdhc_write_protect(struct device *dev)
+{
+	unsigned int rc = 0;
+
+	rc = mxc_get_gpio_datain(MX25_PIN_A14);
+	return rc;
+}
+EXPORT_SYMBOL(sdhc_write_protect);
 
 /*
  *  USB Host2

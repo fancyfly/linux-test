@@ -461,7 +461,7 @@ static struct clk per_clk[] = {
 	 .set_parent = _clk_perclkx_set_parent,
 	 .recalc = _clk_perclkx_recalc,
 	 .enable = _perclk_enable,
-	 .name = "per_esdhc2_clk",
+	 .disable = _perclk_disable,
 	 .flags = RATE_PROPAGATES,},
 	{
 	 .name = "per_esdhc2_clk",

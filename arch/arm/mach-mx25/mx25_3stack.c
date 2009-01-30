@@ -38,6 +38,7 @@
 #include <asm/mach/irq.h>
 #include <asm/arch/memory.h>
 #include <asm/arch/gpio.h>
+#include <asm/arch/mmc.h>
 
 #include "board-mx25_3stack.h"
 #include "crm_regs.h"
@@ -328,6 +329,105 @@ unsigned int expio_intr_fec = MXC_INT_POWER_FAIL;
 EXPORT_SYMBOL(expio_intr_fec);
 #endif
 
+#if defined(CONFIG_MMC_IMX_ESDHCI) || defined(CONFIG_MMC_IMX_ESDHCI_MODULE)
+static struct mxc_mmc_platform_data mmc1_data = {
+	.ocr_mask = MMC_VDD_29_30 | MMC_VDD_32_33,
+	.caps = MMC_CAP_4_BIT_DATA,
+	.min_clk = 400000,
+	.max_clk = 52000000,
+	.card_inserted_state = 1,
+	.status = sdhc_get_card_det_status,
+	.wp_status = sdhc_write_protect,
+	.clock_mmc = "esdhc_clk",
+};
+
+/*!
+ * Resource definition for the SDHC1
+ */
+static struct resource mxcsdhc1_resources[] = {
+	[0] = {
+	       .start = MMC_SDHC1_BASE_ADDR,
+	       .end = MMC_SDHC1_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_SDHC1,
+	       .end = MXC_INT_SDHC1,
+	       .flags = IORESOURCE_IRQ,
+	       },
+	[2] = {
+	       .start = IOMUX_TO_IRQ(MX25_PIN_A15),
+	       .end = IOMUX_TO_IRQ(MX25_PIN_A15),
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Device Definition for MXC SDHC1 */
+static struct platform_device mxcsdhc1_device = {
+	.name = "mxsdhci",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mmc1_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcsdhc1_resources),
+	.resource = mxcsdhc1_resources,
+};
+
+#ifdef CONFIG_MMC_IMX_ESDHCI_SELECT2
+static struct mxc_mmc_platform_data mmc2_data = {
+	.ocr_mask = MMC_VDD_29_30 | MMC_VDD_32_33,
+	.caps = MMC_CAP_4_BIT_DATA,
+	.min_clk = 400000,
+	.max_clk = 52000000,
+	.card_fixed = 1,
+	.card_inserted_state = 1,
+	.status = sdhc_get_card_det_status,
+	.clock_mmc = "esdhc2_clk",
+};
+
+/*!
+ * Resource definition for the SDHC2
+ */
+static struct resource mxcsdhc2_resources[] = {
+	[0] = {
+	       .start = MMC_SDHC2_BASE_ADDR,
+	       .end = MMC_SDHC2_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = MXC_INT_SDHC2,
+	       .end = MXC_INT_SDHC2,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+/*! Device Definition for MXC SDHC2 */
+static struct platform_device mxcsdhc2_device = {
+	.name = "mxsdhci",
+	.id = 1,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mmc2_data,
+		},
+	.num_resources = ARRAY_SIZE(mxcsdhc2_resources),
+	.resource = mxcsdhc2_resources,
+};
+#endif
+
+static inline void mxc_init_mmc(void)
+{
+	(void)platform_device_register(&mxcsdhc1_device);
+#ifdef CONFIG_MMC_IMX_ESDHCI_SELECT2
+	(void)platform_device_register(&mxcsdhc2_device);
+#endif
+}
+#else
+static inline void mxc_init_mmc(void)
+{
+}
+#endif
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -376,6 +476,7 @@ static void __init mxc_board_init(void)
 	mxc_init_bl();
 	mxc_init_nand_mtd();
 	mxc_sgtl5000_init();
+	mxc_init_mmc();
 }
 
 /*

@@ -49,10 +49,10 @@ static struct clk ipu_clk[];
 static struct clk axi_a_clk;
 static struct clk axi_b_clk;
 static struct clk axi_c_clk;
-
-static int cpu_wp_nr;
 static int cpu_curr_wp;
 static struct cpu_wp *cpu_wp_tbl;
+
+int cpu_wp_nr;
 
 extern void propagate_rate(struct clk *tclk);
 extern void board_ref_clk_rate(unsigned long *ckil, unsigned long *osc,

@@ -146,6 +146,18 @@ config TOUCHSCREEN_MXC
 	  To compile this driver as a module, choose M here: the
 	  module will be called mxc_ts.
 
+config TOUCHSCREEN_IMX_ADC
+	tristate "Freescale i.MX ADC touchscreen input driver"
+	depends on IMX_ADC
+	help
+	  Say Y here if you have a Freescale i.MX based board with a
+	  touchscreen interfaced to the processor's integrated ADC.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called imx_adc_ts.
+
 config TOUCHSCREEN_PENMOUNT
 	tristate "Penmount serial touchscreen"
 	select SERIO

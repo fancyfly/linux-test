@@ -16,3 +16,4 @@ obj-$(CONFIG_MXC_ASRC)                 += asrc/
 obj-$(CONFIG_MXC_BLUETOOTH)		+= bt/
 obj-$(CONFIG_GPS_IOCTRL)		+= gps_ioctrl/
 obj-$(CONFIG_MXC_MLB)                   += mlb/
+obj-$(CONFIG_IMX_ADC)                   += adc/

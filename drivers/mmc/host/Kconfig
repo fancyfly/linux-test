@@ -150,6 +150,13 @@ config MMC_IMX_ESDHCI
 
 	  If unsure, say N.
 
+config MMC_IMX_ESDHCI_SELECT2
+	bool "Enable second ESDHCI port"
+	depends on MMC_IMX_ESDHCI && ARCH_MX25
+	default n
+	help
+	  Enable the second ESDHC port
+
 config MMC_IMX_ESDHCI_PIO_MODE
 	bool "Freescale i.MX Secure Digital Host Controller Interface PIO mode"
 	depends on MMC_IMX_ESDHC != n

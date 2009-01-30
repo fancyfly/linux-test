@@ -903,55 +903,28 @@ EXPORT_SYMBOL(sdhc_write_protect);
 
 /*
  *  USB Host2
+ *
+ *  This configuration uses the on-chip FS/LS serial transceiver.
+ *  USBPHY2_{DP,DM} pins are not muxed.
+ *  We just need to grab USBH2_PWR, USBH2_OC and the Bluetooth/USB
+ *  mux control signal.
  */
 int gpio_usbh2_active(void)
 {
-	mxc_request_iomux(MX25_PIN_D9, MUX_CONFIG_ALT6); /*PWR*/
-	mxc_request_iomux(MX25_PIN_D8, MUX_CONFIG_ALT6); /*OC*/
-	mxc_request_iomux(MX25_PIN_LD0, MUX_CONFIG_ALT6); /*CLK*/
-	mxc_request_iomux(MX25_PIN_LD1, MUX_CONFIG_ALT6); /*DIR*/
-	mxc_request_iomux(MX25_PIN_LD2, MUX_CONFIG_ALT6); /*STP*/
-	mxc_request_iomux(MX25_PIN_LD3, MUX_CONFIG_ALT6); /*NXT*/
-	mxc_request_iomux(MX25_PIN_LD4, MUX_CONFIG_ALT6); /*DATA0*/
-	mxc_request_iomux(MX25_PIN_LD5, MUX_CONFIG_ALT6); /*DATA1*/
-	mxc_request_iomux(MX25_PIN_LD6, MUX_CONFIG_ALT6); /*DATA2*/
-	mxc_request_iomux(MX25_PIN_LD7, MUX_CONFIG_ALT6); /*DATA3*/
-	mxc_request_iomux(MX25_PIN_HSYNC, MUX_CONFIG_ALT6); /*DATA4*/
-	mxc_request_iomux(MX25_PIN_VSYNC, MUX_CONFIG_ALT6); /*DATA5*/
-	mxc_request_iomux(MX25_PIN_LSCLK, MUX_CONFIG_ALT6); /*DATA6*/
-	mxc_request_iomux(MX25_PIN_OE_ACD, MUX_CONFIG_ALT6); /*DATA7*/
+	if (mxc_request_iomux(MX25_PIN_D9, MUX_CONFIG_ALT6)  ||	/* PWR */
+	    mxc_request_iomux(MX25_PIN_D8, MUX_CONFIG_ALT6)  ||	/* OC */
+	    mxc_request_iomux(MX25_PIN_A21, MUX_CONFIG_ALT5)) {	/* BT_USB_CS */
+		return -EINVAL;
+	}
 
-	/* If D9-D8 are used */
-#if 0
-	mxc_request_iomux(MX25_PIN_CONTRAST, MUX_CONFIG_ALT6); /*PWR*/
-	mxc_request_iomux(MX25_PIN_PWM, MUX_CONFIG_ALT6); /*OC*/
-#endif
-
-	mxc_iomux_set_input(MUX_IN_USB_TOP_IPP_IND_UH2_USB_OC, INPUT_CTL_PATH0);
-
-#define USB_PAD_CTL_SLOW (PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PUD | \
-			  PAD_CTL_100K_PU)
-#define USB_PAD_CTL_FAST (PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PUD | \
-			  PAD_CTL_100K_PU | PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST)
-
-	mxc_iomux_set_pad(MX25_PIN_D9, PAD_CTL_PUE_PUD | PAD_CTL_100K_PU);
-	mxc_iomux_set_pad(MX25_PIN_D8, PAD_CTL_HYS_SCHMITZ |
-			  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PUD);
-	mxc_iomux_set_pad(MX25_PIN_LD0, USB_PAD_CTL_SLOW);
-	mxc_iomux_set_pad(MX25_PIN_LD1, USB_PAD_CTL_SLOW);
-	mxc_iomux_set_pad(MX25_PIN_LD2, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_LD3, USB_PAD_CTL_SLOW);
-	mxc_iomux_set_pad(MX25_PIN_LD4, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_LD5, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_LD6, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_LD7, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_HSYNC, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_VSYNC, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_LSCLK, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_OE_ACD, USB_PAD_CTL_FAST);
-
-#undef USB_PAD_CTL_SLOW
-#undef USB_PAD_CTL_FAST
+	/*
+	 * This pin controls the mux that switches between
+	 * the J18 connector and the on-board bluetooth module.
+	 *  dir: 0 = out
+	 *  pin: 0 = J18, 1 = BT
+	 */
+	mxc_set_gpio_direction(MX25_PIN_A21, 0);
+	mxc_set_gpio_dataout(MX25_PIN_A21, 0);
 
 	return 0;
 }
@@ -959,124 +932,35 @@ EXPORT_SYMBOL(gpio_usbh2_active);
 
 void gpio_usbh2_inactive(void)
 {
-	mxc_request_gpio(MX25_PIN_D9); /*PWR*/
-	mxc_request_gpio(MX25_PIN_D8); /*OC*/
-	mxc_request_gpio(MX25_PIN_LD0); /*CLK*/
-	mxc_request_gpio(MX25_PIN_LD1); /*DIR*/
-	mxc_request_gpio(MX25_PIN_LD2); /*STP*/
-	mxc_request_gpio(MX25_PIN_LD3); /*NXT*/
-	mxc_request_gpio(MX25_PIN_LD4); /*DATA0*/
-	mxc_request_gpio(MX25_PIN_LD5); /*DATA1*/
-	mxc_request_gpio(MX25_PIN_LD6); /*DATA2*/
-	mxc_request_gpio(MX25_PIN_LD7); /*DATA3*/
-	mxc_request_gpio(MX25_PIN_HSYNC); /*DATA4*/
-	mxc_request_gpio(MX25_PIN_VSYNC); /*DATA5*/
-	mxc_request_gpio(MX25_PIN_LSCLK); /*DATA6*/
-	mxc_request_gpio(MX25_PIN_OE_ACD); /*DATA7*/
-
-	mxc_free_iomux(MX25_PIN_D9, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_D8, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD0, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD1, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD2, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD3, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD4, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD5, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD6, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD7, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_HSYNC, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_VSYNC, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LSCLK, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_OE_ACD, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_D9, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX25_PIN_D8, MUX_CONFIG_FUNC);
+	mxc_free_iomux(MX25_PIN_A21, MUX_CONFIG_GPIO);
 }
 
 /*
  *  USB OTG UTMI
+ *
+ *  This configuration uses the on-chip UTMI transceiver.
+ *  USBPHY1_{VBUS,DP,DM,UID,RREF} pins are not muxed.
+ *  We just need to grab the USBOTG_PWR and USBOTG_OC pins.
  */
 int gpio_usbotg_utmi_active(void)
 {
-	mxc_request_iomux(MX25_PIN_D11, MUX_CONFIG_ALT6); /*PWR*/
-	mxc_request_iomux(MX25_PIN_D10, MUX_CONFIG_ALT6); /*OC*/
-	mxc_request_iomux(MX25_PIN_CSI_D2, MUX_CONFIG_ALT6); /*DATA0*/
-	mxc_request_iomux(MX25_PIN_CSI_D3, MUX_CONFIG_ALT6); /*DATA1*/
-	mxc_request_iomux(MX25_PIN_CSI_D4, MUX_CONFIG_ALT6); /*DATA2*/
-	mxc_request_iomux(MX25_PIN_CSI_D5, MUX_CONFIG_ALT6); /*DATA3*/
-	mxc_request_iomux(MX25_PIN_CSI_D6, MUX_CONFIG_ALT6); /*DATA4*/
-	mxc_request_iomux(MX25_PIN_CSI_D7, MUX_CONFIG_ALT6); /*DATA5*/
-	mxc_request_iomux(MX25_PIN_CSI_D8, MUX_CONFIG_ALT6); /*DATA6*/
-	mxc_request_iomux(MX25_PIN_CSI_D9, MUX_CONFIG_ALT6); /*DATA7*/
-	mxc_request_iomux(MX25_PIN_CSI_MCLK, MUX_CONFIG_ALT6); /*DIR*/
-	mxc_request_iomux(MX25_PIN_CSI_VSYNC, MUX_CONFIG_ALT6); /*STP*/
-	mxc_request_iomux(MX25_PIN_CSI_HSYNC, MUX_CONFIG_ALT6); /*NXT*/
-	mxc_request_iomux(MX25_PIN_CSI_PIXCLK, MUX_CONFIG_ALT6); /*CLK*/
-
-#if 0
-	/*if D10, D11 are in use */
-	mxc_request_iomux(MX25_PIN_GPIO_A, MUX_CONFIG_ALT2); /*PWR*/
-	mxc_request_iomux(MX25_PIN_GPIO_B, MUX_CONFIG_ALT2); /*OC*/
-#endif
-
-#define USB_PAD_CTL_SLOW (PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PUD | \
-			  PAD_CTL_100K_PU)
-#define USB_PAD_CTL_FAST (PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PUD | \
-			  PAD_CTL_100K_PU | PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST)
-
-	mxc_iomux_set_pad(MX25_PIN_D11, USB_PAD_CTL_SLOW);
-	mxc_iomux_set_pad(MX25_PIN_D10, PAD_CTL_HYS_SCHMITZ |
-			  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PUD);
-	mxc_iomux_set_pad(MX25_PIN_CSI_D2, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_CSI_D3, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_CSI_D4, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_CSI_D5, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_CSI_D6, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_CSI_D7, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_CSI_D8, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_CSI_D9, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_CSI_MCLK, USB_PAD_CTL_SLOW);
-	mxc_iomux_set_pad(MX25_PIN_CSI_VSYNC, USB_PAD_CTL_FAST);
-	mxc_iomux_set_pad(MX25_PIN_CSI_HSYNC, USB_PAD_CTL_SLOW);
-	mxc_iomux_set_pad(MX25_PIN_CSI_PIXCLK, USB_PAD_CTL_SLOW);
-
-	mxc_iomux_set_input(MUX_IN_USB_TOP_IPP_IND_OTG_USB_OC, INPUT_CTL_PATH0);
-
-#undef USB_PAD_CTL_SLOW
-#undef USB_PAD_CTL_FAST
-
+	if (mxc_request_iomux(MX25_PIN_GPIO_A, MUX_CONFIG_ALT2)  || /* PWR */
+	    mxc_request_iomux(MX25_PIN_GPIO_B, MUX_CONFIG_ALT2)) {  /* OC */
+		return -EINVAL;
+	}
 	return 0;
 }
 EXPORT_SYMBOL(gpio_usbotg_utmi_active);
 
 void gpio_usbotg_utmi_inactive(void)
 {
-	mxc_request_gpio(MX25_PIN_D11); /*PWR*/
-	mxc_request_gpio(MX25_PIN_D10); /*OC*/
-	mxc_request_gpio(MX25_PIN_CSI_D2); /*DATA0*/
-	mxc_request_gpio(MX25_PIN_CSI_D3); /*DATA1*/
-	mxc_request_gpio(MX25_PIN_CSI_D4); /*DATA2*/
-	mxc_request_gpio(MX25_PIN_CSI_D5); /*DATA3*/
-	mxc_request_gpio(MX25_PIN_CSI_D6); /*DATA4*/
-	mxc_request_gpio(MX25_PIN_CSI_D7); /*DATA5*/
-	mxc_request_gpio(MX25_PIN_CSI_D8); /*DATA6*/
-	mxc_request_gpio(MX25_PIN_CSI_D9); /*DATA7*/
-	mxc_request_gpio(MX25_PIN_CSI_MCLK); /*DIR*/
-	mxc_request_gpio(MX25_PIN_CSI_VSYNC); /*STP*/
-	mxc_request_gpio(MX25_PIN_CSI_HSYNC); /*NXT*/
-	mxc_request_gpio(MX25_PIN_CSI_PIXCLK); /*CLK*/
+	mxc_request_gpio(MX25_PIN_GPIO_A);
+	mxc_request_gpio(MX25_PIN_GPIO_B);
 
-	mxc_free_iomux(MX25_PIN_D11, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_D10, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_D2, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_D3, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_D4, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_D5, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_D6, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_D7, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_D8, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_D9, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_MCLK, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_VSYNC, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_HSYNC, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_CSI_PIXCLK, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_GPIO_A, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_GPIO_B, MUX_CONFIG_GPIO);
 }
 EXPORT_SYMBOL(gpio_usbotg_utmi_inactive);
 

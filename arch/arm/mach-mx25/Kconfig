@@ -5,6 +5,7 @@ config MX25_OPTIONS
 	bool
 	default y
 	select CPU_ARM926T
+	select USB_ARCH_HAS_EHCI
 
 config MACH_MX25_3DS
 	bool "Support MX25 3STACK platforms"

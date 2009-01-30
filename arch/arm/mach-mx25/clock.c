@@ -378,8 +378,8 @@ static struct clk ipg_clk = {
 
 /* Bottom-level clocks */
 
-struct clk usbotg_clk = {
-	.name = "usbotg_clk",
+struct clk usb_ahb_clk = {
+	.name = "usb_ahb_clk",
 	.id = 0,
 	.parent = &ahb_clk,
 	.enable = _clk_enable,
@@ -1354,7 +1354,7 @@ static int _clk_usb_set_rate(struct clk *clk, unsigned long rate)
 
 	reg = __raw_readl(MXC_CCM_CCTL) & ~MXC_CCM_CCTL_USB_DIV_MASK;
 	reg |= (div - 1) << MXC_CCM_CCTL_USB_DIV_OFFSET;
-	__raw_writel(reg, MXC_CCM_MCR);
+	__raw_writel(reg, MXC_CCM_CCTL);
 
 	return 0;
 }
@@ -1362,7 +1362,7 @@ static int _clk_usb_set_rate(struct clk *clk, unsigned long rate)
 static void _clk_usb_recalc(struct clk *clk)
 {
 	unsigned long div =
-	    __raw_readl(MXC_CCM_MCR) & MXC_CCM_CCTL_USB_DIV_MASK;
+	    __raw_readl(MXC_CCM_CCTL) & MXC_CCM_CCTL_USB_DIV_MASK;
 
 	div >>= MXC_CCM_CCTL_USB_DIV_OFFSET;
 
@@ -1506,6 +1506,7 @@ static struct clk *mxc_clks[] = {
 	&cpu_clk,
 	&ahb_clk,
 	&ipg_clk,
+	&usb_ahb_clk,
 	&per_clk[0],
 	&per_clk[1],
 	&per_clk[2],

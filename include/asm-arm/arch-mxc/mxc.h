@@ -394,6 +394,7 @@ struct cpu_wp {
 	u32 mfd;
 	u32 mfn;
 	u32 cpu_voltage;
+	u32 cpu_podf;
 };
 
 struct cpu_wp *get_cpu_wp(int *wp);

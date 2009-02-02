@@ -79,10 +79,8 @@ static int set_cpu_freq(int freq)
 	int i;
 
 	org_cpu_rate = clk_get_rate(cpu_clk);
-	if (org_cpu_rate == freq)
-		return ret;
 
-	if (!axi_c_clk_support)
+	if (org_cpu_rate == freq)
 		return ret;
 
 	for (i = 0; i < cpu_wp_nr; i++) {

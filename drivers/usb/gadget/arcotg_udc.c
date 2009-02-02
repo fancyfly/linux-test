@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -362,10 +362,21 @@ static void dr_controller_run(struct fsl_udc *udc)
 	/* Clear stopped bit */
 	udc->stopped = 0;
 
+	/* If PHY clock is disabled, enable it */
+	if (udc_controller->pdata->usb_clock_for_pm)
+		udc_controller->pdata->usb_clock_for_pm(1);
+	temp = fsl_readl(&dr_regs->portsc1);
+	if (temp & PORTSCX_PHY_LOW_POWER_SPD) {
+		temp &= ~PORTSCX_PHY_LOW_POWER_SPD;
+		fsl_writel(temp, &dr_regs->portsc1);
+	}
+
 	/* Set controller to Run */
-	temp = fsl_readl(&dr_regs->usbcmd);
-	temp |= USB_CMD_RUN_STOP;
-	fsl_writel(temp, &dr_regs->usbcmd);
+	if (udc->driver) {
+		temp = fsl_readl(&dr_regs->usbcmd);
+		temp |= USB_CMD_RUN_STOP;
+		fsl_writel(temp, &dr_regs->usbcmd);
+	}
 
 	return;
 }
@@ -1883,6 +1894,19 @@ static void suspend_irq(struct fsl_udc *udc)
 		udc->driver->suspend(&udc->gadget);
 }
 
+/* Process Wake up interrupt */
+static void wake_up_irq(struct fsl_udc *udc)
+{
+	u32 irq_src;
+
+	pr_debug("%s\n", __func__);
+
+	/* disable wake up irq */
+	irq_src = fsl_readl(&dr_regs->usbctrl);
+	irq_src &= ~USB_CTRL_OTG_WUIE;
+	fsl_writel(irq_src, &dr_regs->usbctrl);
+}
+
 static void bus_resume(struct fsl_udc *udc)
 {
 	udc->usb_state = udc->resume_state;
@@ -1983,6 +2007,15 @@ static irqreturn_t fsl_udc_irq(int irq, void *_udc)
 	u32 irq_src;
 	irqreturn_t status = IRQ_NONE;
 	unsigned long flags;
+
+	spin_lock_irqsave(&udc->lock, flags);
+	/* check USBCTRL register to see if wake up irq */
+	irq_src =  fsl_readl(&dr_regs->usbctrl);
+	if (irq_src & USB_CTRL_OTG_WUIR) {
+		wake_up_irq(udc);
+		status = IRQ_HANDLED;
+	}
+	spin_unlock_irqrestore(&udc->lock, flags);
 
 	/* Disable ISR for OTG host mode */
 	if (udc->stopped)
@@ -2793,6 +2826,26 @@ static int udc_suspend(struct fsl_udc *udc)
  -----------------------------------------------------------------*/
 static int fsl_udc_suspend(struct device *dev, pm_message_t state)
 {
+	unsigned int port_status, temp;
+
+	if ((udc_controller->usb_state > USB_STATE_POWERED) &&
+		(udc_controller->usb_state < USB_STATE_SUSPENDED))
+		return -EBUSY;
+
+	temp = fsl_readl(&dr_regs->usbctrl);
+	/* if usb wake up irq is disabled, enable it */
+	if (!(temp & USB_CTRL_OTG_WUIE)) {
+		temp |= USB_CTRL_OTG_WUIE;
+		fsl_writel(temp, &dr_regs->usbctrl);
+	}
+
+	/* close UBS PHY clock */
+	port_status = fsl_readl(&dr_regs->portsc1);
+	port_status |= PORTSCX_PHY_LOW_POWER_SPD;
+	fsl_writel(port_status, &dr_regs->portsc1);
+	if (udc_controller->pdata->usb_clock_for_pm)
+		udc_controller->pdata->usb_clock_for_pm(0);
+
 	return udc_suspend(udc_controller);
 }
 

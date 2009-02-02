@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  *	otg_{get,set}_transceiver() are from arm/plat-omap/usb.c.
  *	which is Copyright (C) 2004 Texas Instruments, Inc.
@@ -569,6 +569,7 @@ EXPORT_SYMBOL(fsl_usb_xcvr_suspend);
 static void otg_set_utmi_xcvr(void)
 {
 	u32 tmp;
+	struct clk *usb_clk;
 
 	/* Stop then Reset */
 	UOG_USBCMD &= ~UCMD_RUN_STOP;
@@ -608,9 +609,6 @@ static void otg_set_utmi_xcvr(void)
 		USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_UTMI_ENABLE;
 	}
 
-	if (UOG_HCSPARAMS & HCSPARAMS_PPC)
-		UOG_PORTSC1 |= PORTSC_PORT_POWER;
-
 	/* need to reset the controller here so that the ID pin
 	 * is correctly detected.
 	 */
@@ -625,6 +623,16 @@ static void otg_set_utmi_xcvr(void)
 	 * the ULPI transceiver to reset too.
 	 */
 	msleep(100);
+
+	if (cpu_is_mx37()) {
+		usb_clk = clk_get(NULL, "usboh2_clk");
+		clk_disable(usb_clk);
+		clk_put(usb_clk);
+
+		/* fix USB PHY Power Gating leakage issue for i.MX37 */
+		USB_PHY_CTR_FUNC &= ~USB_UTMI_PHYCTRL_CHGRDETON;
+		USB_PHY_CTR_FUNC &= ~USB_UTMI_PHYCTRL_CHGRDETEN;
+	}
 }
 
 static int otg_used = 0;

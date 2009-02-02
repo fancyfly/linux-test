@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -47,6 +47,10 @@ static void set_power(struct fsl_xcvr_ops *this,
 	struct regulator *usbotg_regux;
 
 	pr_debug("real %s(on=%d) pdata=0x%p\n", __func__, on, pdata);
+
+	if (UOG_HCSPARAMS & HCSPARAMS_PPC)
+		UOG_PORTSC1 |= PORTSC_PORT_POWER;
+
 	if (machine_is_mx37_3ds()) {
 		usbotg_regux = regulator_get(dev, "DCDC2");
 		if (on) {

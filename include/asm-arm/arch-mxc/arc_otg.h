@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -298,6 +298,8 @@
 
 /* USB_PHY_CTRL_FUNC */
 #define USB_UTMI_PHYCTRL_UTMI_ENABLE   0x01000000
+#define USB_UTMI_PHYCTRL_CHGRDETEN (1 << 24)	/* Enable Charger Detector */
+#define USB_UTMI_PHYCTRL_CHGRDETON (1 << 23)	/* Charger Detector Power On Control */
 #define USB_UTMI_PHYCTRL_OC_POL	(1 << 9)	/* OTG Polarity of Overcurrent */
 #define USB_UTMI_PHYCTRL_OC_DIS	(1 << 8)	/* OTG Disable Overcurrent Event */
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -344,6 +344,8 @@ static int prpvf_stop(void *private)
 
 	if (cam->overlay_active == false)
 		return 0;
+
+	ipu_disp_set_window_pos(MEM_FG_SYNC, 0, 0);
 
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		ipu_unlink_channels(CSI_PRP_VF_MEM, MEM_ROT_VF_MEM);

@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.26
-# Mon Jan 19 20:27:43 2009
+# Mon Feb  2 13:31:57 2009
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1437,6 +1437,7 @@ CONFIG_RTC_INTF_DEV_UIE_EMUL=y
 #
 # CONFIG_RTC_MXC is not set
 CONFIG_RTC_DRV_MXC_V2=y
+# CONFIG_RTC_DRV_IMXDI is not set
 CONFIG_RTC_MC13892=m
 # CONFIG_UIO is not set
 
@@ -1519,6 +1520,7 @@ CONFIG_MXC_VPU_IRAM=y
 #
 # MXC Bluetooth support
 #
+CONFIG_MXC_BLUETOOTH=m
 
 #
 # Broadcom GPS ioctrl support

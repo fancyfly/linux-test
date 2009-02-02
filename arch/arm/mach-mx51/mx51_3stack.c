@@ -935,6 +935,43 @@ static inline void mxc_sgtl5000_init(void)
 {
 }
 #endif
+
+static void bt_reset(void)
+{
+	int err;
+
+	err = mxc_request_iomux(MX51_PIN_EIM_D19, IOMUX_CONFIG_GPIO);
+	if (err) {
+		printk(KERN_ERR "Error: bt reset request gpio failed!\n");
+		return;
+	}
+	mxc_set_gpio_dataout(MX51_PIN_EIM_D19, 1);
+	mxc_set_gpio_direction(MX51_PIN_EIM_D19, 0);
+	mxc_free_iomux(MX51_PIN_EIM_D19, IOMUX_CONFIG_GPIO);
+}
+
+static struct mxc_bt_platform_data mxc_bt_data = {
+	.bt_vdd = NULL,
+	.bt_vdd_parent = NULL,
+	.bt_vusb = "SW4",
+	.bt_vusb_parent = NULL,
+	.bt_reset = bt_reset,
+};
+
+static struct platform_device mxc_bt_device = {
+	.name = "mxc_bt",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		.platform_data = &mxc_bt_data,
+		},
+};
+
+static void mxc_init_bluetooth(void)
+{
+	(void)platform_device_register(&mxc_bt_device);
+}
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -1003,6 +1040,7 @@ static void __init mxc_board_init(void)
 	mxc_init_audio();
 
 	mxc_sgtl5000_init();
+	mxc_init_bluetooth();
 }
 
 /*

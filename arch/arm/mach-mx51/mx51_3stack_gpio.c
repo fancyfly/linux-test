@@ -75,7 +75,7 @@ void gpio_uart_active(int port, int no_irda)
 				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
 				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
 		mxc_iomux_set_input(MUX_IN_UART2_IPP_UART_RXD_MUX_SELECT_INPUT,
-				    INPUT_CTL_PATH0);
+				    INPUT_CTL_PATH2);
 		mxc_request_iomux(MX51_PIN_UART2_TXD, IOMUX_CONFIG_ALT0);
 		mxc_iomux_set_pad(MX51_PIN_UART2_TXD, PAD_CTL_HYS_NONE |
 				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
@@ -86,7 +86,7 @@ void gpio_uart_active(int port, int no_irda)
 				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
 				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
 		mxc_iomux_set_input(MUX_IN_UART2_IPP_UART_RTS_B_SELECT_INPUT,
-				    INPUT_CTL_PATH2);
+				    INPUT_CTL_PATH3);
 		/* UART2_CTS */
 		mxc_request_iomux(MX51_PIN_EIM_D25, IOMUX_CONFIG_ALT4);
 		mxc_iomux_set_pad(MX51_PIN_EIM_D25, PAD_CTL_HYS_NONE |

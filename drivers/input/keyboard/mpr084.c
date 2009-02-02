@@ -418,8 +418,10 @@ static int mpr084_i2c_probe(struct i2c_client *client, const struct i2c_device_i
 	/*Enable the Regulator*/
 	if (keypad && keypad->vdd_reg) {
 		vdd_reg = regulator_get(&client->dev, keypad->vdd_reg);
-		if (vdd_reg)
+		if (!IS_ERR(vdd_reg))
 			regulator_enable(vdd_reg);
+		else
+			vdd_reg = NULL;
 	} else
 		vdd_reg = NULL;
 

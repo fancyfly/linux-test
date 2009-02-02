@@ -291,7 +291,7 @@ static struct mxc_keyp_platform_data keypad_data = {
 	.matrix = keymap,
 	.active = gpio_keypad_active,
 	.inactive = gpio_keypad_inactive,
-	.vdd_reg = "DCDC3",
+	.vdd_reg = "VGEN2",
 };
 #else
 
@@ -836,6 +836,9 @@ static void mx37_3stack_fixup_for_board_v1(void)
 	unifi_data.reg_1v5_ana_bb = NULL;	/* VMAIN is used on v1 board */
 	unifi_data.reg_vdd_vpa = NULL;
 	unifi_data.reg_1v5_dd = NULL;
+#endif
+#if defined(CONFIG_KEYBOARD_MPR084) || defined(CONFIG_KEYBOARD_MPR084_MODULE)
+	keypad_data.vdd_reg = "DCDC3";
 #endif
 }
 

@@ -2101,28 +2101,35 @@ static void __inline__ fec_get_mac(struct net_device *dev)
 	unsigned long fec_mac_base = FEC_IIM_BASE + MXC_IIMKEY0;
 	fecp = fep->hwp;
 
-	if (cpu_is_mx27_rev(CHIP_REV_2_0) > 0) {
-		fec_mac_base = FEC_IIM_BASE + MXC_IIMMAC;
-	}
+	if (fecp->fec_addr_low || fecp->fec_addr_high) {
+		*((unsigned long *) &tmpaddr[0]) =
+			be32_to_cpu(fecp->fec_addr_low);
+		*((unsigned short *) &tmpaddr[4]) =
+			be32_to_cpu(fecp->fec_addr_high);
+		iap = &tmpaddr[0];
+	} else {
+		if (cpu_is_mx27_rev(CHIP_REV_2_0) > 0)
+			fec_mac_base = FEC_IIM_BASE + MXC_IIMMAC;
 
-	memset(tmpaddr, 0, ETH_ALEN);
-	if (!(machine_is_mx35_3ds() || machine_is_mx51_3ds())) {
-	/*
-	 * Get MAC address from IIM.
-	 * If it is all 1's or 0's, use the default.
-	 */
-		for (i = 0; i < ETH_ALEN; i++) {
-			tmpaddr[ETH_ALEN-1-i] = __raw_readb(fec_mac_base + i * 4);
+		memset(tmpaddr, 0, ETH_ALEN);
+		if (!(machine_is_mx35_3ds() || cpu_is_mx51())) {
+			/*
+			 * Get MAC address from IIM.
+			 * If it is all 1's or 0's, use the default.
+			 */
+			for (i = 0; i < ETH_ALEN; i++)
+				tmpaddr[ETH_ALEN-1-i] =
+				__raw_readb(fec_mac_base + i * 4);
 		}
-	}
-	iap = &tmpaddr[0];
+		iap = &tmpaddr[0];
 
-	if ((iap[0] == 0) && (iap[1] == 0) && (iap[2] == 0) &&
-            (iap[3] == 0) && (iap[4] == 0) && (iap[5] == 0))
-                iap = fec_mac_default;
-        if ((iap[0] == 0xff) && (iap[1] == 0xff) && (iap[2] == 0xff) &&
-	    (iap[3] == 0xff) && (iap[4] == 0xff) && (iap[5] == 0xff))
-	        iap = fec_mac_default;
+		if ((iap[0] == 0) && (iap[1] == 0) && (iap[2] == 0) &&
+			(iap[3] == 0) && (iap[4] == 0) && (iap[5] == 0))
+			iap = fec_mac_default;
+		if ((iap[0] == 0xff) && (iap[1] == 0xff) && (iap[2] == 0xff) &&
+		    (iap[3] == 0xff) && (iap[4] == 0xff) && (iap[5] == 0xff))
+			iap = fec_mac_default;
+	}
 
         memcpy(dev->dev_addr, iap, ETH_ALEN);
 

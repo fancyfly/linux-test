@@ -1450,6 +1450,60 @@ static struct clk gpt_clk[] = {
 	 },
 };
 
+static struct clk pwm1_clk[] = {
+	{
+	 .name = "pwm_clk",
+	 .parent = &ipg_perclk,
+	 .id = 0,
+	 .enable_reg = MXC_CCM_CCGR2,
+	 .enable_shift = MXC_CCM_CCGR2_CG6_OFFSET,
+	 .enable = _clk_enable,
+	 .disable = _clk_disable,
+	 .secondary = &pwm1_clk[1],
+	 },
+	{
+	 .name = "pwm_ipg_clk",
+	 .id = 0,
+	 .parent = &ipg_clk,
+	 .enable_reg = MXC_CCM_CCGR2,
+	 .enable_shift = MXC_CCM_CCGR2_CG5_OFFSET,
+	 .enable = _clk_enable,
+	 .disable = _clk_disable,
+	 },
+	{
+	 .name = "pwm_32k_clk",
+	 .id = 0,
+	 .parent = &ckil_clk,
+	 },
+};
+
+static struct clk pwm2_clk[] = {
+	{
+	 .name = "pwm_clk",
+	 .parent = &ipg_perclk,
+	 .id = 1,
+	 .enable_reg = MXC_CCM_CCGR2,
+	 .enable_shift = MXC_CCM_CCGR2_CG8_OFFSET,
+	 .enable = _clk_enable,
+	 .disable = _clk_disable,
+	 .secondary = &pwm2_clk[1],
+	 },
+	{
+	 .name = "pwm_ipg_clk",
+	 .id = 1,
+	 .parent = &ipg_clk,
+	 .enable_reg = MXC_CCM_CCGR2,
+	 .enable_shift = MXC_CCM_CCGR2_CG7_OFFSET,
+	 .enable = _clk_enable,
+	 .disable = _clk_disable,
+	 },
+	{
+	 .name = "pwm_32k_clk",
+	 .id = 1,
+	 .parent = &ckil_clk,
+	 },
+};
+
 static struct clk i2c_clk[] = {
 	{
 	 .name = "i2c_clk",
@@ -2666,6 +2720,12 @@ static struct clk *mxc_clks[] = {
 	&gpt_clk[0],
 	&gpt_clk[1],
 	&gpt_clk[2],
+	&pwm1_clk[0],
+	&pwm1_clk[1],
+	&pwm1_clk[2],
+	&pwm2_clk[0],
+	&pwm2_clk[1],
+	&pwm2_clk[2],
 	&cspi_main_clk,
 	&cspi1_clk[0],
 	&cspi1_clk[1],

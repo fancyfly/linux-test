@@ -12,7 +12,7 @@
  */
 
 #include "shw_driver.h"
-#include <../dryice.h>
+#include "../dryice.h"
 
 #include <diagnostic.h>
 

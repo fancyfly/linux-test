@@ -95,7 +95,15 @@ struct cpu_wp *get_cpu_wp(int *wp)
 	return cpu_wp_auto;
 }
 
-static void mc13892_reg_int(void)
+/*!
+ * the event handler for power on event
+ */
+static void power_on_evt_handler(void)
+{
+	pr_info("pwr on event1 is received \n");
+}
+
+static int __init mc13892_reg_int(void)
 {
 	int i = 0;
 	struct regulator *regulator;
@@ -130,6 +138,7 @@ static void mc13892_reg_int(void)
 		"GPO3",
 		"GPO4",
 	};
+	pmic_event_callback_t power_key_event;
 
 	for (i = 0; i < ARRAY_SIZE(reg_name); i++) {
 		regulator = regulator_get(NULL, reg_name[i]);
@@ -173,6 +182,12 @@ static void mc13892_reg_int(void)
 
 	regulator_put(gp, NULL);
 	regulator_put(lp, NULL);
+
+	/* subscribe PWRON1 event to enable ON_OFF key */
+	power_key_event.param = NULL;
+	power_key_event.func = (void *)power_on_evt_handler;
+	pmic_event_subscribe(EVENT_PWRONI, power_key_event);
+	return 0;
 }
 
 late_initcall(mc13892_reg_int);

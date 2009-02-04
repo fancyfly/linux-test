@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -1029,7 +1029,8 @@ int gpio_usbh2_active(void)
 		return -EINVAL;
 	}
 	mxc_iomux_set_pad(MX31_PIN_USBH2_CLK,
-			  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
+			  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST |
+			   PAD_CTL_PKE_NONE));
 	mxc_iomux_set_pad(MX31_PIN_USBH2_DIR,
 			  (PAD_CTL_DRV_MAX | PAD_CTL_SRE_FAST));
 	mxc_iomux_set_pad(MX31_PIN_USBH2_NXT,

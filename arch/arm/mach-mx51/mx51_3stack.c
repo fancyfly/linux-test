@@ -164,7 +164,7 @@ static void mc13892_reg_int(void)
 			printk(KERN_INFO "cannot set LP STBY voltage\n");
 	} else {
 		/* Cannot drop voltage for TO2.0 */
-		if (regulator_set_voltage(lp, 1200000))
+		if (regulator_set_voltage(lp, 900000))
 			printk(KERN_INFO "cannot set LP STBY voltage\n");
 	}
 

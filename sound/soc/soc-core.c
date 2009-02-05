@@ -837,7 +837,7 @@ static int soc_match_components(void)
 
 	/* are all pcm_links now created ? */
 	if (probe && machine && machine->pcm_links == machine->pcm_links_total)
-		machine->ops->mach_probe(machine);
+		ret = machine->ops->mach_probe(machine);
 	mutex_unlock(&list_mutex);
 	return ret;
 }

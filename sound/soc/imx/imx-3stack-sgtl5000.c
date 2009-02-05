@@ -489,7 +489,9 @@ static int mach_probe(struct snd_soc_machine *machine)
 	codec_data->vddd = plat->vddd / 1000;
 	codec->platform_data = codec_data;
 
-	codec->ops->io_probe(codec, machine);
+	ret = codec->ops->io_probe(codec, machine);
+	if (ret < 0)
+		goto err_card_reg;
 
 	/* Add imx_3stack specific widgets */
 	for (i = 0; i < ARRAY_SIZE(imx_3stack_dapm_widgets); i++) {

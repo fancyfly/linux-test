@@ -493,6 +493,9 @@ static int mach_probe(struct snd_soc_machine *machine)
 	if (ret < 0)
 		goto err_card_reg;
 
+	gpio_activate_audio_ports();
+	imx_3stack_init_dam(plat->src_port, plat->ext_port);
+
 	/* Add imx_3stack specific widgets */
 	for (i = 0; i < ARRAY_SIZE(imx_3stack_dapm_widgets); i++) {
 		snd_soc_dapm_new_control(machine, codec,
@@ -661,9 +664,6 @@ static int __devinit imx_3stack_sgtl5000_audio_probe(struct platform_device *pde
 		pr_err("%s: failed to attach audio pcm\n", __func__);
 		goto link_err;
 	}
-
-	gpio_activate_audio_ports();
-	imx_3stack_init_dam(plat->src_port, plat->ext_port);
 
 	ret = driver_create_file(pdev->dev.driver, &driver_attr_headphone);
 	if (ret < 0) {

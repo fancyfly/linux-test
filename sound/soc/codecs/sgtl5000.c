@@ -836,6 +836,9 @@ static int sgtl5000_codec_io_probe(struct snd_soc_codec *codec,
 
 	reg = sgtl5000_read(codec, SGTL5000_CHIP_ANA_ADC_CTRL);
 	reg &= ~SGTL5000_ADC_VOL_M6DB;
+	reg &= ~(SGTL5000_ADC_VOL_LEFT_MASK | SGTL5000_ADC_VOL_RIGHT_MASK);
+	reg |= (0xf << SGTL5000_ADC_VOL_LEFT_SHIFT)
+	       | (0xf << SGTL5000_ADC_VOL_RIGHT_SHIFT);
 	sgtl5000_write(codec, SGTL5000_CHIP_ANA_ADC_CTRL, reg);
 
 	reg = SGTL5000_LINE_OUT_MUTE |

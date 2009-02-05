@@ -148,6 +148,9 @@ static int dac_mux_put(struct snd_kcontrol *kcontrol,
 			sgtl5000_dapm_event(codec, SNDRV_CTL_POWER_D0);
 		} else
 			snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
+		reg = sgtl5000_read(codec, SGTL5000_CHIP_ANA_CTRL);
+		reg &= ~(SGTL5000_LINE_OUT_MUTE | SGTL5000_HP_MUTE);
+		sgtl5000_write(codec, SGTL5000_CHIP_ANA_CTRL, reg);
 	} else {
 		reg = sgtl5000_read(codec, SGTL5000_CHIP_CLK_TOP_CTRL);
 		reg &= ~SGTL5000_INT_OSC_EN;

@@ -25,7 +25,7 @@
 #define di_info(fmt, arg...) os_printk(KERN_INFO fmt, ##arg)
 #define di_warn(fmt, arg...) os_printk(KERN_WARNING fmt, ##arg)
 
-#include <sahara2/include/portable_os.h>
+#include "sahara2/include/portable_os.h"
 #include "dryice.h"
 #include "dryice-regs.h"
 

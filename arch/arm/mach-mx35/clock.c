@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -275,14 +275,14 @@ static void sync_cpu_wb(void)
 	struct cpu_wp *p;
 	unsigned long reg = __raw_readl(MXC_CCM_PDR0);
 	if ((reg & MXC_CCM_PDR0_AUTO_CON)
-	    && (cpu_is_mx35_rev(CHIP_REV_2_0) >= 1)) {
+	    || (cpu_is_mx35_rev(CHIP_REV_2_0) >= 1)) {
 		reg &= MXC_CCM_PDR0_CON_MUX_DIV_MASK;
 	} else {
 		reg &= MXC_CCM_PDR0_AUTO_MUX_DIV_MASK;
 	}
 	for (i = 0; i < cpu_wp_nr; i++) {
 		p = cpu_wp_tbl + cpu_curr_wp;
-		if (p->pdr0_reg == reg)
+		if (p->pdr0_reg == (reg & 0xF0E00))
 			break;
 		cpu_curr_wp = (cpu_curr_wp + 1) % cpu_wp_nr;
 	}

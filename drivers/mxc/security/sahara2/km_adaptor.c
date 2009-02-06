@@ -24,9 +24,9 @@
 #include <sah_memory_mapper.h>
 #include <fsl_shw_keystore.h>
 #ifdef FSL_HAVE_SCC
-#include <asm/arch/mxc_scc_driver.h>
+#include <linux/mxc_scc_driver.h>
 #elif defined (FSL_HAVE_SCC2)
-#include <asm/arch/mxc_scc2_driver.h>
+#include <linux/mxc_scc2_driver.h>
 #endif
 
 

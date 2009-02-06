@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -20,8 +20,8 @@
 #include <linux/err.h>
 #include <linux/regulator/regulator-platform.h>
 #include <linux/regulator/regulator-drv.h>
-#include <asm/ioctl.h>
-#include <asm/arch-mxc/pmic_status.h>
+#include <linux/ioctl.h>
+#include <linux/pmic_status.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/mcu_max8660-bus.h>
 

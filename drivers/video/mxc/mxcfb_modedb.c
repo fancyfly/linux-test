@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -12,7 +12,7 @@
  */
 
 #include <linux/kernel.h>
-#include <asm/arch/mxcfb.h>
+#include <linux/mxcfb.h>
 
 struct fb_videomode mxcfb_modedb[] = {
 	{

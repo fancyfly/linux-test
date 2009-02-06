@@ -21,11 +21,11 @@
 #include <linux/platform_device.h>
 #include <linux/fsl_devices.h>
 #include <linux/usb/fsl_xcvr.h>
+#include <linux/pmic_external.h>
 
 #include <asm/hardware.h>
 #include <asm/arch/arc_otg.h>
 #include <asm/mach-types.h>
-#include <asm/arch/pmic_external.h>
 
 static void usb_utmi_init(struct fsl_xcvr_ops *this)
 {

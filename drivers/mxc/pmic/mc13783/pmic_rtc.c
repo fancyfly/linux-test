@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -24,8 +24,8 @@
 #include <linux/wait.h>
 #include <linux/poll.h>
 #include <linux/platform_device.h>
-#include <asm/arch/pmic_rtc.h>
-#include <asm/arch/pmic_status.h>
+#include <linux/pmic_rtc.h>
+#include <linux/pmic_status.h>
 
 #include "pmic_rtc_defs.h"
 

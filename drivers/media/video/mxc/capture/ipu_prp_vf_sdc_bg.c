@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -18,11 +18,11 @@
  *
  * @ingroup IPU
  */
-#include <linux/fb.h>
-#include "mxc_v4l2_capture.h"
-#include <asm/arch/ipu.h>
-#include "ipu_prp_sw.h"
 #include <linux/dma-mapping.h>
+#include <linux/fb.h>
+#include <linux/ipu.h>
+#include "mxc_v4l2_capture.h"
+#include "ipu_prp_sw.h"
 
 static int buffer_num = 0;
 static int buffer_ready = 0;

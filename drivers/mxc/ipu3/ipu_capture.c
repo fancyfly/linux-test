@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -23,8 +23,8 @@
 #include <linux/errno.h>
 #include <linux/spinlock.h>
 #include <linux/delay.h>
-#include <asm/arch/ipu.h>
-#include <asm/arch/clock.h>
+#include <linux/ipu.h>
+#include <linux/clk.h>
 
 #include "ipu_prv.h"
 #include "ipu_regs.h"

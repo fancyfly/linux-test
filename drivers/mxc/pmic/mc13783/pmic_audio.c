@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -53,9 +53,9 @@
 #include <linux/platform_device.h>	/* For kernel module interface.        */
 #include <linux/init.h>
 #include <linux/spinlock.h>	/* For spinlock interface.             */
+#include <linux/pmic_adc.h>	/* For PMIC ADC driver interface.      */
+#include <linux/pmic_status.h>
 #include <asm/arch/pmic_audio.h>	/* For PMIC Audio driver interface.    */
-#include <asm/arch/pmic_adc.h>	/* For PMIC ADC driver interface.      */
-#include <asm/arch/pmic_status.h>
 
 /*
  * mc13783 PMIC Audio API

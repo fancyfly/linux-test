@@ -22,16 +22,17 @@
  */
 #include <linux/module.h>
 #include <linux/init.h>
+#include <linux/io.h>
+#include <linux/semaphore.h>
 #include <linux/console.h>
 #include <linux/fs.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
-#include <asm/cacheflush.h>
-#include <asm/io.h>
-#include <asm/semaphore.h>
 #include <linux/dma-mapping.h>
+#include <linux/mxcfb.h>
 
-#include <asm/arch/mxcfb.h>
+#include <asm/cacheflush.h>
+
 #include "mxc_v4l2_output.h"
 
 vout_data *g_vout;

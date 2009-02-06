@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -15,8 +15,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/leds.h>
-
-#include <asm/arch/pmic_light.h>
+#include <linux/pmic_light.h>
 
 static void mc13892_led_set(struct led_classdev *led_cdev,
 			    enum led_brightness value)

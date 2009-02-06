@@ -53,9 +53,9 @@
 #include "rng_internals.h"
 
 #ifdef FSL_HAVE_SCC2
-#include <asm/arch/mxc_scc2_driver.h>
+#include <linux/mxc_scc2_driver.h>
 #else
-#include <asm/arch/mxc_scc_driver.h>
+#include <linux/mxc_scc_driver.h>
 #endif
 
 #if defined(RNG_DEBUG) || defined(RNG_ENTROPY_DEBUG) ||                     \

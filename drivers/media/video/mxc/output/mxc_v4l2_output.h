@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -30,8 +30,8 @@
 
 #ifdef __KERNEL__
 
-#include <asm/arch/ipu.h>
-#include <asm/arch/mxc_v4l2.h>
+#include <linux/ipu.h>
+#include <linux/mxc_v4l2.h>
 
 #define MIN_FRAME_NUM 2
 #define MAX_FRAME_NUM 30

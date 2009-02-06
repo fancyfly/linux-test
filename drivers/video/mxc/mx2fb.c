@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -34,8 +34,8 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/clk.h>
+#include <linux/mxcfb.h>
 #include <asm/uaccess.h>
-#include <asm/arch/mxcfb.h>
 
 #include "mx2fb.h"
 

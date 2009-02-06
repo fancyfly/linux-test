@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -35,7 +35,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/regulator.h>
-#include <asm/arch/mxcfb.h>
+#include <linux/mxcfb.h>
 
 static void lcd_poweron(void);
 static void lcd_poweroff(void);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -34,10 +34,10 @@
 #include <linux/interrupt.h>
 #include <linux/proc_fs.h>
 #include <linux/dma-mapping.h>
+#include <linux/mxc_asrc.h>
 #include <asm/irq.h>
 #include <asm/memory.h>
 #include <asm/arch/dma.h>
-#include <asm/arch/mxc_asrc.h>
 
 static int asrc_major;
 static struct class *asrc_class;

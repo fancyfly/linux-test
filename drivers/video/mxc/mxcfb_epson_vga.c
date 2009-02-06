@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -36,8 +36,8 @@
 #include <linux/platform_device.h>
 #include <linux/regulator/regulator.h>
 #include <linux/spi/spi.h>
-#include <asm/arch/mxcfb.h>
-#include <asm/arch/ipu.h>
+#include <linux/mxcfb.h>
+#include <linux/ipu.h>
 #include <asm/mach-types.h>
 
 static struct spi_device *lcd_spi;

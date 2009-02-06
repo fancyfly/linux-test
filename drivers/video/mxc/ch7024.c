@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -28,10 +28,10 @@
 #include <linux/irq.h>
 #include <linux/sysfs.h>
 #include <linux/regulator/regulator.h>
+#include <linux/mxcfb.h>
 #include <asm/uaccess.h>
 #include <asm/atomic.h>
 #include <asm/arch/gpio.h>
-#include <asm/arch/mxcfb.h>
 #include <asm/arch/hw_events.h>
 
 /*!

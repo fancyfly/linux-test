@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -32,8 +32,8 @@
 #include <linux/smp_lock.h>
 
 #include <media/v4l2-dev.h>
-#include <asm/arch/ipu.h>
-#include <asm/arch/mxc_v4l2.h>
+#include <linux/ipu.h>
+#include <linux/mxc_v4l2.h>
 
 #define FRAME_NUM 3
 

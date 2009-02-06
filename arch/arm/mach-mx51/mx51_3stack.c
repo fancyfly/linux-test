@@ -26,6 +26,8 @@
 #include <linux/spi/spi.h>
 #include <linux/i2c.h>
 #include <linux/ata.h>
+#include <linux/pmic_external.h>
+#include <linux/ipu.h>
 #if defined(CONFIG_MTD) || defined(CONFIG_MTD_MODULE)
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
@@ -44,8 +46,6 @@
 #include <asm/arch/memory.h>
 #include <asm/arch/gpio.h>
 #include <asm/arch/mmc.h>
-#include <asm/arch/pmic_external.h>
-#include <asm/arch/ipu.h>
 
 #include "board-mx51_3stack.h"
 #include "iomux.h"

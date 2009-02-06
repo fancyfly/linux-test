@@ -9,23 +9,23 @@
  * licensed "as is" without any warranty of any kind, whether express
  * or implied.
  *
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/pmic_external.h>
 
 #include <linux/spi/spi.h>
 
 #include <asm/hardware.h>
 #include <asm/mach-types.h>
-#include <asm/arch/pmic_external.h>
-#include <asm/arch/pmic_power.h>
 
 #include <asm/arch/spba.h>
 #include <asm/arch/mxc_dptc.h>
+#include <asm/arch/pmic_power.h>
 #include "iomux.h"
 #include "crm_regs.h"
 #include <asm/arch/sdma.h>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All rights reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All rights reserved.
  */
 
 /*
@@ -31,9 +31,9 @@
 #include <linux/major.h>
 #include <linux/init.h>
 #include <linux/fs.h>
+#include <linux/pmic_external.h>
 
 #include <asm/uaccess.h>
-#include <asm/arch/pmic_external.h>
 
 #define PMIC_NAME	"pmic"
 #define CIRC_BUF_MAX	16

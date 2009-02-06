@@ -19,9 +19,9 @@
  * @ingroup IPU
  */
 
-#include <asm/semaphore.h>
+#include <linux/ipu.h>
+#include <linux/semaphore.h>
 #include "mxc_v4l2_capture.h"
-#include <asm/arch/ipu.h>
 #include "ipu_prp_sw.h"
 
 static int callback_eof_flag;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -39,11 +39,11 @@
 #include <linux/sched.h>            /* for interrupt.h */
 #include <linux/spinlock.h>
 
-#include <asm/io.h>                 /* ioremap() */
+#include <linux/io.h>               /* ioremap() */
 #include <linux/interrupt.h>        /* IRQ / interrupt definitions */
 
 
-#include <asm/arch/mxc_scc2_driver.h>
+#include <linux/mxc_scc2_driver.h>
 
 #if defined(MXC)
 

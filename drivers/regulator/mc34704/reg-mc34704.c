@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -22,8 +22,8 @@
 #include <linux/regulator/regulator-platform.h>
 #include <linux/regulator/regulator-drv.h>
 #include <linux/platform_device.h>
-#include <asm/arch/pmic_status.h>
-#include <asm/arch/pmic_external.h>
+#include <linux/pmic_status.h>
+#include <linux/pmic_external.h>
 
 #define MC34704_ONOFFA	0x8
 #define MC34704_ONOFFC	0x4

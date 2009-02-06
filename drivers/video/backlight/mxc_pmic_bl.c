@@ -1,5 +1,5 @@
 /*
- * Copyright 2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -33,9 +33,9 @@
 #include <linux/spinlock.h>
 #include <linux/fb.h>
 #include <linux/backlight.h>
+#include <linux/pmic_light.h>
 
 #include <asm/arch/pmic_power.h>
-#include <asm/arch/pmic_light.h>
 
 #define MXC_MAX_INTENSITY 	255
 #define MXC_DEFAULT_INTENSITY 	127

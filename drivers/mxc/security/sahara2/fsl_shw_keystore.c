@@ -26,7 +26,7 @@
 #endif
 
 #if !defined(FSL_HAVE_SCC2) && defined(__KERNEL__)
-#include <asm/arch/mxc_scc_driver.h>
+#include <linux/mxc_scc_driver.h>
 #endif
 
 /* Define a semaphore to protect the keystore data */

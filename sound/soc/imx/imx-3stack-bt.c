@@ -19,6 +19,8 @@
 #include <linux/i2c.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/clk.h>
+#include <linux/pmic_external.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
@@ -26,9 +28,6 @@
 #include <sound/initval.h>
 
 #include <asm/hardware.h>
-#include <asm/arch/clock.h>
-#include <asm/arch/mxc.h>
-#include <asm/arch/pmic_external.h>
 
 #include "imx-pcm.h"
 #include "imx-ssi.h"

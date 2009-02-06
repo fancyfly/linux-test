@@ -1,7 +1,7 @@
 /*
  * linux/drivers/mxc/mlb/mxc_mlb.c
  *
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -24,10 +24,10 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/regulator.h>
+#include <linux/mxc_mlb.h>
 
 #include <asm/irq.h>
 #include <asm/uaccess.h>
-#include <asm/arch/mxc_mlb.h>
 
 /*!
  * MLB module memory map registers define

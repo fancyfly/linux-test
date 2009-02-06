@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -33,8 +33,8 @@
  * @ingroup PMIC_CORE
  */
 
-#include <asm/ioctl.h>
-#include <asm/arch/pmic_status.h>
+#include <linux/ioctl.h>
+#include <linux/pmic_status.h>
 
 /*!
  * This is the enumeration of versions of PMIC

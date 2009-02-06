@@ -16,6 +16,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/mxc_scc2_driver.h>
 
 #include <linux/spi/spi.h>
 
@@ -26,7 +27,6 @@
 #include "iomux.h"
 #include <asm/arch/sdma.h>
 #include "sdma_script_code.h"
-#include <asm/arch/mxc_scc2_driver.h>
 #include "crm_regs.h"
 
 extern struct dptc_wp dptc_gp_wp_allfreq[DPTC_GP_WP_SUPPORTED];

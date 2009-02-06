@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -29,8 +29,8 @@
 #include <linux/poll.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
-#include <asm/arch/ipu.h>
-#include <asm/arch/mxc_pf.h>
+#include <linux/ipu.h>
+#include <linux/mxc_pf.h>
 
 struct mxc_pf_data {
 	pf_operation_t mode;

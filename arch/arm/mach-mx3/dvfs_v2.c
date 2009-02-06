@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -35,9 +35,7 @@
 #include <linux/sysdev.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
-
-#include <asm/arch/gpio.h>
-#include <asm/arch/pmic_external.h>
+#include <linux/pmic_external.h>
 #include <asm/arch/pmic_power.h>
 
 #include "iomux.h"

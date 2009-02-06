@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -24,8 +24,8 @@
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/fs.h>
-#include <asm/arch/pmic_light.h>
-#include <asm/arch/pmic_status.h>
+#include <linux/pmic_light.h>
+#include <linux/pmic_status.h>
 #include "pmic_light_defs.h"
 
 #define NB_LIGHT_REG      6

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -37,9 +37,9 @@
 #include <linux/interrupt.h>	/* For tasklet interface.                  */
 #include <linux/platform_device.h>	/* For kernel module interface.            */
 #include <linux/spinlock.h>	/* For spinlock interface.                 */
+#include <linux/pmic_adc.h>	/* For PMIC ADC driver interface.          */
+#include <linux/pmic_status.h>
 #include <asm/arch/pmic_convity.h>	/* For PMIC Connectivity driver interface. */
-#include <asm/arch/pmic_adc.h>	/* For PMIC ADC driver interface.          */
-#include <asm/arch/pmic_status.h>
 
 /*
  * mc13783 Connectivity API

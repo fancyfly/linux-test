@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -26,12 +26,12 @@
 #include <linux/wait.h>
 #include <linux/init.h>
 #include <linux/errno.h>
-#include <asm/io.h>
+#include <linux/io.h>
+#include <linux/pmic_external.h>
+#include <linux/pmic_status.h>
 #include <asm/irq.h>
 #include <asm/uaccess.h>
 
-#include <asm/arch/pmic_external.h>
-#include <asm/arch/pmic_status.h>
 
 /*
  * External Functions

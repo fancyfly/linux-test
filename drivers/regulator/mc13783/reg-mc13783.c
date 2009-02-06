@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -20,10 +20,10 @@
 #include <linux/err.h>
 #include <linux/regulator/regulator-platform.h>
 #include <linux/regulator/regulator-drv.h>
-#include <asm/ioctl.h>
+#include <linux/ioctl.h>
 #include <linux/platform_device.h>
-#include <asm/arch/pmic_status.h>
-#include <asm/arch/pmic_external.h>
+#include <linux/pmic_status.h>
+#include <linux/pmic_external.h>
 
 /*!
  * brief PMIC regulators.

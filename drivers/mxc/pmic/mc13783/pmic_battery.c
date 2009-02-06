@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -28,9 +28,9 @@
 #include <linux/delay.h>
 #include <linux/wait.h>
 
-#include <asm/arch/pmic_battery.h>
-#include <asm/arch/pmic_adc.h>
-#include <asm/arch/pmic_status.h>
+#include <linux/pmic_battery.h>
+#include <linux/pmic_adc.h>
+#include <linux/pmic_status.h>
 
 #include "pmic_battery_defs.h"
 

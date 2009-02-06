@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -18,9 +18,9 @@
 #include <linux/wait.h>
 #include <linux/device.h>
 
-#include <asm/arch/pmic_adc.h>
+#include <linux/pmic_adc.h>
+#include <linux/pmic_status.h>
 #include <asm/arch/pmic_power.h>
-#include <asm/arch/pmic_status.h>
 
 #include "../core/pmic.h"
 

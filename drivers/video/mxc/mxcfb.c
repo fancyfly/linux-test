@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -41,12 +41,12 @@
 #include <linux/dma-mapping.h>
 #include <linux/clk.h>
 #include <linux/console.h>
+#include <linux/io.h>
+#include <linux/ipu.h>
+#include <linux/mxcfb.h>
 #include <asm/hardware.h>
-#include <asm/io.h>
 #include <asm/mach-types.h>
 #include <asm/uaccess.h>
-#include <asm/arch/ipu.h>
-#include <asm/arch/mxcfb.h>
 
 /*
  * Driver name

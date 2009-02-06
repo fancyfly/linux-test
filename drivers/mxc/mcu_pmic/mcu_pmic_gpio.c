@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -23,8 +23,8 @@
  */
 #include <linux/platform_device.h>
 #include <linux/regulator/mcu_max8660-bus.h>
-#include <asm/arch-mxc/pmic_status.h>
-#include <asm/ioctl.h>
+#include <linux/pmic_status.h>
+#include <linux/ioctl.h>
 
 #define SET_BIT_IN_BYTE(byte, pos) (byte |= (0x01 << pos))
 #define CLEAR_BIT_IN_BYTE(byte, pos) (byte &= ~(0x01 << pos))

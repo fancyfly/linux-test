@@ -31,6 +31,7 @@ struct sgtl5000_priv {
 	int fmt;
 	int playback_active;
 	int capture_active;
+	int rev;
 };
 
 static int sgtl5000_dapm_event(struct snd_soc_codec *codec, int event);
@@ -487,6 +488,7 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = pcm_link->codec;
 	struct sgtl5000_priv *sgtl5000 = codec->private_data;
 	int fs = params_rate(params);
+	int channels = params_channels(params);
 	int clk_ctl = 0;
 	int pll_ctl = 0;
 	int i2s_ctl;
@@ -497,6 +499,16 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 		pr_err("%s: set sysclk first!\n", __func__);
 		return -EFAULT;
 	}
+
+	if (sgtl5000->rev != 0x00) { /* rev 1 not support mono playback */
+		reg = sgtl5000_read(codec, SGTL5000_CHIP_ANA_TEST2);
+		if (channels == 1)
+			reg |= SGTL5000_MONO_DAC;
+		else
+			reg &= ~SGTL5000_MONO_DAC;
+		sgtl5000_write(codec, SGTL5000_CHIP_ANA_TEST2, reg);
+	}
+
 
 	switch (fs) {
 	case 32000:
@@ -619,7 +631,7 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 			SNDRV_PCM_FMTBIT_S20_3LE |\
 			SNDRV_PCM_FMTBIT_S24_LE)
 
-static const struct snd_soc_pcm_stream sgtl5000_dai_playback = {
+static struct snd_soc_pcm_stream sgtl5000_dai_playback = {
 	.stream_name = "Playback",
 	.channels_min = 1,
 	.channels_max = 2,
@@ -740,6 +752,7 @@ static int sgtl5000_codec_io_probe(struct snd_soc_codec *codec,
 	int vag;
 	unsigned int val;
 	struct sgtl5000_platform_data *plat = codec->platform_data;
+	struct sgtl5000_priv *sgtl5000 = codec->private_data;
 
 	val = sgtl5000_read(NULL, SGTL5000_CHIP_ID);
 	if (((val & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
@@ -749,8 +762,11 @@ static int sgtl5000_codec_io_probe(struct snd_soc_codec *codec,
 		return -ENODEV;
 	}
 
+	sgtl5000->rev = (val & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
 	dev_info(&sgtl5000_i2c_client->dev, "SGTL5000 revision %d\n",
-		(val & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT);
+		 sgtl5000->rev);
+	if (sgtl5000->rev == 0x00) /* if chip is rev 1 */
+		sgtl5000_dai_playback.channels_min = 2;
 
 	/* reset value */
 	ana_pwr = SGTL5000_DAC_STERO |

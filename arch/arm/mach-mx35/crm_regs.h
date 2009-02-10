@@ -74,7 +74,7 @@
 #define MXC_CCM_PDR0_CON_MUX_DIV_MASK           (0xF << 16)
 #define MXC_CCM_PDR0_CKIL_SEL			(1 << 15)
 #define MXC_CCM_PDR0_PER_PODF_OFFSET            12
-#define MXC_CCM_PDR0_PER_PODF_MASK              (0xF << 12)
+#define MXC_CCM_PDR0_PER_PODF_MASK              (0x7 << 12)
 #define MXC_CCM_PDR0_AUTO_MUX_DIV_OFFSET        9
 #define MXC_CCM_PDR0_AUTO_MUX_DIV_MASK          (0x7 << 9)
 #define MXC_CCM_PDR0_AUTO_CON	                0x1

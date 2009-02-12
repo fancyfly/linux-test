@@ -822,8 +822,8 @@ static int cpufreq_add_dev(struct sys_device *sys_dev)
 		dprintk("initialization failed\n");
 		goto err_out;
 	}
-	policy->user_policy.min = policy->cpuinfo.min_freq;
-	policy->user_policy.max = policy->cpuinfo.max_freq;
+	policy->user_policy.min = policy->min;
+	policy->user_policy.max = policy->max;
 
 #ifdef CONFIG_SMP
 

@@ -961,8 +961,14 @@ fb_set_var(struct fb_info *info, struct fb_var_screeninfo *var)
 
 			info->var = *var;
 
-			if (info->fbops->fb_set_par)
-				info->fbops->fb_set_par(info);
+			if (info->fbops->fb_set_par) {
+				static int ft = 1;
+
+				if (ft) {
+					info->fbops->fb_set_par(info);
+					ft = 0;
+				}
+			}
 
 			fb_pan_display(info, &info->var);
 			fb_set_cmap(&info->cmap, info);

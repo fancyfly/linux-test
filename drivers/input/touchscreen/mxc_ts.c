@@ -55,11 +55,32 @@ static int ts_thread(void *arg)
 		if (!(ts_sample.contact_resistance || wait))
 			continue;
 
-		input_report_abs(mxc_inputdev, ABS_X, ts_sample.x_position);
-		input_report_abs(mxc_inputdev, ABS_Y, ts_sample.y_position);
-		input_report_abs(mxc_inputdev, ABS_PRESSURE,
-				 ts_sample.contact_resistance);
-		input_sync(mxc_inputdev);
+		{
+		int	x, y;
+		static int last_x = -1, last_y = -1, last_press = -1;
+
+		if (ts_sample.x_position == 0 && ts_sample.y_position == 0 && ts_sample.contact_resistance == 0) {
+			x = last_x;
+			y = last_y;
+		} else {
+			x = 480 - ((ts_sample.x_position - 80)*480)/(1000-80);
+			y = ((ts_sample.y_position - 80)*640)/(1000-80);
+		}
+
+		if (x != last_x) {
+			input_report_abs(mxc_inputdev, ABS_X, x);
+			last_x = x;
+		}
+		if (y != last_y) {
+			input_report_abs(mxc_inputdev, ABS_Y, y);
+			last_y = y;
+		}
+		if (ts_sample.contact_resistance != last_press) {
+			input_event(mxc_inputdev, EV_KEY, BTN_TOUCH, ts_sample.contact_resistance);
+		}
+			input_sync(mxc_inputdev);
+			last_press = ts_sample.contact_resistance;
+		}
 
 		wait = ts_sample.contact_resistance;
 		msleep(20);

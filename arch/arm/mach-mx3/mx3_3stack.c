@@ -90,7 +90,7 @@ unsigned long board_get_ckih_rate(void)
 static u16 keymapping[12] = {
 	KEY_UP, KEY_DOWN, 0, 0,
 	KEY_RIGHT, KEY_LEFT, KEY_ENTER, 0,
-	KEY_F6, KEY_F8, KEY_F9, KEY_F10,
+	KEY_END, KEY_KBDILLUMDOWN, KEY_HOME, KEY_BACK,
 };
 
 static struct resource mxc_kpp_resources[] = {

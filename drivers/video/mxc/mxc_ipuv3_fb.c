@@ -607,14 +607,15 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)info->par;
 	u_int y_bottom;
 	unsigned long base;
+	static __u32 last_xoff, last_yoff;
 
 	if (var->xoffset > 0) {
 		dev_dbg(info->device, "x panning not supported\n");
 		return -EINVAL;
 	}
 
-	if ((info->var.xoffset == var->xoffset) &&
-	    (info->var.yoffset == var->yoffset))
+	if ((last_xoff == var->xoffset) &&
+	    (last_yoff == var->yoffset))
 		return 0;	/* No change, do nothing */
 
 	y_bottom = var->yoffset;
@@ -650,8 +651,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 
 	dev_dbg(info->device, "Update complete\n");
 
-	info->var.xoffset = var->xoffset;
-	info->var.yoffset = var->yoffset;
+	last_xoff = var->xoffset;
+	last_yoff = var->yoffset;
 
 	if (var->vmode & FB_VMODE_YWRAP)
 		info->var.vmode |= FB_VMODE_YWRAP;

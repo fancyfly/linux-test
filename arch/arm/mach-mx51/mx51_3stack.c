@@ -209,10 +209,10 @@ void board_ref_clk_rate(unsigned long *ckil, unsigned long *osc,
 
 #if defined(CONFIG_KEYBOARD_MXC) || defined(CONFIG_KEYBOARD_MXC_MODULE)
 static u16 keymapping[24] = {
-	KEY_1, KEY_2, KEY_3, KEY_F1, KEY_UP, KEY_F2,
+	KEY_KBDILLUMDOWN, KEY_2, KEY_3, KEY_F1, KEY_UP, KEY_F2,
 	KEY_4, KEY_5, KEY_6, KEY_LEFT, KEY_SELECT, KEY_RIGHT,
 	KEY_7, KEY_8, KEY_9, KEY_F3, KEY_DOWN, KEY_F4,
-	KEY_0, KEY_OK, KEY_ESC, KEY_ENTER, KEY_MENU, KEY_BACK,
+	KEY_0, KEY_OK, KEY_END, KEY_ENTER, KEY_MENU, KEY_BACK,
 };
 
 static struct resource mxc_kpp_resources[] = {
@@ -276,11 +276,11 @@ static struct mtd_partition mxc_nand_partitions[] = {
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = 128 * 1024 * 1024},
 	{
-	 .name = "nand.userfs1",
+	 .name = "nand.system",
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = 256 * 1024 * 1024},
 	{
-	 .name = "nand.userfs2",
+	 .name = "nand.userdata",
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = MTDPART_SIZ_FULL},
 };

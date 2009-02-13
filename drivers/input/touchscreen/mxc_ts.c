@@ -75,6 +75,14 @@ static int ts_thread(void *arg)
 			input_report_abs(mxc_inputdev, ABS_Y, y);
 			last_y = y;
 		}
+#ifdef CONFIG_MXC_PMIC_MC13892
+		/* workaround for aplite ADC resistance large range value */
+		if (ts_sample.contact_resistance > 22)
+			ts_sample.contact_resistance = 1;
+		else
+			ts_sample.contact_resistance = 0;
+#endif
+
 		if (ts_sample.contact_resistance != last_press) {
 			input_event(mxc_inputdev, EV_KEY, BTN_TOUCH, ts_sample.contact_resistance);
 		}

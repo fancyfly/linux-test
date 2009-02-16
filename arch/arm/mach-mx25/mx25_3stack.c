@@ -428,6 +428,39 @@ static inline void mxc_init_mmc(void)
 }
 #endif
 
+#if defined(CONFIG_CAN_FLEXCAN) || defined(CONFIG_CAN_FLEXCAN_MODULE)
+static void flexcan_xcvr_enable(int id, int en)
+{
+	static int pwdn;
+
+	if (id != 1)		/* MX25 3-stack uses only CAN2 */
+		return;
+
+	if (en) {
+		if (!pwdn++)
+			mxc_set_gpio_dataout(MX25_PIN_D14, 0);
+	} else {
+		if (!--pwdn)
+			mxc_set_gpio_dataout(MX25_PIN_D14, 1);
+	}
+}
+
+struct flexcan_platform_data flexcan_data[] = {
+	{
+	 .core_reg = NULL,
+	 .io_reg = NULL,
+	 .xcvr_enable = flexcan_xcvr_enable,
+	 .active = gpio_can_active,
+	 .inactive = gpio_can_inactive,},
+	{
+	 .core_reg = NULL,
+	 .io_reg = NULL,
+	 .xcvr_enable = flexcan_xcvr_enable,
+	 .active = gpio_can_active,
+	 .inactive = gpio_can_inactive,},
+};
+#endif
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to

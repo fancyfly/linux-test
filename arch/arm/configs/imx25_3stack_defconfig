@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.26
-# Fri Jan 30 20:51:13 2009
+# Wed Mar 11 16:54:31 2009
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -192,6 +192,7 @@ CONFIG_ARCH_MXC_HAS_NFC_V2_1=y
 # Device options
 #
 # CONFIG_I2C_MXC_SELECT3 is not set
+# CONFIG_FLEXCAN_MXC_SELECT1 is not set
 CONFIG_DMA_ZONE_SIZE=24
 CONFIG_UTMI_MXC=y
 CONFIG_UTMI_MXC_OTG=m
@@ -366,7 +367,16 @@ CONFIG_DEFAULT_TCP_CONG="cubic"
 #
 # CONFIG_NET_PKTGEN is not set
 # CONFIG_HAMRADIO is not set
-# CONFIG_CAN is not set
+CONFIG_CAN=y
+CONFIG_CAN_RAW=y
+# CONFIG_CAN_BCM is not set
+
+#
+# CAN Device Drivers
+#
+# CONFIG_CAN_VCAN is not set
+# CONFIG_CAN_DEBUG_DEVICES is not set
+CONFIG_CAN_FLEXCAN=y
 CONFIG_IRDA=m
 
 #

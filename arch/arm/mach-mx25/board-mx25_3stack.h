@@ -167,6 +167,9 @@ extern int headphone_det_status(void);
 extern void sgtl5000_enable_amp(void);
 extern unsigned int sdhc_get_card_det_status(struct device *dev);
 extern int sdhc_write_protect(struct device *dev);
+extern void gpio_can_active(int id);
+extern void gpio_can_inactive(int id);
+extern struct flexcan_platform_data flexcan_data[];
 
 #endif				/* CONFIG_MACH_MX25_3DS */
 #endif				/* __ASM_ARCH_MXC_BOARD_MX25_3STACK_H__ */

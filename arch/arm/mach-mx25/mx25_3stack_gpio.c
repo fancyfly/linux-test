@@ -483,7 +483,9 @@ void gpio_spi_active(int cspi_mod)
 		mxc_request_iomux(MX25_PIN_CSPI1_SS1, MUX_CONFIG_FUNC);
 		mxc_request_iomux(MX25_PIN_CSPI1_SCLK, MUX_CONFIG_FUNC);
 		mxc_request_iomux(MX25_PIN_CSPI1_RDY, MUX_CONFIG_FUNC);
+#ifndef CONFIG_CAN_FLEXCAN	/* MX25 3-stack uses this pin for CAN2 */
 		mxc_request_iomux(MX25_PIN_GPIO_C, MUX_CONFIG_ALT5); /*SS2*/
+#endif
 		mxc_request_iomux(MX25_PIN_VSTBY_ACK, MUX_CONFIG_ALT2); /*SS3*/
 
 		/* Or if VSTBY_ACK is being used */
@@ -495,7 +497,9 @@ void gpio_spi_active(int cspi_mod)
 		mxc_iomux_set_pad(MX25_PIN_CSPI1_SS1, SPI_PAD_CTL1);
 		mxc_iomux_set_pad(MX25_PIN_CSPI1_SCLK, SPI_PAD_CTL1);
 		mxc_iomux_set_pad(MX25_PIN_CSPI1_RDY, SPI_PAD_CTL1);
+#ifndef CONFIG_CAN_FLEXCAN	/* MX25 3-stack uses this pin for CAN2 */
 		mxc_iomux_set_pad(MX25_PIN_GPIO_C, SPI_PAD_CTL2);
+#endif
 		mxc_iomux_set_pad(MX25_PIN_VSTBY_ACK, SPI_PAD_CTL1);
 
 		mxc_iomux_set_input(MUX_IN_CSPI1_IPP_IND_SS3_B,
@@ -589,7 +593,9 @@ void gpio_spi_inactive(int cspi_mod)
 		mxc_request_gpio(MX25_PIN_CSPI1_SS1);
 		mxc_request_gpio(MX25_PIN_CSPI1_SCLK);
 		mxc_request_gpio(MX25_PIN_CSPI1_RDY);
+#ifndef CONFIG_CAN_FLEXCAN	/* MX25 3-stack uses this pin for CAN2 */
 		mxc_request_gpio(MX25_PIN_GPIO_C); /*SS2*/
+#endif
 		mxc_request_gpio(MX25_PIN_VSTBY_ACK); /*SS3*/
 
 		mxc_free_iomux(MX25_PIN_CSPI1_MOSI, MUX_CONFIG_GPIO);
@@ -598,7 +604,9 @@ void gpio_spi_inactive(int cspi_mod)
 		mxc_free_iomux(MX25_PIN_CSPI1_SS1, MUX_CONFIG_GPIO);
 		mxc_free_iomux(MX25_PIN_CSPI1_SCLK, MUX_CONFIG_GPIO);
 		mxc_free_iomux(MX25_PIN_CSPI1_RDY, MUX_CONFIG_GPIO);
+#ifndef CONFIG_CAN_FLEXCAN	/* MX25 3-stack uses this pin for CAN2 */
 		mxc_free_iomux(MX25_PIN_GPIO_C, MUX_CONFIG_GPIO);
+#endif
 		mxc_free_iomux(MX25_PIN_VSTBY_ACK, MUX_CONFIG_GPIO);
 		break;
 	case 1:
@@ -1151,44 +1159,30 @@ EXPORT_SYMBOL(gpio_inactivate_esai_ports);
  */
 void gpio_can_active(int id)
 {
-#define CAN_PAD_CTL (PAD_CTL_HYS_SCHMITZ | PAD_CTL_PKE_ENABLE | \
-		     PAD_CTL_PUE_PUD | PAD_CTL_100K_PU | PAD_CTL_ODE_OpenDrain)
+#define CAN_PAD_CTL (PAD_CTL_DRV_3_3V | PAD_CTL_PKE_NONE | PAD_CTL_ODE_CMOS | \
+		     PAD_CTL_DRV_NORMAL | PAD_CTL_SRE_SLOW)
+#define CAN_PAD_IN_CTL (PAD_CTL_HYS_CMOS | PAD_CTL_PKE_NONE)
 
 	switch (id) {
 	case 0:
-#if 0
 		/* CAN1 */
 		mxc_request_iomux(MX25_PIN_GPIO_A, MUX_CONFIG_ALT6); /*TXCAN*/
 		mxc_request_iomux(MX25_PIN_GPIO_B, MUX_CONFIG_ALT6); /*RXCAN*/
-#if 0
-		/* Or if FEC is not used */
-		/*TXCAN*/
-		mxc_request_iomux(MX25_PIN_FEC_TX_EN, MUX_CONFIG_ALT4);
-		/*RXCAN*/
-		mxc_request_iomux(MX25_PIN_FEC_RDATA0, MUX_CONFIG_ALT4);
-#endif
 
 		mxc_iomux_set_pad(MX25_PIN_GPIO_A, CAN_PAD_CTL);
-		mxc_iomux_set_pad(MX25_PIN_GPIO_B, CAN_PAD_CTL);
+		mxc_iomux_set_pad(MX25_PIN_GPIO_B, CAN_PAD_IN_CTL);
 
-#endif
+		mxc_iomux_set_input(MUX_IN_CAN1_IPP_IND_CANRX, INPUT_CTL_PATH1);
 		break;
 	case 1:
 		/* CAN2 */
 		mxc_request_iomux(MX25_PIN_GPIO_C, MUX_CONFIG_ALT6); /*TXCAN*/
 		mxc_request_iomux(MX25_PIN_GPIO_D, MUX_CONFIG_ALT6); /*RXCAN*/
 		mxc_request_iomux(MX25_PIN_D14, MUX_CONFIG_ALT5); /*PWDN*/
-#if 0
-		/* Or if FEC is not used */
-		/*TXCAN*/
-		mxc_request_iomux(MX25_PIN_FEC_RDATA1, MUX_CONFIG_ALT4);
-		*RXCAN*/
-		mxc_request_iomux(MX25_PIN_FEC_RX_DV, MUX_CONFIG_ALT4);
-#endif
 
 		mxc_iomux_set_pad(MX25_PIN_GPIO_C, CAN_PAD_CTL);
-		mxc_iomux_set_pad(MX25_PIN_GPIO_D, CAN_PAD_CTL);
-		mxc_iomux_set_pad(MX25_PIN_D14, PAD_CTL_DRV_NORMAL);
+		mxc_iomux_set_pad(MX25_PIN_GPIO_D, CAN_PAD_IN_CTL);
+		mxc_iomux_set_pad(MX25_PIN_D14, CAN_PAD_CTL);
 
 		mxc_iomux_set_input(MUX_IN_CAN2_IPP_IND_CANRX, INPUT_CTL_PATH1);
 
@@ -1211,25 +1205,20 @@ void gpio_can_inactive(int id)
 {
 	switch (id) {
 	case 0:
-#if 0
 		/* CAN1 */
 		mxc_request_gpio(MX25_PIN_GPIO_A); /*TXCAN*/
 		mxc_request_gpio(MX25_PIN_GPIO_B); /*RXCAN*/
 
 		mxc_free_iomux(MX25_PIN_GPIO_A, MUX_CONFIG_FUNC);
 		mxc_free_iomux(MX25_PIN_GPIO_B, MUX_CONFIG_FUNC);
-
-#endif
 		break;
 	case 1:
 		/* CAN2 */
 		mxc_request_gpio(MX25_PIN_GPIO_C); /*TXCAN*/
 		mxc_request_gpio(MX25_PIN_GPIO_D); /*RXCAN*/
-		mxc_request_gpio(MX25_PIN_D14); /*PWDN*/
 
 		mxc_free_iomux(MX25_PIN_GPIO_C, MUX_CONFIG_FUNC);
 		mxc_free_iomux(MX25_PIN_GPIO_D, MUX_CONFIG_FUNC);
-		mxc_free_iomux(MX25_PIN_D14, MUX_CONFIG_FUNC);
 
 		/* Disable input by setting PWDN/TLE6250.INH high */
 		mxc_set_gpio_dataout(MX25_PIN_D14, 1);

@@ -55,7 +55,7 @@ struct imx_3stack_pcm_state {
 struct imx_3stack_priv {
 	struct regulator *reg_vddio;
 	struct regulator *reg_vdda;
-	struct regulator *reg_amp_gpo;
+	struct regulator *reg_vddd;
 };
 
 #if SGTL5000_SSI_MASTER
@@ -385,21 +385,21 @@ static int spk_amp_event(struct snd_soc_dapm_widget *w,
 	priv = sgtl5000_3stack_pcm_link->machine->platform_data;
 	plat = sgtl5000_3stack_pcm_link->machine->pdev->dev.platform_data;
 
-	if ((priv->reg_amp_gpo == NULL) || (priv->reg_vdda == NULL))
+	if ((plat->amp_enable == NULL) || (priv->reg_vdda == NULL))
 		return 0;
 
 	hp_status = plat->hp_status();
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
 		if (hp_status) {
-			regulator_disable(priv->reg_amp_gpo);
+			plat->amp_enable(0);
 			regulator_set_mode(priv->reg_vdda,
 					REGULATOR_MODE_NORMAL);
 		} else {
-			regulator_enable(priv->reg_amp_gpo);
+			plat->amp_enable(1);
 			regulator_set_mode(priv->reg_vdda, REGULATOR_MODE_FAST);
 		}
 	} else {
-		regulator_disable(priv->reg_amp_gpo);
+		plat->amp_enable(0);
 		regulator_set_mode(priv->reg_vdda, REGULATOR_MODE_NORMAL);
 	}
 	return 0;
@@ -453,6 +453,8 @@ static int mach_probe(struct snd_soc_machine *machine)
 	}
 
 	ret = -EINVAL;
+	if (plat->init && plat->init())
+		goto err_plat_init;
 	if (plat->vddio_reg) {
 		reg = regulator_get(&pdev->dev, plat->vddio_reg);
 		if (IS_ERR(reg))
@@ -465,11 +467,11 @@ static int mach_probe(struct snd_soc_machine *machine)
 			goto err_reg_vdda;
 		priv->reg_vdda = reg;
 	}
-	if (plat->amp_gpo) {
-		reg = regulator_get(&pdev->dev, plat->amp_gpo);
+	if (plat->vddd_reg) {
+		reg = regulator_get(&pdev->dev, plat->vddd_reg);
 		if (IS_ERR(reg))
-			goto err_reg_gpo;
-		priv->reg_amp_gpo = reg;
+			goto err_reg_vddd;
+		priv->reg_vddd = reg;
 	}
 	machine->platform_data = priv;
 
@@ -481,8 +483,10 @@ static int mach_probe(struct snd_soc_machine *machine)
 		regulator_set_voltage(priv->reg_vddio, plat->vddio);
 		regulator_enable(priv->reg_vddio);
 	}
-	if (priv->reg_amp_gpo)
-		regulator_enable(priv->reg_amp_gpo);
+	if (priv->reg_vddd) {
+		regulator_set_voltage(priv->reg_vddd, plat->vddd);
+		regulator_enable(priv->reg_vddd);
+	}
 
 	codec_data->vddio = plat->vddio / 1000; /* uV to mV */
 	codec_data->vdda = plat->vdda / 1000;
@@ -551,15 +555,18 @@ static int mach_probe(struct snd_soc_machine *machine)
 	return 0;
 
 err_card_reg:
-	if (priv->reg_amp_gpo)
-		regulator_put(priv->reg_amp_gpo, &pdev->dev);
-err_reg_gpo:
+	if (priv->reg_vddd)
+		regulator_put(priv->reg_vddd, &pdev->dev);
+err_reg_vddd:
 	if (priv->reg_vdda)
 		regulator_put(priv->reg_vdda, &pdev->dev);
 err_reg_vdda:
 	if (priv->reg_vddio)
 		regulator_put(priv->reg_vddio, &pdev->dev);
 err_reg_vddio:
+	if (plat->finit)
+		plat->finit();
+err_plat_init:
 	kfree(codec_data);
 	codec->platform_data = NULL;
 err_codec_data:
@@ -593,16 +600,20 @@ static int mach_remove(struct snd_soc_machine *machine)
 		priv = machine->platform_data;
 		if (priv->reg_vddio)
 			regulator_disable(priv->reg_vddio);
+		if (priv->reg_vddd)
+			regulator_disable(priv->reg_vddd);
 		if (priv->reg_vdda)
 			regulator_disable(priv->reg_vdda);
-		if (priv->reg_amp_gpo) {
-			regulator_disable(priv->reg_amp_gpo);
-			regulator_put(priv->reg_amp_gpo, &pdev->dev);
-		}
+		if (plat->amp_enable)
+			plat->amp_enable(0);
+		if (plat->finit)
+			plat->finit();
 		if (priv->reg_vdda)
 			regulator_put(priv->reg_vdda, &pdev->dev);
 		if (priv->reg_vddio)
 			regulator_put(priv->reg_vddio, &pdev->dev);
+		if (priv->reg_vddd)
+			regulator_put(priv->reg_vddd, &pdev->dev);
 		kfree(machine->platform_data);
 		machine->platform_data = NULL;
 	}

@@ -689,6 +689,9 @@ static int __init mxc_init_pmic(void)
 		power_key_event.func = (void *)power_on_evt_handler;
 		pmic_event_subscribe(EVENT_PWRONI, power_key_event);
 
+		/* set SW2 hi bit = "0" and keep default value = 1350*/
+		pmic_write(REG_SW_1, 0x45431E);
+
 		pmic_read_reg(REG_POWER_CTL2, &value, 0xffffff);
 		/* Bit 11 (STANDBYSECINV): Active Low */
 		value |= 0x00800;

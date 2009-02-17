@@ -62,7 +62,7 @@ enum {
 enum {
 	VPLL_1_05V = 0,
 	VPLL_1_25V,
-	VPLL_1_65V,
+	VPLL_1_50V_1_65V,
 	VPLL_1_80V,
 } regulator_voltage_vpll;
 
@@ -283,6 +283,9 @@ enum {
 #define SWXHI_WID	1
 #define SWXHI_ON	1
 #define SWXHI_OFF	0
+
+void pmic_get_revision(pmic_version_t *ver);
+static unsigned int mc13892_revision;
 
 static int mc13892_get_sw_hi_bit(int sw)
 {
@@ -698,14 +701,19 @@ static int mc13892_vpll_set_voltage(struct regulator *reg, int uV)
 {
 	unsigned int register_val = 0, register_mask = 0;
 	unsigned int register1;
-	int voltage, mV = uV / 1000;
+	int voltage, volt_rev, mV = uV / 1000;
+
+	if (mc13892_revision >= 20)
+		volt_rev = 1500;
+	else
+		volt_rev = 1650;
 
 	if ((mV >= 1050) && (mV < 1250))
 		voltage = VPLL_1_05V;
-	else if ((mV >= 1250) && (mV < 1650))
+	else if ((mV >= 1250) && (mV < volt_rev))
 		voltage = VPLL_1_25V;
-	else if ((mV >= 1650) && (mV < 1800))
-		voltage = VPLL_1_65V;
+	else if ((mV >= volt_rev) && (mV < 1800))
+		voltage = VPLL_1_50V_1_65V;
 	else
 		voltage = VPLL_1_80V;
 
@@ -719,10 +727,15 @@ static int mc13892_vpll_set_voltage(struct regulator *reg, int uV)
 static int mc13892_vpll_get_voltage(struct regulator *reg)
 {
 	unsigned int register_val = 0;
-	int voltage = 0, mV = 0;
+	int volt_rev, voltage = 0, mV = 0;
 
 	CHECK_ERROR(pmic_read_reg(REG_SETTING_0, &register_val, PMIC_ALL_BITS));
 	voltage = BITFEXT(register_val, VPLL);
+
+	if (mc13892_revision >= 20)
+		volt_rev = 1500;
+	else
+		volt_rev = 1650;
 
 	switch (voltage) {
 	case VPLL_1_05V:
@@ -731,8 +744,8 @@ static int mc13892_vpll_get_voltage(struct regulator *reg)
 	case VPLL_1_25V:
 		mV = 1250;
 		break;
-	case VPLL_1_65V:
-		mV = 1650;
+	case VPLL_1_50V_1_65V:
+		mV = volt_rev;
 		break;
 	case VPLL_1_80V:
 		mV = 1800;
@@ -1968,6 +1981,7 @@ static struct mc13892_regulator reg_mc13892[] = {
 
 int reg_mc13892_probe(void)
 {
+	pmic_version_t ver;
 	int ret11 = 0;
 	int i = 0;
 	int register_val = 0, register_mask = 0;
@@ -1989,6 +2003,10 @@ int reg_mc13892_probe(void)
 			return ret11;
 		}
 	}
+
+	pmic_get_revision(&ver);
+	mc13892_revision = ver.revision;
+
 	/* Set the STANDBYSECINV bit, so that STANDBY pin is
 	 * interpreted as active low.
 	 */

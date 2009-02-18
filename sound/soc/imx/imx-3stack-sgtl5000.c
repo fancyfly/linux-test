@@ -488,6 +488,11 @@ static int mach_probe(struct snd_soc_machine *machine)
 		regulator_enable(priv->reg_vddd);
 	}
 
+	/* The SGTL5000 has an internal reset that is deasserted 8 SYS_MCLK
+	   cycles after all power rails have been brought up. After this time
+	   communication can start */
+	msleep(1);
+
 	codec_data->vddio = plat->vddio / 1000; /* uV to mV */
 	codec_data->vdda = plat->vdda / 1000;
 	codec_data->vddd = plat->vddd / 1000;

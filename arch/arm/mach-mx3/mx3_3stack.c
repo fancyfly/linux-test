@@ -59,6 +59,10 @@
 #include "board-mx3_3stack.h"
 #include "crm_regs.h"
 #include "iomux.h"
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
+
 /*!
  * @file mach-mx3/mx3_3stack.c
  *
@@ -768,6 +772,34 @@ static inline void mxc_init_mmc(void)
 }
 #endif
 
+#ifdef CONFIG_ANDROID_PMEM
+#define PMEM_SIZE           (CONFIG_PMEM_SIZE * SZ_1M)
+#define PMEM_BASE           PHYS_OFFSET + SZ_128M - PMEM_SIZE
+
+static struct android_pmem_platform_data android_pmem_pdata = {
+	.name = "pmem",
+	.start = PMEM_BASE,
+	.size = PMEM_SIZE,
+	.no_allocator = 0,
+	.cached = 1,
+};
+
+static struct platform_device mxc_android_pmem_device = {
+	.name = "android_pmem",
+	.id = 0,
+	.dev = { .platform_data = &android_pmem_pdata },
+};
+
+static void mxc_init_android_pmem(void)
+{
+       platform_device_register(&mxc_android_pmem_device);
+}
+#else
+static void mxc_init_android_pmem(void)
+{
+}
+#endif
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -1017,6 +1049,7 @@ static void __init mxc_board_init(void)
 	mxc_init_pata();
 	mxc_init_bluetooth();
 	mxc_init_gps();
+	mxc_init_android_pmem();
 }
 
 #define PLL_PCTL_REG(pd, mfd, mfi, mfn)		\

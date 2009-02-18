@@ -50,6 +50,9 @@
 #include "board-mx51_3stack.h"
 #include "iomux.h"
 #include "crm_regs.h"
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
 
 /*!
  * @file mach-mx51/mx51_3stack.c
@@ -1137,6 +1140,34 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 #endif
 }
 
+#ifdef CONFIG_ANDROID_PMEM
+#define PMEM_SIZE           (CONFIG_PMEM_SIZE * SZ_1M)
+#define PMEM_BASE           PHYS_OFFSET + SZ_128M - PMEM_SIZE
+
+static struct android_pmem_platform_data android_pmem_pdata = {
+	.name = "pmem",
+	.start = PMEM_BASE,
+	.size = PMEM_SIZE,
+	.no_allocator = 0,
+	.cached = 1,
+};
+
+static struct platform_device mxc_android_pmem_device = {
+	.name = "android_pmem",
+	.id = 0,
+	.dev = { .platform_data = &android_pmem_pdata },
+};
+
+static void mxc_init_android_pmem(void)
+{
+       platform_device_register(&mxc_android_pmem_device);
+}
+#else
+static void mxc_init_android_pmem(void)
+{
+}
+#endif
+
 /*!
  * Board specific initialization.
  */
@@ -1181,6 +1212,7 @@ static void __init mxc_board_init(void)
 
 	mxc_sgtl5000_init();
 	mxc_init_bluetooth();
+	mxc_init_android_pmem();
 
 	err = mxc_request_iomux(MX51_PIN_EIM_D19, IOMUX_CONFIG_GPIO);
 	if (err)

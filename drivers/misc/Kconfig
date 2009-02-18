@@ -17,6 +17,14 @@ config ANDROID_PMEM
 	bool "Android pmem allocator"
 	default y
 
+config PMEM_SIZE
+	int "Memory size reserved for Android pmem driver"
+	depends on ANDROID_PMEM
+	range 0 32
+	default 16
+	help
+	  This is the size in MB for Android PMEM allocator reserved memory
+
 config TIMED_OUTPUT
 	bool "Timed output class driver"
 	default y

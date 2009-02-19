@@ -26,7 +26,7 @@ typedef struct {
 } usr_msc_info;
 
 /* let usr msc run */
-#define USR_MSC_RUN    _IO('g', 1)
+#define USR_MSC_RUN    _IOW('g', 1, unsigned short)
 
 /* tell msc thread that disconnect event happened*/
 #define USR_MSC_DISCONNECT    _IO('g', 2)
@@ -39,6 +39,9 @@ typedef struct {
 
 /* call 'fsg_unbind' when close this inode */
 #define USR_MSC_UNBIND    _IO('g', 5)
+
+/* call FSG_STATE_INTERFACE_CHANGE */
+#define USC_MSC_SET_INTERFACE _IO('g', 6)
 
 #define MAX_FILE_NAME_LEN 256
 
@@ -180,7 +183,7 @@ msc_ioctl(struct inode *inode, struct file *filp, u_int cmd, u_long arg)
 		break;
 	case USR_MSC_RUN:
 		/* USB_REQ_SET_CONFIGURATION of function standard_setup_req */
-		fsg->new_config = 1;
+		fsg->new_config = arg;
 		/* Raise an exception to wipe out previous transaction
 		 * state (queued bufs, etc) and set the new config. */
 		raise_exception(fsg, FSG_STATE_CONFIG_CHANGE);
@@ -188,6 +191,10 @@ msc_ioctl(struct inode *inode, struct file *filp, u_int cmd, u_long arg)
 	case USR_MSC_DISCONNECT:
 		/* call ->disconnect() */
 		fsg_disconnect(fsg->gadget);
+		break;
+	case USC_MSC_SET_INTERFACE:
+		INFO(fsg, "set interface \n");
+		raise_exception(fsg, FSG_STATE_INTERFACE_CHANGE);
 		break;
 	default:
 		ERROR(fsg, "IOCTL_MSC_UNKNOWN cmd is 0x%x \n", cmd);

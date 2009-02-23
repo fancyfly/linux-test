@@ -106,6 +106,7 @@ static void power_on_evt_handler(void)
 static int __init mc13892_reg_int(void)
 {
 	int i = 0;
+	unsigned int value;
 	struct regulator *regulator;
 	struct regulator *gp;
 	struct regulator *lp;
@@ -187,6 +188,12 @@ static int __init mc13892_reg_int(void)
 	power_key_event.param = NULL;
 	power_key_event.func = (void *)power_on_evt_handler;
 	pmic_event_subscribe(EVENT_PWRONI, power_key_event);
+
+	/* Bit 4 DRM: keep VSRTC and CLK32KMCU on for all states */
+	pmic_read_reg(REG_POWER_CTL0, &value, 0xffffff);
+	value |= 0x000010;
+	pmic_write_reg(REG_POWER_CTL0, value, 0xffffff);
+
 	return 0;
 }
 

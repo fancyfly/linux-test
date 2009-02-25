@@ -361,7 +361,7 @@ static int period_to_usecs(struct snd_pcm_runtime *runtime)
 	return usecs;
 }
 
-int snd_pcm_hw_params(struct snd_pcm_substream *substream,
+static int snd_pcm_hw_params(struct snd_pcm_substream *substream,
 			     struct snd_pcm_hw_params *params)
 {
 	struct snd_pcm_runtime *runtime;
@@ -459,8 +459,6 @@ int snd_pcm_hw_params(struct snd_pcm_substream *substream,
 	return err;
 }
 
-EXPORT_SYMBOL(snd_pcm_hw_params);
-
 static int snd_pcm_hw_params_user(struct snd_pcm_substream *substream,
 				  struct snd_pcm_hw_params __user * _params)
 {
@@ -514,7 +512,7 @@ static int snd_pcm_hw_free(struct snd_pcm_substream *substream)
 	return result;
 }
 
-int snd_pcm_sw_params(struct snd_pcm_substream *substream,
+static int snd_pcm_sw_params(struct snd_pcm_substream *substream,
 			     struct snd_pcm_sw_params *params)
 {
 	struct snd_pcm_runtime *runtime;
@@ -560,8 +558,6 @@ int snd_pcm_sw_params(struct snd_pcm_substream *substream,
 	snd_pcm_stream_unlock_irq(substream);
 	return 0;
 }
-
-EXPORT_SYMBOL(snd_pcm_sw_params);
 
 static int snd_pcm_sw_params_user(struct snd_pcm_substream *substream,
 				  struct snd_pcm_sw_params __user * _params)
@@ -1328,7 +1324,7 @@ static struct action_ops snd_pcm_action_prepare = {
  *
  * Prepare the PCM substream to be triggerable.
  */
-int snd_pcm_prepare(struct snd_pcm_substream *substream,
+static int snd_pcm_prepare(struct snd_pcm_substream *substream,
 			   struct file *file)
 {
 	int res;
@@ -1347,8 +1343,6 @@ int snd_pcm_prepare(struct snd_pcm_substream *substream,
 	snd_power_unlock(card);
 	return res;
 }
-
-EXPORT_SYMBOL(snd_pcm_prepare);
 
 /*
  * drain ioctl

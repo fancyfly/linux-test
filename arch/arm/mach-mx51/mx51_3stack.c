@@ -163,26 +163,29 @@ static int __init mc13892_reg_int(void)
 
 	gp = regulator_get(NULL, "SW1_STBY");
 	lp = regulator_get(NULL, "SW2_STBY");
-	regulator_enable(gp);
-	regulator_enable(lp);
-
-	if (regulator_set_voltage(gp, 700000))
-		printk(KERN_INFO "cannot set GP STBY voltage\n");
-
-	if ((mxc_cpu_is_rev(CHIP_REV_2_0)) < 0) {
-		if (regulator_set_voltage(lp, 1100000))
-			printk(KERN_INFO "cannot set LP STBY voltage\n");
-	} else {
-		/* Cannot drop voltage for TO2.0 */
-		if (regulator_set_voltage(lp, 900000))
-			printk(KERN_INFO "cannot set LP STBY voltage\n");
+	if (gp != NULL) {
+		regulator_enable(gp);
+		if (regulator_set_voltage(gp, 700000))
+			printk(KERN_INFO "cannot set GP STBY voltage\n");
+		regulator_disable(gp);
+		regulator_put(gp, NULL);
 	}
 
-	regulator_disable(gp);
-	regulator_disable(lp);
-
-	regulator_put(gp, NULL);
-	regulator_put(lp, NULL);
+	if (lp != NULL) {
+		regulator_enable(lp);
+		if ((mxc_cpu_is_rev(CHIP_REV_2_0)) < 0) {
+			if (regulator_set_voltage(lp, 1100000))
+				printk(KERN_INFO
+					"cannot set LP STBY voltage\n");
+		} else {
+			/* Cannot drop voltage for TO2.0 */
+			if (regulator_set_voltage(lp, 1200000))
+				printk(KERN_INFO
+					"cannot set LP STBY voltage\n");
+		}
+		regulator_disable(lp);
+		regulator_put(lp, NULL);
+	}
 
 	/* subscribe PWRON1 event to enable ON_OFF key */
 	power_key_event.param = NULL;

@@ -773,7 +773,7 @@ static inline void mxc_init_mmc(void)
 #define PMEM_BASE           PHYS_OFFSET + SZ_128M - PMEM_SIZE
 
 static struct android_pmem_platform_data android_pmem_pdata = {
-	.name = "pmem",
+	.name = "pmem_adsp",
 	.start = PMEM_BASE,
 	.size = PMEM_SIZE,
 	.no_allocator = 0,

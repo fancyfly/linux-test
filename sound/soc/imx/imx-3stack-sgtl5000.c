@@ -116,7 +116,7 @@ static int imx_3stack_audio_hw_params(struct snd_pcm_substream *substream,
 	/* set i.MX active slot mask */
 	cpu_dai->ops->set_tdm_slot(cpu_dai,
 				   channels == 1 ? 0xfffffffe : 0xfffffffc,
-				   channels);
+				   2);
 
 	/* set the SSI system clock as input (unused) */
 	cpu_dai->ops->set_sysclk(cpu_dai, IMX_SSP_SYS_CLK, 0, SND_SOC_CLOCK_IN);

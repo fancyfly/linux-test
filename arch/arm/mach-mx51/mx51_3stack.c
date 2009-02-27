@@ -1137,11 +1137,13 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 }
 
 #ifdef CONFIG_ANDROID_PMEM
-#define PMEM_SIZE           (CONFIG_PMEM_SIZE * SZ_1M)
-#define PMEM_BASE           PHYS_OFFSET + SZ_128M - PMEM_SIZE
+#define PMEM_SIZE	(CONFIG_PMEM_SIZE * SZ_1M)
+#define PMEM_BASE	PHYS_OFFSET + SZ_128M - PMEM_SIZE
+#define PMEM_VPU_SIZE	(SZ_1M * 20)
+#define PMEM_VPU_BASE	PMEM_BASE - PMEM_VPU_SIZE
 
 static struct android_pmem_platform_data android_pmem_pdata = {
-	.name = "pmem",
+	.name = "pmem_adsp",
 	.start = PMEM_BASE,
 	.size = PMEM_SIZE,
 	.no_allocator = 0,
@@ -1154,9 +1156,24 @@ static struct platform_device mxc_android_pmem_device = {
 	.dev = { .platform_data = &android_pmem_pdata },
 };
 
+static struct android_pmem_platform_data android_pmem_vpu_pdata = {
+	.name = "pmem_vpu",
+	.start = PMEM_VPU_BASE,
+	.size = PMEM_VPU_SIZE,
+	.no_allocator = 0,
+	.cached = 0,
+};
+
+static struct platform_device mxc_android_pmem_vpu_device = {
+	.name = "android_pmem",
+	.id = 1,
+	.dev = { .platform_data = &android_pmem_vpu_pdata },
+};
+
 static void mxc_init_android_pmem(void)
 {
        platform_device_register(&mxc_android_pmem_device);
+       platform_device_register(&mxc_android_pmem_vpu_device);
 }
 #else
 static void mxc_init_android_pmem(void)

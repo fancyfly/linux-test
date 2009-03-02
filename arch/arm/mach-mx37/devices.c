@@ -195,8 +195,6 @@ static struct platform_device mxc_ipu_device = {
 
 static void mxc_init_ipu(void)
 {
-	struct clk *clk;
-
 	mxc_ipu_data.di_clk[1] = clk_get(NULL, "ipu_di_clk");
 
 	platform_device_register(&mxc_ipu_device);

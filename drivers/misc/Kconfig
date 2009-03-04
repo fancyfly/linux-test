@@ -21,7 +21,7 @@ config PMEM_SIZE
 	int "Memory size reserved for Android pmem driver"
 	depends on ANDROID_PMEM
 	range 0 32
-	default 16
+	default 24
 	help
 	  This is the size in MB for Android PMEM allocator reserved memory
 

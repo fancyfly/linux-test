@@ -1161,6 +1161,7 @@ static struct platform_device mxc_android_pmem_device = {
 	.dev = { .platform_data = &android_pmem_pdata },
 };
 
+#if 0
 static struct android_pmem_platform_data android_pmem_vpu_pdata = {
 	.name = "pmem_vpu",
 	.start = PMEM_VPU_BASE,
@@ -1174,11 +1175,14 @@ static struct platform_device mxc_android_pmem_vpu_device = {
 	.id = 1,
 	.dev = { .platform_data = &android_pmem_vpu_pdata },
 };
+#endif
 
 static void mxc_init_android_pmem(void)
 {
        platform_device_register(&mxc_android_pmem_device);
+#if 0
        platform_device_register(&mxc_android_pmem_vpu_device);
+#endif
 }
 #else
 static void mxc_init_android_pmem(void)

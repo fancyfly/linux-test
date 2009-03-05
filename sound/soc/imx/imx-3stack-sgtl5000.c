@@ -379,29 +379,17 @@ static int sgtl5000_set_spk(struct snd_kcontrol *kcontrol,
 
 static int spk_amp_event(struct snd_soc_dapm_widget *w,
 			 struct snd_kcontrol *kcontrol, int event) {
-	int hp_status;
 	struct mxc_sgtl5000_platform_data *plat;
-	struct imx_3stack_priv *priv;
-	priv = sgtl5000_3stack_pcm_link->machine->platform_data;
 	plat = sgtl5000_3stack_pcm_link->machine->pdev->dev.platform_data;
 
-	if ((plat->amp_enable == NULL) || (priv->reg_vdda == NULL))
+	if (plat->amp_enable == NULL)
 		return 0;
 
-	hp_status = plat->hp_status();
-	if (SND_SOC_DAPM_EVENT_ON(event)) {
-		if (hp_status) {
-			plat->amp_enable(0);
-			regulator_set_mode(priv->reg_vdda,
-					REGULATOR_MODE_NORMAL);
-		} else {
-			plat->amp_enable(1);
-			regulator_set_mode(priv->reg_vdda, REGULATOR_MODE_FAST);
-		}
-	} else {
+	if (SND_SOC_DAPM_EVENT_ON(event))
+		plat->amp_enable(1);
+	else
 		plat->amp_enable(0);
-		regulator_set_mode(priv->reg_vdda, REGULATOR_MODE_NORMAL);
-	}
+
 	return 0;
 }
 

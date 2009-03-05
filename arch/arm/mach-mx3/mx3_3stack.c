@@ -94,7 +94,7 @@ unsigned long board_get_ckih_rate(void)
 static u16 keymapping[12] = {
 	KEY_UP, KEY_DOWN, 0, 0,
 	KEY_RIGHT, KEY_LEFT, KEY_ENTER, 0,
-	KEY_END, KEY_KBDILLUMDOWN, KEY_HOME, KEY_BACK,
+	KEY_F6, KEY_F8, KEY_F9, KEY_F10,
 };
 
 static struct resource mxc_kpp_resources[] = {
@@ -152,7 +152,7 @@ static struct mtd_partition mxc_nand_partitions[] = {
 	{
 	 .name = "nand.system",
 	 .offset = MTDPART_OFS_APPEND,
-	 .size = 80 * 1024 * 1024},
+	 .size = 10 * 1024 * 1024},
 	{
 	 .name = "nand.userdata",
 	 .offset = MTDPART_OFS_APPEND,

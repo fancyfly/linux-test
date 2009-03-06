@@ -489,6 +489,8 @@ void _ipu_dp_dc_enable(ipu_channel_t channel)
 		reg = __raw_readl(DP_COM_CONF(DP_SYNC));
 		__raw_writel(reg | DP_COM_CONF_FG_EN, DP_COM_CONF(DP_SYNC));
 
+		reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
+		__raw_writel(reg, IPU_SRM_PRI2);
 		return;
 	}
 
@@ -569,6 +571,9 @@ void _ipu_dp_dc_disable(ipu_channel_t channel)
 
 		reg &= ~DP_COM_CONF_FG_EN;
 		__raw_writel(reg, DP_COM_CONF(DP_SYNC));
+
+		reg = __raw_readl(IPU_SRM_PRI2) | 0x8;
+		__raw_writel(reg, IPU_SRM_PRI2);
 
 		spin_unlock_irqrestore(&ipu_lock, lock_flags);
 

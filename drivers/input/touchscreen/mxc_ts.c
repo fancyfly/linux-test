@@ -63,8 +63,14 @@ static int ts_thread(void *arg)
 			x = last_x;
 			y = last_y;
 		} else {
+#ifdef CONFIG_FB_MXC_CLAA_WVGA_SYNC_PANEL
+                       x = ((ts_sample.x_position - 30)*800)/(1000 - 30);
+                       if (x > 1000) x = 0;
+                       y = 480 - ((ts_sample.y_position - 52)*480)/(990 - 52);
+#else
 			x = 480 - ((ts_sample.x_position - 80)*480)/(1000-80);
 			y = ((ts_sample.y_position - 80)*640)/(1000-80);
+#endif
 		}
 
 		if (x != last_x) {

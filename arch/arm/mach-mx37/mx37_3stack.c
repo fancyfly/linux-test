@@ -47,6 +47,10 @@
 #include "board-mx37_3stack.h"
 #include "iomux.h"
 #include "crm_regs.h"
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
+
 
 /*!
  * @file mach-mx37/mx37_3stack.c
@@ -212,21 +216,13 @@ static struct mtd_partition mxc_nand_partitions[] = {
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = 4 * 1024 * 1024},
 	{
-	 .name = "nand.rootfs",
-	 .offset = MTDPART_OFS_APPEND,
-	 .size = 128 * 1024 * 1024},
-	{
-	 .name = "nand.userfs1",
+	 .name = "nand.system",
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = 256 * 1024 * 1024},
 	{
-	 .name = "nand.userfs2",
+	 .name = "nand.userdata",
 	 .offset = MTDPART_OFS_APPEND,
-	 .size = 512 * 1024 * 1024},
-	{
-	 .name = "nand.userfs3",
-	 .offset = MTDPART_OFS_APPEND,
-	 .size = 1024 * 1024 * 1024},
+	 .size = MTDPART_SIZ_FULL},
 };
 
 static struct flash_platform_data mxc_nand_data = {
@@ -684,6 +680,56 @@ static struct platform_device mxcsdhc2_device = {
 };
 #endif
 
+#ifdef CONFIG_ANDROID_PMEM
+#define PMEM_SIZE       (CONFIG_PMEM_SIZE * SZ_1M)
+#define PMEM_BASE       PHYS_OFFSET + SZ_128M - PMEM_SIZE
+#define PMEM_VPU_SIZE   (SZ_1M * 20)
+#define PMEM_VPU_BASE   PMEM_BASE - PMEM_VPU_SIZE
+
+static struct android_pmem_platform_data android_pmem_pdata = {
+       .name = "pmem_adsp",
+       .start = PMEM_BASE,
+       .size = PMEM_SIZE,
+       .no_allocator = 0,
+       .cached = 1,
+};
+
+static struct platform_device mxc_android_pmem_device = {
+       .name = "android_pmem",
+       .id = 0,
+       .dev = { .platform_data = &android_pmem_pdata },
+};
+
+#if 0
+static struct android_pmem_platform_data android_pmem_vpu_pdata = {
+        .name = "pmem_vpu",
+        .start = PMEM_VPU_BASE,
+        .size = PMEM_VPU_SIZE,
+        .no_allocator = 0,
+        .cached = 0,
+};
+
+static struct platform_device mxc_android_pmem_vpu_device = {
+        .name = "android_pmem",
+        .id = 1,
+        .dev = { .platform_data = &android_pmem_vpu_pdata },
+};
+#endif
+
+static void mxc_init_android_pmem(void)
+{
+       platform_device_register(&mxc_android_pmem_device);
+#if 0
+       platform_device_register(&mxc_android_pmem_vpu_device);
+#endif
+}
+#else
+static void mxc_init_android_pmem(void)
+{
+}
+#endif
+
+
 static inline void mxc_init_mmc(void)
 {
 	int cd_irq;
@@ -942,6 +988,7 @@ static void __init mxc_board_init(void)
 	mxc_init_bluetooth();
 	mxc_init_gps();
 	mxc_sgtl5000_init();
+	mxc_init_android_pmem();
 }
 
 /*

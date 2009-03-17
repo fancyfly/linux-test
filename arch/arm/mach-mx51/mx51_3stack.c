@@ -1044,7 +1044,12 @@ static void mxc_sgtl5000_init(void)
 		printk(KERN_ERR "Error: sgtl5000_init request gpio failed!\n");
 		return;
 	}
-	mxc_iomux_set_pad(pin, PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU);
+	mxc_iomux_set_pad(pin, PAD_CTL_SRE_SLOW |
+			  PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_DRV_MEDIUM |
+			  PAD_CTL_100K_PU |
+			  PAD_CTL_HYS_ENABLE |
+			  PAD_CTL_DRV_VOT_HIGH | PAD_CTL_DDR_INPUT_CMOS);
 	mxc_set_gpio_direction(pin, 1);
 
 	platform_device_register(&sgtl5000_device);

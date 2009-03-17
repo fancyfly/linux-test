@@ -24,6 +24,7 @@
 #include <linux/i2c.h>
 #include <linux/err.h>
 #include <linux/irq.h>
+#include <linux/switch.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -57,6 +58,10 @@ struct imx_3stack_priv {
 	struct regulator *reg_vdda;
 	struct regulator *reg_vddd;
 };
+
+#define H2W_NO_DEVICE	0
+#define H2W_HEADSET	1
+static struct switch_dev *psdev;
 
 #if SGTL5000_SSI_MASTER
 static int imx_3stack_startup(struct snd_pcm_substream *substream)
@@ -286,10 +291,13 @@ static void headphone_detect_handler(struct work_struct *work)
 
 	plat = sgtl5000_3stack_pcm_link->machine->pdev->dev.platform_data;
 	hp_status = plat->hp_status();
-	if (hp_status)
+	if (hp_status) {
 		set_irq_type(plat->hp_irq, IRQT_FALLING);
-	else
+		switch_set_state(psdev, H2W_HEADSET);
+	} else {
 		set_irq_type(plat->hp_irq, IRQT_RISING);
+		switch_set_state(psdev, H2W_NO_DEVICE);
+	}
 	enable_irq(plat->hp_irq);
 }
 
@@ -619,6 +627,17 @@ static struct snd_soc_machine_ops machine_ops = {
 	.mach_remove = mach_remove,
 };
 
+ssize_t	h2w_print_name(struct switch_dev *sdev, char *buf)
+{
+	switch (switch_get_state(sdev)) {
+	case H2W_NO_DEVICE:
+		return sprintf(buf, "No Device\n");
+	case H2W_HEADSET:
+		return sprintf(buf, "Headset\n");
+	}
+	return -EINVAL;
+}
+
 static int __devinit imx_3stack_sgtl5000_audio_probe(struct platform_device *pdev)
 {
 	struct snd_soc_machine *machine;
@@ -675,8 +694,29 @@ static int __devinit imx_3stack_sgtl5000_audio_probe(struct platform_device *pde
 		goto sysfs_err;
 	}
 
+	psdev = kzalloc(sizeof(struct switch_dev), GFP_KERNEL);
+	if (psdev == NULL) {
+		ret = -ENOMEM;
+		goto sysfs_err;
+	}
+	psdev->name = "h2w";
+	psdev->print_name = h2w_print_name;
+
+	ret = switch_dev_register(psdev);
+	if (ret < 0) {
+		pr_err("%s:failed to register switch device\n", __func__);
+		goto sdev_err;
+	}
+
+	if (plat->hp_status())
+		switch_set_state(psdev, H2W_HEADSET);
+	else
+		switch_set_state(psdev, H2W_NO_DEVICE);
+
 	return ret;
 
+sdev_err:
+	kfree(psdev);
 sysfs_err:
 	driver_remove_file(pdev->dev.driver, &driver_attr_headphone);
 link_err:
@@ -700,6 +740,8 @@ imx_3stack_sgtl5000_audio_remove(struct platform_device *pdev)
 	codec = pcm_link->codec;
 	codec->ops->io_remove(codec, machine);
 
+	switch_dev_unregister(psdev);
+	kfree(psdev);
 	snd_soc_machine_free(machine);
 	kfree(machine);
 	platform_set_drvdata(pdev, NULL);

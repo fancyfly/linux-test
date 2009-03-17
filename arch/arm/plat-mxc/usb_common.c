@@ -593,7 +593,6 @@ static void otg_set_utmi_xcvr(void)
 	}
 
 	USBCTRL &= ~UCTRL_OPM;	/* OTG Power Mask */
-	USBCTRL |= UCTRL_OWIE;	/* OTG Wakeup Intr Enable */
 
 	/* set UTMI xcvr */
 	tmp = UOG_PORTSC1 & ~PORTSC_PTS_MASK;
@@ -669,6 +668,7 @@ int usbotg_init(struct platform_device *pdev)
 		if (xops->init)
 			xops->init(xops);
 
+		UOG_PORTSC1 = UOG_PORTSC1 & ~PORTSC_PHCD;
 		if (xops->xcvr_type == PORTSC_PTS_SERIAL) {
 			if (pdata->operating_mode == FSL_USB2_DR_HOST) {
 				otg_set_serial_host();
@@ -697,6 +697,7 @@ void usbotg_uninit(struct fsl_usb2_platform_data *pdata)
 
 	otg_used--;
 	if (!otg_used) {
+		struct clk *phy_clk;
 		if (pdata->xcvr_ops && pdata->xcvr_ops->uninit)
 			pdata->xcvr_ops->uninit(pdata->xcvr_ops);
 
@@ -706,6 +707,13 @@ void usbotg_uninit(struct fsl_usb2_platform_data *pdata)
 			if (pdata->xcvr_ops && pdata->xcvr_ops->suspend)
 				pdata->xcvr_ops->suspend(pdata->xcvr_ops);
 			clk_disable(usb_clk);
+		}
+
+		UOG_PORTSC1 = UOG_PORTSC1 | PORTSC_PHCD;
+		if (cpu_is_mx37()) {
+			phy_clk = clk_get(NULL, "usb_phy_clk");
+			clk_disable(phy_clk);
+			clk_put(phy_clk);
 		}
 
 		pdata->gpio_usb_inactive();

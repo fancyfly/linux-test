@@ -156,6 +156,7 @@
 #define PORTSC_PTS_SERIAL		(3 << 30)	/* serial */
 #define PORTSC_STS			(1 << 29)	/* serial xcvr select */
 #define PORTSC_PTW                      (1 << 28)       /* UTMI width */
+#define PORTSC_PHCD                     (1 << 23)       /* Low Power Suspend */
 #define PORTSC_PORT_POWER		(1 << 12)	/* port power */
 #define PORTSC_LS_MASK			(3 << 10)	/* Line State mask */
 #define PORTSC_LS_SE0			(0 << 10)	/* SE0     */

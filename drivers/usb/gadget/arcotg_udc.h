@@ -92,6 +92,8 @@ struct usb_dr_device {
 	u32 endptctrl[8 * 2];	/* Endpoint Control Registers */
 	u32 res8[256];
 	u32 usbctrl;
+	u32 otgmirror;
+	u32 phyctrl0;
 };
 
  /* non-EHCI USB system interface registers (Big Endian) */
@@ -255,6 +257,11 @@ struct usb_sys_interface {
 #define  PORTSCX_PTS_FSLS                     (0xC0000000)
 #define  PORTSCX_PTS_BIT_POS                  (30)
 
+/* OTGSC Register Bit Masks */
+#define  OTGSC_B_SESSION_VALID_IRQ_EN		(1 << 27)
+#define  OTGSC_B_SESSION_VALID_IRQ_STS		(1 << 19)
+#define  OTGSC_B_SESSION_VALID			(1 << 11)
+
 /* USB MODE Register Bit Masks */
 #define  USB_MODE_CTRL_MODE_IDLE              (0x00000000)
 #define  USB_MODE_CTRL_MODE_DEVICE            (0x00000002)
@@ -334,6 +341,11 @@ struct usb_sys_interface {
 #define  USB_CTRL_ULPI_INT0EN                 (0x00000001)
 #define  USB_CTRL_OTG_WUIR		      (0x80000000)
 #define  USB_CTRL_OTG_WUIE		      (0x08000000)
+#define  USB_CTRL_OTG_VWUE		      (0x00001000)
+#define  USB_CTRL_OTG_IWUE		      (0x00100000)
+
+/* PHY control0 Register Bit Masks */
+#define  PHY_CTRL0_CONF2			(1 << 26)
 
 /*!
  * Endpoint Queue Head data struct

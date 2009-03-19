@@ -274,7 +274,7 @@ CONFIG_ALIGNMENT_TRAP=y
 #
 CONFIG_ZBOOT_ROM_TEXT=0x0
 CONFIG_ZBOOT_ROM_BSS=0x0
-CONFIG_CMDLINE="console=ttymxc0,115200 init=/init ip=dhcp ubi.mtd=3 mem=104M"
+CONFIG_CMDLINE="console=ttymxc0,115200 init=/init ip=dhcp ubi.mtd=3 mem=448M"
 # CONFIG_XIP_KERNEL is not set
 # CONFIG_KEXEC is not set
 

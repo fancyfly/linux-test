@@ -10,4 +10,11 @@ config MXC_BLUETOOTH
 	---help---
          Say Y to get the third party Bluetooth service.
 
+config MXC_BLUETOOTH_ANDROID
+        tristate "MXC Bluetooth support for ANDROID"
+        depends on MACH_MX31_3DS ||  MACH_MX51_3DS
+        ---help---
+         Say Y to get the third party Bluetooth service.
+
+
 endmenu

@@ -9,3 +9,28 @@ config UTMI_MXC_OTG
 	depends on  USB_EHCI_FSL_UTMI && USB_GADGET && USB_EHCI_HCD && USB_OTG
 	help
 	  Support for USB OTG PIN detect for UTMI PHY on MXC platforms.
+ 
+comment "OTG and related infrastructure"
+ 
+if USB || USB_GADGET
+ 
+config USB_OTG_UTILS
+ 	bool
+ 	help
+ 	  Select this to make sure the build includes objects from
+ 	  the OTG infrastructure directory.
+ 
+#
+# USB Transceiver Drivers
+#
+config USB_GPIO_VBUS
+ 	tristate "GPIO based peripheral-only VBUS sensing 'transceiver'"
+ 	depends on GENERIC_GPIO
+ 	select USB_OTG_UTILS
+ 	help
+ 	  Provides simple GPIO VBUS sensing for controllers with an
+ 	  internal transceiver via the otg_transceiver interface, and
+ 	  optionally control of a D+ pullup GPIO as well as a VBUS
+ 	  current limit regulator.
+
+endif

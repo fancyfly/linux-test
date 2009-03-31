@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -22,12 +22,75 @@
 #include <linux/platform_device.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/rfkill.h>
 #include <linux/regulator/regulator.h>
 
 static struct regulator *bt_vdd;
 static struct regulator *bt_vdd_parent;
 static struct regulator *bt_vusb;
 static struct regulator *bt_vusb_parent;
+
+#ifdef CONFIG_MXC_BLUETOOTH_ANDROID
+struct rfkill *btrfkill;
+static int active;
+
+static int rfkill_toggle_radio(void *data, enum rfkill_state state)
+{
+	struct device *dev = (struct device *)data;
+	struct mxc_bt_platform_data *platform_data;
+
+	platform_data = (struct mxc_bt_platform_data *)dev->platform_data;
+	if (active != state) {
+		if (state == RFKILL_STATE_ON) {
+			if (platform_data->bt_vdd) {
+				bt_vdd = regulator_get(dev,
+						       platform_data->bt_vdd);
+				regulator_enable(bt_vdd);
+			}
+			if (platform_data->bt_vdd_parent) {
+				bt_vdd_parent =
+				    regulator_get(dev,
+						  platform_data->bt_vdd_parent);
+				regulator_enable(bt_vdd_parent);
+			}
+			if (platform_data->bt_vusb) {
+				bt_vusb = regulator_get(dev,
+							platform_data->bt_vusb);
+				regulator_enable(bt_vusb);
+			}
+			if (platform_data->bt_vusb_parent) {
+				bt_vusb_parent = regulator_get(dev,
+							       platform_data->
+							       bt_vusb_parent);
+				regulator_enable(bt_vusb_parent);
+			}
+
+			if (platform_data->bt_reset != NULL)
+				platform_data->bt_reset();
+		} else if (state == RFKILL_STATE_OFF) {
+			if (bt_vdd) {
+				regulator_disable(bt_vdd);
+				regulator_put(bt_vdd, dev);
+			}
+			if (bt_vdd_parent) {
+				regulator_disable(bt_vdd_parent);
+				regulator_put(bt_vdd_parent, dev);
+			}
+			if (bt_vusb) {
+				regulator_disable(bt_vusb);
+				regulator_put(bt_vusb, dev);
+			}
+			if (bt_vusb_parent) {
+				regulator_disable(bt_vusb_parent);
+				regulator_put(bt_vusb_parent, dev);
+			}
+		}
+	}
+	printk(KERN_INFO "Changed RF State to %d\n", state);
+	active = state;
+	return 0;
+}
+#endif
 
 /*!
   * This function poweron the bluetooth hardware module
@@ -37,6 +100,19 @@ static struct regulator *bt_vusb_parent;
   */
 static int mxc_bt_probe(struct platform_device *pdev)
 {
+#ifdef CONFIG_MXC_BLUETOOTH_ANDROID
+	struct rfkill *rfkill = rfkill_allocate(NULL, RFKILL_TYPE_BLUETOOTH);
+
+	rfkill->name = "Bluetooth";
+	rfkill->state = RFKILL_STATE_OFF;
+	rfkill->toggle_radio = rfkill_toggle_radio;
+	rfkill->user_claim = 1;
+	rfkill->data = &pdev->dev;
+
+	rfkill_register(rfkill);
+	btrfkill = rfkill;
+	return 0;
+#else
 	struct mxc_bt_platform_data *platform_data;
 	platform_data = (struct mxc_bt_platform_data *)pdev->dev.platform_data;
 	if (platform_data->bt_vdd) {
@@ -61,7 +137,7 @@ static int mxc_bt_probe(struct platform_device *pdev)
 	if (platform_data->bt_reset != NULL)
 		platform_data->bt_reset();
 	return 0;
-
+#endif
 }
 
 /*!
@@ -72,6 +148,11 @@ static int mxc_bt_probe(struct platform_device *pdev)
   */
 static int mxc_bt_remove(struct platform_device *pdev)
 {
+#ifdef CONFIG_MXC_BLUETOOTH_ANDROID
+	if (btrfkill)
+		rfkill_unregister(btrfkill);
+	return 0;
+#else
 	struct mxc_bt_platform_data *platform_data;
 	platform_data = (struct mxc_bt_platform_data *)pdev->dev.platform_data;
 	if (bt_vdd) {
@@ -91,6 +172,7 @@ static int mxc_bt_remove(struct platform_device *pdev)
 		regulator_put(bt_vusb_parent, &pdev->dev);
 	}
 	return 0;
+#endif
 
 }
 

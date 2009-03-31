@@ -800,6 +800,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	int retval;
 	u_int y_bottom;
 	unsigned long base;
+	static __u32 last_xoff, last_yoff;
 
 	if ((retval = wait_event_interruptible(mxcfb_drv_data.suspend_wq,
 					       (mxcfb_drv_data.suspended ==
@@ -812,8 +813,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		return -EINVAL;
 	}
 
-	if ((info->var.xoffset == var->xoffset) &&
-	    (info->var.yoffset == var->yoffset)) {
+	if ((last_xoff == var->xoffset) &&
+	    (last_yoff == var->yoffset)) {
 		return 0;	// No change, do nothing
 	}
 
@@ -855,8 +856,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 
 	dev_dbg(info->device, "Update complete\n");
 
-	info->var.xoffset = var->xoffset;
-	info->var.yoffset = var->yoffset;
+	last_xoff = var->xoffset;
+	last_yoff = var->yoffset;
 
 	if (var->vmode & FB_VMODE_YWRAP) {
 		info->var.vmode |= FB_VMODE_YWRAP;

@@ -24,6 +24,7 @@
 #include <linux/i2c.h>
 #include <linux/err.h>
 #include <linux/irq.h>
+#include <linux/switch.h>
 #include <linux/io.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -64,6 +65,10 @@ static struct asrc_esai asrc_ssi_data;
 
 /* SSI BCLK and LRC master */
 #define SGTL5000_SSI_MASTER	1
+
+#define H2W_NO_DEVICE	0
+#define H2W_HEADSET	1
+static struct switch_dev *psdev;
 
 struct imx_3stack_priv {
 	int sysclk;
@@ -312,10 +317,13 @@ static void headphone_detect_handler(struct work_struct *work)
 
 	sysfs_notify(&pdev->dev.kobj, NULL, "headphone");
 	hp_status = plat->hp_status();
-	if (hp_status)
+	if (hp_status) {
 		set_irq_type(plat->hp_irq, IRQ_TYPE_EDGE_FALLING);
-	else
+		switch_set_state(psdev, H2W_HEADSET);
+	} else {
 		set_irq_type(plat->hp_irq, IRQ_TYPE_EDGE_RISING);
+		switch_set_state(psdev, H2W_NO_DEVICE);
+	}
 	enable_irq(plat->hp_irq);
 }
 
@@ -563,6 +571,17 @@ static struct snd_soc_device imx_3stack_snd_devdata = {
 	.codec_dev = &soc_codec_dev_sgtl5000,
 };
 
+ssize_t	h2w_print_name(struct switch_dev *sdev, char *buf)
+{
+	switch (switch_get_state(sdev)) {
+	case H2W_NO_DEVICE:
+		return sprintf(buf, "No Device\n");
+	case H2W_HEADSET:
+		return sprintf(buf, "Headset\n");
+	}
+	return -EINVAL;
+}
+
 static int __devinit imx_3stack_sgtl5000_probe(struct platform_device *pdev)
 {
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
@@ -659,8 +678,29 @@ static int __devinit imx_3stack_sgtl5000_probe(struct platform_device *pdev)
 	sgtl5000_jack_func = 1;
 	sgtl5000_spk_func = 1;
 
+	psdev = kzalloc(sizeof(struct switch_dev), GFP_KERNEL);
+	if (psdev == NULL) {
+		ret = -ENOMEM;
+		goto err_card_reg;
+	}
+	psdev->name = "h2w";
+	psdev->print_name = h2w_print_name;
+
+	ret = switch_dev_register(psdev);
+	if (ret < 0) {
+		pr_err("%s:failed to register switch device\n", __func__);
+		goto err_switchdev;
+	}
+
+	if (plat->hp_status())
+		switch_set_state(psdev, H2W_HEADSET);
+	else
+		switch_set_state(psdev, H2W_NO_DEVICE);
+
 	return 0;
 
+err_switchdev:
+	kfree(psdev);
 err_card_reg:
 	if (priv->reg_vddd)
 		regulator_put(priv->reg_vddd);
@@ -691,6 +731,9 @@ static int imx_3stack_sgtl5000_remove(struct platform_device *pdev)
 	driver_remove_file(pdev->dev.driver, &driver_attr_headphone);
 
 	kfree(imx_3stack_snd_devdata.codec_data);
+
+	switch_dev_unregister(psdev);
+	kfree(psdev);
 
 	return 0;
 }

@@ -63,8 +63,15 @@ static int ts_thread(void *arg)
 			x = last_x;
 			y = last_y;
 		} else {
-			x = 480 - ((ts_sample.x_position - 80)*480)/(1000-80);
-			y = ((ts_sample.y_position - 80)*640)/(1000-80);
+#ifdef CONFIG_FB_MXC_CLAA_WVGA_SYNC_PANEL
+			x = ((ts_sample.x_position - 30) * 800) / (1000 - 30);
+			if (x > 1000)
+			       x = 0;
+			y = 480 - ((ts_sample.y_position - 52) * 480) / (990 - 52);
+#else
+			x = 480 - ((ts_sample.x_position - 80) * 480) / (1000 - 80);
+			y = ((ts_sample.y_position - 80) * 640) / (1000 - 80);
+#endif
 		}
 
 		if (x != last_x) {
@@ -75,6 +82,15 @@ static int ts_thread(void *arg)
 			input_report_abs(mxc_inputdev, ABS_Y, y);
 			last_y = y;
 		}
+
+#ifdef CONFIG_MXC_PMIC_MC13892
+		/* workaround for aplite ADC resistance large range value */
+		if (ts_sample.contact_resistance > 22)
+			ts_sample.contact_resistance = 1;
+		else
+			ts_sample.contact_resistance = 0;
+#endif
+
 		if (ts_sample.contact_resistance != last_press)
 			input_event(mxc_inputdev, EV_KEY,
 					BTN_TOUCH, ts_sample.contact_resistance);

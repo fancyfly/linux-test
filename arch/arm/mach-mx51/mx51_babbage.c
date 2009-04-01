@@ -51,6 +51,9 @@
 #include "iomux.h"
 #include "crm_regs.h"
 #include <mach/mxc_edid.h>
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
 
 /*!
  * @file mach-mx51/mx51_babbage.c
@@ -787,6 +790,34 @@ static inline void mxc_init_gpio_button(void)
 }
 #endif
 
+#ifdef CONFIG_ANDROID_PMEM
+#define PMEM_SIZE           (CONFIG_PMEM_SIZE * SZ_1M)
+#define PMEM_BASE           (PHYS_OFFSET + SZ_512M - PMEM_SIZE)
+
+static struct android_pmem_platform_data android_pmem_pdata = {
+	.name = "pmem_adsp",
+	.start = PMEM_BASE,
+	.size = PMEM_SIZE,
+	.no_allocator = 0,
+	.cached = 1,
+};
+
+static struct platform_device mxc_android_pmem_device = {
+	.name = "android_pmem",
+	.id = 0,
+	.dev = { .platform_data = &android_pmem_pdata },
+};
+
+static void mxc_init_android_pmem(void)
+{
+	platform_device_register(&mxc_android_pmem_device);
+}
+#else
+static void mxc_init_android_pmem(void)
+{
+}
+#endif
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -910,6 +941,7 @@ static void __init mxc_board_init(void)
 #endif
 	pm_power_off = mxc_power_off;
 	mxc_init_sgtl5000();
+	mxc_init_android_pmem();
 }
 
 static void __init mx51_babbage_timer_init(void)

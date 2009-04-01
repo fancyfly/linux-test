@@ -52,6 +52,9 @@
 #include "board-mx51_3stack.h"
 #include "iomux.h"
 #include "crm_regs.h"
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
 
 /*!
  * @file mach-mx51/mx51_3stack.c
@@ -178,15 +181,11 @@ static struct mtd_partition mxc_nand_partitions[] = {
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = 5 * 1024 * 1024},
 	{
-	 .name = "nand.rootfs",
+	 .name = "nand.system",
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = 256 * 1024 * 1024},
 	{
-	 .name = "nand.userfs1",
-	 .offset = MTDPART_OFS_APPEND,
-	 .size = 256 * 1024 * 1024},
-	{
-	 .name = "nand.userfs2",
+	 .name = "nand.userdata",
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = MTDPART_SIZ_FULL},
 };
@@ -1052,6 +1051,34 @@ struct mxc_unifi_platform_data *get_unifi_plat_data(void)
 
 EXPORT_SYMBOL(get_unifi_plat_data);
 
+#ifdef CONFIG_ANDROID_PMEM
+#define PMEM_SIZE           (CONFIG_PMEM_SIZE * SZ_1M)
+#define PMEM_BASE           (PHYS_OFFSET + SZ_512M - PMEM_SIZE)
+
+static struct android_pmem_platform_data android_pmem_pdata = {
+	.name = "pmem_adsp",
+	.start = PMEM_BASE,
+	.size = PMEM_SIZE,
+	.no_allocator = 0,
+	.cached = 0,
+};
+
+static struct platform_device mxc_android_pmem_device = {
+	.name = "android_pmem",
+	.id = 0,
+	.dev = { .platform_data = &android_pmem_pdata },
+};
+
+static void mxc_init_android_pmem(void)
+{
+	platform_device_register(&mxc_android_pmem_device);
+}
+#else
+static void mxc_init_android_pmem(void)
+{
+}
+#endif
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -1166,6 +1193,7 @@ static void __init mxc_board_init(void)
 	mxc_init_sgtl5000();
 	mxc_init_bluetooth();
 	mxc_init_gps();
+	mxc_init_android_pmem();
 
 	err = mxc_request_iomux(MX51_PIN_EIM_D19, IOMUX_CONFIG_GPIO);
 	if (err)

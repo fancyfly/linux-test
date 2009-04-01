@@ -707,7 +707,7 @@ config TLS_REG_EMUL
 	  that required register must be emulated.
 
 config HAS_TLS_REG
-	bool
+	bool "Support CP15 thread register"
 	depends on !TLS_REG_EMUL
 	default y if SMP || CPU_32v7
 	help

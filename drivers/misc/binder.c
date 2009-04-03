@@ -56,7 +56,7 @@ static int binder_read_proc_proc(
 #endif
 
 #ifndef __i386__
-#define FORBIDDEN_MMAP_FLAGS                (VM_WRITE | VM_EXEC)
+#define FORBIDDEN_MMAP_FLAGS                (VM_WRITE)
 #else
 #define FORBIDDEN_MMAP_FLAGS                (VM_WRITE)
 #endif

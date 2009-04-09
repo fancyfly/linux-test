@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -45,6 +45,9 @@
 #include <asm/semaphore.h>
 
 #include <asm/arch/clock.h>
+
+extern int dvfs_core_is_active;
+extern void dvfs_core_set_bus_freq(void);
 
 static LIST_HEAD(clocks);
 static DEFINE_MUTEX(clocks_mutex);
@@ -203,11 +206,18 @@ int clk_enable(struct clk *clk)
 
 	spin_unlock_irqrestore(&clockfw_lock, flags);
 
-#if defined(CONFIG_CPU_FREQ)
 	if ((clk->flags & CPU_FREQ_TRIG_UPDATE)
-	    && (clk_get_usecount(clk) == 1))
-		cpufreq_update_policy(0);
+	    && (clk_get_usecount(clk) == 1)) {
+#if defined(CONFIG_CPU_FREQ)
+		if (dvfs_core_is_active)
+			dvfs_core_set_bus_freq();
+		else
+			cpufreq_update_policy(0);
+#else
+		if (dvfs_core_is_active)
+			dvfs_core_set_bus_freq();
 #endif
+	}
 	return ret;
 }
 
@@ -236,11 +246,18 @@ void clk_disable(struct clk *clk)
 
 	spin_unlock_irqrestore(&clockfw_lock, flags);
 
-#if defined(CONFIG_CPU_FREQ)
 	if ((clk->flags & CPU_FREQ_TRIG_UPDATE)
-	    && (clk_get_usecount(clk) == 0))
-		cpufreq_update_policy(0);
+	    && (clk_get_usecount(clk) == 0)) {
+#if defined(CONFIG_CPU_FREQ)
+		if (dvfs_core_is_active)
+			dvfs_core_set_bus_freq();
+		else
+			cpufreq_update_policy(0);
+#else
+		if (dvfs_core_is_active)
+			dvfs_core_set_bus_freq();
 #endif
+	}
 }
 
 EXPORT_SYMBOL(clk_disable);

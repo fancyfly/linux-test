@@ -896,6 +896,19 @@ static inline void mx51_init_lpmode(void)
 	(void)platform_device_register(&mx51_lpmode_device);
 }
 
+static struct platform_device busfreq_device = {
+	.name = "busfreq",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		},
+};
+
+static inline void mxc_init_busfreq(void)
+{
+	(void)platform_device_register(&busfreq_device);
+}
+
 int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
@@ -911,6 +924,7 @@ int __init mxc_init_devices(void)
 	mxc_init_spdif();
 	mxc_init_tve();
 	mx51_init_lpmode();
+	mxc_init_busfreq();
 	mxc_init_dvfs();
 	return 0;
 }

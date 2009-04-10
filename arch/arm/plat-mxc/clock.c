@@ -46,8 +46,15 @@
 
 #include <asm/arch/clock.h>
 
+#if (defined(CONFIG_ARCH_MX51) || defined(CONFIG_ARCH_MX37))
 extern int dvfs_core_is_active;
 extern void dvfs_core_set_bus_freq(void);
+#else
+int dvfs_core_is_active;
+void dvfs_core_set_bus_freq(void)
+{
+};
+#endif
 
 static LIST_HEAD(clocks);
 static DEFINE_MUTEX(clocks_mutex);

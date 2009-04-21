@@ -947,6 +947,7 @@ static inline int valid_mode(u32 palette)
 		(palette == V4L2_PIX_FMT_BGR32) ||
 		(palette == V4L2_PIX_FMT_RGB32) ||
 		(palette == V4L2_PIX_FMT_NV12) ||
+		(palette == V4L2_PIX_FMT_UYVY) ||
 		(palette == V4L2_PIX_FMT_YUV422P) ||
 		(palette == V4L2_PIX_FMT_YUV420));
 }
@@ -1003,6 +1004,7 @@ static int mxc_v4l2out_s_fmt(vout_data * vout, struct v4l2_format *f)
 	}
 
 	switch (f->fmt.pix.pixelformat) {
+	case V4L2_PIX_FMT_UYVY:
 	case V4L2_PIX_FMT_YUV422P:
 		/* byteperline for YUV planar formats is for
 		   Y plane only */

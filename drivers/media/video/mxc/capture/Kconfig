@@ -74,6 +74,22 @@ config MXC_TVIN_ADV7180
 
 endchoice
 
+choice
+	prompt "Select CSI0 or CSI1 to connect OV3640 camera"
+	default CAMERA_USE_MXC_CSI0
+	depends on VIDEO_MXC_CAMERA && MXC_CAMERA_OV3640 && MXC_IPU_V3 && !MXC_IPU_V3D
+
+config MXC_CAMERA_USE_CSI0
+	bool "Choose CSI0 to connect OV3640 camera"
+	---help---
+	  If you plan to use CSI0 to connect OV3640 camera, say Y here.
+
+config MXC_CAMERA_USE_CSI1
+	bool "Choose CSI1 to connect OV3640 camera"
+	---help---
+	  If you plan to use CSI1 to connect OV3640 camera, say Y here.
+endchoice
+
 config MXC_IPU_PRP_VF_SDC
 	tristate "Pre-Processor VF SDC library"
 	depends on VIDEO_MXC_IPU_CAMERA && FB_MXC_SYNC_PANEL

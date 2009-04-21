@@ -1043,7 +1043,7 @@ static int mxc_v4l2_s_param(cam_data *cam, struct v4l2_streamparm *parm)
 	csi_param.force_eof = 0;
 	csi_param.data_en_pol = 0;
 	csi_param.data_fmt = 0;
-	csi_param.csi = 0;
+	csi_param.csi = cam->csi;
 	csi_param.mclk = 0;
 
 	/* This may not work on other platforms. Check when adding a new one.*/
@@ -1305,8 +1305,7 @@ static int mxc_v4l_open(struct inode *inode, struct file *file)
 
 		csi_param.pixclk_pol = ifparm.u.bt656.latch_clk_inv;
 
-		/* Once we handle multiple inputs this will need to change. */
-		csi_param.csi = 0;
+		csi_param.csi = cam->csi;
 
 		if (ifparm.u.bt656.mode
 				== V4L2_IF_TYPE_BT656_MODE_NOBT_8BIT)
@@ -1320,8 +1319,6 @@ static int mxc_v4l_open(struct inode *inode, struct file *file)
 
 		csi_param.Vsync_pol = ifparm.u.bt656.nobt_vs_inv;
 		csi_param.Hsync_pol = ifparm.u.bt656.nobt_hs_inv;
-
-		csi_param.csi = cam->csi;
 
 		cam_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		vidioc_int_g_fmt_cap(cam->sensor, &cam_fmt);
@@ -1451,7 +1448,7 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 			    loff_t *ppos)
 {
 	int err = 0;
-	u8 *v_address;
+	u8 *v_address[2];
 	struct video_device *dev = video_devdata(file);
 	cam_data *cam = dev->priv;
 
@@ -1462,11 +1459,15 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 	if (cam->overlay_on == true)
 		stop_preview(cam);
 
-	v_address = dma_alloc_coherent(0,
+	v_address[0] = dma_alloc_coherent(0,
 				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
-				       &cam->still_buf, GFP_DMA | GFP_KERNEL);
-
-	if (!v_address) {
+				       &cam->still_buf[0],
+				       GFP_DMA | GFP_KERNEL);
+	v_address[1] = dma_alloc_coherent(0,
+				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
+				       &cam->still_buf[1],
+				       GFP_DMA | GFP_KERNEL);
+	if (!v_address[0] || !v_address[1]) {
 		err = -ENOBUFS;
 		goto exit0;
 	}
@@ -1474,14 +1475,14 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 	err = prp_still_select(cam);
 	if (err != 0) {
 		err = -EIO;
-		goto exit1;
+		goto exit0;
 	}
 
 	cam->still_counter = 0;
 	err = cam->csi_start(cam);
 	if (err != 0) {
 		err = -EIO;
-		goto exit2;
+		goto exit1;
 	}
 
 	if (!wait_event_interruptible_timeout(cam->still_queue,
@@ -1490,19 +1491,23 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 		pr_err("ERROR: v4l2 capture: mxc_v4l_read timeout counter %x\n",
 		       cam->still_counter);
 		err = -ETIME;
-		goto exit2;
+		goto exit1;
 	}
-	err = copy_to_user(buf, v_address, cam->v2f.fmt.pix.sizeimage);
-
-      exit2:
-	prp_still_deselect(cam);
+	err = copy_to_user(buf, v_address[1], cam->v2f.fmt.pix.sizeimage);
 
       exit1:
-	dma_free_coherent(0, cam->v2f.fmt.pix.sizeimage, v_address,
-			  cam->still_buf);
-	cam->still_buf = 0;
+	prp_still_deselect(cam);
 
       exit0:
+	if (v_address[0] != 0)
+		dma_free_coherent(0, cam->v2f.fmt.pix.sizeimage, v_address[0],
+				  cam->still_buf[0]);
+	if (v_address[1] != 0)
+		dma_free_coherent(0, cam->v2f.fmt.pix.sizeimage, v_address[1],
+				  cam->still_buf[1]);
+
+	cam->still_buf[0] = cam->still_buf[0] = 0;
+
 	if (cam->overlay_on == true) {
 		start_preview(cam);
 	}
@@ -2181,8 +2186,7 @@ static void init_camera_struct(cam_data *cam)
 	cam->win.w.left = 0;
 	cam->win.w.top = 0;
 
-	cam->csi = 0;  /* Need to determine how to set this correctly with
-			* multiple video input devices. */
+	cam->csi = 0; /* Default use csi0 */
 
 	cam->enc_callback = camera_callback;
 	init_waitqueue_head(&cam->power_queue);
@@ -2297,6 +2301,7 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 {
 	cam_data *cam = slave->u.slave->master->priv;
 	struct v4l2_format cam_fmt;
+	int csi;
 
 	pr_debug("In MVC: mxc_v4l2_master_attach\n");
 	pr_debug("   slave.name = %s\n", slave->name);
@@ -2307,6 +2312,11 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 		pr_err("ERROR: v4l2 capture: slave parameter not valid.\n");
 		return -1;
 	}
+
+	if (IS_ERR_VALUE(vidioc_int_g_csi(cam->sensor, &csi)))
+		cam->csi = 0;	/* No vidioc_int_g_csi ioctrl defined */
+	else
+		cam->csi = csi;
 
 	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi, true, true);
 	vidioc_int_dev_init(slave);
@@ -2354,7 +2364,8 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 static void mxc_v4l2_master_detach(struct v4l2_int_device *slave)
 {
 	pr_debug("In MVC:mxc_v4l2_master_detach\n");
-	/* vidioc_int_dev_exit(slave); */
+
+	vidioc_int_dev_exit(slave);
 }
 
 /*!

@@ -32,10 +32,14 @@
 #include <linux/smp_lock.h>
 
 #include <media/v4l2-dev.h>
+#include <media/v4l2-int-device.h>
 #include <linux/ipu.h>
 #include <linux/mxc_v4l2.h>
 
 #define FRAME_NUM 3
+
+#define vidioc_int_g_csi_num	vidioc_int_priv_start_num
+V4L2_INT_WRAPPER_1(g_csi, int, *);
 
 /*!
  * v4l2 frame structure.
@@ -121,7 +125,7 @@ typedef struct _cam_data {
 	/* still image capture */
 	wait_queue_head_t still_queue;
 	int still_counter;
-	dma_addr_t still_buf;
+	dma_addr_t still_buf[2];
 	void *still_buf_vaddr;
 
 	/* overlay */

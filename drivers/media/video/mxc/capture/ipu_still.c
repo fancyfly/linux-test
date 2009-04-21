@@ -25,6 +25,7 @@
 #include "ipu_prp_sw.h"
 
 static int callback_eof_flag;
+static int buffer_num;
 
 #ifdef CONFIG_MXC_IPU_V1
 static int callback_flag;
@@ -64,9 +65,10 @@ static irqreturn_t prp_still_callback(int irq, void *dev_id)
 	cam_data *cam = (cam_data *) dev_id;
 
 	callback_eof_flag++;
-	if (callback_eof_flag < 5)
-		ipu_select_buffer(CSI_MEM, IPU_OUTPUT_BUFFER, 0);
-	else {
+	if (callback_eof_flag < 5) {
+		buffer_num = (buffer_num == 0) ? 1 : 0;
+		ipu_select_buffer(CSI_MEM, IPU_OUTPUT_BUFFER, buffer_num);
+	} else {
 		cam->still_counter++;
 		wake_up_interruptible(&cam->still_queue);
 	}
@@ -111,6 +113,7 @@ static int prp_still_start(void *private)
 	ipu_csi_enable_mclk_if(CSI_MCLK_RAW, cam->csi, true, true);
 
 	memset(&params, 0, sizeof(params));
+	params.csi_mem.csi = cam->csi;
 	err = ipu_init_channel(CSI_MEM, &params);
 	if (err != 0)
 		return err;
@@ -119,7 +122,8 @@ static int prp_still_start(void *private)
 				      pixel_fmt, cam->v2f.fmt.pix.width,
 				      cam->v2f.fmt.pix.height,
 				      cam->v2f.fmt.pix.width, IPU_ROTATE_NONE,
-				      cam->still_buf, 0, 0, 0);
+				      cam->still_buf[0], cam->still_buf[1],
+				      0, 0);
 	if (err != 0)
 		return err;
 
@@ -132,6 +136,7 @@ static int prp_still_start(void *private)
 	}
 	callback_flag = 0;
 	callback_eof_flag = 0;
+	buffer_num = 0;
 	err = ipu_request_irq(IPU_IRQ_SENSOR_EOF, prp_csi_eof_callback,
 			      0, "Mxc Camera", NULL);
 	if (err != 0) {
@@ -147,6 +152,7 @@ static int prp_still_start(void *private)
 	}
 
 	callback_eof_flag = 0;
+	buffer_num = 0;
 
 	ipu_select_buffer(CSI_MEM, IPU_OUTPUT_BUFFER, 0);
 	ipu_enable_channel(CSI_MEM);
@@ -166,16 +172,16 @@ static int prp_still_stop(void *private)
 	cam_data *cam = (cam_data *) private;
 	int err = 0;
 
+	ipu_disable_channel(CSI_MEM, true);
+	ipu_uninit_channel(CSI_MEM);
+	ipu_csi_enable_mclk_if(CSI_MCLK_RAW, cam->csi, false, false);
+
 #ifdef CONFIG_MXC_IPU_V1
 	ipu_free_irq(IPU_IRQ_SENSOR_EOF, NULL);
 	ipu_free_irq(IPU_IRQ_SENSOR_OUT_EOF, cam);
 #else
 	ipu_free_irq(IPU_IRQ_CSI0_OUT_EOF, cam);
 #endif
-
-	ipu_disable_channel(CSI_MEM, true);
-	ipu_uninit_channel(CSI_MEM);
-	ipu_csi_enable_mclk_if(CSI_MCLK_RAW, cam->csi, false, false);
 
 	return err;
 }

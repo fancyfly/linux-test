@@ -213,6 +213,10 @@ struct mxc_camera_platform_data {
 	char *io_regulator;
 	char *analog_regulator;
 	char *gpo_regulator;
+	int core_voltage;
+	int io_voltage;
+	int analog_voltage;
+	int gpo_voltage;
 	u32 mclk;
 	u32 csi;
 };

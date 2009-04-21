@@ -30,18 +30,13 @@
 	#define CAMERA_TRACE(x)
 #endif
 
-#define OV3640_VOLTAGE_ANALOG               2800000
-#define OV3640_VOLTAGE_DIGITAL_CORE         1500000
-#define OV3640_VOLTAGE_DIGITAL_IO           1800000
-
-
 /* Check these values! */
 #define MIN_FPS 15
 #define MAX_FPS 30
 #define DEFAULT_FPS 30
 
 #define OV3640_XCLK_MIN 6000000
-#define OV3640_XCLK_MAX 24000000
+#define OV3640_XCLK_MAX 54000000
 
 enum ov3640_mode {
 	ov3640_mode_MIN = 0,
@@ -98,8 +93,46 @@ struct sensor {
 } ov3640_data;
 
 static struct reg_value ov3640_setting_15fps_QXGA_2048_1536[] = {
+#if 0
+	/* The true 15fps QXGA setting. */
+	{0x3012, 0x80, 0, 0}, {0x304d, 0x41, 0, 0}, {0x3087, 0x16, 0, 0},
+	{0x30aa, 0x45, 0, 0}, {0x30b0, 0xff, 0, 0}, {0x30b1, 0xff, 0, 0},
+	{0x30b2, 0x13, 0, 0}, {0x30d7, 0x10, 0, 0}, {0x309e, 0x00, 0, 0},
+	{0x3602, 0x26, 0, 0}, {0x3603, 0x4D, 0, 0}, {0x364c, 0x04, 0, 0},
+	{0x360c, 0x12, 0, 0}, {0x361e, 0x00, 0, 0}, {0x361f, 0x11, 0, 0},
+	{0x3633, 0x03, 0, 0}, {0x3629, 0x3c, 0, 0}, {0x300e, 0x33, 0, 0},
+	{0x300f, 0x21, 0, 0}, {0x3010, 0x20, 0, 0}, {0x3011, 0x00, 0, 0},
+	{0x304c, 0x81, 0, 0}, {0x3029, 0x47, 0, 0}, {0x3070, 0x00, 0, 0},
+	{0x3071, 0xEC, 0, 0}, {0x301C, 0x06, 0, 0}, {0x3072, 0x00, 0, 0},
+	{0x3073, 0xC5, 0, 0}, {0x301D, 0x07, 0, 0}, {0x3018, 0x38, 0, 0},
+	{0x3019, 0x30, 0, 0}, {0x301a, 0x61, 0, 0}, {0x307d, 0x00, 0, 0},
+	{0x3087, 0x02, 0, 0}, {0x3082, 0x20, 0, 0}, {0x303c, 0x08, 0, 0},
+	{0x303d, 0x18, 0, 0}, {0x303e, 0x06, 0, 0}, {0x303F, 0x0c, 0, 0},
+	{0x3030, 0x62, 0, 0}, {0x3031, 0x26, 0, 0}, {0x3032, 0xe6, 0, 0},
+	{0x3033, 0x6e, 0, 0}, {0x3034, 0xea, 0, 0}, {0x3035, 0xae, 0, 0},
+	{0x3036, 0xa6, 0, 0}, {0x3037, 0x6a, 0, 0}, {0x3015, 0x12, 0, 0},
+	{0x3014, 0x04, 0, 0}, {0x3013, 0xf7, 0, 0}, {0x3104, 0x02, 0, 0},
+	{0x3105, 0xfd, 0, 0}, {0x3106, 0x00, 0, 0}, {0x3107, 0xff, 0, 0},
+	{0x3308, 0xa5, 0, 0}, {0x3316, 0xff, 0, 0}, {0x3317, 0x00, 0, 0},
+	{0x3087, 0x02, 0, 0}, {0x3082, 0x20, 0, 0}, {0x3300, 0x13, 0, 0},
+	{0x3301, 0xd6, 0, 0}, {0x3302, 0xef, 0, 0}, {0x30b8, 0x20, 0, 0},
+	{0x30b9, 0x17, 0, 0}, {0x30ba, 0x04, 0, 0}, {0x30bb, 0x08, 0, 0},
+	{0x3100, 0x02, 0, 0}, {0x3304, 0x00, 0, 0}, {0x3400, 0x00, 0, 0},
+	{0x3404, 0x02, 0, 0}, {0x3020, 0x01, 0, 0}, {0x3021, 0x1d, 0, 0},
+	{0x3022, 0x00, 0, 0}, {0x3023, 0x0a, 0, 0}, {0x3024, 0x08, 0, 0},
+	{0x3025, 0x18, 0, 0}, {0x3026, 0x06, 0, 0}, {0x3027, 0x0c, 0, 0},
+	{0x335f, 0x68, 0, 0}, {0x3360, 0x18, 0, 0}, {0x3361, 0x0c, 0, 0},
+	{0x3362, 0x68, 0, 0}, {0x3363, 0x08, 0, 0}, {0x3364, 0x04, 0, 0},
+	{0x3403, 0x42, 0, 0}, {0x3088, 0x08, 0, 0}, {0x3089, 0x00, 0, 0},
+	{0x308a, 0x06, 0, 0}, {0x308b, 0x00, 0, 0}, {0x3507, 0x06, 0, 0},
+	{0x350a, 0x4f, 0, 0}, {0x3600, 0xc4, 0, 0},
+#endif
+	/*
+	 * Only support 7.5fps for QXGA to workaround screen tearing issue
+	 * for 15fps when capturing still image.
+	 */
 	{0x3012, 0x80, 0, 0}, {0x304d, 0x45, 0, 0}, {0x30a7, 0x5e, 0, 0},
-	{0x3087, 0x16, 0, 0}, {0x309c, 0x1a, 0, 0}, {0x30a2, 0xe4, 0, 0},
+	{0x3087, 0x16, 0, 0}, {0x309C, 0x1a, 0, 0}, {0x30a2, 0xe4, 0, 0},
 	{0x30aa, 0x42, 0, 0}, {0x30b0, 0xff, 0, 0}, {0x30b1, 0xff, 0, 0},
 	{0x30b2, 0x10, 0, 0}, {0x300e, 0x32, 0, 0}, {0x300f, 0x21, 0, 0},
 	{0x3010, 0x20, 0, 0}, {0x3011, 0x00, 0, 0}, {0x304c, 0x81, 0, 0},
@@ -123,25 +156,9 @@ static struct reg_value ov3640_setting_15fps_QXGA_2048_1536[] = {
 	{0x30bb, 0x08, 0, 0}, {0x3507, 0x06, 0, 0}, {0x350a, 0x4f, 0, 0},
 	{0x3100, 0x02, 0, 0}, {0x3301, 0xde, 0, 0}, {0x3304, 0x00, 0, 0},
 	{0x3400, 0x00, 0, 0}, {0x3404, 0x02, 0, 0}, {0x3600, 0xc4, 0, 0},
-	{0x3302, 0xef, 0, 0}, {0x3020, 0x01, 0, 0}, {0x3021, 0x1d, 0, 0},
-	{0x3022, 0x00, 0, 0}, {0x3023, 0x0a, 0, 0}, {0x3024, 0x08, 0, 0},
-	{0x3025, 0x00, 0, 0}, {0x3026, 0x06, 0, 0}, {0x3027, 0x00, 0, 0},
-	{0x335f, 0x68, 0, 0}, {0x3360, 0x00, 0, 0}, {0x3361, 0x00, 0, 0},
-	{0x3362, 0x68, 0, 0}, {0x3363, 0x00, 0, 0}, {0x3364, 0x00, 0, 0},
-	{0x3403, 0x00, 0, 0}, {0x3088, 0x08, 0, 0}, {0x3089, 0x00, 0, 0},
-	{0x308a, 0x06, 0, 0}, {0x308b, 0x00, 0, 0}, {0x307c, 0x10, 0, 0},
-	{0x3090, 0xc0, 0, 0}, {0x304c, 0x84, 0, 0}, {0x308d, 0x04, 0, 0},
-	{0x3086, 0x03, 0, 0}, {0x3086, 0x00, 0, 0}, {0x3012, 0x00, 0, 0},
-	{0x3020, 0x01, 0, 0}, {0x3021, 0x1d, 0, 0}, {0x3022, 0x00, 0, 0},
-	{0x3023, 0x0a, 0, 0}, {0x3024, 0x08, 0, 0}, {0x3025, 0x18, 0, 0},
-	{0x3026, 0x06, 0, 0}, {0x3027, 0x0c, 0, 0}, {0x302a, 0x06, 0, 0},
-	{0x302b, 0x20, 0, 0}, {0x3075, 0x44, 0, 0}, {0x300d, 0x00, 0, 0},
-	{0x30d7, 0x00, 0, 0}, {0x3069, 0x40, 0, 0}, {0x303e, 0x01, 0, 0},
-	{0x303f, 0x80, 0, 0}, {0x3302, 0x20, 0, 0}, {0x335f, 0x68, 0, 0},
-	{0x3360, 0x18, 0, 0}, {0x3361, 0x0c, 0, 0}, {0x3362, 0x68, 0, 0},
-	{0x3363, 0x08, 0, 0}, {0x3364, 0x04, 0, 0}, {0x3403, 0x42, 0, 0},
 	{0x3088, 0x08, 0, 0}, {0x3089, 0x00, 0, 0}, {0x308a, 0x06, 0, 0},
-	{0x308b, 0x00, 0, 0},
+	{0x308b, 0x00, 0, 0}, {0x308d, 0x04, 0, 0}, {0x3086, 0x03, 0, 0},
+	{0x3086, 0x00, 0, 0}, {0x3011, 0x01, 0, 0},
 };
 
 static struct reg_value ov3640_setting_15fps_XGA_1024_768[] = {
@@ -376,8 +393,15 @@ static struct regulator *core_regulator;
 static struct regulator *analog_regulator;
 static struct regulator *gpo_regulator;
 
-static int ov3640_probe(struct i2c_client *adapter,
-				const struct i2c_device_id *device_id);
+static int io_voltage;
+static int core_voltage;
+static int analog_voltage;
+static int gpo_voltage;
+
+static int ov3640_enable_regulator(struct sensor *sensor);
+
+static int ov3640_probe(struct i2c_client *client,
+			const struct i2c_device_id *device_id);
 static int ov3640_remove(struct i2c_client *client);
 
 static s32 ov3640_read_reg(u16 reg, u8 *val);
@@ -502,6 +526,17 @@ err:
 }
 
 /* --------------- IOCTL functions from v4l2_int_ioctl_desc --------------- */
+
+static int ioctl_g_csi(struct v4l2_int_device *s, int *csi)
+{
+	struct sensor *sensor = s->priv;
+
+	CAMERA_TRACE(("In ov3640:ioctl_g_csi\n"));
+
+	*csi = sensor->csi;
+
+	return 0;
+}
 
 static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 {
@@ -856,6 +891,9 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 
 	CAMERA_TRACE(("In ov3640:ioctl_dev_init\n"));
 
+	if (ov3640_enable_regulator(sensor) < 0)
+		return -1;
+
 	gpio_sensor_active(ov3640_data.csi);
 	ov3640_data.on = true;
 
@@ -884,12 +922,54 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 }
 
 /*!
+ * ioctl_dev_exit - V4L2 sensor interface handler for vidioc_int_dev_exit_num
+ * @s: pointer to standard V4L2 device structure
+ *
+ * Initialise the device when slave detaches to the master.
+ */
+static int ioctl_dev_exit(struct v4l2_int_device *s)
+{
+	struct sensor *sensor = s->priv;
+	struct device dev;
+
+	dev = sensor->i2c_client->dev;
+
+	CAMERA_TRACE(("In ov3640:ioctl_dev_exit\n"));
+
+	if (!IS_ERR_VALUE((unsigned long)gpo_regulator) &&
+	    gpo_regulator != NULL) {
+		regulator_disable(gpo_regulator);
+		regulator_put(gpo_regulator, &dev);
+	}
+
+	if (!IS_ERR_VALUE((unsigned long)analog_regulator) &&
+	    analog_regulator != NULL) {
+		regulator_disable(analog_regulator);
+		regulator_put(analog_regulator, &dev);
+	}
+
+	if (!IS_ERR_VALUE((unsigned long)core_regulator) &&
+	    core_regulator != NULL) {
+		regulator_disable(core_regulator);
+		regulator_put(core_regulator, &dev);
+	}
+
+	if (!IS_ERR_VALUE((unsigned long)io_regulator) &&
+	    io_regulator != NULL) {
+		regulator_disable(io_regulator);
+		regulator_put(io_regulator, &dev);
+	}
+
+	return 0;
+}
+
+/*!
  * This structure defines all the ioctls for this module and links them to the
  * enumeration.
  */
 static struct v4l2_int_ioctl_desc ov3640_ioctl_desc[] = {
 	{vidioc_int_dev_init_num, (v4l2_int_ioctl_func *)ioctl_dev_init},
-/*	{vidioc_int_dev_exit_num, (v4l2_int_ioctl_func *)ioctl_dev_exit}, */
+	{vidioc_int_dev_exit_num, ioctl_dev_exit},
 	{vidioc_int_s_power_num, (v4l2_int_ioctl_func *)ioctl_s_power},
 	{vidioc_int_g_ifparm_num, (v4l2_int_ioctl_func *)ioctl_g_ifparm},
 /*	{vidioc_int_g_needs_reset_num,
@@ -907,6 +987,7 @@ static struct v4l2_int_ioctl_desc ov3640_ioctl_desc[] = {
 /*	{vidioc_int_queryctrl_num, (v4l2_int_ioctl_func *)ioctl_queryctrl}, */
 	{vidioc_int_g_ctrl_num, (v4l2_int_ioctl_func *)ioctl_g_ctrl},
 	{vidioc_int_s_ctrl_num, (v4l2_int_ioctl_func *)ioctl_s_ctrl},
+	{vidioc_int_g_csi_num, ioctl_g_csi},
 };
 
 static struct v4l2_int_slave ov3640_slave = {
@@ -923,10 +1004,73 @@ static struct v4l2_int_device ov3640_int_device = {
 	},
 };
 
+static int ov3640_enable_regulator(struct sensor *sensor)
+{
+	struct device dev = sensor->i2c_client->dev;
+
+	if (!IS_ERR_VALUE((u32)io_regulator) && io_regulator != NULL) {
+		regulator_set_voltage(io_regulator, io_voltage);
+		if (regulator_enable(io_regulator) != 0) {
+			pr_err("%s:io set voltage error\n", __func__);
+			goto err1;
+		} else {
+			dev_dbg(&dev, "%s:io set voltage ok\n", __func__);
+		}
+	}
+	if (!IS_ERR_VALUE((u32)core_regulator) && core_regulator != NULL) {
+		regulator_set_voltage(core_regulator, core_voltage);
+		if (regulator_enable(core_regulator) != 0) {
+			pr_err("%s:core set voltage error\n",
+			       __func__);
+			goto err2;
+		} else {
+			dev_dbg(&dev, "%s:core set voltage ok\n", __func__);
+		}
+	}
+	if (!IS_ERR_VALUE((u32)analog_regulator) && analog_regulator != NULL) {
+		regulator_set_voltage(analog_regulator, analog_voltage);
+		if (regulator_enable(analog_regulator) != 0) {
+			pr_err("%s:analog set voltage error\n", __func__);
+			goto err3;
+		} else {
+			dev_dbg(&dev, "%s:analog set voltage ok\n", __func__);
+		}
+	}
+	if (!IS_ERR_VALUE((u32)gpo_regulator) && gpo_regulator != NULL) {
+		regulator_set_voltage(gpo_regulator, gpo_voltage);
+		if (regulator_enable(gpo_regulator) != 0) {
+			pr_err("%s:gpo3 enable error\n", __func__);
+			goto err4;
+		} else {
+			dev_dbg(&dev, "%s:gpo3 enable ok\n", __func__);
+		}
+	}
+
+	return 0;
+err4:
+	if (!IS_ERR_VALUE((u32)analog_regulator) && analog_regulator != NULL) {
+		regulator_disable(analog_regulator);
+		regulator_put(analog_regulator, &dev);
+	}
+err3:
+	if (!IS_ERR_VALUE((u32)core_regulator) && core_regulator != NULL) {
+		regulator_disable(core_regulator);
+		regulator_put(core_regulator, &dev);
+	}
+err2:
+	if (!IS_ERR_VALUE((u32)io_regulator) && io_regulator != NULL) {
+		regulator_disable(io_regulator);
+		regulator_put(io_regulator, &dev);
+	}
+err1:
+	return -1;
+}
+
 /*!
  * ov3640 I2C probe function
  *
- * @param adapter            struct i2c_adapter *
+ * @param client            struct i2c_client *
+ * @param id		    struct i2c_device_id *
  * @return  Error code indicating success or failure
  */
 static int ov3640_probe(struct i2c_client *client,
@@ -953,53 +1097,36 @@ static int ov3640_probe(struct i2c_client *client,
 	ov3640_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	ov3640_data.streamcap.timeperframe.numerator = 1;
 
-	io_regulator = regulator_get(&client->dev, plat_data->io_regulator);
-	if (!IS_ERR_VALUE((u32)io_regulator)) {
-		regulator_set_voltage(io_regulator, OV3640_VOLTAGE_DIGITAL_IO);
-		if (regulator_enable(io_regulator) != 0) {
-			pr_err("%s:io set voltage error\n", __func__);
+	if (plat_data->io_regulator != NULL) {
+		io_voltage = plat_data->io_voltage;
+		io_regulator = regulator_get(&client->dev,
+					     plat_data->io_regulator);
+		if (IS_ERR_VALUE((unsigned long)io_regulator))
 			goto err1;
-		} else {
-			dev_dbg(&client->dev,
-				"%s:io set voltage ok\n", __func__);
-		}
 	}
 
-	core_regulator = regulator_get(&client->dev, plat_data->core_regulator);
-	if (!IS_ERR_VALUE((u32)core_regulator)) {
-		regulator_set_voltage(core_regulator,
-				      OV3640_VOLTAGE_DIGITAL_CORE);
-		if (regulator_enable(core_regulator) != 0) {
-			pr_err("%s:core set voltage error\n", __func__);
+	if (plat_data->core_regulator != NULL) {
+		core_voltage = plat_data->core_voltage;
+		core_regulator = regulator_get(&client->dev,
+					       plat_data->core_regulator);
+		if (IS_ERR_VALUE((unsigned long)core_regulator))
 			goto err2;
-		} else {
-			dev_dbg(&client->dev,
-				"%s:core set voltage ok\n", __func__);
-		}
 	}
 
-	analog_regulator =
-		regulator_get(&client->dev, plat_data->analog_regulator);
-	if (!IS_ERR_VALUE((u32)analog_regulator)) {
-		regulator_set_voltage(analog_regulator, OV3640_VOLTAGE_ANALOG);
-		if (regulator_enable(analog_regulator) != 0) {
-			pr_err("%s:analog set voltage error\n", __func__);
+	if (plat_data->analog_regulator != NULL) {
+		analog_voltage = plat_data->analog_voltage;
+		analog_regulator = regulator_get(&client->dev,
+				      plat_data->analog_regulator);
+		if (IS_ERR_VALUE((unsigned long)analog_regulator))
 			goto err3;
-		} else {
-			dev_dbg(&client->dev,
-				"%s:analog set voltage ok\n", __func__);
-		}
 	}
 
-	gpo_regulator = regulator_get(&client->dev, plat_data->gpo_regulator);
-	if (!IS_ERR_VALUE((u32)gpo_regulator)) {
-		if (regulator_enable(gpo_regulator) != 0) {
-			pr_err("%s:gpo3 enable error\n", __func__);
+	if (plat_data->gpo_regulator != NULL) {
+		gpo_voltage = plat_data->gpo_voltage;
+		gpo_regulator = regulator_get(&client->dev,
+					      plat_data->gpo_regulator);
+		if (IS_ERR_VALUE((unsigned long)gpo_regulator))
 			goto err4;
-		} else {
-			dev_dbg(&client->dev,
-				"%s:gpo3 enable ok\n", __func__);
-		}
 	}
 
 	ov3640_int_device.priv = &ov3640_data;
@@ -1008,20 +1135,14 @@ static int ov3640_probe(struct i2c_client *client,
 	return retval;
 
 err4:
-	if (!IS_ERR_VALUE((u32)analog_regulator)) {
-		regulator_disable(analog_regulator);
+	if (!IS_ERR_VALUE((u32)analog_regulator) && analog_regulator != NULL)
 		regulator_put(analog_regulator, &client->dev);
-	}
 err3:
-	if (!IS_ERR_VALUE((u32)core_regulator)) {
-		regulator_disable(core_regulator);
+	if (!IS_ERR_VALUE((u32)core_regulator) && core_regulator != NULL)
 		regulator_put(core_regulator, &client->dev);
-	}
 err2:
-	if (!IS_ERR_VALUE((u32)io_regulator)) {
-		regulator_disable(io_regulator);
+	if (!IS_ERR_VALUE((u32)io_regulator) && io_regulator != NULL)
 		regulator_put(io_regulator, &client->dev);
-	}
 err1:
 	return -1;
 }
@@ -1037,26 +1158,6 @@ static int ov3640_remove(struct i2c_client *client)
 	CAMERA_TRACE(("In ov3640_remove\n"));
 
 	v4l2_int_device_unregister(&ov3640_int_device);
-
-	if (!IS_ERR_VALUE((unsigned long)gpo_regulator)) {
-		regulator_disable(gpo_regulator);
-		regulator_put(gpo_regulator, &client->dev);
-	}
-
-	if (!IS_ERR_VALUE((unsigned long)analog_regulator)) {
-		regulator_disable(analog_regulator);
-		regulator_put(analog_regulator, &client->dev);
-	}
-
-	if (!IS_ERR_VALUE((unsigned long)core_regulator)) {
-		regulator_disable(core_regulator);
-		regulator_put(core_regulator, &client->dev);
-	}
-
-	if (!IS_ERR_VALUE((unsigned long)io_regulator)) {
-		regulator_disable(io_regulator);
-		regulator_put(io_regulator, &client->dev);
-	}
 
 	return 0;
 }

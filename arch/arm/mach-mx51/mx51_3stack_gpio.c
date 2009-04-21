@@ -951,18 +951,39 @@ void gpio_sensor_active(unsigned int csi)
 				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
 				  PAD_CTL_SRE_SLOW);
 
-		mxc_request_iomux(MX51_PIN_GPIO1_5, IOMUX_CONFIG_ALT6);
-		mxc_iomux_set_pad(MX51_PIN_GPIO1_5, PAD_CTL_HYS_NONE |
-				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
-				  PAD_CTL_DRV_LOW | PAD_CTL_ODE_OPENDRAIN_NONE |
-				  PAD_CTL_SRE_SLOW);
+		if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0) {
+			/* Camera reset */
+			mxc_request_iomux(MX51_PIN_CSI1_D9, IOMUX_CONFIG_ALT3);
+			mxc_iomux_set_pad(MX51_PIN_CSI1_D9, PAD_CTL_HYS_NONE |
+					  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
+					  PAD_CTL_SRE_SLOW);
+			mxc_set_gpio_direction(MX51_PIN_CSI1_D9, 0);
+			mxc_set_gpio_dataout(MX51_PIN_CSI1_D9, 1);
+		} else {
+			/* Camera reset */
+			mxc_request_iomux(MX51_PIN_EIM_EB3, IOMUX_CONFIG_ALT1);
+			mxc_iomux_set_pad(MX51_PIN_EIM_EB3, PAD_CTL_HYS_NONE |
+					  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
+					  PAD_CTL_DRV_LOW | PAD_CTL_SRE_SLOW);
+			mxc_set_gpio_direction(MX51_PIN_EIM_EB3, 0);
+			mxc_set_gpio_dataout(MX51_PIN_EIM_EB3, 1);
+		}
 
-		mxc_request_iomux(MX51_PIN_DI2_PIN4, IOMUX_CONFIG_ALT3);
-		mxc_iomux_set_pad(MX51_PIN_DI2_PIN4, PAD_CTL_HYS_NONE |
+		/* Camera low power */
+		mxc_request_iomux(MX51_PIN_EIM_CS4, IOMUX_CONFIG_ALT1);
+		mxc_iomux_set_pad(MX51_PIN_EIM_CS4, PAD_CTL_HYS_NONE |
 				  PAD_CTL_PKE_ENABLE | PAD_CTL_DRV_LOW |
 				  PAD_CTL_SRE_SLOW);
-		mxc_iomux_set_input(MUX_IN_FEC_FEC_COL_SELECT_INPUT,
-				    INPUT_CTL_PATH1);
+		mxc_set_gpio_direction(MX51_PIN_EIM_CS4, 0);
+		mxc_set_gpio_dataout(MX51_PIN_EIM_CS4, 0);
+
+		/* Data enable */
+		mxc_request_iomux(MX51_PIN_GPIO1_8, IOMUX_CONFIG_ALT2);
+		mxc_iomux_set_input(MUX_IN_HSC_MIPI_MIX_IPP_IND_SENS1_DATA_EN_SELECT_INPUT, INPUT_CTL_PATH2);
+		mxc_iomux_set_pad(MX51_PIN_GPIO1_8, PAD_CTL_HYS_NONE |
+				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+				  PAD_CTL_22K_PU | PAD_CTL_DRV_HIGH |
+				  PAD_CTL_SRE_SLOW);
 		break;
 	default:
 		break;
@@ -994,8 +1015,18 @@ void gpio_sensor_inactive(unsigned int csi)
 		mxc_request_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT0);
 		break;
 	case 1:
-		mxc_request_iomux(MX51_PIN_GPIO1_5, IOMUX_CONFIG_ALT0);
-		mxc_request_iomux(MX51_PIN_DI2_PIN4, IOMUX_CONFIG_ALT0);
+		if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0) {
+			mxc_free_iomux(MX51_PIN_CSI1_D9, IOMUX_CONFIG_GPIO);
+			mxc_request_iomux(MX51_PIN_CSI1_D9, IOMUX_CONFIG_ALT0);
+		} else {
+			mxc_free_iomux(MX51_PIN_EIM_EB3, IOMUX_CONFIG_GPIO);
+			mxc_request_iomux(MX51_PIN_EIM_EB3, IOMUX_CONFIG_ALT0);
+		}
+
+		mxc_free_iomux(MX51_PIN_EIM_CS4, IOMUX_CONFIG_GPIO);
+		mxc_request_iomux(MX51_PIN_EIM_CS4, IOMUX_CONFIG_ALT0);
+
+		mxc_request_iomux(MX51_PIN_GPIO1_8, IOMUX_CONFIG_ALT0);
 		break;
 	default:
 		break;

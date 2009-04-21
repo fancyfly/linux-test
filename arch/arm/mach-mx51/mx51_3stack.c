@@ -520,11 +520,26 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 #endif
 #if defined(CONFIG_I2C_MXC_HS) || defined(CONFIG_I2C_MXC_HS_MODULE)
 static struct mxc_camera_platform_data camera_data = {
-	.io_regulator = "SW4",
-	.analog_regulator = "VIOHI",
-	.mclk = 24000000,
-	.csi = 0,
+#ifdef CONFIG_MXC_CAMERA_USE_CSI0
+	 .io_regulator = "SW4",
+	 .analog_regulator = "VIOHI",
+	 .core_voltage = 1500000,
+	 .io_voltage = 1800000,
+	 .analog_voltage = 2800000,
+	 .mclk = 24000000,
+	 .csi = 0,
+#else
+	 .core_regulator = "VGEN1",
+	 .io_regulator = "VCAM",
+	 .analog_regulator = "VAUDIO",
+	 .core_voltage = 1500000,
+	 .io_voltage = 1800000,
+	 .analog_voltage = 2800000,
+	 .mclk = 24000000,
+	 .csi = 1,
+#endif
 };
+
 static struct mxc_lightsensor_platform_data ls_data = {
 	.vdd_reg = NULL,
 	.rext = 100,
@@ -532,9 +547,9 @@ static struct mxc_lightsensor_platform_data ls_data = {
 
 static struct i2c_board_info mxc_i2c_hs_board_info[] __initdata = {
 	{
-		.type = "ov3640",
-		.addr = 0x3C,
-		.platform_data = (void *)&camera_data,
+	 .type = "ov3640",
+	 .addr = 0x3C,
+	 .platform_data = (void *)&camera_data,
 	},
 	{
 	 .type = "isl29003",

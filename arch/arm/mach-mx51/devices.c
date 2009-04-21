@@ -255,7 +255,11 @@ static void mxc_init_ipu(void)
 
 		/* CSI mode reserved*/
 		temp = __raw_readl(reg_hsc_mxt_conf);
+#ifdef CONFIG_MXC_CAMERA_USE_CSI0
 		__raw_writel(temp | 0x0FF, reg_hsc_mxt_conf);
+#else
+		__raw_writel(temp | 0x0FA, reg_hsc_mxt_conf);
+#endif
 
 		if (cpu_is_mx51_rev(CHIP_REV_2_0) > 0) {
 			temp = __raw_readl(reg_hsc_mxt_conf);

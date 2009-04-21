@@ -1141,6 +1141,82 @@ static struct clk csi0_clk = {
 	.disable = _clk_disable,
 };
 
+#ifdef CONFIG_MACH_MX51_3DS
+static int _clk_csi1_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 reg, mux;
+
+	reg = __raw_readl(MXC_CCM_CSCMR2);
+	mux = _get_mux(parent, &pll1_sw_clk, &pll2_sw_clk, &pll3_sw_clk, NULL);
+	reg = (reg & ~MXC_CCM_CSCMR2_CSI_MCLK1_CLK_SEL_MASK) |
+		    (mux << MXC_CCM_CSCMR2_CSI_MCLK1_CLK_SEL_OFFSET);
+	__raw_writel(reg, MXC_CCM_CSCMR2);
+
+	return 0;
+}
+
+static void _clk_csi1_recalc(struct clk *clk)
+{
+	u32 reg, pred, podf;
+
+	reg = __raw_readl(MXC_CCM_CSCDR4);
+	pred = ((reg & MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PRED_MASK) >>
+			MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PRED_OFFSET) + 1;
+	podf = ((reg & MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PODF_MASK) >>
+			MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PODF_OFFSET) + 1;
+	clk->rate = clk->parent->rate / (pred * podf);
+}
+
+static unsigned long _clk_csi1_round_rate(struct clk *clk, unsigned long rate)
+{
+	u32 pre, post;
+	u32 div = clk->parent->rate / rate;
+	if (clk->parent->rate % rate)
+		div++;
+
+	__calc_pre_post_dividers(div, &pre, &post);
+
+	return clk->parent->rate / (pre * post);
+}
+
+static int _clk_csi1_set_rate(struct clk *clk, unsigned long rate)
+{
+	u32 reg;
+	u32 div;
+	u32 pre, post;
+
+	div = clk->parent->rate / rate;
+
+	if ((clk->parent->rate / div) != rate)
+		return -EINVAL;
+
+	__calc_pre_post_dividers(div, &pre, &post);
+
+	/* Set CSI clock divider */
+	reg = __raw_readl(MXC_CCM_CSCDR4) &
+	    ~(MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PRED_MASK |
+		MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PODF_MASK);
+	reg |= (post - 1) << MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PODF_OFFSET;
+	reg |= (pre - 1) << MXC_CCM_CSCDR4_CSI_MCLK1_CLK_PRED_OFFSET;
+	__raw_writel(reg, MXC_CCM_CSCDR4);
+
+	clk->rate = rate;
+	return 0;
+}
+
+static struct clk csi1_clk = {
+	.name = "csi_mclk2",
+	.parent = &pll3_sw_clk,
+	.set_parent = _clk_csi1_set_parent,
+	.recalc = _clk_csi1_recalc,
+	.round_rate = _clk_csi1_round_rate,
+	.set_rate = _clk_csi1_set_rate,
+	.enable = _clk_enable,
+	.enable_reg = MXC_CCM_CCGR6,
+	.enable_shift = MXC_CCM_CCGR6_CG2_OFFSET,
+	.disable = _clk_disable,
+};
+#else /* !CONFIG_MACH_MX51_3DS */
 static int _clk_csi1_set_parent(struct clk *clk, struct clk *parent)
 {
 	u32 reg, mux;
@@ -1215,7 +1291,7 @@ static struct clk csi1_clk = {
 	.enable_shift = MXC_CCM_CCGR6_CG3_OFFSET,
 	.disable = _clk_disable,
 };
-
+#endif /* CONFIG_MACH_MX51_3DS */
 
 static int _clk_hsc_enable(struct clk *clk)
 {

@@ -345,6 +345,8 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 			IPU_CHAN_ID(channel));
 	}
 
+	ipu_conf = __raw_readl(IPU_CONF);
+
 	switch (channel) {
 	case CSI_MEM0:
 	case CSI_MEM1:
@@ -538,7 +540,7 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 
 	/* Enable IPU sub module */
 	g_channel_init_mask |= 1L << IPU_CHAN_ID(channel);
-	ipu_conf = __raw_readl(IPU_CONF);
+
 	if (ipu_ic_use_count == 1)
 		ipu_conf |= IPU_CONF_IC_EN;
 	if (ipu_rot_use_count == 1)
@@ -1428,7 +1430,7 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 	    (channel == MEM_DC_SYNC)) {
 		_ipu_dp_dc_disable(channel);
 	} else if (wait_for_stop) {
-		timeout = 40;
+		timeout = 240;
 		while (idma_is_set(IDMAC_CHA_BUSY, in_dma) ||
 		       idma_is_set(IDMAC_CHA_BUSY, out_dma) ||
 			(g_sec_chan_en[IPU_CHAN_ID(channel)] &&

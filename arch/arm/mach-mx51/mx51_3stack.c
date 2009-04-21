@@ -1190,6 +1190,30 @@ static void mxc_init_android_pmem(void)
 }
 #endif
 
+#if defined(CONFIG_GPS_IOCTRL) || defined(CONFIG_GPS_IOCTRL_MODULE)
+static struct mxc_gps_platform_data gps_data = {
+       .core_reg = "VIOHI",
+       .analog_reg = "SW4",
+};
+
+static struct platform_device mxc_gps_device = {
+       .name = "gps_ioctrl",
+       .id = -1,
+       .dev = {
+               .platform_data = &gps_data,
+       },
+};
+
+static void __init mxc_init_gps(void)
+{
+       (void)platform_device_register(&mxc_gps_device);
+}
+#else
+static void __init mxc_init_gps(void)
+{
+}
+#endif
+
 /*!
  * Board specific initialization.
  */
@@ -1234,6 +1258,7 @@ static void __init mxc_board_init(void)
 
 	mxc_sgtl5000_init();
 	mxc_init_bluetooth();
+	mxc_init_gps();
 	mxc_init_android_pmem();
 
 	err = mxc_request_iomux(MX51_PIN_EIM_D19, IOMUX_CONFIG_GPIO);

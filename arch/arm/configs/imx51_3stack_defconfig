@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.26
-# Mon Apr 20 13:58:40 2009
+# Tue Apr 21 14:48:05 2009
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1652,6 +1652,7 @@ CONFIG_MXC_BLUETOOTH_ANDROID=y
 #
 # Broadcom GPS ioctrl support
 #
+CONFIG_GPS_IOCTRL=y
 
 #
 # MXC Media Local Bus Driver

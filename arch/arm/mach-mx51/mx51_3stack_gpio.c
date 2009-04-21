@@ -95,13 +95,13 @@ void gpio_uart_active(int port, int no_irda)
 		break;
 	case 2:
 		/* UART 3 IOMUX Configs */
-		mxc_request_iomux(MX51_PIN_UART3_RXD, IOMUX_CONFIG_ALT0);
+		mxc_request_iomux(MX51_PIN_UART3_RXD, IOMUX_CONFIG_ALT1);
 		mxc_iomux_set_pad(MX51_PIN_UART3_RXD, PAD_CTL_HYS_NONE |
 				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
 				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
 		mxc_iomux_set_input(MUX_IN_UART3_IPP_UART_RXD_MUX_SELECT_INPUT,
-				    INPUT_CTL_PATH0);
-		mxc_request_iomux(MX51_PIN_UART3_TXD, IOMUX_CONFIG_ALT0);
+				    INPUT_CTL_PATH4);
+		mxc_request_iomux(MX51_PIN_UART3_TXD, IOMUX_CONFIG_ALT1);
 		mxc_iomux_set_pad(MX51_PIN_UART3_TXD, PAD_CTL_HYS_NONE |
 				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
 				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
@@ -111,7 +111,7 @@ void gpio_uart_active(int port, int no_irda)
 				  PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_KEEPER |
 				  PAD_CTL_DRV_HIGH | PAD_CTL_SRE_FAST);
 		mxc_iomux_set_input(MUX_IN_UART3_IPP_UART_RTS_B_SELECT_INPUT,
-				    INPUT_CTL_PATH2);
+				    INPUT_CTL_PATH3);
 		/* UART3_CTS */
 		mxc_request_iomux(MX51_PIN_EIM_D24, IOMUX_CONFIG_ALT3);
 		mxc_iomux_set_pad(MX51_PIN_EIM_D24, PAD_CTL_HYS_NONE |
@@ -1924,3 +1924,63 @@ int headphone_det_status(void)
 }
 
 EXPORT_SYMBOL(headphone_det_status);
+
+/*!
+ * GPS GPIO
+ */
+void gpio_gps_active(void)
+{
+	/* POWER_EN */
+	mxc_request_iomux(MX51_PIN_EIM_CS2, IOMUX_CONFIG_GPIO);
+	mxc_iomux_set_pad(MX51_PIN_EIM_CS2, PAD_CTL_DRV_HIGH |
+			PAD_CTL_HYS_NONE | PAD_CTL_PUE_KEEPER |
+			PAD_CTL_100K_PU | PAD_CTL_PKE_ENABLE |
+			PAD_CTL_SRE_FAST);
+	mxc_set_gpio_direction(MX51_PIN_EIM_CS2, 0);
+
+	/* Reset Pin */
+	mxc_request_iomux(MX51_PIN_EIM_CRE, IOMUX_CONFIG_GPIO);
+	mxc_iomux_set_pad(MX51_PIN_EIM_CRE, PAD_CTL_DRV_HIGH |
+			PAD_CTL_HYS_NONE | PAD_CTL_PUE_KEEPER |
+			PAD_CTL_100K_PU | PAD_CTL_PKE_ENABLE |
+			PAD_CTL_SRE_FAST);
+	mxc_set_gpio_direction(MX51_PIN_EIM_CRE, 0);
+
+	mxc_set_gpio_dataout(MX51_PIN_EIM_CS2, 0);
+	mxc_set_gpio_dataout(MX51_PIN_EIM_CRE, 0);
+
+	msleep(5);
+	mxc_set_gpio_dataout(MX51_PIN_EIM_CRE, 1);
+	msleep(5);
+}
+
+EXPORT_SYMBOL(gpio_gps_active);
+
+int gpio_gps_access(int para)
+{
+	iomux_pin_name_t pin;
+	pin = (para & 0x1) ? MX51_PIN_EIM_CS2 : MX51_PIN_EIM_CRE;
+
+	if(para & 0x1)
+		printk("r65092 set Power Enable Pin %d\n", para & 0x2);
+	else
+		printk("r65092 set Reset Pin %d\n", para & 0x2);
+
+	if (para & 0x4) /* Read GPIO */
+		return mxc_get_gpio_datain(pin);
+	else if (para & 0x2) /* Write GPIO */
+		mxc_set_gpio_dataout(pin, 1);
+	else
+		mxc_set_gpio_dataout(pin, 0);
+	return 0;
+}
+
+EXPORT_SYMBOL(gpio_gps_access);
+
+void gpio_gps_inactive(void)
+{
+	mxc_free_iomux(MX51_PIN_EIM_CRE, IOMUX_CONFIG_GPIO);
+	mxc_free_iomux(MX51_PIN_EIM_CS2, IOMUX_CONFIG_GPIO);
+}
+
+EXPORT_SYMBOL(gpio_gps_inactive);

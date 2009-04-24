@@ -1955,3 +1955,71 @@ int headphone_det_status(void)
 }
 
 EXPORT_SYMBOL(headphone_det_status);
+
+/*!
+ * Setup GPIO for SIM to be active
+ */
+void gpio_sim_active(void)
+{
+#if 0				/* Not used yet on AAPL2_20081105 */
+	mxc_request_iomux(MX51_PIN_NANDF_CS3, IOMUX_CONFIG_ALT6);
+#endif
+	mxc_request_iomux(MX51_PIN_NANDF_CS4, IOMUX_CONFIG_ALT6);
+	mxc_request_iomux(MX51_PIN_NANDF_CS5, IOMUX_CONFIG_ALT6);
+	mxc_request_iomux(MX51_PIN_NANDF_CS6, IOMUX_CONFIG_ALT6);
+	mxc_request_iomux(MX51_PIN_NANDF_CS7, IOMUX_CONFIG_ALT6);
+
+#if 0				/* Not used yet on AAPL2_20081105 */
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS3,
+			  PAD_CTL_DRV_HIGH | PAD_CTL_DRV_VOT_HIGH |
+			  PAD_CTL_HYS_NONE | PAD_CTL_100K_PU |
+			  PAD_CTL_PUE_KEEPER | PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_PKE_ENABLE);
+#endif
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS4,
+			  PAD_CTL_DRV_HIGH | PAD_CTL_DRV_VOT_HIGH |
+			  PAD_CTL_HYS_NONE | PAD_CTL_47K_PU |
+			  PAD_CTL_PUE_KEEPER | PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_PKE_ENABLE);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS5,
+			  PAD_CTL_DRV_HIGH | PAD_CTL_DRV_VOT_HIGH |
+			  PAD_CTL_HYS_NONE | PAD_CTL_47K_PU |
+			  PAD_CTL_PUE_KEEPER | PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_PKE_ENABLE);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS6,
+			  PAD_CTL_DRV_HIGH | PAD_CTL_DRV_VOT_HIGH |
+			  PAD_CTL_HYS_NONE | PAD_CTL_100K_PD |
+			  PAD_CTL_PUE_PULL | PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_PKE_ENABLE);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS7,
+			  PAD_CTL_DRV_HIGH | PAD_CTL_DRV_VOT_HIGH |
+			  PAD_CTL_HYS_NONE | PAD_CTL_22K_PU |
+			  PAD_CTL_PUE_PULL | PAD_CTL_ODE_OPENDRAIN_NONE |
+			  PAD_CTL_PKE_ENABLE);
+}
+
+EXPORT_SYMBOL(gpio_sim_active);
+
+/*!
+ * Setup GPIO for SIM to be inactive
+ */
+void gpio_sim_inactive(void)
+{
+#if 0				/* Not used yet on AAPL2_20081105 */
+	mxc_free_iomux(MX51_PIN_NANDF_CS3, IOMUX_CONFIG_ALT6);
+#endif
+	mxc_free_iomux(MX51_PIN_NANDF_CS4, IOMUX_CONFIG_ALT6);
+	mxc_free_iomux(MX51_PIN_NANDF_CS5, IOMUX_CONFIG_ALT6);
+	mxc_free_iomux(MX51_PIN_NANDF_CS6, IOMUX_CONFIG_ALT6);
+	mxc_free_iomux(MX51_PIN_NANDF_CS7, IOMUX_CONFIG_ALT6);
+
+#if 0				/* Not used yet on AAPL2_20081105 */
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS3, PAD_CTL_DRV_LOW);
+#endif
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS4, PAD_CTL_DRV_LOW);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS5, PAD_CTL_DRV_LOW);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS6, PAD_CTL_DRV_LOW);
+	mxc_iomux_set_pad(MX51_PIN_NANDF_CS7, PAD_CTL_DRV_LOW);
+}
+
+EXPORT_SYMBOL(gpio_sim_inactive);

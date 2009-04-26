@@ -854,6 +854,8 @@ void gpio_sdhc_inactive(int module)
 		mxc_free_iomux(MX25_PIN_SD1_DATA1, MUX_CONFIG_GPIO);
 		mxc_free_iomux(MX25_PIN_SD1_DATA2, MUX_CONFIG_GPIO);
 		mxc_free_iomux(MX25_PIN_SD1_DATA3, MUX_CONFIG_GPIO);
+		mxc_free_iomux(MX25_PIN_A14, MUX_CONFIG_GPIO);
+		mxc_free_iomux(MX25_PIN_A15, MUX_CONFIG_GPIO);
 		break;
 	case 1:
 		/* SDHC2 */

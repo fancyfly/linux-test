@@ -1430,22 +1430,23 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 	    (channel == MEM_DC_SYNC)) {
 		_ipu_dp_dc_disable(channel, false);
 	} else if (wait_for_stop) {
-		timeout = 240;
-		while (idma_is_set(IDMAC_CHA_BUSY, in_dma) ||
-		       idma_is_set(IDMAC_CHA_BUSY, out_dma) ||
-			(g_sec_chan_en[IPU_CHAN_ID(channel)] &&
-			idma_is_set(IDMAC_CHA_BUSY, sec_dma)) ||
-			(g_thrd_chan_en[IPU_CHAN_ID(channel)] &&
-			idma_is_set(IDMAC_CHA_BUSY, thrd_dma)) ||
-		       (_ipu_channel_status(channel) == TASK_STAT_ACTIVE)) {
-			timeout--;
-			msleep(10);
-			if (timeout == 0) {
-				ipu_dump_registers();
-				break;
+			/* for CSI etc */
+			timeout = 2400;
+			while (idma_is_set(IDMAC_CHA_BUSY, in_dma) ||
+				idma_is_set(IDMAC_CHA_BUSY, out_dma) ||
+				(g_sec_chan_en[IPU_CHAN_ID(channel)] &&
+				 idma_is_set(IDMAC_CHA_BUSY, sec_dma)) ||
+				(g_thrd_chan_en[IPU_CHAN_ID(channel)] &&
+				 idma_is_set(IDMAC_CHA_BUSY, thrd_dma)) ||
+				(_ipu_channel_status(channel) == TASK_STAT_ACTIVE)) {
+				timeout--;
+				udelay(1000);
+				if (timeout == 0) {
+					ipu_dump_registers();
+					break;
+				}
 			}
-		}
-		dev_dbg(g_ipu_dev, "timeout = %d * 10ms\n", 40 - timeout);
+			dev_dbg(g_ipu_dev, "timeout = %d * ms\n", 2400 - timeout);
 	}
 
 	spin_lock_irqsave(&ipu_lock, lock_flags);

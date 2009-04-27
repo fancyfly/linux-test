@@ -218,6 +218,12 @@ static struct spi_board_info mxc_spi_board_info[] __initdata = {
 	 .chip_select = 0,
 	 .mode = SPI_MODE_2,
 	 },
+	{
+	 .modalias = "wm8580_spi",
+	 .max_speed_hz = 8000000,	/* max spi SCK clock speed in HZ */
+	 .bus_num = 1,
+	 .chip_select = 1,
+	 },
 };
 
 static struct i2c_board_info mxc_i2c_board_info[] __initdata = {

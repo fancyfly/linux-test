@@ -1125,7 +1125,7 @@ EXPORT_SYMBOL(gpio_activate_esai_ports);
 /*!
  * Inactivate ESAI ports to disable surround sound I/O
  */
-void gpio_inactivate_esai_ports(void)
+void gpio_deactivate_esai_ports(void)
 {
 	mxc_request_gpio(MX25_PIN_CSI_D2); /*SCKR*/
 	mxc_request_gpio(MX25_PIN_CSI_D3); /*FSR*/
@@ -1153,7 +1153,7 @@ void gpio_inactivate_esai_ports(void)
 	mxc_free_iomux(MX25_PIN_CSI_HSYNC, MUX_CONFIG_FUNC);
 	mxc_free_iomux(MX25_PIN_CSI_PIXCLK, MUX_CONFIG_FUNC);
 }
-EXPORT_SYMBOL(gpio_inactivate_esai_ports);
+EXPORT_SYMBOL(gpio_deactivate_esai_ports);
 
 
 /*!

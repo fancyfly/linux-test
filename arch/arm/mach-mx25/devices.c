@@ -542,6 +542,19 @@ static inline void mxc_init_flexcan(void)
 }
 #endif
 
+static struct platform_device mxc_alsa_surround_device = {
+	.name = "imx-3stack-wm8580",
+	.id = 0,
+	.dev = {
+		.release = mxc_nop_release,
+		},
+};
+
+static void mxc_init_surround_audio(void)
+{
+	platform_device_register(&mxc_alsa_surround_device);
+}
+
 static int __init mxc_init_devices(void)
 {
 	mxc_init_wdt();
@@ -549,6 +562,7 @@ static int __init mxc_init_devices(void)
 	mxc_init_i2c();
 	mxc_init_dma();
 	mxc_init_ssi();
+	mxc_init_surround_audio();
 	mxc_init_rtc();
 	imx_init_adc();
 	mxc_init_flexcan();

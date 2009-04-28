@@ -11,6 +11,8 @@ obj-$(CONFIG_MACH_MX25_3DS)	+= mx25_3stack.o mx25_3stack_gpio.o
 
 obj-$(CONFIG_USB_EHCI_ARC_H2)	+= usb_h2.o
 
+obj-$(CONFIG_PM) 		+= pm.o
+
 ifneq ($(strip $(CONFIG_USB_GADGET_ARC) $(CONFIG_USB_EHCI_ARC_OTG)),)
 	obj-y	+= usb_dr.o
 endif

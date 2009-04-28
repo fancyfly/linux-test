@@ -54,6 +54,31 @@
 
 unsigned int mx25_3stack_board_io;
 
+/* working point(wp): 0 - 399MHz; 1 - 266MHz; 2 - 133MHz; */
+/* 24MHz input clock table */
+static struct cpu_wp cpu_wp_mx25[] = {
+	{
+	 .pll_rate = 399000000,
+	 .cpu_rate = 399000000,
+	 .cpu_podf = 0x0,
+	 .cpu_voltage = 1450000},
+	{
+	 .pll_rate = 532000000,
+	 .cpu_rate = 266000000,
+	 .cpu_podf = 0x1,
+	 .cpu_voltage = 1340000},
+	{
+	 .pll_rate = 532000000,
+	 .cpu_rate = 133000000,
+	 .cpu_podf = 0x3,
+	 .cpu_voltage = 1340000},
+};
+struct cpu_wp *get_cpu_wp(int *wp)
+{
+	*wp = 3;
+	return cpu_wp_mx25;
+}
+
 static void mxc_nop_release(struct device *dev)
 {
 	/* Nothing */

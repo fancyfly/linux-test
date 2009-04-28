@@ -86,6 +86,7 @@
 #define MXC_CCM_CCTL_USB_DIV_MASK   (0x3 << 16)
 #define MXC_CCM_CCTL_CG_CTRL        (1 << 15)
 #define MXC_CCM_CCTL_ARM_SRC        (1 << 14)
+#define MXC_CCM_CCTL_ARM_SRC_OFFSET	14
 
 #define MXC_CCM_CGCR0_HCLK_ATA_OFFSET    16
 #define MXC_CCM_CGCR0_HCLK_BROM_OFFSET   17

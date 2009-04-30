@@ -251,6 +251,14 @@ static struct spi_board_info mxc_spi_board_info[] __initdata = {
 	 },
 };
 
+static struct mxc_camera_platform_data camera_data = {
+	.core_regulator = NULL,
+	.io_regulator = NULL,
+	.analog_regulator = NULL,
+	.gpo_regulator = NULL,
+	.mclk = 24000000,
+};
+
 static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	{
 	 .type = "mc34704",
@@ -259,6 +267,11 @@ static struct i2c_board_info mxc_i2c_board_info[] __initdata = {
 	{
 	 .type = "sgtl5000-i2c",
 	 .addr = 0x0a,
+	 },
+	{
+	 .type = "ov2640",
+	 .addr = 0x30,
+	 .platform_data = (void *)&camera_data,
 	 },
 };
 

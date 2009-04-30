@@ -979,8 +979,6 @@ EXPORT_SYMBOL(gpio_usbotg_utmi_inactive);
  */
 void gpio_sensor_active(void)
 {
-	mxc_request_iomux(MX25_PIN_KPP_ROW2, MUX_CONFIG_ALT3); /*CSI D0*/
-	mxc_request_iomux(MX25_PIN_KPP_ROW3, MUX_CONFIG_ALT3); /*CSI D1*/
 	mxc_request_iomux(MX25_PIN_CSI_D2, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX25_PIN_CSI_D3, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX25_PIN_CSI_D4, MUX_CONFIG_FUNC);
@@ -993,25 +991,20 @@ void gpio_sensor_active(void)
 	mxc_request_iomux(MX25_PIN_CSI_MCLK, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX25_PIN_CSI_PIXCLK, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX25_PIN_CSI_VSYNC, MUX_CONFIG_FUNC);
-	mxc_request_iomux(MX25_PIN_LD7, MUX_CONFIG_ALT2); /*CSI D10*/
-	mxc_request_iomux(MX25_PIN_LD6, MUX_CONFIG_ALT2); /*CSI D11*/
-	mxc_request_iomux(MX25_PIN_LD5, MUX_CONFIG_ALT2); /*CSI D12*/
-	mxc_request_iomux(MX25_PIN_LD4, MUX_CONFIG_ALT2); /*CSI D13*/
-	mxc_request_iomux(MX25_PIN_LD3, MUX_CONFIG_ALT2); /*CSI D14*/
-	mxc_request_iomux(MX25_PIN_LD2, MUX_CONFIG_ALT2); /*CSI D15*/
 	mxc_request_iomux(MX25_PIN_A19, MUX_CONFIG_ALT5); /*CSI_PWDN*/
-#if 0
-	/* Or if uart1 is not used */
-	mxc_request_iomux(MX25_PIN_UART1_RTS, MUX_CONFIG_ALT1); /*CSI D0*/
-	mxc_request_iomux(MX25_PIN_UART1_CTS, MUX_CONFIG_ALT1); /*CSI D1*/
-#endif
+	mxc_request_iomux(MX25_PIN_A20, MUX_CONFIG_ALT5);
+
+	mxc_set_gpio_direction(MX25_PIN_A19, 0); /*CSI_PWDN*/
+	mxc_set_gpio_dataout(MX25_PIN_A19, 0);
+	mxc_set_gpio_direction(MX25_PIN_A20, 0); /*CMOS_RST*/
+	mxc_set_gpio_dataout(MX25_PIN_A20, 0);
+	mdelay(20);
+	mxc_set_gpio_dataout(MX25_PIN_A20, 1);
 
 #define CSI_PAD_CTL1 (PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU)
 #define CSI_PAD_CTL2 (PAD_CTL_HYS_SCHMITZ | PAD_CTL_PKE_ENABLE | \
 		      PAD_CTL_100K_PU)
 
-	mxc_iomux_set_pad(MX25_PIN_KPP_ROW2, CSI_PAD_CTL1);
-	mxc_iomux_set_pad(MX25_PIN_KPP_ROW3, CSI_PAD_CTL1);
 	mxc_iomux_set_pad(MX25_PIN_CSI_D2, CSI_PAD_CTL1);
 	mxc_iomux_set_pad(MX25_PIN_CSI_D3, CSI_PAD_CTL1);
 	mxc_iomux_set_pad(MX25_PIN_CSI_D4, CSI_PAD_CTL2);
@@ -1025,12 +1018,6 @@ void gpio_sensor_active(void)
 			  PAD_CTL_PUE_PUD | PAD_CTL_100K_PU | PAD_CTL_SRE_FAST);
 	mxc_iomux_set_pad(MX25_PIN_CSI_PIXCLK, CSI_PAD_CTL2);
 	mxc_iomux_set_pad(MX25_PIN_CSI_VSYNC, CSI_PAD_CTL1);
-	mxc_iomux_set_pad(MX25_PIN_LD7, CSI_PAD_CTL1);
-	mxc_iomux_set_pad(MX25_PIN_LD6, CSI_PAD_CTL1);
-	mxc_iomux_set_pad(MX25_PIN_LD5, CSI_PAD_CTL1);
-	mxc_iomux_set_pad(MX25_PIN_LD4, CSI_PAD_CTL1);
-	mxc_iomux_set_pad(MX25_PIN_LD3, CSI_PAD_CTL1);
-	mxc_iomux_set_pad(MX25_PIN_LD2, CSI_PAD_CTL1);
 }
 EXPORT_SYMBOL(gpio_sensor_active);
 
@@ -1039,8 +1026,6 @@ EXPORT_SYMBOL(gpio_sensor_active);
  */
 void gpio_sensor_inactive(void)
 {
-	mxc_request_gpio(MX25_PIN_KPP_ROW2);
-	mxc_request_gpio(MX25_PIN_KPP_ROW3);
 	mxc_request_gpio(MX25_PIN_CSI_D2);
 	mxc_request_gpio(MX25_PIN_CSI_D3);
 	mxc_request_gpio(MX25_PIN_CSI_D4);
@@ -1053,16 +1038,7 @@ void gpio_sensor_inactive(void)
 	mxc_request_gpio(MX25_PIN_CSI_MCLK);
 	mxc_request_gpio(MX25_PIN_CSI_PIXCLK);
 	mxc_request_gpio(MX25_PIN_CSI_VSYNC);
-	mxc_request_gpio(MX25_PIN_LD7);
-	mxc_request_gpio(MX25_PIN_LD6);
-	mxc_request_gpio(MX25_PIN_LD5);
-	mxc_request_gpio(MX25_PIN_LD4);
-	mxc_request_gpio(MX25_PIN_LD3);
-	mxc_request_gpio(MX25_PIN_LD2);
-	mxc_request_gpio(MX25_PIN_A19); /*CSI_PWDN*/
 
-	mxc_free_iomux(MX25_PIN_KPP_ROW2, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_KPP_ROW3, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_CSI_D2, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_CSI_D3, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_CSI_D4, MUX_CONFIG_GPIO);
@@ -1075,13 +1051,6 @@ void gpio_sensor_inactive(void)
 	mxc_free_iomux(MX25_PIN_CSI_MCLK, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_CSI_PIXCLK, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_CSI_VSYNC, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD7, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD6, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD5, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD4, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD3, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_LD2, MUX_CONFIG_GPIO);
-	mxc_free_iomux(MX25_PIN_A19, MUX_CONFIG_GPIO);
 }
 EXPORT_SYMBOL(gpio_sensor_inactive);
 

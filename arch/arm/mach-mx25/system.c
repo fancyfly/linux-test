@@ -121,7 +121,6 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 
 	__raw_writel(reg, MXC_CCM_CCTL);
 }
-EXPORT_SYMBOL(mxc_cpu_lp_set);
 
 /*!
  * This function puts the CPU into idle mode. It is called by default_idle()

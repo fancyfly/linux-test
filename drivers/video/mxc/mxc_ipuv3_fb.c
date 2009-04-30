@@ -1475,6 +1475,9 @@ static int mxcfb_probe(struct platform_device *pdev)
 			fb_videomode_to_var(&fbi->var, plat_data->mode);
 	}
 
+	/* Default Y virtual size is 2x panel size */
+	fbi->var.yres_virtual = fbi->var.yres * 2;
+
 	mxcfb_check_var(&fbi->var, fbi);
 
 	/* Default Y virtual size is 2x panel size */

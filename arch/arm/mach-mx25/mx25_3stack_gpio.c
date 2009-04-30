@@ -757,14 +757,6 @@ void gpio_lcdc_inactive(void)
 }
 EXPORT_SYMBOL(gpio_lcdc_inactive);
 
-/*
- * Power on/off CPT VGA panel.
- */
-void board_power_lcd(int on)
-{
-}
-EXPORT_SYMBOL(board_power_lcd);
-
 /*!
  * Activate SDHC
  *

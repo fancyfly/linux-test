@@ -153,6 +153,9 @@ extern unsigned int mx25_3stack_board_io;
 #define MXC_BD_LED_ON(led)
 #define MXC_BD_LED_OFF(led)
 
+#define MXC_DEFAULT_INTENSITY	127
+#define MXC_INTENSITY_OFF	0
+
 /*! @} */
 
 extern void mxc_map_io(void);
@@ -170,6 +173,7 @@ extern int sdhc_write_protect(struct device *dev);
 extern void gpio_can_active(int id);
 extern void gpio_can_inactive(int id);
 extern struct flexcan_platform_data flexcan_data[];
+extern void mx2fb_set_brightness(uint8_t);
 
 #endif				/* CONFIG_MACH_MX25_3DS */
 #endif				/* __ASM_ARCH_MXC_BOARD_MX25_3STACK_H__ */

@@ -201,6 +201,18 @@ static struct platform_device mxc_fb_device = {
 		},
 };
 
+/*
+ * Power on/off CPT VGA panel.
+ */
+void board_power_lcd(int on)
+{
+	if (on)
+		mx2fb_set_brightness(MXC_DEFAULT_INTENSITY);
+	else
+		mx2fb_set_brightness(MXC_INTENSITY_OFF);
+}
+EXPORT_SYMBOL(board_power_lcd);
+
 static void mxc_init_fb(void)
 {
 	(void)platform_device_register(&mxc_fb_device);

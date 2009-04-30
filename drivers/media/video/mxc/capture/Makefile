@@ -5,6 +5,11 @@ ifeq ($(CONFIG_VIDEO_MXC_IPU_CAMERA),y)
 	obj-$(CONFIG_MXC_IPU_PRP_ENC) += ipu_prp_enc.o ipu_still.o
 endif
 
+ifeq ($(CONFIG_MACH_MX25_3DS),y)
+       obj-$(CONFIG_VIDEO_MXC_CSI_CAMERA) += fsl_csi.o
+       obj-$(CONFIG_VIDEO_MXC_CSI_CAMERA) += csi_v4l2_capture.o
+endif
+
 mx27_capture-objs := mx27_prphw.o mx27_prpsw.o emma_v4l2_capture.o
 obj-$(CONFIG_VIDEO_MXC_EMMA_CAMERA) += mx27_csi.o mx27_capture.o
 

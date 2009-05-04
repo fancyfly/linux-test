@@ -154,6 +154,7 @@ void csi_init_interface(void)
 	val |= 0x4000;
 	__raw_writel(val, CSI_CSICR3);
 }
+
 EXPORT_SYMBOL(csi_init_interface);
 
 /*!
@@ -175,6 +176,7 @@ void csi_enable_prpif(uint32_t enable)
 
 	csihw_set_config(&g_csi_cfg);
 }
+
 EXPORT_SYMBOL(csi_enable_prpif);
 
 /*!
@@ -203,6 +205,7 @@ int32_t csi_enable_mclk(int src, bool flag, bool wait)
 
 	return 0;
 }
+
 EXPORT_SYMBOL(csi_enable_mclk);
 
 /*!
@@ -214,9 +217,10 @@ int csi_read_mclk_flag(void)
 {
 	return 0;
 }
+
 EXPORT_SYMBOL(csi_read_mclk_flag);
 
-void csi_set_callback(void *data)
+void csi_start_callback(void *data)
 {
 	cam_data *cam = (cam_data *)data;
 
@@ -224,7 +228,15 @@ void csi_set_callback(void *data)
 		pr_debug("CSI error: irq request fail\n");
 
 }
-EXPORT_SYMBOL(csi_set_callback);
+EXPORT_SYMBOL(csi_start_callback);
+
+void csi_stop_callback(void *data)
+{
+	cam_data *cam = (cam_data *)data;
+
+	free_irq(MXC_INT_CSI, cam);
+}
+EXPORT_SYMBOL(csi_stop_callback);
 
 static void _mclk_recalc(struct clk *clk)
 {

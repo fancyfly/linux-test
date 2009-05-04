@@ -754,7 +754,7 @@ static void init_camera_struct(cam_data *cam)
 	cam->win.w.top = 0;
 	cam->still_counter = 0;
 
-	csi_set_callback(cam);
+	csi_start_callback(cam);
 	init_waitqueue_head(&cam->power_queue);
 	spin_lock_init(&cam->int_lock);
 }
@@ -902,10 +902,7 @@ static int csi_v4l2_master_attach(struct v4l2_int_device *slave)
  */
 static void csi_v4l2_master_detach(struct v4l2_int_device *slave)
 {
-	cam_data *cam = slave->u.slave->master->priv;
 	pr_debug("In MVC: %s\n", __func__);
-	/* vidioc_int_dev_exit(slave); */
-	free_irq(MXC_INT_CSI, cam);
 }
 
 /*!
@@ -979,6 +976,7 @@ static void __exit camera_exit(void)
 	} else {
 		pr_info("V4L2 freeing image input device\n");
 		v4l2_int_device_unregister(&csi_v4l2_int_device);
+		csi_stop_callback(g_cam);
 		video_unregister_device(g_cam->video_dev);
 		platform_driver_unregister(&csi_v4l2_driver);
 		platform_device_unregister(&csi_v4l2_devices);

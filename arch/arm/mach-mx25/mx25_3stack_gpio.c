@@ -984,7 +984,7 @@ void gpio_sensor_active(void)
 	mxc_request_iomux(MX25_PIN_CSI_PIXCLK, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX25_PIN_CSI_VSYNC, MUX_CONFIG_FUNC);
 	mxc_request_iomux(MX25_PIN_A19, MUX_CONFIG_ALT5); /*CSI_PWDN*/
-	mxc_request_iomux(MX25_PIN_A20, MUX_CONFIG_ALT5);
+	mxc_request_iomux(MX25_PIN_A20, MUX_CONFIG_ALT5); /*CMOS_RST*/
 
 	mxc_set_gpio_direction(MX25_PIN_A19, 0); /*CSI_PWDN*/
 	mxc_set_gpio_dataout(MX25_PIN_A19, 0);
@@ -1031,6 +1031,8 @@ void gpio_sensor_inactive(void)
 	mxc_request_gpio(MX25_PIN_CSI_PIXCLK);
 	mxc_request_gpio(MX25_PIN_CSI_VSYNC);
 
+	mxc_free_iomux(MX25_PIN_A19, MUX_CONFIG_GPIO);
+	mxc_free_iomux(MX25_PIN_A20, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_CSI_D2, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_CSI_D3, MUX_CONFIG_GPIO);
 	mxc_free_iomux(MX25_PIN_CSI_D4, MUX_CONFIG_GPIO);

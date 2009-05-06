@@ -152,6 +152,7 @@ static int __init mc13892_reg_int(void)
 		if ((strcmp(reg_name[i], "VIOHI") == 0) ||
 			(strcmp(reg_name[i], "VPLL") == 0) ||
 			(strcmp(reg_name[i], "VDIG") == 0) ||
+			(strcmp(reg_name[i], "VUSB2") == 0) ||
 			(strcmp(reg_name[i], "VGEN2") == 0))
 			continue;
 		regulator = regulator_get(NULL, reg_name[i]);

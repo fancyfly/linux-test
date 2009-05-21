@@ -103,6 +103,11 @@ static inline int _ipu_is_ic_chan(uint32_t dma_chan)
 	return ((dma_chan >= 11) && (dma_chan <= 22));
 }
 
+static inline int _ipu_is_ic_graphic_chan(uint32_t dma_chan)
+{
+	return (dma_chan == 14 || dma_chan == 15);
+}
+
 static inline int _ipu_is_irt_chan(uint32_t dma_chan)
 {
 	return ((dma_chan >= 45) && (dma_chan <= 50));
@@ -836,6 +841,15 @@ int32_t ipu_init_channel_buffer(ipu_channel_t channel, ipu_buffer_t type,
 	/* Build parameter memory data for DMA channel */
 	_ipu_ch_param_init(dma_chan, pixel_fmt, width, height, stride, u, v, 0,
 			   phyaddr_0, phyaddr_1);
+
+	/* Set correlative channel parameter of local alpha channel */
+	if (_ipu_is_ic_graphic_chan(dma_chan) &&
+	    (g_thrd_chan_en[IPU_CHAN_ID(channel)] == true)) {
+		_ipu_ch_param_set_separate_alpha_channel(dma_chan);
+		_ipu_ch_param_set_alpha_buffer_memory(dma_chan);
+		_ipu_ch_param_set_alpha_condition_read(dma_chan);
+	}
+
 	if (rot_mode)
 		_ipu_ch_param_set_rotation(dma_chan, rot_mode);
 
@@ -1366,6 +1380,10 @@ int32_t ipu_enable_channel(ipu_channel_t channel)
 		thrd_dma = channel_2_dma(channel, IPU_ALPHA_IN_BUFFER);
 		reg = __raw_readl(IDMAC_CHA_EN(thrd_dma));
 		__raw_writel(reg | idma_mask(thrd_dma), IDMAC_CHA_EN(thrd_dma));
+
+		sec_dma = channel_2_dma(channel, IPU_GRAPH_IN_BUFFER);
+		reg = __raw_readl(IDMAC_SEP_ALPHA);
+		__raw_writel(reg | idma_mask(sec_dma), IDMAC_SEP_ALPHA);
 	}
 
 	if ((channel == MEM_DC_SYNC) || (channel == MEM_BG_SYNC) ||
@@ -1423,8 +1441,10 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 
 	if (g_sec_chan_en[IPU_CHAN_ID(channel)])
 		sec_dma = channel_2_dma(channel, IPU_GRAPH_IN_BUFFER);
-	if (g_thrd_chan_en[IPU_CHAN_ID(channel)])
+	if (g_thrd_chan_en[IPU_CHAN_ID(channel)]) {
+		sec_dma = channel_2_dma(channel, IPU_GRAPH_IN_BUFFER);
 		thrd_dma = channel_2_dma(channel, IPU_ALPHA_IN_BUFFER);
+	}
 
 	if ((channel == MEM_BG_SYNC) || (channel == MEM_FG_SYNC) ||
 	    (channel == MEM_DC_SYNC)) {
@@ -1475,6 +1495,8 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 	if (g_thrd_chan_en[IPU_CHAN_ID(channel)] && idma_is_valid(thrd_dma)) {
 		reg = __raw_readl(IDMAC_CHA_EN(thrd_dma));
 		__raw_writel(reg & ~idma_mask(thrd_dma), IDMAC_CHA_EN(thrd_dma));
+		reg = __raw_readl(IDMAC_SEP_ALPHA);
+		__raw_writel(reg & ~idma_mask(sec_dma), IDMAC_SEP_ALPHA);
 		__raw_writel(idma_mask(thrd_dma), IPU_CHA_CUR_BUF(thrd_dma));
 	}
 

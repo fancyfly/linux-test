@@ -70,19 +70,19 @@ static int rfkill_toggle_radio(void *data, enum rfkill_state state)
 		} else if (state == RFKILL_STATE_OFF) {
 			if (bt_vdd) {
 				regulator_disable(bt_vdd);
-				regulator_put(bt_vdd, dev);
+				regulator_put(bt_vdd);
 			}
 			if (bt_vdd_parent) {
 				regulator_disable(bt_vdd_parent);
-				regulator_put(bt_vdd_parent, dev);
+				regulator_put(bt_vdd_parent);
 			}
 			if (bt_vusb) {
 				regulator_disable(bt_vusb);
-				regulator_put(bt_vusb, dev);
+				regulator_put(bt_vusb);
 			}
 			if (bt_vusb_parent) {
 				regulator_disable(bt_vusb_parent);
-				regulator_put(bt_vusb_parent, dev);
+				regulator_put(bt_vusb_parent);
 			}
 		}
 	}

@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.28
-# Tue Jun  2 15:47:53 2009
+# Tue Jun  2 16:58:39 2009
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1533,7 +1533,7 @@ CONFIG_MMC_BLOCK_BOUNCE=y
 CONFIG_MMC_BLOCK_PARANOID_RESUME=y
 # CONFIG_SDIO_UART is not set
 # CONFIG_MMC_TEST is not set
-CONFIG_SDIO_UNIFI_FS=m
+CONFIG_SDIO_UNIFI_FS=y
 
 #
 # MMC/SD/SDIO Host Controller Drivers

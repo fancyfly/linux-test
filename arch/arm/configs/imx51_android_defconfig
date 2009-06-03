@@ -1722,6 +1722,7 @@ CONFIG_MXC_BLUETOOTH_ANDROID=y
 #
 # Broadcom GPS ioctrl support
 #
+CONFIG_GPS_IOCTRL=y
 
 #
 # MXC Media Local Bus Driver

@@ -1570,8 +1570,6 @@ static int sdhci_suspend(struct platform_device *pdev, pm_message_t state)
 		free_irq(chip->hosts[i]->irq, chip->hosts[i]);
 	}
 
-	gpio_sdhc_inactive(pdev->id);
-
 	return 0;
 }
 
@@ -1585,8 +1583,6 @@ static int sdhci_resume(struct platform_device *pdev)
 		return 0;
 
 	DBG("Resuming...\n");
-
-	gpio_sdhc_active(pdev->id);
 
 	for (i = 0; i < chip->num_slots; i++) {
 		if (!chip->hosts[i])

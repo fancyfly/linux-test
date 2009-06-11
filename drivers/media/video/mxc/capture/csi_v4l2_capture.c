@@ -63,14 +63,14 @@ static struct v4l2_int_device csi_v4l2_int_device = {
 /*!
  * Indicates whether the palette is supported.
  *
- * @param palette V4L2_PIX_FMT_RGB565, V4L2_PIX_FMT_YUV422P or V4L2_PIX_FMT_YUV420
+ * @param palette V4L2_PIX_FMT_RGB565, V4L2_PIX_FMT_UYVY or V4L2_PIX_FMT_YUV420
  *
  * @return 0 if failed
  */
 static inline int valid_mode(u32 palette)
 {
 	return (palette == V4L2_PIX_FMT_RGB565) ||
-	    (palette == V4L2_PIX_FMT_YUV422P) ||
+	    (palette == V4L2_PIX_FMT_UYVY) ||
 	    (palette == V4L2_PIX_FMT_YUV420);
 }
 
@@ -81,18 +81,16 @@ static inline int valid_mode(u32 palette)
  *
  * @return status  0 Success
  */
-static int start_preview(cam_data *cam, unsigned long *addr)
+static int start_preview(cam_data *cam)
 {
-	unsigned long fb_add = *addr;
+	unsigned long fb_addr = (unsigned long)cam->v4l2_fb.base;
 
-	if (fb_add != 0) {
-		__raw_writel(fb_add, CSI_CSIDMASA_FB1);
-		__raw_writel(fb_add, CSI_CSIDMASA_FB2);
-	} else {
-		/* set CSI_CSIDMASA_FB1 and CSI_CSIDMASA_FB2 to default value */
-		__raw_writel(0, CSI_CSIDMASA_FB1);
-		__raw_writel(0, CSI_CSIDMASA_FB2);
-	}
+	__raw_writel(fb_addr, CSI_CSIDMASA_FB1);
+	__raw_writel(fb_addr, CSI_CSIDMASA_FB2);
+	__raw_writel(__raw_readl(CSI_CSICR3) | BIT_DMA_REFLASH_RFF, CSI_CSICR3);
+
+	csi_enable_int(0);
+	csi_enable_mclk(CSI_MCLK_I2C, true, true);
 
 	return 0;
 }
@@ -106,9 +104,13 @@ static int start_preview(cam_data *cam, unsigned long *addr)
  */
 static int stop_preview(cam_data *cam)
 {
+	csi_enable_mclk(CSI_MCLK_I2C, false, false);
+	csi_disable_int();
+
 	/* set CSI_CSIDMASA_FB1 and CSI_CSIDMASA_FB2 to default value */
 	__raw_writel(0, CSI_CSIDMASA_FB1);
 	__raw_writel(0, CSI_CSIDMASA_FB2);
+	__raw_writel(__raw_readl(CSI_CSICR3) | BIT_DMA_REFLASH_RFF, CSI_CSICR3);
 
 	return 0;
 }
@@ -215,21 +217,27 @@ static int csi_v4l2_s_fmt(cam_data *cam, struct v4l2_format *f)
 		switch (f->fmt.pix.pixelformat) {
 		case V4L2_PIX_FMT_RGB565:
 			size = f->fmt.pix.width * f->fmt.pix.height * 2;
+			csi_set_16bit_imagpara(f->fmt.pix.width,
+					       f->fmt.pix.height);
 			bytesperline = f->fmt.pix.width * 2;
 			break;
-		case V4L2_PIX_FMT_YUV422P:
+		case V4L2_PIX_FMT_UYVY:
 			size = f->fmt.pix.width * f->fmt.pix.height * 2;
-			bytesperline = f->fmt.pix.width;
+			csi_set_16bit_imagpara(f->fmt.pix.width,
+					       f->fmt.pix.height);
+			bytesperline = f->fmt.pix.width * 2;
 			break;
 		case V4L2_PIX_FMT_YUV420:
 			size = f->fmt.pix.width * f->fmt.pix.height * 3 / 2;
+			csi_set_12bit_imagpara(f->fmt.pix.width,
+					       f->fmt.pix.height);
 			bytesperline = f->fmt.pix.width;
 			break;
+		case V4L2_PIX_FMT_YUV422P:
 		case V4L2_PIX_FMT_RGB24:
 		case V4L2_PIX_FMT_BGR24:
 		case V4L2_PIX_FMT_BGR32:
 		case V4L2_PIX_FMT_RGB32:
-		case V4L2_PIX_FMT_UYVY:
 		case V4L2_PIX_FMT_NV12:
 		default:
 			pr_debug("   case not supported\n");
@@ -247,19 +255,6 @@ static int csi_v4l2_s_fmt(cam_data *cam, struct v4l2_format *f)
 			size = f->fmt.pix.sizeimage;
 
 		cam->v2f.fmt.pix = f->fmt.pix;
-		if (cam->still_buf_vaddr == NULL) {
-			cam->still_buf_vaddr = dma_alloc_coherent(0,
-								  PAGE_ALIGN
-								  (cam->v2f.fmt.
-								   pix.
-								   sizeimage),
-								  &cam->
-								  still_buf[0],
-								  GFP_DMA |
-								  GFP_KERNEL);
-			__raw_writel(cam->still_buf[0], CSI_CSIDMASA_FB1);
-			__raw_writel(cam->still_buf[0], CSI_CSIDMASA_FB2);
-		}
 
 		if (cam->v2f.fmt.pix.priv != 0) {
 			if (copy_from_user(&cam->offset,
@@ -329,7 +324,15 @@ static int csi_v4l2_s_param(cam_data *cam, struct v4l2_streamparm *parm)
 	pr_debug("   Current framerate is %d  change to %d\n",
 		 currentparm.parm.capture.timeperframe.denominator,
 		 parm->parm.capture.timeperframe.denominator);
-	csi_enable_mclk(CSI_MCLK_I2C, true, false);
+
+	csi_enable_mclk(CSI_MCLK_I2C, true, true);
+	err = vidioc_int_s_parm(cam->sensor, parm);
+	csi_enable_mclk(CSI_MCLK_I2C, false, false);
+	if (err) {
+		pr_err("%s: vidioc_int_s_parm returned an error %d\n",
+		       __func__, err);
+		goto exit;
+	}
 
 	vidioc_int_g_ifparm(cam->sensor, &ifparm);
 	cam_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -377,7 +380,9 @@ static int csi_v4l_open(struct inode *inode, struct file *file)
 		vidioc_int_g_ifparm(cam->sensor, &ifparm);
 
 		cam_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		csi_enable_mclk(CSI_MCLK_I2C, true, true);
 		vidioc_int_init(cam->sensor);
+		csi_enable_mclk(CSI_MCLK_I2C, false, false);
 	}
 
 	file->private_data = dev;
@@ -421,13 +426,6 @@ static int csi_v4l_close(struct inode *inode, struct file *file)
 		file->private_data = NULL;
 	}
 
-	if (cam->still_buf_vaddr != NULL) {
-		dma_free_coherent(0, PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
-				  cam->still_buf_vaddr, cam->still_buf[0]);
-		cam->still_buf[0] = 0;
-		cam->still_buf_vaddr = NULL;
-	}
-
 	return err;
 }
 
@@ -451,10 +449,48 @@ static ssize_t csi_v4l_read(struct file *file, char *buf, size_t count,
 	if (down_interruptible(&cam->busy_lock))
 		return -EINTR;
 
-	wait_event_interruptible(cam->still_queue, cam->still_counter != 0);
-	cam->still_counter--;
+	/* Stop the viewfinder */
+	if (cam->overlay_on == true)
+		stop_preview(cam);
+
+	if (cam->still_buf_vaddr == NULL) {
+		cam->still_buf_vaddr = dma_alloc_coherent(0,
+							  PAGE_ALIGN
+							  (cam->v2f.fmt.
+							   pix.sizeimage),
+							  &cam->
+							  still_buf[0],
+							  GFP_DMA | GFP_KERNEL);
+		if (cam->still_buf_vaddr == NULL) {
+			pr_err("alloc dma memory failed\n");
+			return -ENOMEM;
+		}
+		cam->still_counter = 0;
+		__raw_writel(cam->still_buf[0], CSI_CSIDMASA_FB2);
+		__raw_writel(__raw_readl(CSI_CSICR3) | BIT_DMA_REFLASH_RFF,
+			     CSI_CSICR3);
+		__raw_writel(__raw_readl(CSI_CSISR), CSI_CSISR);
+		__raw_writel(__raw_readl(CSI_CSICR3) | BIT_FRMCNT_RST,
+			     CSI_CSICR3);
+		csi_enable_int(1);
+		csi_enable_mclk(CSI_MCLK_I2C, true, true);
+	}
+
+	wait_event_interruptible(cam->still_queue, cam->still_counter);
+	csi_enable_mclk(CSI_MCLK_I2C, false, false);
+	csi_disable_int();
 	err = copy_to_user(buf, cam->still_buf_vaddr,
 			   cam->v2f.fmt.pix.sizeimage);
+
+	if (cam->still_buf_vaddr != NULL) {
+		dma_free_coherent(0, PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
+				  cam->still_buf_vaddr, cam->still_buf[0]);
+		cam->still_buf[0] = 0;
+		cam->still_buf_vaddr = NULL;
+	}
+
+	if (cam->overlay_on == true)
+		start_preview(cam);
 
 	up(&cam->busy_lock);
 	if (err < 0)
@@ -508,6 +544,9 @@ static int csi_v4l_do_ioctl(struct inode *inode, struct file *file,
 			struct v4l2_format *sf = arg;
 			pr_debug("   case VIDIOC_S_FMT\n");
 			retval = csi_v4l2_s_fmt(cam, sf);
+			csi_enable_mclk(CSI_MCLK_I2C, true, true);
+			vidioc_int_s_fmt_cap(cam->sensor, sf);
+			csi_enable_mclk(CSI_MCLK_I2C, false, false);
 			break;
 		}
 
@@ -515,10 +554,17 @@ static int csi_v4l_do_ioctl(struct inode *inode, struct file *file,
 		 * V4l2 VIDIOC_OVERLAY ioctl
 		 */
 	case VIDIOC_OVERLAY:{
-			unsigned long *fb_addr;
-			fb_addr = arg;
+			int *on = arg;
 			pr_debug("   case VIDIOC_OVERLAY\n");
-			start_preview(cam, fb_addr);
+			if (*on) {
+				cam->overlay_on = true;
+				cam->overlay_pid = current->pid;
+				start_preview(cam);
+			}
+			if (!*on) {
+				stop_preview(cam);
+				cam->overlay_on = false;
+			}
 			break;
 		}
 
@@ -558,11 +604,10 @@ static int csi_v4l_do_ioctl(struct inode *inode, struct file *file,
 	case VIDIOC_QUERYCAP:{
 			struct v4l2_capability *cap = arg;
 			pr_debug("   case VIDIOC_QUERYCAP\n");
-			strcpy(cap->driver, "mxc_v4l2");
+			strcpy(cap->driver, "csi_v4l2");
 			cap->version = KERNEL_VERSION(0, 1, 11);
-			cap->capabilities = V4L2_CAP_VIDEO_CAPTURE |
-			    V4L2_CAP_VIDEO_OVERLAY |
-			    V4L2_CAP_STREAMING | V4L2_CAP_READWRITE;
+			cap->capabilities = V4L2_CAP_VIDEO_OVERLAY |
+			    V4L2_CAP_VIDEO_OUTPUT_OVERLAY | V4L2_CAP_READWRITE;
 			cap->card[0] = '\0';
 			cap->bus_info[0] = '\0';
 			break;
@@ -743,11 +788,11 @@ static void init_camera_struct(cam_data *cam)
 	cam->skip_frame = 0;
 	cam->v4l2_fb.flags = V4L2_FBUF_FLAG_OVERLAY;
 
-	cam->v2f.fmt.pix.sizeimage = 352 * 288 * 3 / 2;
-	cam->v2f.fmt.pix.bytesperline = 288 * 3 / 2;
-	cam->v2f.fmt.pix.width = 288;
-	cam->v2f.fmt.pix.height = 352;
-	cam->v2f.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
+	cam->v2f.fmt.pix.sizeimage = 480 * 640 * 2;
+	cam->v2f.fmt.pix.bytesperline = 640 * 2;
+	cam->v2f.fmt.pix.width = 640;
+	cam->v2f.fmt.pix.height = 480;
+	cam->v2f.fmt.pix.pixelformat = V4L2_PIX_FMT_UYVY;
 	cam->win.w.width = 160;
 	cam->win.w.height = 160;
 	cam->win.w.left = 0;
@@ -782,7 +827,6 @@ static u8 camera_power(cam_data *cam, bool cameraOn)
 	return 0;
 }
 
-#if defined(CONFIG_PM)
 /*!
  * This function is called to put the sensor in a low power state.
  * Refer to the document driver-model/driver.txt in the kernel source tree
@@ -812,14 +856,7 @@ static int csi_v4l2_suspend(struct platform_device *pdev, pm_message_t state)
 
 	return 0;
 }
-#else
-static int csi_v4l2_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	return 0;
-}
-#endif
 
-#if defined(CONFIG_PM)
 /*!
  * This function is called to bring the sensor back from a low power state.
  * Refer to the document driver-model/driver.txt in the kernel source tree
@@ -842,14 +879,11 @@ static int csi_v4l2_resume(struct platform_device *pdev)
 	wake_up_interruptible(&cam->power_queue);
 	camera_power(cam, true);
 
+	if (cam->overlay_on == true)
+		start_preview(cam);
+
 	return 0;
 }
-#else
-static int csi_v4l2_resume(struct platform_device *pdev)
-{
-	return 0;
-}
-#endif
 
 /*!
  * This structure contains pointers to the power management callback functions.
@@ -860,8 +894,10 @@ static struct platform_driver csi_v4l2_driver = {
 		   },
 	.probe = NULL,
 	.remove = NULL,
+#ifdef CONFIG_PM
 	.suspend = csi_v4l2_suspend,
 	.resume = csi_v4l2_resume,
+#endif
 	.shutdown = NULL,
 };
 

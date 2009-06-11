@@ -184,7 +184,12 @@ typedef void (*csi_irq_callback_t) (void *data, unsigned long status);
 
 int32_t csi_enable_mclk(int src, bool flag, bool wait);
 void csi_init_interface(void);
+void csi_set_16bit_imagpara(int width, int height);
+void csi_set_12bit_imagpara(int width, int height);
 int csi_read_mclk_flag(void);
 void csi_start_callback(void *data);
 void csi_stop_callback(void *data);
-void csi_enable_prpif(uint32_t enable);
+void csi_enable_int(int arg);
+void csi_disable_int(void);
+void csi_mclk_enable(void);
+void csi_mclk_disable(void);

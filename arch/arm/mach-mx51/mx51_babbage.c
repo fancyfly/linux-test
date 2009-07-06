@@ -54,6 +54,9 @@
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
+#ifdef CONFIG_USB_ANDROID
+#include <linux/usb/android.h>
+#endif
 
 /*!
  * @file mach-mx51/mx51_babbage.c
@@ -918,6 +921,26 @@ static void mxc_init_android_pmem(void)
 }
 #endif
 
+#ifdef CONFIG_USB_ANDROID
+static struct android_usb_platform_data android_usb_pdata = {
+	.vendor_id	= 0x0bb4,
+	.product_id	= 0x0c01,
+	.adb_product_id	= 0x0c02,
+	.version	= 0x0100,
+	.product_name	= "Android Phone",
+	.manufacturer_name = "Freescale",
+	.nluns = 1,
+};
+
+static struct platform_device android_usb_device = {
+	.name	= "android_usb",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &android_usb_pdata,
+		},
+};
+#endif
+
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -1057,6 +1080,9 @@ static void __init mxc_board_init(void)
 	pm_power_off = mxc_power_off;
 	mxc_init_sgtl5000();
 	mxc_init_android_pmem();
+#ifdef CONFIG_USB_ANDROID
+	platform_device_register(&android_usb_device);
+#endif
 }
 
 static void __init mx51_babbage_timer_init(void)

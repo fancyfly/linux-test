@@ -32,6 +32,7 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
 #include <linux/mtd/partitions.h>
+#include <linux/usb/android.h>
 
 #include <asm/mach/flash.h>
 #endif
@@ -1239,6 +1240,27 @@ static void __init mxc_init_gps(void)
 }
 #endif
 
+#ifdef CONFIG_USB_ANDROID
+static struct android_usb_platform_data android_usb_pdata = {
+	.vendor_id	= 0x0bb4,
+	.product_id	= 0x0c01,
+	.adb_product_id	= 0x0c02,
+	.version	= 0x0100,
+	.product_name	= "Android Phone",
+	.manufacturer_name = "Freescale",
+	.nluns = 1,
+};
+
+static struct platform_device android_usb_device = {
+	.name	= "android_usb",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &android_usb_pdata,
+		},
+};
+#endif
+
+
 /*!
  * Board specific initialization.
  */
@@ -1287,6 +1309,9 @@ static void __init mxc_board_init(void)
 	mxc_init_bluetooth();
 	mxc_init_gps();
 	mxc_init_android_pmem();
+#ifdef CONFIG_USB_ANDROID
+	platform_device_register(&android_usb_device);
+#endif
 
 	err = mxc_request_iomux(MX51_PIN_EIM_D19, IOMUX_CONFIG_GPIO);
 	if (err)

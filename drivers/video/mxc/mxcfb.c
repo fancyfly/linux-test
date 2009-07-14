@@ -811,8 +811,6 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	base *= (var->bits_per_pixel) / 8;
 	base += info->fix.smem_start;
 
-	down(&mxc_fbi->flip_sem);
-
 	spin_lock_irqsave(&mxc_fbi->fb_lock, lock_flags);
 
 	dev_dbg(info->device, "Updating SDC BG buf %d address=0x%08lX\n",
@@ -834,6 +832,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	spin_unlock_irqrestore(&mxc_fbi->fb_lock, lock_flags);
 
 	dev_dbg(info->device, "Update complete\n");
+
+	down(&mxc_fbi->flip_sem);
 
 	last_xoff = var->xoffset;
 	last_yoff = var->yoffset;

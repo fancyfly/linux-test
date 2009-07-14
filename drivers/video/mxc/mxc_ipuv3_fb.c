@@ -644,7 +644,6 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	dev_dbg(info->device, "Updating SDC BG buf %d address=0x%08lX\n",
 		mxc_fbi->cur_ipu_buf, base);
 
-	down(&mxc_fbi->flip_sem);
 	init_completion(&mxc_fbi->vsync_complete);
 
 	mxc_fbi->cur_ipu_buf = !mxc_fbi->cur_ipu_buf;
@@ -661,6 +660,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	}
 
 	dev_dbg(info->device, "Update complete\n");
+
+	down(&mxc_fbi->flip_sem);
 
 	last_xoff = var->xoffset;
 	last_yoff = var->yoffset;

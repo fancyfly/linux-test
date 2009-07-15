@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -194,7 +194,7 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 		host->clock = 0;
 
 	/* Wait max 100 ms */
-	timeout = 100;
+	timeout = 5000;
 
 	/* hw clears the bit when it's done */
 	while ((readl(host->ioaddr + SDHCI_CLOCK_CONTROL) >> 24) & mask) {
@@ -205,7 +205,7 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 			return;
 		}
 		timeout--;
-		mdelay(1);
+		udelay(20);
 	}
 	/*
 	 * The INT_EN SIG_EN regs have been modified after reset.
@@ -609,7 +609,7 @@ static void sdhci_finish_data(struct sdhci_host *host)
 			     DMA_TO_DEVICE);
 	}
 	if ((host->flags & SDHCI_USE_EXTERNAL_DMA) &&
-	    (host->dma_size >= mxc_wml_value)) {
+	    (host->dma_size >= mxc_wml_value) && (data != NULL)) {
 		dma_unmap_sg(mmc_dev(host->mmc), data->sg,
 			     host->dma_len, host->dma_dir);
 		host->dma_size = 0;
@@ -657,7 +657,7 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	WARN_ON(host->cmd);
 
 	/* Wait max 10 ms */
-	timeout = 10;
+	timeout = 500;
 
 	mask = SDHCI_CMD_INHIBIT;
 	if ((cmd->data != NULL) || (cmd->flags & MMC_RSP_BUSY))
@@ -678,10 +678,10 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 			return;
 		}
 		timeout--;
-		mdelay(1);
+		udelay(20);
 	}
 
-	mod_timer(&host->timer, jiffies + 10 * HZ);
+	mod_timer(&host->timer, jiffies + 1 * HZ);
 
 	host->cmd = cmd;
 
@@ -1079,7 +1079,7 @@ static void sdhci_tasklet_card(unsigned long param)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	mmc_detect_change(host->mmc, msecs_to_jiffies(500));
+	mmc_detect_change(host->mmc, msecs_to_jiffies(200));
 }
 
 static void sdhci_tasklet_finish(unsigned long param)
@@ -1136,7 +1136,7 @@ static void sdhci_tasklet_finish(unsigned long param)
 static void sdhci_timeout_timer(unsigned long data)
 {
 	struct sdhci_host *host;
-	unsigned long flags;
+	unsigned long tmp, flags;
 
 	host = (struct sdhci_host *)data;
 
@@ -1158,10 +1158,29 @@ static void sdhci_timeout_timer(unsigned long data)
 
 			tasklet_schedule(&host->finish_tasklet);
 		}
+		if (!readl(host->ioaddr + SDHCI_SIGNAL_ENABLE)) {
+			printk(KERN_ERR "%s, ERROR SIG_INT is 0.\n", __func__);
+			tmp = readl(host->ioaddr + SDHCI_INT_ENABLE);
+			if (host->sdio_enable)
+				writel(tmp, host->ioaddr + SDHCI_SIGNAL_ENABLE);
+			else
+				writel(tmp & ~SDHCI_INT_CARD_INT,
+				       host->ioaddr + SDHCI_SIGNAL_ENABLE);
+			if (!host->plat_data->status(host->mmc->parent))
+				schedule_work(&host->cd_wq);
+		}
 	}
 
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
+}
+
+static void sdhci_cd_timer(unsigned long data)
+{
+	struct sdhci_host *host;
+
+	host = (struct sdhci_host *)data;
+	schedule_work(&host->cd_wq);
 }
 
 /*****************************************************************************\
@@ -1212,6 +1231,8 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		       "though no data operation was in progress.\n",
 		       mmc_hostname(host->mmc), (unsigned)intmask);
 		sdhci_dumpregs(host);
+		sdhci_reset(host, SDHCI_RESET_CMD);
+		sdhci_reset(host, SDHCI_RESET_DATA);
 
 		return;
 	}
@@ -1329,13 +1350,17 @@ static void esdhc_cd_callback(struct work_struct *work)
 	else
 		host->flags |= SDHCI_CD_PRESENT;
 	/* Detect there is a card in slot or not */
-	DBG("cd_status=%d %s\n", cd_status,
+	DBG("%s cd_status=%d %s\n", __func__, cd_status,
 	    (host->flags & SDHCI_CD_PRESENT) ? "inserted" : "removed");
 
 	spin_lock_irqsave(&host->lock, flags);
 
 	if (!(host->flags & SDHCI_CD_PRESENT)) {
 		if (host->mrq) {
+			struct mmc_data *data;
+			data = host->data;
+			host->data = NULL;
+
 			printk(KERN_ERR
 			       "%s: Card removed during transfer!\n",
 			       mmc_hostname(host->mmc));
@@ -1343,6 +1368,12 @@ static void esdhc_cd_callback(struct work_struct *work)
 			       "%s: Resetting controller.\n",
 			       mmc_hostname(host->mmc));
 
+			if ((host->flags & SDHCI_USE_EXTERNAL_DMA) &&
+			    (data != NULL)) {
+				dma_unmap_sg(mmc_dev(host->mmc), data->sg,
+					     host->dma_len, host->dma_dir);
+				host->dma_size = 0;
+			}
 			sdhci_reset(host, SDHCI_RESET_CMD);
 			sdhci_reset(host, SDHCI_RESET_DATA);
 
@@ -1350,20 +1381,20 @@ static void esdhc_cd_callback(struct work_struct *work)
 			tasklet_schedule(&host->finish_tasklet);
 		}
 	}
+	sdhci_init(host);
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	mmc_detect_change(host->mmc, msecs_to_jiffies(500));
-
+	if (host->flags & SDHCI_CD_PRESENT) {
+		del_timer(&host->cd_timer);
+		mmc_detect_change(host->mmc, msecs_to_jiffies(500));
+	} else
+		mmc_detect_change(host->mmc, 0);
 	if (!host->detect_irq)
-		return;
-	do {
-		cd_status = host->plat_data->status(host->mmc->parent);
-		if (cd_status)
-			set_irq_type(host->detect_irq, IRQT_FALLING);
-		else
-			set_irq_type(host->detect_irq, IRQT_RISING);
-	} while (cd_status != host->plat_data->status(host->mmc->parent));
+		goto out;
+	
+out:
+	return;
 }
 
 /*!
@@ -1378,9 +1409,31 @@ static void esdhc_cd_callback(struct work_struct *work)
 */
 static irqreturn_t sdhci_cd_irq(int irq, void *dev_id)
 {
+	unsigned int cd_status = 0;
 	struct sdhci_host *host = dev_id;
 
-	schedule_work(&host->cd_wq);
+	do {
+		cd_status = host->plat_data->status(host->mmc->parent);
+		if (cd_status)
+			set_irq_type(host->detect_irq, IRQT_FALLING);
+		else
+			set_irq_type(host->detect_irq, IRQT_RISING);
+	} while (cd_status != host->plat_data->status(host->mmc->parent));
+
+	DBG("cd_status=%d %s\n", cd_status,
+	    cd_status ? "removed" : "inserted");
+
+	if(!cd_status)
+		/* If there is a card in the slot, the timer is start 
+		 * to work. Then the card detection would be carried
+		 * after the timer is timeout.
+		 * */
+		mod_timer(&host->cd_timer, jiffies + HZ/2);
+	else
+		/* If there is no card, call the card detection func
+		 * immediately. */
+		schedule_work(&host->cd_wq);
+
 	return IRQ_HANDLED;
 }
 
@@ -1784,6 +1837,7 @@ no_detect_irq:
 	INIT_WORK(&host->cd_wq, esdhc_cd_callback);
 
 	setup_timer(&host->timer, sdhci_timeout_timer, (unsigned long)host);
+	setup_timer(&host->cd_timer, sdhci_cd_timer, (unsigned long)host);
 
 	if (host->detect_irq) {
 		ret = request_irq(host->detect_irq, sdhci_cd_irq, 0,
@@ -1841,6 +1895,7 @@ out5:
 	}
 out4:
 	del_timer_sync(&host->timer);
+	del_timer_sync(&host->cd_timer);
 	tasklet_kill(&host->card_tasklet);
 	tasklet_kill(&host->finish_tasklet);
 out3:
@@ -1886,6 +1941,7 @@ static void sdhci_remove_slot(struct platform_device *pdev, int slot)
 	}
 
 	del_timer_sync(&host->timer);
+	del_timer_sync(&host->cd_timer);
 
 	tasklet_kill(&host->card_tasklet);
 	tasklet_kill(&host->finish_tasklet);

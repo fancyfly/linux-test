@@ -257,6 +257,7 @@ struct sdhci_host {
 	struct mxc_mmc_platform_data *plat_data;
 
 	struct timer_list timer;	/* Timer for timeouts */
+	struct timer_list cd_timer;	/* Timer for cd */
 };
 
 struct sdhci_chip {

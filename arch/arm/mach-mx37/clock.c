@@ -2765,10 +2765,6 @@ int __init mxc_clocks_init(void)
 	u32 reg;
 	int i;
 
-	for (clkp = mxc_clks; clkp < mxc_clks + ARRAY_SIZE(mxc_clks); clkp++) {
-		clk_register(*clkp);
-	}
-
 	/* Turn off all possible clocks */
 	if (mxc_jtag_enabled) {
 		__raw_writel((1 << MXC_CCM_CCGR0_CG0_OFFSET) |
@@ -2803,6 +2799,9 @@ int __init mxc_clocks_init(void)
 		     (1 << MXC_CCM_CCGR5_CG13_OFFSET) |
 		     (1 << MXC_CCM_CCGR5_CG14_OFFSET) |
 		     MXC_CCM_CCGR5_CG11_MASK, MXC_CCM_CCGR5);
+
+	for (clkp = mxc_clks; clkp < mxc_clks + ARRAY_SIZE(mxc_clks); clkp++)
+		clk_register(*clkp);
 
 	reg = __raw_readl(MXC_CCM_CCSR);
 	/*STEP_CLK - make sure its source is lp_apm */

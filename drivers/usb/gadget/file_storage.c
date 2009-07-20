@@ -326,6 +326,7 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 static struct {
 	char		*file[MAX_LUNS];
+	char		chg_fileName[MAX_LUNS][64];
 	int		ro[MAX_LUNS];
 	unsigned int	num_filenames;
 	unsigned int	num_ros;
@@ -2719,6 +2720,25 @@ static int check_command(struct fsg_dev *fsg, int cmnd_size,
 	return 0;
 }
 
+#include <linux/namei.h>
+static int open_backing_file(struct lun *curlun, const char *filename);
+
+void do_unit_ready(struct fsg_dev *fsg)
+{
+	struct nameidata nd;
+	int error;
+
+	error = path_lookup(mod_data.chg_fileName[fsg->lun], LOOKUP_FOLLOW,&nd);
+	if(error) {
+		if(backing_file_is_open(fsg->curlun))
+			close_backing_file(fsg->curlun);
+	} else {
+		path_release(&nd);
+		//path_put(&nd.path);
+		if(!backing_file_is_open(fsg->curlun))
+			open_backing_file(fsg->curlun,mod_data.file[fsg->lun]);
+	}
+}
 
 static int do_scsi_command(struct fsg_dev *fsg)
 {
@@ -2864,6 +2884,8 @@ static int do_scsi_command(struct fsg_dev *fsg)
 		reply = check_command(fsg, 6, DATA_DIR_NONE,
 				0, 1,
 				"TEST UNIT READY");
+		//if(reply == 0)
+			do_unit_ready(fsg);
 		break;
 
 	/* Although optional, this command is used by MS-Windows.  We
@@ -3486,7 +3508,7 @@ static int open_backing_file(struct lun *curlun, const char *filename)
 	if (ro)
 		filp = filp_open(filename, O_RDONLY | O_LARGEFILE, 0);
 	if (IS_ERR(filp)) {
-		LINFO(curlun, "unable to open backing file: %s\n", filename);
+		//LINFO(curlun, "unable to open backing file: %s\n", filename);
 		return PTR_ERR(filp);
 	}
 
@@ -3808,6 +3830,29 @@ static int __init check_parameters(struct fsg_dev *fsg)
 #include "msclib.c"
 #endif
 
+/* 
+   someone used cramfs, so need check /sys/block
+   change name from /dev/xxx to /sys/block/xxx
+ */
+const char look_path[] = "/sys/block/";
+
+void change_dev_name(int i)
+{
+	char* node_name = mod_data.file[i];
+	char* temp = node_name;
+
+	/* find the last '/' */
+	while(*temp) {
+		temp++;
+		if(*temp == '/') {
+			node_name = temp + 1;	
+		}
+	}
+	if(mod_data.removable) {
+		sprintf( mod_data.chg_fileName[i],"%s%s",look_path,node_name);
+	}
+}
+
 static int __init fsg_bind(struct usb_gadget *gadget)
 {
 	struct fsg_dev		*fsg = the_fsg;
@@ -3877,9 +3922,14 @@ static int __init fsg_bind(struct usb_gadget *gadget)
 		kref_get(&fsg->ref);
 
 		if (mod_data.file[i] && *mod_data.file[i]) {
+			/* for cramfs, this node could be opened always */
+			/*
 			if ((rc = open_backing_file(curlun,
-					mod_data.file[i])) != 0)
+							mod_data.file[i])) != 0)
 				goto out;
+			*/
+			change_dev_name(i);
+
 		} else if (!mod_data.removable) {
 			ERROR(fsg, "no file given for LUN%d\n", i);
 			rc = -EINVAL;

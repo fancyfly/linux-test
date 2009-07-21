@@ -88,7 +88,7 @@ static void mmc_request(struct request_queue *q)
 {
 	struct mmc_queue *mq = q->queuedata;
 	struct request *req;
-	int ret;
+	int ret, count = 0;
 
 	if (!mq) {
 		printk(KERN_ERR "MMC: killing requests for dead queue\n");
@@ -96,6 +96,14 @@ static void mmc_request(struct request_queue *q)
 			do {
 				ret = end_that_request_chunk(req, 0,
 					req->current_nr_sectors << 9);
+				count++;
+				if (count > 100) {
+					/* dequeue the request in the queue */
+					printk(KERN_ERR "dequeue req\n");
+					blkdev_dequeue_request(req);
+					break;
+				}
+			count++;
 			} while (ret);
 		}
 		return;

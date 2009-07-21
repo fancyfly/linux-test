@@ -365,6 +365,10 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	return 1;
 
  cmd_err:
+	if (brq.cmd.error == -ENOMEDIUM || brq.data.error == -ENOMEDIUM) {
+		printk(KERN_ERR "The card is removed~!!\n");
+		goto no_card;
+	}
  	/*
  	 * If this is an SD card and we're writing, we can first
  	 * mark the known good sectors as ok.
@@ -396,6 +400,7 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 		spin_unlock_irq(&md->lock);
 	}
 
+no_card:
 	mmc_release_host(card->host);
 
 	spin_lock_irq(&md->lock);

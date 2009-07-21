@@ -212,6 +212,8 @@ static int __devinit pmic_probe(struct spi_device *spi)
 		return ret;
 	}
 
+	enable_irq_wake(spi->irq);
+
 	power_ldm.dev.platform_data = spi->dev.platform_data;
 
 	pmic_pdev_register();

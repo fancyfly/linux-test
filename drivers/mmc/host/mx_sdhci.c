@@ -874,7 +874,7 @@ static void sdhci_set_power(struct sdhci_host *host, unsigned short power)
 static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct sdhci_host *host;
-	unsigned long flags;
+	unsigned long flags, tmp;
 
 	host = mmc_priv(mmc);
 
@@ -887,6 +887,16 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	spin_lock_irqsave(&host->lock, flags);
 
 	WARN_ON(host->mrq != NULL);
+
+	if (!readl(host->ioaddr + SDHCI_SIGNAL_ENABLE)
+	    && 0 == host->plat_data->status(host->mmc->parent)) {
+		tmp = readl(host->ioaddr + SDHCI_INT_ENABLE);
+		if (host->sdio_enable)
+			writel(tmp, host->ioaddr + SDHCI_SIGNAL_ENABLE);
+		else
+			writel(tmp & ~SDHCI_INT_CARD_INT,
+			       host->ioaddr + SDHCI_SIGNAL_ENABLE);
+	}
 
 	sdhci_activate_led(host);
 

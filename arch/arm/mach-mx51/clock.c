@@ -3110,6 +3110,7 @@ int __init mxc_clocks_init(void)
 	__raw_writel(0, MXC_CCM_CCGR3);
 	__raw_writel(3 << MXC_CCM_CCGR4_CG8_OFFSET, MXC_CCM_CCGR4);
 	__raw_writel(1 << MXC_CCM_CCGR5_CG2_OFFSET |
+		     3 << MXC_CCM_CCGR5_CG6_OFFSET |
 		     1 << MXC_CCM_CCGR5_CG7_OFFSET |
 		     1 << MXC_CCM_CCGR5_CG8_OFFSET |
 		     1 << MXC_CCM_CCGR5_CG9_OFFSET |

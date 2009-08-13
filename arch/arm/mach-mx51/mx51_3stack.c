@@ -183,8 +183,16 @@ static int __init mc13892_reg_int(void)
 	lp = regulator_get(NULL, "SW2_STBY");
 	if (gp != NULL) {
 		regulator_enable(gp);
-		if (regulator_set_voltage(gp, 700000))
-			printk(KERN_INFO "cannot set GP STBY voltage\n");
+
+		if ((mxc_cpu_is_rev(CHIP_REV_2_0)) < 0) {
+			if (regulator_set_voltage(gp, 700000))
+				printk(KERN_INFO
+					"cannot set GP STBY voltage\n");
+		} else {
+			if (regulator_set_voltage(gp, 1000000))
+				printk(KERN_INFO
+					"cannot set GP STBY voltage\n");
+		}
 		regulator_disable(gp);
 		regulator_put(gp, NULL);
 	}
@@ -197,7 +205,7 @@ static int __init mc13892_reg_int(void)
 					"cannot set LP STBY voltage\n");
 		} else {
 			/* Cannot drop voltage for TO2.0 */
-			if (regulator_set_voltage(lp, 1200000))
+			if (regulator_set_voltage(lp, 1250000))
 				printk(KERN_INFO
 					"cannot set LP STBY voltage\n");
 		}

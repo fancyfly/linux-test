@@ -545,6 +545,7 @@ int usbhid_open(struct hid_device *hid)
 			hid->open--;
 			return -EIO;
 		}
+		usb_autopm_put_interface(usbhid->intf);
 	}
 	if (hid_start_in(hid))
 		hid_io_error(hid);
@@ -557,7 +558,7 @@ void usbhid_close(struct hid_device *hid)
 
 	if (!--hid->open) {
 		usb_kill_urb(usbhid->urbin);
-		usb_autopm_put_interface(usbhid->intf);
+		/* usb_autopm_put_interface(usbhid->intf); */
 	}
 }
 

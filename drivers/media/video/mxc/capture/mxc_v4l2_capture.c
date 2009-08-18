@@ -42,6 +42,7 @@ static cam_data *g_cam;
 
 /*! This data is used for the output to the display. */
 #define MXC_V4L2_CAPTURE_NUM_OUTPUTS	3
+#define MXC_V4L2_CAPTURE_NUM_INPUTS	2
 static struct v4l2_output mxc_capture_outputs[MXC_V4L2_CAPTURE_NUM_OUTPUTS] = {
 	{
 	 .index = 0,
@@ -66,6 +67,27 @@ static struct v4l2_output mxc_capture_outputs[MXC_V4L2_CAPTURE_NUM_OUTPUTS] = {
 	 .audioset = 0,
 	 .modulator = 0,
 	 .std = V4L2_STD_UNKNOWN,
+	 },
+};
+
+static struct v4l2_input mxc_capture_inputs[MXC_V4L2_CAPTURE_NUM_INPUTS] = {
+	{
+	 .index = 0,
+	 .name = "CSI IC MEM",
+	 .type = V4L2_INPUT_TYPE_CAMERA,
+	 .audioset = 0,
+	 .tuner = 0,
+	 .std = V4L2_STD_UNKNOWN,
+	 .status = 0,
+	 },
+	{
+	 .index = 1,
+	 .name = "CSI MEM",
+	 .type = V4L2_INPUT_TYPE_CAMERA,
+	 .audioset = 0,
+	 .tuner = 0,
+	 .std = V4L2_STD_UNKNOWN,
+	 .status = V4L2_IN_ST_NO_POWER,
 	 },
 };
 
@@ -373,6 +395,7 @@ static int mxc_streamoff(cam_data *cam)
 		err = cam->enc_disable(cam);
 	}
 	mxc_free_frames(cam);
+	mxc_capture_inputs[cam->current_input].status |= V4L2_IN_ST_NO_POWER;
 	cam->capture_on = false;
 	return err;
 }
@@ -642,6 +665,16 @@ static int mxc_v4l2_s_fmt(cam_data *cam, struct v4l2_format *f)
 			pr_err("ERROR: v4l2 capture: mxc_v4l2_s_fmt: format "
 			       "not supported\n");
 			return -EINVAL;
+		}
+
+		/*
+		 * Force the capture window resolution to be crop bounds
+		 * for CSI MEM input mode.
+		 */
+		if (strcmp(mxc_capture_inputs[cam->current_input].name,
+			   "CSI MEM") == 0) {
+			f->fmt.pix.width = cam->crop_bounds.width;
+			f->fmt.pix.height = cam->crop_bounds.height;
 		}
 
 		/* Handle case where size requested is larger than cuurent
@@ -1308,9 +1341,17 @@ static int mxc_v4l_open(struct inode *inode, struct file *file)
 		wait_event_interruptible(cam->power_queue,
 					 cam->low_power == false);
 
-#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_PRP_ENC_MODULE)
-		err = prp_enc_select(cam);
+		if (strcmp(mxc_capture_inputs[cam->current_input].name,
+			   "CSI MEM") == 0) {
+#if defined(CONFIG_MXC_IPU_CSI_ENC) || defined(CONFIG_MXC_IPU_CSI_ENC_MODULE)
+			err = csi_enc_select(cam);
 #endif
+		} else if (strcmp(mxc_capture_inputs[cam->current_input].name,
+				  "CSI IC MEM") == 0) {
+#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_PRP_ENC_MODULE)
+			err = prp_enc_select(cam);
+#endif
+		}
 
 		cam->enc_counter = 0;
 		cam->skip_frame = 0;
@@ -1446,9 +1487,18 @@ static int mxc_v4l_close(struct inode *inode, struct file *file)
 					 cam->low_power == false);
 		pr_info("mxc_v4l_close: release resource\n");
 
-#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_PRP_ENC_MODULE)
-		err |= prp_enc_deselect(cam);
+		if (strcmp(mxc_capture_inputs[cam->current_input].name,
+			   "CSI MEM") == 0) {
+#if defined(CONFIG_MXC_IPU_CSI_ENC) || defined(CONFIG_MXC_IPU_CSI_ENC_MODULE)
+			err |= csi_enc_deselect(cam);
 #endif
+		} else if (strcmp(mxc_capture_inputs[cam->current_input].name,
+				  "CSI IC MEM") == 0) {
+#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_PRP_ENC_MODULE)
+			err |= prp_enc_deselect(cam);
+#endif
+		}
+
 		mxc_free_frame_buf(cam);
 		file->private_data = NULL;
 
@@ -1461,7 +1511,9 @@ static int mxc_v4l_close(struct inode *inode, struct file *file)
 	return err;
 }
 
-#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_PRP_ENC_MODULE)
+#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_CSI_ENC) || \
+    defined(CONFIG_MXC_IPU_PRP_ENC_MODULE) || \
+    defined(CONFIG_MXC_IPU_CSI_ENC_MODULE)
 /*
  * V4L interface - read function
  *
@@ -1704,6 +1756,7 @@ static int mxc_v4l_do_ioctl(struct inode *inode, struct file *file,
 			   flags & V4L2_BUF_FLAG_QUEUED) {
 			pr_err("ERROR: v4l2 capture: VIDIOC_QBUF: "
 			       "buffer already queued\n");
+			retval = -EINVAL;
 		} else if (cam->frame[index].buffer.
 			   flags & V4L2_BUF_FLAG_DONE) {
 			pr_err("ERROR: v4l2 capture: VIDIOC_QBUF: "
@@ -1712,6 +1765,7 @@ static int mxc_v4l_do_ioctl(struct inode *inode, struct file *file,
 			    ~V4L2_BUF_FLAG_DONE;
 			cam->frame[index].buffer.flags |=
 			    V4L2_BUF_FLAG_QUEUED;
+			retval = -EINVAL;
 		}
 
 		buf->flags = cam->frame[index].buffer.flags;
@@ -1950,12 +2004,67 @@ static int mxc_v4l_do_ioctl(struct inode *inode, struct file *file,
 		break;
 	}
 
+	case VIDIOC_ENUMINPUT: {
+		struct v4l2_input *input = arg;
+		pr_debug("   case VIDIOC_ENUMINPUT\n");
+		if (input->index >= MXC_V4L2_CAPTURE_NUM_INPUTS) {
+			retval = -EINVAL;
+			break;
+		}
+		*input = mxc_capture_inputs[input->index];
+		break;
+	}
+
+	case VIDIOC_G_INPUT: {
+		int *index = arg;
+		pr_debug("   case VIDIOC_G_INPUT\n");
+		*index = cam->current_input;
+		break;
+	}
+
+	case VIDIOC_S_INPUT: {
+		int *index = arg;
+		pr_debug("   case VIDIOC_S_INPUT\n");
+		if (*index >= MXC_V4L2_CAPTURE_NUM_INPUTS) {
+			retval = -EINVAL;
+			break;
+		}
+
+		if (*index == cam->current_input)
+			break;
+
+		if ((mxc_capture_inputs[cam->current_input].status &
+		    V4L2_IN_ST_NO_POWER) == 0) {
+			retval = mxc_streamoff(cam);
+			if (retval)
+				break;
+			mxc_capture_inputs[cam->current_input].status |=
+							V4L2_IN_ST_NO_POWER;
+		}
+
+		if (strcmp(mxc_capture_inputs[*index].name, "CSI MEM") == 0) {
+#if defined(CONFIG_MXC_IPU_CSI_ENC) || defined(CONFIG_MXC_IPU_CSI_ENC_MODULE)
+			retval = csi_enc_select(cam);
+			if (retval)
+				break;
+#endif
+		} else if (strcmp(mxc_capture_inputs[*index].name,
+				  "CSI IC MEM") == 0) {
+#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_PRP_ENC_MODULE)
+			retval = prp_enc_select(cam);
+			if (retval)
+				break;
+#endif
+		}
+
+		mxc_capture_inputs[*index].status &= ~V4L2_IN_ST_NO_POWER;
+		cam->current_input = *index;
+		break;
+	}
+
 	case VIDIOC_ENUM_FMT:
 	case VIDIOC_TRY_FMT:
 	case VIDIOC_QUERYCTRL:
-	case VIDIOC_ENUMINPUT:
-	case VIDIOC_G_INPUT:
-	case VIDIOC_S_INPUT:
 	case VIDIOC_G_TUNER:
 	case VIDIOC_S_TUNER:
 	case VIDIOC_G_FREQUENCY:

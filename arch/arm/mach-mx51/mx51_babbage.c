@@ -213,8 +213,10 @@ static struct platform_device mxc_fb_device[] = {
 		 .coherent_dma_mask = 0xFFFFFFFF,
 		 .platform_data = &fb_data[0],
 		 },
+#if 0
 	 .num_resources = ARRAY_SIZE(mxcfb_resources),
 	 .resource = mxcfb_resources,
+#endif
 	 },
 	{
 	 .name = "mxc_sdc_fb",
@@ -964,6 +966,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 	get_cpu_wp = mx51_babbage_get_cpu_wp;
 	set_num_cpu_wp = mx51_babbage_set_num_cpu_wp;
 
+#if 0
 	for_each_tag(t, tags) {
 		if (t->hdr.tag != ATAG_CMDLINE)
 			continue;
@@ -985,6 +988,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 		mxcfb_resources[0].start = t->u.mem.start + size;
 		mxcfb_resources[0].end = t->u.mem.start + SZ_512M - 1;
 	}
+#endif
 }
 
 #define PWGT1SPIEN (1<<15)

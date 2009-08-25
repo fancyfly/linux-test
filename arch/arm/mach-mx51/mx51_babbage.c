@@ -913,9 +913,24 @@ static struct platform_device mxc_android_pmem_device = {
 	.dev = { .platform_data = &android_pmem_pdata },
 };
 
+static struct android_pmem_platform_data android_pmem_gpu_pdata = {
+	.name = "pmem_gpu",
+	.start = PMEM_BASE - SZ_32M,
+	.size = SZ_32M,
+	.no_allocator = 0,
+	.cached = 1,
+};
+
+static struct platform_device mxc_android_pmem_gpu_device = {
+	.name = "android_pmem",
+	.id = 1,
+	.dev = { .platform_data = &android_pmem_gpu_pdata },
+};
+
 static void mxc_init_android_pmem(void)
 {
 	platform_device_register(&mxc_android_pmem_device);
+	platform_device_register(&mxc_android_pmem_gpu_device);
 }
 #else
 static void mxc_init_android_pmem(void)

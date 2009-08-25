@@ -1149,12 +1149,12 @@ struct mxc_unifi_platform_data *get_unifi_plat_data(void)
 EXPORT_SYMBOL(get_unifi_plat_data);
 
 #ifdef CONFIG_ANDROID_PMEM
-#define PMEM_SIZE           (CONFIG_PMEM_SIZE * SZ_1M)
-#define PMEM_BASE           (PHYS_OFFSET + SZ_512M - PMEM_SIZE)
+#define PMEM_SIZE	(CONFIG_PMEM_SIZE * SZ_1M)
+#define PMEM_GPU_SIZE	(CONFIG_PMEM_GPU_SIZE * SZ_1M)
 
 static struct android_pmem_platform_data android_pmem_pdata = {
 	.name = "pmem_adsp",
-	.start = PMEM_BASE,
+	.start = 0,
 	.size = PMEM_SIZE,
 	.no_allocator = 0,
 	.cached = 0,
@@ -1166,9 +1166,24 @@ static struct platform_device mxc_android_pmem_device = {
 	.dev = { .platform_data = &android_pmem_pdata },
 };
 
+static struct android_pmem_platform_data android_pmem_gpu_pdata = {
+	.name = "pmem_gpu",
+	.start = 0,
+	.size = PMEM_GPU_SIZE,
+	.no_allocator = 0,
+	.cached = 1,
+};
+
+static struct platform_device mxc_android_pmem_gpu_device = {
+	.name = "android_pmem",
+	.id = 1,
+	.dev = { .platform_data = &android_pmem_gpu_pdata },
+};
+
 static void mxc_init_android_pmem(void)
 {
 	platform_device_register(&mxc_android_pmem_device);
+	platform_device_register(&mxc_android_pmem_gpu_device);
 }
 #else
 static void mxc_init_android_pmem(void)
@@ -1190,6 +1205,9 @@ static void mxc_init_android_pmem(void)
 static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				   char **cmdline, struct meminfo *mi)
 {
+	int size;
+	struct tag *t;
+
 	mxc_cpu_init();
 
 	get_cpu_wp = mx51_3stack_get_cpu_wp;
@@ -1202,6 +1220,21 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 			SET_NODE(mi, nid);
 
 	} while (0);
+#endif
+#ifdef CONFIG_ANDROID_PMEM
+	for_each_tag(t, tags) {
+		if (t->hdr.tag != ATAG_MEM)
+			continue;
+		size = t->u.mem.size;
+
+		android_pmem_pdata.start =
+				PHYS_OFFSET + size - android_pmem_pdata.size;
+		android_pmem_gpu_pdata.start =
+				android_pmem_pdata.start - android_pmem_gpu_pdata.size;
+		size -= android_pmem_pdata.size;
+		size -= android_pmem_gpu_pdata.size;
+		t->u.mem.size = size;
+	}
 #endif
 }
 

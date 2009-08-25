@@ -748,11 +748,10 @@ static inline void mxc_init_mmc(void)
 
 #ifdef CONFIG_ANDROID_PMEM
 #define PMEM_SIZE           (CONFIG_PMEM_SIZE * SZ_1M)
-#define PMEM_BASE           (PHYS_OFFSET + SZ_128M - PMEM_SIZE)
 
 static struct android_pmem_platform_data android_pmem_pdata = {
 	.name = "pmem",
-	.start = PMEM_BASE,
+	.start = 0,
 	.size = PMEM_SIZE,
 	.no_allocator = 0,
 	.cached = 0,
@@ -788,6 +787,9 @@ static void mxc_init_android_pmem(void)
 static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				   char **cmdline, struct meminfo *mi)
 {
+	int size;
+	struct tag *t;
+
 	mxc_cpu_init();
 
 #ifdef CONFIG_DISCONTIGMEM
@@ -798,6 +800,18 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 			SET_NODE(mi, nid);
 		}
 	} while (0);
+#endif
+#ifdef CONFIG_ANDROID_PMEM
+	for_each_tag(t, tags) {
+		if (t->hdr.tag != ATAG_MEM)
+			continue;
+		size = t->u.mem.size;
+
+		android_pmem_pdata.start =
+				PHYS_OFFSET + size - android_pmem_pdata.size;
+		size -= android_pmem_pdata.size;
+		t->u.mem.size = size;
+	}
 #endif
 }
 

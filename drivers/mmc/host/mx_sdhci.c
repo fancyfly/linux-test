@@ -54,6 +54,7 @@
 	pr_debug(DRIVER_NAME " [%s()]: " f, __func__, ## x)
 
 static unsigned int debug_quirks;
+static int init_flag = 0;
 
 /*
  * Different quirks to handle when the hardware deviates from a strict
@@ -1413,7 +1414,12 @@ static void esdhc_cd_callback(struct work_struct *work)
 			tasklet_schedule(&host->finish_tasklet);
 		}
 	}
-	sdhci_init(host);
+	if (init_flag > 0)
+		/* The initialization of sdhc controller has been
+		 * done in the resume func */
+		init_flag--;
+	else
+		sdhci_init(host);
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
@@ -1617,6 +1623,7 @@ static int sdhci_resume(struct platform_device *pdev)
 		if (ret)
 			return ret;
 		sdhci_init(chip->hosts[i]);
+		init_flag = 2;
 		mmiowb();
 		ret = mmc_resume_host(chip->hosts[i]->mmc);
 		if (ret)

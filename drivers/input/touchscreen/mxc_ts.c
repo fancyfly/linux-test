@@ -41,6 +41,9 @@
 static struct input_dev *mxc_inputdev = NULL;
 static u32 input_ts_installed;
 
+static int calibration[7];
+module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
+
 static int ts_thread(void *arg)
 {
 	t_touch_screen ts_sample;
@@ -62,16 +65,18 @@ static int ts_thread(void *arg)
 			ts_sample.contact_resistance == 0) {
 			x = last_x;
 			y = last_y;
+		} else if (calibration[6] == 0) {
+			x = ts_sample.x_position;
+			y = ts_sample.y_position;
 		} else {
-#ifdef CONFIG_FB_MXC_CLAA_WVGA_SYNC_PANEL
-			x = ((ts_sample.x_position - 30) * 800) / (1000 - 30);
-			if (x > 1000)
-			       x = 0;
-			y = 480 - ((ts_sample.y_position - 52) * 480) / (990 - 52);
-#else
-			x = 480 - ((ts_sample.x_position - 80) * 480) / (1000 - 80);
-			y = ((ts_sample.y_position - 80) * 640) / (1000 - 80);
-#endif
+			x = (calibration[0] * (int)ts_sample.x_position +
+				calibration[2]) / calibration[6];
+			if (x < 0)
+				x = 0;
+			y = (calibration[4] * (int)ts_sample.y_position +
+				calibration[5]) / calibration[6];
+			if (y < 0)
+				y = 0;
 		}
 
 		if (x != last_x) {

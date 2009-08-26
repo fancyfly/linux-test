@@ -146,14 +146,8 @@ static inline void _ipu_ch_param_init(int ch,
 	memset(&params, 0, sizeof(params));
 
 	ipu_ch_param_set_field(&params, 0, 125, 13, width - 1);
-
-	if ((ch == 8) || (ch == 9) || (ch == 10)) {
-		ipu_ch_param_set_field(&params, 0, 138, 12, (height / 2) - 1);
-		ipu_ch_param_set_field(&params, 1, 102, 14, (stride * 2) - 1);
-	} else {
-		ipu_ch_param_set_field(&params, 0, 138, 12, height - 1);
-		ipu_ch_param_set_field(&params, 1, 102, 14, stride - 1);
-	}
+	ipu_ch_param_set_field(&params, 0, 138, 12, height - 1);
+	ipu_ch_param_set_field(&params, 1, 102, 14, stride - 1);
 
 	ipu_ch_param_set_field(&params, 1, 0, 29, addr0 >> 3);
 	ipu_ch_param_set_field(&params, 1, 29, 29, addr1 >> 3);
@@ -164,7 +158,6 @@ static inline void _ipu_ch_param_init(int ch,
 		ipu_ch_param_set_field(&params, 0, 107, 3, 5);	/* bits/pixel */
 		ipu_ch_param_set_field(&params, 1, 85, 4, 6);	/* pix format */
 		ipu_ch_param_set_field(&params, 1, 78, 7, 63);	/* burst size */
-
 		break;
 	case IPU_PIX_FMT_GENERIC_32:
 		/*Represents 32-bit Generic data */
@@ -173,7 +166,6 @@ static inline void _ipu_ch_param_init(int ch,
 		ipu_ch_param_set_field(&params, 0, 107, 3, 3);	/* bits/pixel */
 		ipu_ch_param_set_field(&params, 1, 85, 4, 7);	/* pix format */
 		ipu_ch_param_set_field(&params, 1, 78, 7, 31);	/* burst size */
-
 
 		_ipu_ch_params_set_packing(&params, 5, 0, 6, 5, 5, 11, 1, 16);
 		/* Set WID3 to be 8-bit for seperate alpha channel */
@@ -220,13 +212,14 @@ static inline void _ipu_ch_param_init(int ch,
 	case IPU_PIX_FMT_ABGR32:
 		ipu_ch_param_set_field(&params, 0, 107, 3, 0);	/* bits/pixel */
 		ipu_ch_param_set_field(&params, 1, 85, 4, 7);	/* pix format */
+		ipu_ch_param_set_field(&params, 1, 78, 7, 15);	/* burst size */
 
 		_ipu_ch_params_set_packing(&params, 8, 0, 8, 8, 8, 16, 8, 24);
 		break;
 	case IPU_PIX_FMT_UYVY:
 		ipu_ch_param_set_field(&params, 0, 107, 3, 3);	/* bits/pixel */
 		ipu_ch_param_set_field(&params, 1, 85, 4, 0xA);	/* pix format */
-		ipu_ch_param_set_field(&params, 1, 78, 7, 15);	/* burst size */
+		ipu_ch_param_set_field(&params, 1, 78, 7, 31);	/* burst size */
 		break;
 	case IPU_PIX_FMT_YUYV:
 		ipu_ch_param_set_field(&params, 0, 107, 3, 3);	/* bits/pixel */
@@ -236,18 +229,13 @@ static inline void _ipu_ch_param_init(int ch,
 	case IPU_PIX_FMT_YUV420P2:
 	case IPU_PIX_FMT_YUV420P:
 		ipu_ch_param_set_field(&params, 1, 85, 4, 2);	/* pix format */
+		ipu_ch_param_set_field(&params, 1, 78, 7, 31);	/* burst size */
 
 		if (uv_stride < stride / 2)
 			uv_stride = stride / 2;
 
-		u_offset = stride * height;
-		v_offset = u_offset + (uv_stride * height / 2);
-		if ((ch == 8) || (ch == 9) || (ch == 10)) {
-			ipu_ch_param_set_field(&params, 1, 78, 7, 15);  /* burst size */
-			uv_stride = uv_stride*2;
-		} else {
-			ipu_ch_param_set_field(&params, 1, 78, 7, 31);  /* burst size */
-		}
+		u_offset = (u == 0) ? stride * height : u;
+		v_offset = (v == 0) ? u_offset + (uv_stride * height / 2) : v;
 		break;
 	case IPU_PIX_FMT_YVU422P:
 		/* BPP & pixel format */
@@ -282,8 +270,6 @@ static inline void _ipu_ch_param_init(int ch,
 		dev_err(g_ipu_dev, "mxc ipu: unimplemented pixel format\n");
 		break;
 	}
-	/*set burst size to 16*/
-
 
 	if (uv_stride)
 		ipu_ch_param_set_field(&params, 1, 128, 14, uv_stride - 1);

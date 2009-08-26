@@ -22,7 +22,6 @@
 #include <linux/init.h>
 #include <linux/errno.h>
 #include <linux/spinlock.h>
-#include <linux/videodev2.h>
 #include <linux/io.h>
 #include <linux/ipu.h>
 
@@ -65,9 +64,6 @@ void _ipu_ic_enable_task(ipu_channel_t channel)
 	case MEM_PRP_VF_MEM:
 		ic_conf |= IC_CONF_PRPVF_EN;
 		break;
-	case MEM_VDI_PRP_VF_MEM:
-		ic_conf |= IC_CONF_PRPVF_EN;
-		break;
 	case MEM_ROT_VF_MEM:
 		ic_conf |= IC_CONF_PRPVF_ROT_EN;
 		break;
@@ -100,9 +96,6 @@ void _ipu_ic_disable_task(ipu_channel_t channel)
 	case MEM_PRP_VF_MEM:
 		ic_conf &= ~IC_CONF_PRPVF_EN;
 		break;
-	case MEM_VDI_PRP_VF_MEM:
-		ic_conf &= ~IC_CONF_PRPVF_EN;
-		break;
 	case MEM_ROT_VF_MEM:
 		ic_conf &= ~IC_CONF_PRPVF_ROT_EN;
 		break;
@@ -123,36 +116,6 @@ void _ipu_ic_disable_task(ipu_channel_t channel)
 		break;
 	}
 	__raw_writel(ic_conf, IC_CONF);
-}
-
-void _ipu_vdi_init(ipu_channel_params_t *params)
-{
-	uint32_t reg;
-	uint32_t pixel_fmt;
-
-	reg = ((params->mem_prp_vf_mem.in_height-1) << 16) |
-	  (params->mem_prp_vf_mem.in_width-1);
-	__raw_writel(reg, VDI_FSIZE);
-
-	/* Full motion, only vertical filter is used
-	   Burst size is 4 accesses */
-	pixel_fmt =
-	    (params->mem_prp_vf_mem.in_pixel_fmt ==
-	     V4L2_PIX_FMT_YUV422P) ? VDI_C_CH_422 : VDI_C_CH_420;
-
-	reg = pixel_fmt | VDI_C_MOT_SEL_FULL | VDI_C_BURST_SIZE2_4;
-	__raw_writel(reg, VDI_C);
-
-	reg = __raw_readl(IC_CONF);
-	reg &= ~IC_CONF_RWS_EN;
-	__raw_writel(reg, IC_CONF);
-}
-
-_ipu_vdi_uninit(void)
-{
-	uint32_t reg;
-	__raw_writel(0, VDI_FSIZE);
-	__raw_writel(0, VDI_C);
 }
 
 void _ipu_ic_init_prpvf(ipu_channel_params_t *params, bool src_is_csi)

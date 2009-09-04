@@ -815,19 +815,22 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 	else
 		di_clk = g_ipu_clk;
 
-	/*
-	 * Calculate divider
-	 * Fractional part is 4 bits,
-	 * so simply multiply by 2^4 to get fractional part.
-	 */
-	div = (clk_get_rate(di_clk) * 16) / pixel_clk;
+	if (sig.ext_clk)
+		div = (clk_get_rate(di_clk) * 16) / pixel_clk;
+	else {
+		div = (clk_get_rate(di_clk) + pixel_clk) / pixel_clk;
+		if (div % 2)
+			div++;
+		/* Shift by 4 bits to the integer portion of divider. */
+		div *= 16;
+	}
 	if (div < 0x10)	/* Min DI disp clock divider is 1 */
 		div = 0x10;
 	/*
 	 * DI disp clock offset is zero,
-	 * and fractional part is rounded off to 0.5.
+	 * and fractional part is rounded off to 0.
 	 */
-	div &= 0xFF8;
+	div &= 0xFF0;
 
 	reg = __raw_readl(DI_GENERAL(disp));
 	if (sig.ext_clk)
@@ -1111,6 +1114,8 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 			di_gen |= DI_GEN_POLARITY_3;
 		if (sig.Vsync_pol)
 			di_gen |= DI_GEN_POLARITY_2;
+		if (sig.clk_pol)
+			di_gen |= DI_GEN_POL_DISP_CLK;
 	} else {
 		/* Setup internal HSYNC waveform */
 		_ipu_di_sync_config(disp, 1, h_total - 1, DI_SYNC_CLK,
@@ -1149,6 +1154,8 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 			di_gen |= DI_GEN_POLARITY_2;
 		if (sig.Vsync_pol)
 			di_gen |= DI_GEN_POLARITY_3;
+		if (sig.clk_pol)
+			di_gen |= DI_GEN_POL_DISP_CLK;
 	}
 
 	__raw_writel(di_gen, DI_GENERAL(disp));

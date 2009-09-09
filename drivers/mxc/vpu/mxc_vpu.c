@@ -628,9 +628,6 @@ static int vpu_dev_probe(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int vpu_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	if (codec_done == 1)
-		return -EAGAIN;
-
 	clk_enable(vpu_clk);
 	if (bitwork_mem.cpu_addr != 0) {
 		SAVE_WORK_REGS;

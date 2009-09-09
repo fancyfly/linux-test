@@ -30,6 +30,7 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/mxcfb.h>
+#include <linux/suspend.h>
 #include <media/v4l2-ioctl.h>
 #include <asm/cacheflush.h>
 
@@ -712,6 +713,7 @@ static int init_PP(ipu_channel_params_t params, vout_data *vout,
 	return 0;
 }
 
+int v4l_streamon;
 /*!
  * Start the output stream
  *
@@ -1049,7 +1051,7 @@ static int mxc_v4l2out_streamon(vout_data * vout)
 
 	dev_dbg(dev,
 		"streamon: start time = %lu jiffies\n", vout->start_jiffies);
-
+	v4l_streamon = 1;
 	return 0;
 }
 
@@ -1238,6 +1240,7 @@ static int mxc_v4l2out_streamoff(vout_data * vout)
 				       MXCFB_REFRESH_PARTIAL, 0);
 	}
 #endif
+	v4l_streamon = 0;
 
 	return retval;
 }
@@ -1502,7 +1505,7 @@ static int mxc_v4l2out_close(struct inode *inode, struct file *file)
 
 		/* capture off */
 		wake_up_interruptible(&vout->v4l_bufq);
-
+		v4l_streamon = 0;
 	}
 
 	return 0;
@@ -2147,6 +2150,26 @@ static int mxc_v4l2out_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int v4l2out_suspend_notifier(struct notifier_block *nb,
+		unsigned long event,
+		void *dummy)
+{
+	int ret = 0;
+
+	switch (event) {
+	case PM_SUSPEND_PREPARE:
+		if (v4l_streamon)
+			ret = mxc_v4l2out_streamoff(g_vout);
+		break;
+	case PM_POST_SUSPEND:
+		if (v4l_streamon)
+			ret = mxc_v4l2out_streamon(g_vout);
+	default:
+		break;
+       }
+       return 0;
+}
+
 /*!
  * This structure contains pointers to the power management callback functions.
  */
@@ -2163,6 +2186,10 @@ static struct platform_device mxc_v4l2out_device = {
 	.id = 0,
 };
 
+static struct notifier_block v4l2out_notif_block = {
+	.notifier_call = v4l2out_suspend_notifier,
+};
+
 /*!
  * mxc v4l2 init function
  *
@@ -2170,11 +2197,14 @@ static struct platform_device mxc_v4l2out_device = {
 static int mxc_v4l2out_init(void)
 {
 	u8 err = 0;
+	v4l_streamon = 0;
 
 	err = platform_driver_register(&mxc_v4l2out_driver);
 	if (err == 0) {
 		platform_device_register(&mxc_v4l2out_device);
 	}
+
+	err = register_pm_notifier(&v4l2out_notif_block);
 	return err;
 }
 

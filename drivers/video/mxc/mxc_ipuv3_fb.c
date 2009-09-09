@@ -144,6 +144,12 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 	dev_dbg(fbi->device, "Reconfiguring framebuffer\n");
 
+	if (ipu_disp_chan_linked(mxc_fbi->ipu_ch)) {
+		dev_dbg(fbi->device, "FB display channel busy, can not set var now\n");
+		return -EBUSY;
+	}
+
+
 	ipu_disable_irq(mxc_fbi->ipu_ch_irq);
 	ipu_disable_channel(mxc_fbi->ipu_ch, true);
 	ipu_uninit_channel(mxc_fbi->ipu_ch);
@@ -577,8 +583,10 @@ static int mxcfb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_VSYNC_SUSPEND:
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_NORMAL:
-		ipu_disable_channel(mxc_fbi->ipu_ch, true);
-		ipu_uninit_channel(mxc_fbi->ipu_ch);
+		if (!ipu_disp_chan_linked(mxc_fbi->ipu_ch)) {
+			ipu_disable_channel(mxc_fbi->ipu_ch, true);
+			ipu_uninit_channel(mxc_fbi->ipu_ch);
+		}
 		break;
 	case FB_BLANK_UNBLANK:
 		mxcfb_set_par(info);

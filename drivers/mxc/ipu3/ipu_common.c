@@ -1383,6 +1383,30 @@ err:
 }
 EXPORT_SYMBOL(ipu_unlink_channels);
 
+extern int v4l_streamon;
+int32_t ipu_disp_chan_linked(ipu_channel_t channel)
+{
+	uint32_t reg, mask = 0;
+
+	if (v4l_streamon)
+		return 1;
+
+	if (channel == MEM_FG_SYNC)
+		mask = 0xf << 4;
+	else if (channel == MEM_BG_SYNC)
+		mask = 0xf;
+	else if (channel == MEM_DC_SYNC)
+		mask = 0xf << 20;
+
+	reg = __raw_readl(IPU_FS_DISP_FLOW1);
+	if (mask & reg)
+		return 1;
+	else
+		return 0;
+}
+
+EXPORT_SYMBOL(ipu_disp_chan_linked);
+
 /*!
  * This function check whether a logical channel was enabled.
  *

@@ -46,8 +46,9 @@ static int __init usbh1_init(void)
 {
 	pr_debug("%s: \n", __func__);
 
-	host_pdev_register(usbh1_resources, ARRAY_SIZE(usbh1_resources),
-			   &usbh1_config);
+	host_pdev_register(usbh1_resources,
+			ARRAY_SIZE(usbh1_resources), &usbh1_config);
+
 	return 0;
 }
 

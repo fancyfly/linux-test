@@ -231,6 +231,12 @@ static int usb_hcd_fsl_probe(const struct hc_driver *driver,
 	}
 #endif
 
+	if (pdata->suspended) {
+		pdata->suspended = 0;
+		if (pdata->already_suspended)
+			pdata->already_suspended = 0;
+	}
+
 	fsl_platform_set_ahb_burst(hcd);
 	ehci_testmode_init(hcd_to_ehci(hcd));
 	return retval;
@@ -421,6 +427,7 @@ static int ehci_fsl_drv_remove(struct platform_device *pdev)
 
 
 #ifdef CONFIG_PM
+extern void usb_host_set_wakeup(struct device *wkup_dev, bool para);
 /* suspend/resume, section 4.3 */
 
 /* These routines rely on the bus (pci, platform, etc)
@@ -430,16 +437,12 @@ static int ehci_fsl_drv_remove(struct platform_device *pdev)
  *
  * They're also used for turning on/off the port when doing OTG.
  */
-#if defined(CONFIG_USB_EHCI_ARC_H2_WAKE_UP) || \
-	defined(CONFIG_USB_EHCI_ARC_OTG_WAKE_UP)
-extern void usb_wakeup_set(struct device *wkup_dev, int para);
-#endif
 static int ehci_fsl_drv_suspend(struct platform_device *pdev,
 				pm_message_t message)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	u32 tmp;
+	u32 tmp, port_status;
 	struct fsl_usb2_platform_data *pdata = pdev->dev.platform_data;
 
 #ifdef DEBUG
@@ -467,6 +470,7 @@ static int ehci_fsl_drv_suspend(struct platform_device *pdev,
 
 	printk(KERN_INFO "USB Host suspended\n");
 
+	port_status = ehci_readl(ehci, &ehci->regs->port_status[0]);
 	hcd->state = HC_STATE_SUSPENDED;
 	pdev->dev.power.power_state = PMSG_SUSPEND;
 
@@ -495,16 +499,26 @@ static int ehci_fsl_drv_suspend(struct platform_device *pdev,
 	pdata->pm_portsc &= cpu_to_hc32(ehci, ~PORT_RWC_BITS);
 
 	pdata->suspended = 1;
-#if defined(CONFIG_USB_EHCI_ARC_H2_WAKE_UP) || \
-	defined(CONFIG_USB_EHCI_ARC_OTG_WAKE_UP)
-	/* enable remote wake up irq */
-	usb_wakeup_set(&(pdev->dev), 1);
+
+	if (!device_may_wakeup(&(pdev->dev))) {
+		/* clear PP to cut power to the port */
+		tmp = ehci_readl(ehci, &ehci->regs->port_status[0]);
+		tmp &= ~PORT_POWER;
+		ehci_writel(ehci, tmp, &ehci->regs->port_status[0]);
+		return 0;
+	}
+
+	/* device_may_wakeup */
+	if (!((ehci->transceiver) &&
+			(readl(hcd->regs + 0x1A4) & (1 << 8)))) {
+		/* enable remote wake up irq */
+		usb_host_set_wakeup(&(pdev->dev), true);
 
 	/* We CAN NOT enable wake up by connetion and disconnection
 	 * concurrently */
 	tmp = ehci_readl(ehci, &ehci->regs->port_status[0]);
 	/* if there is no usb device connectted */
-	if (tmp & PORT_CONNECT) {
+	if (port_status & PORT_CONNECT) {
 		/* enable wake up by usb device disconnection */
 		tmp |= PORT_WKDISC_E;
 		tmp &= ~(PORT_WKOC_E | PORT_WKCONN_E);
@@ -522,14 +536,10 @@ static int ehci_fsl_drv_suspend(struct platform_device *pdev,
 
 	/* Disable PHY clock */
 	tmp = ehci_readl(ehci, &ehci->regs->port_status[0]);
-	tmp |= PORT_PHCD;
+	tmp |= (1 << 23);
 	ehci_writel(ehci, tmp, &ehci->regs->port_status[0]);
-#else
-	/* clear PP to cut power to the port */
-	tmp = ehci_readl(ehci, &ehci->regs->port_status[0]);
-	tmp &= ~PORT_POWER;
-	ehci_writel(ehci, tmp, &ehci->regs->port_status[0]);
-#endif
+	}
+
 	return 0;
 }
 
@@ -539,8 +549,6 @@ static int ehci_fsl_drv_resume(struct platform_device *pdev)
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	u32 tmp;
 	struct fsl_usb2_platform_data *pdata = pdev->dev.platform_data;
-
-	printk(KERN_INFO "USB Host resumed\n");
 
 	pr_debug("%s('%s'): suspend=%d already_suspended=%d\n", __func__,
 		pdata->name, pdata->suspended, pdata->already_suspended);
@@ -558,6 +566,15 @@ static int ehci_fsl_drv_resume(struct platform_device *pdev)
 	if (!pdata->suspended) {
 		pr_debug("not suspended, leaving early\n");
 		return 0;
+	}
+
+	if (device_may_wakeup(&(pdev->dev))) {
+		tmp = ehci_readl(ehci, &ehci->regs->port_status[0]);
+		if (tmp & (1 << 23)) {
+			tmp &= ~(1 << 23);
+			ehci_writel(ehci, tmp, &ehci->regs->port_status[0]);
+			msleep(10);
+		}
 	}
 
 	pdata->suspended = 0;
@@ -579,6 +596,7 @@ static int ehci_fsl_drv_resume(struct platform_device *pdev)
 	ehci_writel(ehci, pdata->pm_portsc, &ehci->regs->port_status[0]);
 
 	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+	hcd->state = HC_STATE_RUNNING;
 	pdev->dev.power.power_state = PMSG_ON;
 
 	tmp = ehci_readl(ehci, &ehci->regs->command);
@@ -587,6 +605,7 @@ static int ehci_fsl_drv_resume(struct platform_device *pdev)
 
 	usb_hcd_resume_root_hub(hcd);
 
+	printk(KERN_INFO "USB Host resumed\n");
 	return 0;
 }
 #endif				/* CONFIG_USB_OTG */

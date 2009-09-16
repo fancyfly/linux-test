@@ -29,6 +29,7 @@
 #include <linux/sched.h>
 #include <linux/errno.h>
 #include <linux/skbuff.h>
+#include <linux/rfkill.h>
 
 #include <linux/usb.h>
 
@@ -179,6 +180,8 @@ struct btusb_data {
 	int isoc_altsetting;
 	int suspend_count;
 };
+
+static struct rfkill *btusbrfkill;
 
 static void btusb_intr_complete(struct urb *urb)
 {
@@ -746,12 +749,18 @@ static void btusb_work(struct work_struct *work)
 	}
 }
 
+static int rfkill_toggle_radio(void *data, enum rfkill_state state)
+{
+	return 0;
+}
+
 static int btusb_probe(struct usb_interface *intf,
 				const struct usb_device_id *id)
 {
 	struct usb_endpoint_descriptor *ep_desc;
 	struct btusb_data *data;
 	struct hci_dev *hdev;
+	struct rfkill *rfkill;
 	int i, err;
 
 	BT_DBG("intf %p id %p", intf, id);
@@ -909,7 +918,17 @@ static int btusb_probe(struct usb_interface *intf,
 	}
 
 	usb_set_intfdata(intf, data);
+	if (btusbrfkill == NULL) {
+		rfkill = rfkill_allocate(NULL, RFKILL_TYPE_BLUETOOTH);
 
+		rfkill->name = "Bluetooth";
+		rfkill->state = RFKILL_STATE_OFF;
+		rfkill->toggle_radio = rfkill_toggle_radio;
+		rfkill->user_claim = 1;
+
+		rfkill_register(rfkill);
+		btusbrfkill = rfkill;
+	}
 	return 0;
 }
 
@@ -1023,6 +1042,9 @@ static int __init btusb_init(void)
 static void __exit btusb_exit(void)
 {
 	usb_deregister(&btusb_driver);
+	if (btusbrfkill)
+		rfkill_unregister(btusbrfkill);
+
 }
 
 module_init(btusb_init);

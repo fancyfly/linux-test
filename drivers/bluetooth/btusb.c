@@ -1009,6 +1009,7 @@ static struct usb_driver btusb_driver = {
 	.disconnect	= btusb_disconnect,
 	.suspend	= btusb_suspend,
 	.resume		= btusb_resume,
+	.reset_resume   = btusb_resume,
 	.id_table	= btusb_table,
 };
 

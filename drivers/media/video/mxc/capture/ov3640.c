@@ -22,14 +22,6 @@
 #include <media/v4l2-int-device.h>
 #include "mxc_v4l2_capture.h"
 
-#define CAMERA_DBG
-
-#ifdef CAMERA_DBG
-	#define CAMERA_TRACE(x) (printk)x
-#else
-	#define CAMERA_TRACE(x)
-#endif
-
 /* Check these values! */
 #define MIN_FPS 15
 #define MAX_FPS 30
@@ -399,6 +391,7 @@ static int analog_voltage;
 static int gpo_voltage;
 
 static int ov3640_enable_regulator(struct sensor *sensor);
+static int ov3640_disable_regulator(struct sensor *sensor);
 
 static int ov3640_probe(struct i2c_client *client,
 			const struct i2c_device_id *device_id);
@@ -482,8 +475,6 @@ static int ov3640_init_mode(enum ov3640_frame_rate frame_rate,
 	u8 RegVal = 0;
 	int retval = 0;
 
-	CAMERA_TRACE(("CAMERA_DBG Entry: ov3640_init_mode\n"));
-
 	if (mode > ov3640_mode_MAX || mode < ov3640_mode_MIN) {
 		pr_err("Wrong ov3640 mode detected!\n");
 		return -1;
@@ -520,8 +511,6 @@ static int ov3640_init_mode(enum ov3640_frame_rate frame_rate,
 			msleep(Delay_ms);
 	}
 err:
-	CAMERA_TRACE(("CAMERA_DBG Exit: ov3640_init_mode\n"));
-
 	return retval;
 }
 
@@ -531,8 +520,6 @@ static int ioctl_g_csi(struct v4l2_int_device *s, int *csi)
 {
 	struct sensor *sensor = s->priv;
 
-	CAMERA_TRACE(("In ov3640:ioctl_g_csi\n"));
-
 	*csi = sensor->csi;
 
 	return 0;
@@ -540,7 +527,6 @@ static int ioctl_g_csi(struct v4l2_int_device *s, int *csi)
 
 static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 {
-	CAMERA_TRACE(("In ov3640:ioctl_g_ifparm\n"));
 	if (s == NULL) {
 		pr_err("   ERROR!! no slave device set!\n");
 		return -1;
@@ -569,8 +555,6 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 static int ioctl_s_power(struct v4l2_int_device *s, int on)
 {
 	struct sensor *sensor = s->priv;
-
-	CAMERA_TRACE(("In ov3640:ioctl_s_power\n"));
 
 	if (on && !sensor->on) {
 		gpio_sensor_active(ov3640_data.csi);
@@ -616,11 +600,9 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	struct v4l2_captureparm *cparm = &a->parm.capture;
 	int ret = 0;
 
-	CAMERA_TRACE(("In ov3640:ioctl_g_parm\n"));
 	switch (a->type) {
 	/* This is the only case currently handled. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
-		CAMERA_TRACE(("   type is V4L2_BUF_TYPE_VIDEO_CAPTURE\n"));
 		memset(a, 0, sizeof(*a));
 		a->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		cparm->capability = sensor->streamcap.capability;
@@ -636,9 +618,6 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	case V4L2_BUF_TYPE_VBI_OUTPUT:
 	case V4L2_BUF_TYPE_SLICED_VBI_CAPTURE:
 	case V4L2_BUF_TYPE_SLICED_VBI_OUTPUT:
-		CAMERA_TRACE(("   type is not " \
-			"V4L2_BUF_TYPE_VIDEO_CAPTURE but %d\n",
-			a->type));
 		ret = -EINVAL;
 		break;
 
@@ -668,12 +647,9 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	enum ov3640_frame_rate frame_rate;
 	int ret = 0;
 
-	CAMERA_TRACE(("In ov3640:ioctl_s_parm\n"));
 	switch (a->type) {
 	/* This is the only case currently handled. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
-		CAMERA_TRACE(("   type is V4L2_BUF_TYPE_VIDEO_CAPTURE\n"));
-
 		/* Check that the new frame rate is allowed. */
 		if ((timeperframe->numerator == 0) ||
 		    (timeperframe->denominator == 0)) {
@@ -747,8 +723,6 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 {
 	struct sensor *sensor = s->priv;
 
-	CAMERA_TRACE(("In ov3640:ioctl_g_fmt_cap.\n"));
-
 	f->fmt.pix = sensor->pix;
 
 	return 0;
@@ -767,7 +741,6 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 {
 	int ret = 0;
 
-	CAMERA_TRACE(("In ov3640:ioctl_g_ctrl\n"));
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
 		vc->value = ov3640_data.brightness;
@@ -815,49 +788,34 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
-		CAMERA_TRACE(("   V4L2_CID_BRIGHTNESS\n"));
 		break;
 	case V4L2_CID_CONTRAST:
-		CAMERA_TRACE(("   V4L2_CID_CONTRAST\n"));
 		break;
 	case V4L2_CID_SATURATION:
-		CAMERA_TRACE(("   V4L2_CID_SATURATION\n"));
 		break;
 	case V4L2_CID_HUE:
-		CAMERA_TRACE(("   V4L2_CID_HUE\n"));
 		break;
 	case V4L2_CID_AUTO_WHITE_BALANCE:
-		CAMERA_TRACE(("   V4L2_CID_AUTO_WHITE_BALANCE\n"));
 		break;
 	case V4L2_CID_DO_WHITE_BALANCE:
-		CAMERA_TRACE(("   V4L2_CID_DO_WHITE_BALANCE\n"));
 		break;
 	case V4L2_CID_RED_BALANCE:
-		CAMERA_TRACE(("   V4L2_CID_RED_BALANCE\n"));
 		break;
 	case V4L2_CID_BLUE_BALANCE:
-		CAMERA_TRACE(("   V4L2_CID_BLUE_BALANCE\n"));
 		break;
 	case V4L2_CID_GAMMA:
-		CAMERA_TRACE(("   V4L2_CID_GAMMA\n"));
 		break;
 	case V4L2_CID_EXPOSURE:
-		CAMERA_TRACE(("   V4L2_CID_EXPOSURE\n"));
 		break;
 	case V4L2_CID_AUTOGAIN:
-		CAMERA_TRACE(("   V4L2_CID_AUTOGAIN\n"));
 		break;
 	case V4L2_CID_GAIN:
-		CAMERA_TRACE(("   V4L2_CID_GAIN\n"));
 		break;
 	case V4L2_CID_HFLIP:
-		CAMERA_TRACE(("   V4L2_CID_HFLIP\n"));
 		break;
 	case V4L2_CID_VFLIP:
-		CAMERA_TRACE(("   V4L2_CID_VFLIP\n"));
 		break;
 	default:
-		CAMERA_TRACE(("   Default case\n"));
 		retval = -EPERM;
 		break;
 	}
@@ -871,8 +829,6 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
  */
 static int ioctl_init(struct v4l2_int_device *s)
 {
-	CAMERA_TRACE(("In ov3640:ioctl_init\n"));
-
 	return 0;
 }
 
@@ -888,8 +844,6 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	u32 tgt_xclk;	/* target xclk */
 	u32 tgt_fps;	/* target frames per secound */
 	enum ov3640_frame_rate frame_rate;
-
-	CAMERA_TRACE(("In ov3640:ioctl_dev_init\n"));
 
 	if (ov3640_enable_regulator(sensor) < 0)
 		return -1;
@@ -930,35 +884,9 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 static int ioctl_dev_exit(struct v4l2_int_device *s)
 {
 	struct sensor *sensor = s->priv;
-	struct device dev;
 
-	dev = sensor->i2c_client->dev;
-
-	CAMERA_TRACE(("In ov3640:ioctl_dev_exit\n"));
-
-	if (!IS_ERR_VALUE((unsigned long)gpo_regulator) &&
-	    gpo_regulator != NULL) {
-		regulator_disable(gpo_regulator);
-		regulator_put(gpo_regulator, &dev);
-	}
-
-	if (!IS_ERR_VALUE((unsigned long)analog_regulator) &&
-	    analog_regulator != NULL) {
-		regulator_disable(analog_regulator);
-		regulator_put(analog_regulator, &dev);
-	}
-
-	if (!IS_ERR_VALUE((unsigned long)core_regulator) &&
-	    core_regulator != NULL) {
-		regulator_disable(core_regulator);
-		regulator_put(core_regulator, &dev);
-	}
-
-	if (!IS_ERR_VALUE((unsigned long)io_regulator) &&
-	    io_regulator != NULL) {
-		regulator_disable(io_regulator);
-		regulator_put(io_regulator, &dev);
-	}
+	gpio_sensor_inactive(ov3640_data.csi);
+	ov3640_disable_regulator(sensor);
 
 	return 0;
 }
@@ -1008,13 +936,13 @@ static int ov3640_enable_regulator(struct sensor *sensor)
 {
 	struct device dev = sensor->i2c_client->dev;
 
-	if (!IS_ERR_VALUE((u32)io_regulator) && io_regulator != NULL) {
-		regulator_set_voltage(io_regulator, io_voltage);
-		if (regulator_enable(io_regulator) != 0) {
-			pr_err("%s:io set voltage error\n", __func__);
+	if (!IS_ERR_VALUE((u32)analog_regulator) && analog_regulator != NULL) {
+		regulator_set_voltage(analog_regulator, analog_voltage);
+		if (regulator_enable(analog_regulator) != 0) {
+			pr_err("%s:analog set voltage error\n", __func__);
 			goto err1;
 		} else {
-			dev_dbg(&dev, "%s:io set voltage ok\n", __func__);
+			dev_dbg(&dev, "%s:analog set voltage ok\n", __func__);
 		}
 	}
 	if (!IS_ERR_VALUE((u32)core_regulator) && core_regulator != NULL) {
@@ -1027,13 +955,13 @@ static int ov3640_enable_regulator(struct sensor *sensor)
 			dev_dbg(&dev, "%s:core set voltage ok\n", __func__);
 		}
 	}
-	if (!IS_ERR_VALUE((u32)analog_regulator) && analog_regulator != NULL) {
-		regulator_set_voltage(analog_regulator, analog_voltage);
-		if (regulator_enable(analog_regulator) != 0) {
-			pr_err("%s:analog set voltage error\n", __func__);
+	if (!IS_ERR_VALUE((u32)io_regulator) && io_regulator != NULL) {
+		regulator_set_voltage(io_regulator, io_voltage);
+		if (regulator_enable(io_regulator) != 0) {
+			pr_err("%s:io set voltage error\n", __func__);
 			goto err3;
 		} else {
-			dev_dbg(&dev, "%s:analog set voltage ok\n", __func__);
+			dev_dbg(&dev, "%s:io set voltage ok\n", __func__);
 		}
 	}
 	if (!IS_ERR_VALUE((u32)gpo_regulator) && gpo_regulator != NULL) {
@@ -1048,9 +976,9 @@ static int ov3640_enable_regulator(struct sensor *sensor)
 
 	return 0;
 err4:
-	if (!IS_ERR_VALUE((u32)analog_regulator) && analog_regulator != NULL) {
-		regulator_disable(analog_regulator);
-		regulator_put(analog_regulator, &dev);
+	if (!IS_ERR_VALUE((u32)io_regulator) && io_regulator != NULL) {
+		regulator_disable(io_regulator);
+		regulator_put(io_regulator, &dev);
 	}
 err3:
 	if (!IS_ERR_VALUE((u32)core_regulator) && core_regulator != NULL) {
@@ -1058,12 +986,33 @@ err3:
 		regulator_put(core_regulator, &dev);
 	}
 err2:
-	if (!IS_ERR_VALUE((u32)io_regulator) && io_regulator != NULL) {
-		regulator_disable(io_regulator);
-		regulator_put(io_regulator, &dev);
+	if (!IS_ERR_VALUE((u32)analog_regulator) && analog_regulator != NULL) {
+		regulator_disable(analog_regulator);
+		regulator_put(analog_regulator, &dev);
 	}
 err1:
 	return -1;
+}
+
+static int ov3640_disable_regulator(struct sensor *sensor)
+{
+	if (!IS_ERR_VALUE((unsigned long)gpo_regulator) &&
+	    gpo_regulator != NULL)
+		regulator_disable(gpo_regulator);
+
+	if (!IS_ERR_VALUE((unsigned long)analog_regulator) &&
+	    analog_regulator != NULL)
+		regulator_disable(analog_regulator);
+
+	if (!IS_ERR_VALUE((unsigned long)core_regulator) &&
+	    core_regulator != NULL)
+		regulator_disable(core_regulator);
+
+	if (!IS_ERR_VALUE((unsigned long)io_regulator) &&
+	    io_regulator != NULL)
+		regulator_disable(io_regulator);
+
+	return 0;
 }
 
 /*!
@@ -1078,8 +1027,6 @@ static int ov3640_probe(struct i2c_client *client,
 {
 	int retval;
 	struct mxc_camera_platform_data *plat_data = client->dev.platform_data;
-
-	CAMERA_TRACE(("CAMERA_DBG Entry: ov3640_probe\n"));
 
 	/* Set initial values for the sensor struct. */
 	memset(&ov3640_data, 0, sizeof(ov3640_data));
@@ -1155,7 +1102,23 @@ err1:
  */
 static int ov3640_remove(struct i2c_client *client)
 {
-	CAMERA_TRACE(("In ov3640_remove\n"));
+	struct device dev = client->dev;
+
+	if (!IS_ERR_VALUE((unsigned long)gpo_regulator) &&
+	    gpo_regulator != NULL)
+		regulator_put(gpo_regulator, &dev);
+
+	if (!IS_ERR_VALUE((unsigned long)analog_regulator) &&
+	    analog_regulator != NULL)
+		regulator_put(analog_regulator, &dev);
+
+	if (!IS_ERR_VALUE((unsigned long)core_regulator) &&
+	    core_regulator != NULL)
+		regulator_put(core_regulator, &dev);
+
+	if (!IS_ERR_VALUE((unsigned long)io_regulator) &&
+	    io_regulator != NULL)
+		regulator_put(io_regulator, &dev);
 
 	v4l2_int_device_unregister(&ov3640_int_device);
 
@@ -1172,14 +1135,10 @@ static __init int ov3640_init(void)
 {
 	u8 err;
 
-	CAMERA_TRACE(("CAMERA_DBG Entry: ov3640_init\n"));
-
 	err = i2c_add_driver(&ov3640_i2c_driver);
 	if (err != 0)
 		pr_err("%s:driver registration failed, error=%d \n",
 			__func__, err);
-
-	CAMERA_TRACE(("CAMERA_DBG Exit: ov3640_init\n"));
 
 	return err;
 }
@@ -1192,12 +1151,7 @@ static __init int ov3640_init(void)
  */
 static void __exit ov3640_clean(void)
 {
-	CAMERA_TRACE(("CAMERA_DBG Entry: ov3640_clean\n"));
-
 	i2c_del_driver(&ov3640_i2c_driver);
-	gpio_sensor_inactive(ov3640_data.csi);
-
-	CAMERA_TRACE(("CAMERA_DBG Exit: ov3640_clean\n"));
 }
 
 module_init(ov3640_init);

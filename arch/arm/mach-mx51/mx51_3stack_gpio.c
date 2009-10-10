@@ -905,6 +905,7 @@ void gpio_sensor_active(unsigned int csi)
 			mxc_set_gpio_dataout(MX51_PIN_EIM_EB2, 0);
 		}
 
+		mxc_free_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT0);
 		mxc_request_iomux(MX51_PIN_EIM_A26, IOMUX_CONFIG_ALT5);
 		mxc_iomux_set_input
 		    (MUX_IN_HSC_MIPI_MIX_IPP_IND_SENS2_DATA_EN_SELECT_INPUT,
@@ -1026,7 +1027,8 @@ void gpio_sensor_inactive(unsigned int csi)
 		mxc_free_iomux(MX51_PIN_EIM_CS4, IOMUX_CONFIG_GPIO);
 		mxc_request_iomux(MX51_PIN_EIM_CS4, IOMUX_CONFIG_ALT0);
 
-		mxc_request_iomux(MX51_PIN_GPIO1_8, IOMUX_CONFIG_ALT0);
+		mxc_request_gpio(MX51_PIN_GPIO1_8);
+		mxc_free_iomux(MX51_PIN_GPIO1_8, IOMUX_CONFIG_GPIO);
 		break;
 	default:
 		break;

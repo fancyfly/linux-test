@@ -23,6 +23,7 @@
 #include <linux/buffer_head.h>
 #include <linux/vfs.h>
 #include <linux/mutex.h>
+#include <linux/mpage.h>
 
 #include <asm/uaccess.h>
 
@@ -39,6 +40,7 @@ static DEFINE_MUTEX(read_mutex);
 #define CRAMINO(x)	(((x)->offset && (x)->size)?(x)->offset<<2:1)
 #define OFFSET(x)	((x)->i_ino)
 
+#define CRAMFS_INODE_IS_XIP(x) ((x)->i_mode & S_ISVTX)
 
 static int cramfs_iget5_test(struct inode *inode, void *opaque)
 {
@@ -459,6 +461,18 @@ static struct dentry * cramfs_lookup(struct inode *dir, struct dentry *dentry, s
 	return NULL;
 }
 
+static int cramfs_get_block(struct inode *inode, sector_t iblock,
+ struct buffer_head *bh_result, int create)
+{
+ /* A write? */
+ BUG_ON(unlikely(create));
+
+ iblock += (PAGE_ALIGN(OFFSET(inode)) >> PAGE_CACHE_SHIFT);
+ map_bh(bh_result, inode->i_sb, iblock);
+
+ return 0;
+}
+
 static int cramfs_readpage(struct file *file, struct page * page)
 {
 	struct inode *inode = page->mapping->host;
@@ -470,7 +484,10 @@ static int cramfs_readpage(struct file *file, struct page * page)
 	bytes_filled = 0;
 	pgdata = kmap(page);
 
-	if (page->index < maxblock) {
+	/* Handle uncompressed files */
+	if (CRAMFS_INODE_IS_XIP(inode) && page->index < maxblock) {
+		return mpage_readpage(page, cramfs_get_block);
+	} else if (page->index < maxblock) {
 		struct super_block *sb = inode->i_sb;
 		u32 blkptr_offset = OFFSET(inode) + page->index*4;
 		u32 start_offset, compr_len;

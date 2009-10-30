@@ -1165,6 +1165,11 @@ typedef struct _ipu_mem_info {
 	int size;
 } ipu_mem_info;
 
+typedef struct _ipu_csc_update {
+	ipu_channel_t channel;
+	int **param;
+} ipu_csc_update;
+
 /* IOCTL commands */
 
 #define IPU_INIT_CHANNEL              _IOW('I',0x1,ipu_channel_parm)
@@ -1205,7 +1210,7 @@ typedef struct _ipu_mem_info {
 #define IPU_ALOC_MEM		      _IOWR('I', 0x24, ipu_mem_info)
 #define IPU_FREE_MEM		      _IOW('I', 0x25, ipu_mem_info)
 #define IPU_IS_CHAN_BUSY	      _IOW('I', 0x26, ipu_channel_t)
-
+#define IPU_CSC_UPDATE                _IOW('I', 0x27, ipu_csc_update)
 
 /* two stripe calculations */
 struct stripe_param{

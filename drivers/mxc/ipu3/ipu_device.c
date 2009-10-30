@@ -374,6 +374,19 @@ static int mxc_ipu_ioctl(struct inode *inode, struct file *file,
 				ret = 0;
 		}
 		break;
+	case IPU_CSC_UPDATE:
+		{
+			int param[5][3];
+			ipu_csc_update csc;
+			if (copy_from_user(&csc, (void *) arg,
+					   sizeof(ipu_csc_update)))
+				return -EFAULT;
+			if (copy_from_user(&param[0][0], (void *) csc.param,
+					   sizeof(param)))
+				return -EFAULT;
+			ipu_set_csc_coefficients(csc.channel, param);
+		}
+		break;
 	default:
 		break;
 	}

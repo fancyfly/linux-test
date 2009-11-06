@@ -171,7 +171,7 @@ static struct mtd_partition nand_flash_partitions[] = {
 	{
 	 .name = "BOOT",
 	 .offset = 0,
-	 .size = 5 * 1024 * 1024},
+	 .size = 7 * 1024 * 1024},
 	{
 	 .name = "MISC",
 	 .offset = MTDPART_OFS_APPEND,

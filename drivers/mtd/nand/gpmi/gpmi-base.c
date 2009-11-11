@@ -47,7 +47,7 @@ static int add_mtd_chip;
 static int ignorebad;
 static int max_chips = 4;
 static long clk = -1;
-static int bch /* = 0 */;
+static int bch = 1/* = 0 */;
 
 static int gpmi_nand_init_hw(struct platform_device *pdev, int request_pins);
 static void gpmi_nand_release_hw(struct platform_device *pdev);
@@ -446,7 +446,7 @@ static void gpmi_ecc_write_page(struct mtd_info *mtd,
 	}
 
 	/* if OOB is all FF, leave it as such */
-	if (!is_ff(chip->oob_poi, mtd->oobsize)) {
+	if (!is_ff(chip->oob_poi, mtd->oobsize) || bch_mode()) {
 		if (map_buffers)
 			oobphys = dma_map_single(&g->dev->dev, chip->oob_poi,
 				mtd->oobsize, DMA_TO_DEVICE);
@@ -892,17 +892,18 @@ int gpmi_ecc_read_oob(struct mtd_info *mtd, struct nand_chip *chip,
 		  int page, int sndcmd)
 {
 	struct gpmi_nand_data *g = chip->priv;
-	loff_t oob_offset;
+	loff_t oob_offset = 0;
 	struct mtd_ecc_stats stats;
-	dma_addr_t oobphys;
+	dma_addr_t bufphys, oobphys;
 	int ecc;
 	int ret;
 
 	ecc = g->raw_oob_mode == 0 && raw_mode == 0;
 
 	if (sndcmd) {
-		oob_offset = mtd->writesize;
-		if (likely(ecc))
+		if (!bch_mode())
+			oob_offset = mtd->writesize;
+		if (likely(ecc) && !bch_mode())
 			oob_offset += chip->ecc.bytes * chip->ecc.steps;
 		chip->cmdfunc(mtd, NAND_CMD_READ0, oob_offset, page);
 		sndcmd = 0;
@@ -921,9 +922,17 @@ int gpmi_ecc_read_oob(struct mtd_info *mtd, struct nand_chip *chip,
 	if (dma_mapping_error(&g->dev->dev, oobphys))
 		oobphys = g->oob_buffer_handle;
 
+	bufphys = ~0;
+
+	if (map_buffers && bch_mode())
+		bufphys = dma_map_single(&g->dev->dev, chip->buffers->databuf,
+				mtd->writesize, DMA_FROM_DEVICE);
+	if (dma_mapping_error(&g->dev->dev, bufphys))
+		bufphys = g->data_buffer_handle;
+
 	/* ECC read */
 	(void)g->hc->read(g->hc, g->selected_chip, g->cchip->d,
-			g->cchip->error.handle, ~0, oobphys);
+			g->cchip->error.handle, bufphys, oobphys);
 
 	ret = gpmi_dma_exchange(g, NULL);
 
@@ -945,6 +954,11 @@ int gpmi_ecc_read_oob(struct mtd_info *mtd, struct nand_chip *chip,
 		memcpy(chip->oob_poi, g->oob_buffer, mtd->oobsize);
 		copies++;
 	}
+
+	if (bufphys != g->data_buffer_handle)
+		dma_unmap_single(&g->dev->dev, bufphys, mtd->writesize,
+			DMA_FROM_DEVICE);
+
 
 	/* fill rest with ff */
 	memset(chip->oob_poi + g->oob_free, 0xff, mtd->oobsize - g->oob_free);
@@ -1157,7 +1171,10 @@ static int gpmi_scan_middle(struct gpmi_nand_data *g)
 		g->mtd.oobsize = oobsize;
 		/* otherwise error; oobsize should be set
 		   in valid cases */
-		g->hc = gpmi_hwecc_chip_find("ecc8");
+		if (!bch_mode())
+			g->hc = gpmi_hwecc_chip_find("ecc8");
+		else
+			g->hc = gpmi_hwecc_chip_find("bch");
 		g->hc->setup(g->hc, 0, g->mtd.writesize, g->mtd.oobsize);
 		return 0;
 	}

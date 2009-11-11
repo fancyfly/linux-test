@@ -39,6 +39,11 @@ static int bch_read(void *context,
 		struct stmp3xxx_dma_descriptor *chain,
 		dma_addr_t error,
 		dma_addr_t page, dma_addr_t oob);
+static int bch_write(void *context,
+		int index,
+		struct stmp3xxx_dma_descriptor *chain,
+		dma_addr_t error,
+		dma_addr_t page, dma_addr_t oob);
 static int bch_stat(void *ctx, int index, struct mtd_ecc_stats *r);
 static int bch_reset(void *context, int index);
 
@@ -48,6 +53,7 @@ struct bch_state_t {
 		struct mtd_ecc_stats stat;
 		struct completion done;
 		u32 writesize, oobsize;
+		u32 ecc0, eccn, metasize;
 	} nands[BCH_MAX_NANDS];
 };
 
@@ -57,6 +63,7 @@ static struct bch_state_t state = {
 		.setup		= bch_setup,
 		.stat		= bch_stat,
 		.read		= bch_read,
+		.write		= bch_write,
 		.reset		= bch_reset,
 	},
 };
@@ -72,6 +79,8 @@ static int bch_stat(void *context, int index, struct mtd_ecc_stats *r)
 {
 	struct bch_state_t *state = context;
 
+	wait_for_completion(&state->nands[index].done);
+
 	*r = state->nands[index].stat;
 	state->nands[index].stat.failed = 0;
 	state->nands[index].stat.corrected = 0;
@@ -80,7 +89,7 @@ static int bch_stat(void *context, int index, struct mtd_ecc_stats *r)
 
 static irqreturn_t bch_irq(int irq, void *context)
 {
-	u32 b0, s0;
+	u32 b0, s0, ecc0;
 	struct mtd_ecc_stats stat;
 	int r;
 	struct bch_state_t *state = context;
@@ -88,16 +97,17 @@ static irqreturn_t bch_irq(int irq, void *context)
 	s0 = HW_BCH_STATUS0_RD();
 	r = (s0 & BM_BCH_STATUS0_COMPLETED_CE) >> 16;
 
+	ecc0 = state->nands[r].ecc0;
+
 	stat.corrected = stat.failed = 0;
 
+	/* for meta block */
 	b0 = (s0 & BM_BCH_STATUS0_STATUS_BLK0) >> 8;
-	if (b0 <= 4)
+	if (b0 <= ecc0)
 		stat.corrected += b0;
 	if (b0 == 0xFE)
 		stat.failed++;
 
-	if (s0 & BM_BCH_STATUS0_CORRECTED)
-		stat.corrected += (s0 & BM_BCH_STATUS0_CORRECTED);
 	if (s0 & BM_BCH_STATUS0_UNCORRECTABLE)
 		stat.failed++;
 
@@ -116,7 +126,7 @@ static irqreturn_t bch_irq(int irq, void *context)
 
 static int bch_available(void *context)
 {
-	stmp3xxx_reset_block(REGS_BCH_BASE, 0);
+	stmp3xxx_reset_block(REGS_BCH_BASE, true);
 	return HW_BCH_BLOCKNAME_RD() == 0x20484342;
 }
 
@@ -125,19 +135,26 @@ static int bch_setup(void *context, int index, int writesize, int oobsize)
 	struct bch_state_t *state = context;
 	u32 layout = (REGS_BCH_BASE + 0x80 /* HW_BCH_FLASH0LAYOUT0_ADDR */)
 		+ index * 0x20;
-	u32 ecc0, eccN;
-	int meta;
+	u32 ecc0, eccn;
+	int metasize;
 
 	switch (writesize) {
 	case 2048:
 		ecc0 = 4;
-		eccN = 4;
-		meta = 5;
+		eccn = 4;
+		metasize = 10;
 		break;
 	case 4096:
-		ecc0 = 16;
-		eccN = 14;
-		meta = 10;
+		if (oobsize == 218) {
+			ecc0 = 16;
+			eccn = 14;
+		} else {
+			ecc0 = 8;
+			eccn = 8;
+		}
+
+		metasize = 10;
+
 		break;
 	default:
 		printk(KERN_ERR"%s: cannot tune BCH for page size %d\n",
@@ -147,13 +164,16 @@ static int bch_setup(void *context, int index, int writesize, int oobsize)
 
 	state->nands[index].oobsize = oobsize;
 	state->nands[index].writesize = writesize;
+	state->nands[index].metasize = metasize;
+	state->nands[index].ecc0 = ecc0;
+	state->nands[index].eccn = eccn;
 
 	__raw_writel(BF_BCH_FLASH0LAYOUT0_NBLOCKS(writesize/512) |
-		     BF_BCH_FLASH0LAYOUT0_META_SIZE(oobsize) |
+		     BF_BCH_FLASH0LAYOUT0_META_SIZE(metasize) |
 		     BF_BCH_FLASH0LAYOUT0_ECC0(ecc0 >> 1) | /* for oob */
 		     BF_BCH_FLASH0LAYOUT0_DATA0_SIZE(0x00), layout);
 	__raw_writel(BF_BCH_FLASH0LAYOUT1_PAGE_SIZE(writesize + oobsize) |
-		     BF_BCH_FLASH0LAYOUT1_ECCN(eccN >> 1) | /* for dblock */
+		     BF_BCH_FLASH0LAYOUT1_ECCN(eccn >> 1) | /* for dblock */
 		     BF_BCH_FLASH0LAYOUT1_DATAN_SIZE(512), layout + 0x10);
 
 	/*
@@ -247,7 +267,7 @@ static int bch_read(void *context,
 		BF_APBH_CHn_CMD_COMMAND(BV_APBH_CHn_CMD_COMMAND__NO_DMA_XFER);
 	chain->command->pio_words[0] =
 		BF_GPMI_CTRL0_COMMAND_MODE(
-			BV_GPMI_CTRL0_COMMAND_MODE__WAIT_FOR_READY) |
+		BV_GPMI_CTRL0_COMMAND_MODE__WAIT_FOR_READY) |
 		BM_GPMI_CTRL0_WORD_LENGTH	|
 		BF_GPMI_CTRL0_CS(index)		|
 		BF_GPMI_CTRL0_XFER_COUNT(readsize);
@@ -263,6 +283,67 @@ static int bch_read(void *context,
 		BM_APBH_CHn_CMD_IRQONCMPLT	|
 		BF_APBH_CHn_CMD_COMMAND(BV_APBH_CHn_CMD_COMMAND__NO_DMA_XFER);
 	chain->command->alternate = 0;
+
+	init_completion(&state->nands[index].done);
+
+	return 0;
+}
+
+static int bch_write(void *context,
+		int index,
+		struct stmp3xxx_dma_descriptor *chain,
+		dma_addr_t error,
+		dma_addr_t page, dma_addr_t oob)
+{
+	unsigned long writesize = 0;
+	u32 bufmask = 0;
+	struct bch_state_t *state = context;
+
+	if (!dma_mapping_error(NULL, oob)) {
+		bufmask |= BV_GPMI_ECCCTRL_BUFFER_MASK__BCH_AUXONLY;
+		writesize += state->nands[index].oobsize;
+	}
+	if (!dma_mapping_error(NULL, page)) {
+		bufmask |= (BV_GPMI_ECCCTRL_BUFFER_MASK__BCH_PAGE
+				& ~BV_GPMI_ECCCTRL_BUFFER_MASK__BCH_AUXONLY);
+		writesize += state->nands[index].writesize;
+	}
+
+	pr_debug("writesize = %ld, bufmask = 0x%X\n", writesize, bufmask);
+	bch_reset(context, index);
+
+	/* enable BCH and write NAND data */
+	chain->command->cmd =
+		BF_APBH_CHn_CMD_CMDWORDS(6)     |
+		BM_APBH_CHn_CMD_WAIT4ENDCMD     |
+		BM_APBH_CHn_CMD_NANDLOCK        |
+		BM_APBH_CHn_CMD_CHAIN           |
+		BF_APBH_CHn_CMD_COMMAND(BV_APBH_CHn_CMD_COMMAND__NO_DMA_XFER);
+	chain->command->pio_words[0] =
+		BF_GPMI_CTRL0_COMMAND_MODE(BV_GPMI_CTRL0_COMMAND_MODE__WRITE) |
+		BM_GPMI_CTRL0_WORD_LENGTH       |
+		BF_GPMI_CTRL0_CS(index)         |
+		BF_GPMI_CTRL0_XFER_COUNT(0);
+	chain->command->pio_words[1] = 0;
+	chain->command->pio_words[2] =
+		BM_GPMI_ECCCTRL_ENABLE_ECC      |
+		BF_GPMI_ECCCTRL_ECC_CMD(0x03)   |
+		BF_GPMI_ECCCTRL_BUFFER_MASK(bufmask);
+	chain->command->pio_words[3] = writesize;
+	chain->command->pio_words[4] =
+		!dma_mapping_error(NULL, page) ? page : 0;
+	chain->command->pio_words[5] =
+		!dma_mapping_error(NULL, oob) ? oob : 0;
+	chain->command->alternate = 0;
+	chain++;
+
+	/* emit IRQ */
+	chain->command->cmd =
+		BF_APBH_CHn_CMD_CMDWORDS(0)	|
+		BF_APBH_CHn_CMD_COMMAND(
+		BV_APBH_CHn_CMD_COMMAND__NO_DMA_XFER) |
+		BM_APBH_CHn_CMD_WAIT4ENDCMD	|
+		BM_APBH_CHn_CMD_IRQONCMPLT;
 
 	return 0;
 }

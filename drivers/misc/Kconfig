@@ -611,4 +611,8 @@ config ANDROID_RAM_CONSOLE_EARLY_SIZE
         default 0
         depends on ANDROID_RAM_CONSOLE_EARLY_INIT
 
+config FSL_CACHE
+	tristate "Freescale Cache manipulate driver"
+	default y
+
 endif # MISC_DEVICES

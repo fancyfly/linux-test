@@ -137,19 +137,19 @@ static inline void mxc_init_keypad(void)
 
 static struct mtd_partition mxc_nand_partitions[] = {
 	{
-	 .name = "nand.bootloader",
+	 .name = "BOOT",
 	 .offset = 0,
-	 .size = 1024 * 1024},
+	 .size = 7 * 1024 * 1024},
 	{
-	 .name = "nand.kernel",
+	 .name = "MISC",
 	 .offset = MTDPART_OFS_APPEND,
-	 .size = 5 * 1024 * 1024},
+	 .size = 1 * 1024 * 1024},
 	{
-	 .name = "nand.system",
+	 .name = "RECOVERY",
 	 .offset = MTDPART_OFS_APPEND,
-	 .size = 180 * 1024 * 1024},
+	 .size = 20 * 1024 * 1024},
 	{
-	 .name = "nand.userdata",
+	 .name = "ROOT",
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = MTDPART_SIZ_FULL},
 };

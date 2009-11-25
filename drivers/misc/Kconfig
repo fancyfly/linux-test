@@ -20,8 +20,8 @@ config ANDROID_PMEM
 config PMEM_SIZE
 	int "Memory size reserved for Android pmem driver"
 	depends on ANDROID_PMEM
-	range 0 32
-	default 16
+	range 0 40
+	default 40
 	help
 	  This is the size in MB for Android PMEM allocator reserved memory
 
@@ -29,7 +29,7 @@ config PMEM_GPU_SIZE
 	int "Memory size reserved for Android GPU pmem driver"
 	depends on ANDROID_PMEM
 	range 0 32
-	default 32
+	default 24
 	help
 	  This is the size in MB for GPU PMEM allocator reserved memory
 

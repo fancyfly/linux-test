@@ -600,7 +600,7 @@ void gpio_spi_active(int cspi_mod)
 		mxc_request_iomux(MX25_PIN_CSPI1_SS1, MUX_CONFIG_FUNC);
 		mxc_request_iomux(MX25_PIN_CSPI1_SCLK, MUX_CONFIG_FUNC);
 		mxc_request_iomux(MX25_PIN_CSPI1_RDY, MUX_CONFIG_FUNC);
-#ifndef CONFIG_CAN_FLEXCAN	/* MX25 3-stack uses this pin for CAN2 */
+#if !defined(CONFIG_CAN_FLEXCAN) && !defined(CONFIG_BTCS) /* used for CAN2 */
 		mxc_request_iomux(MX25_PIN_GPIO_C, MUX_CONFIG_ALT5); /*SS2*/
 #endif
 		mxc_request_iomux(MX25_PIN_VSTBY_ACK, MUX_CONFIG_ALT2); /*SS3*/
@@ -614,7 +614,7 @@ void gpio_spi_active(int cspi_mod)
 		mxc_iomux_set_pad(MX25_PIN_CSPI1_SS1, SPI_PAD_CTL1);
 		mxc_iomux_set_pad(MX25_PIN_CSPI1_SCLK, SPI_PAD_CTL1);
 		mxc_iomux_set_pad(MX25_PIN_CSPI1_RDY, SPI_PAD_CTL1);
-#ifndef CONFIG_CAN_FLEXCAN	/* MX25 3-stack uses this pin for CAN2 */
+#if !defined(CONFIG_CAN_FLEXCAN) && !defined(CONFIG_BTCS) /* used for CAN2 */
 		mxc_iomux_set_pad(MX25_PIN_GPIO_C, SPI_PAD_CTL2);
 #endif
 		mxc_iomux_set_pad(MX25_PIN_VSTBY_ACK, SPI_PAD_CTL1);
@@ -710,7 +710,7 @@ void gpio_spi_inactive(int cspi_mod)
 		gpio_request(IOMUX_TO_GPIO(MX25_PIN_CSPI1_SS1), NULL);
 		gpio_request(IOMUX_TO_GPIO(MX25_PIN_CSPI1_SCLK), NULL);
 		gpio_request(IOMUX_TO_GPIO(MX25_PIN_CSPI1_RDY), NULL);
-#ifndef CONFIG_CAN_FLEXCAN	/* MX25 3-stack uses this pin for CAN2 */
+#if !defined(CONFIG_CAN_FLEXCAN) && !defined(CONFIG_BTCS) /* used for CAN2 */
 		gpio_request(IOMUX_TO_GPIO(MX25_PIN_GPIO_C), NULL); /*SS2*/
 #endif
 		gpio_request(IOMUX_TO_GPIO(MX25_PIN_VSTBY_ACK), NULL); /*SS3*/
@@ -721,7 +721,7 @@ void gpio_spi_inactive(int cspi_mod)
 		mxc_free_iomux(MX25_PIN_CSPI1_SS1, MUX_CONFIG_GPIO);
 		mxc_free_iomux(MX25_PIN_CSPI1_SCLK, MUX_CONFIG_GPIO);
 		mxc_free_iomux(MX25_PIN_CSPI1_RDY, MUX_CONFIG_GPIO);
-#ifndef CONFIG_CAN_FLEXCAN	/* MX25 3-stack uses this pin for CAN2 */
+#if !defined(CONFIG_CAN_FLEXCAN) && !defined(CONFIG_BTCS) /* used for CAN2 */
 		mxc_free_iomux(MX25_PIN_GPIO_C, MUX_CONFIG_GPIO);
 #endif
 		mxc_free_iomux(MX25_PIN_VSTBY_ACK, MUX_CONFIG_GPIO);

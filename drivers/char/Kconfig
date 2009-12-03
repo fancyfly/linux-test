@@ -1096,5 +1096,12 @@ config DEVPORT
 
 source "drivers/s390/char/Kconfig"
 
+config BTCS_MOD
+	tristate "Helper driver for communicating between userland and BTCS"
+	depends on BTCS
+	help
+	   The BTCS userland application communicates with BTCS by issuing ioctls
+	   to this module.
+
 endmenu
 

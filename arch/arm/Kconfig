@@ -903,6 +903,27 @@ config NODES_SHIFT
 	default "2"
 	depends on NEED_MULTIPLE_NODES
 
+config BTCS
+        bool "Boot Time Critical Services Support"
+        default n
+        help
+           This selects support for BTCS
+
+config BTCS_START
+        hex "Kernel virtual address of BTCS reserved memory"
+        depends on BTCS
+        default "0xC2080000"
+        help
+            This the kernel virtual address of BTCS.
+            This should probably be 0xC0000000 + offset in physical.
+
+config BTCS_SIZE
+        hex "Size in bytes of BTCS reserved memory"
+        depends on BTCS
+        default "0x00100000"
+        help
+            This the size of BTCS reserved memory.
+
 source "mm/Kconfig"
 
 config LEDS

@@ -29,6 +29,8 @@
 
 #include <asm/mach/flash.h>
 #endif
+#include <linux/bootmem.h>
+#include <linux/btcs.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -56,7 +58,6 @@
  */
 
 unsigned int mx25_3stack_board_io;
-
 /* working point(wp): 0 - 399MHz; 1 - 266MHz; 2 - 133MHz; */
 /* 24MHz input clock table */
 static struct cpu_wp cpu_wp_mx25[] = {
@@ -627,6 +628,9 @@ static inline void mxc_init_mmc(void)
 static void __init mx25_3stack_timer_init(void)
 {
 	mx25_clocks_init(24000000);
+
+	btcs_init();
+	btcs_poll();
 }
 
 static struct sys_timer mxc_timer = {

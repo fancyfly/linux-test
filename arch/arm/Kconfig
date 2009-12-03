@@ -1330,6 +1330,28 @@ config HW_PERF_EVENTS
 	  Enable hardware performance counter support for perf events. If
 	  disabled, perf events will use software events only.
 
+config BTCS
+        bool "Boot Time Critical Services Support"
+        default n
+        help
+           This selects support for BTCS
+
+config BTCS_START
+        hex "Kernel virtual address of BTCS reserved memory"
+        depends on BTCS
+        default "0xC2080000"
+        help
+          This the kernel virtual address of BTCS.
+	  This should probably be 0xC0000000 + offset in physical.
+
+config BTCS_SIZE
+        hex "Size in bytes of BTCS reserved memory"
+        depends on BTCS
+        default "0x00100000"
+	help
+          This the size of BTCS reserved memory.
+	  The size shall not exceed 0x00100000.
+
 source "mm/Kconfig"
 
 config LEDS

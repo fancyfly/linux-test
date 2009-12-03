@@ -16,6 +16,7 @@
 #include <mach/hardware.h>
 #include <asm/pgtable.h>
 #include <asm/mach/map.h>
+#include <linux/btcs.h>
 
 /*!
  * @file mach-mx25/mm.c
@@ -79,4 +80,7 @@ static struct map_desc mxc_io_desc[] __initdata = {
 void __init mxc_map_io(void)
 {
 	iotable_init(mxc_io_desc, ARRAY_SIZE(mxc_io_desc));
+
+	btcs_reserve_sdram();
+	btcs_poll();
 }

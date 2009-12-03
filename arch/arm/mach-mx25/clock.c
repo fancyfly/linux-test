@@ -1681,6 +1681,12 @@ unsigned long __init clk_early_get_timer_rate(void)
 
 extern void propagate_rate(struct clk *tclk);
 
+#ifdef CONFIG_BTCS
+#define BTCS_CLK_ENABLE (1 << MXC_CCM_CGCR1_CAN2_OFFSET)
+#else
+#define BTCS_CLK_ENABLE 0
+#endif
+
 int __init mxc_clocks_init(unsigned long ckil, unsigned long osc, unsigned long ckih1, unsigned long ckih2)
 {
 	struct clk **clkp;
@@ -1692,7 +1698,8 @@ int __init mxc_clocks_init(unsigned long ckil, unsigned long osc, unsigned long 
 	__raw_writel((1 << MXC_CCM_CGCR0_HCLK_EMI_OFFSET), MXC_CCM_CGCR0);
 
 	__raw_writel((1 << MXC_CCM_CGCR1_GPT1_OFFSET) |
-		     (1 << MXC_CCM_CGCR1_IIM_OFFSET), MXC_CCM_CGCR1);
+		     (1 << MXC_CCM_CGCR1_IIM_OFFSET) |
+		     BTCS_CLK_ENABLE, MXC_CCM_CGCR1);
 	__raw_writel(1 << MXC_CCM_CGCR2_SCC_OFFSET, MXC_CCM_CGCR2);
 
 	/* This will propagate to all children and init all the clock rates */

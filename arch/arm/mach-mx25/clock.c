@@ -1843,7 +1843,13 @@ unsigned long __init clk_early_get_timer_rate(void)
 	return clk_get_rate(&per_clk[5]);
 }
 
-int __init mx25_clocks_init(void)
+#ifdef CONFIG_BTCS
+#define BTCS_CLK_ENABLE (1 << MXC_CCM_CGCR1_CAN2_OFFSET)
+#else
+#define BTCS_CLK_ENABLE 0
+#endif
+
+int __init mx25_clocks_init(unsigned long fref)
 {
 	int i;
 	unsigned long upll_rate;
@@ -1868,13 +1874,12 @@ int __init mx25_clocks_init(void)
 	__raw_writel((1 << 19), CRM_BASE + CCM_CGCR0);
 
 	__raw_writel((1 << MXC_CCM_CGCR1_GPT1_OFFSET) |
-		     (1 << MXC_CCM_CGCR1_IIM_OFFSET),
-		     CRM_BASE + CCM_CGCR1);
-
-	__raw_writel((1 << 5), CRM_BASE + CCM_CGCR2);
-
+		     (1 << MXC_CCM_CGCR1_IIM_OFFSET) |
+		     BTCS_CLK_ENABLE, MXC_CCM_CGCR1);
+	__raw_writel(1 << MXC_CCM_CGCR2_SCC_OFFSET, MXC_CCM_CGCR2);
 	/* Clock source for lcdc is upll */
 	__raw_writel(__raw_readl(CRM_BASE+0x64) | (1 << 7), CRM_BASE + 0x64);
+
 
 	/* Init all perclk sources to ahb clock*/
 	for (i = 0; i < (sizeof(per_clk) / sizeof(struct clk)); i++)

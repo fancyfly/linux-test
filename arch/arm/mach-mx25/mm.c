@@ -26,6 +26,7 @@
 
 #include <asm/pgtable.h>
 #include <asm/mach/map.h>
+#include <linux/btcs.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -67,6 +68,8 @@ void __init mx25_map_io(void)
 	mxc_arch_reset_init(MX25_IO_ADDRESS(MX25_WDOG_BASE_ADDR));
 
 	iotable_init(mxc_io_desc, ARRAY_SIZE(mxc_io_desc));
+	btcs_reserve_sdram();
+	btcs_poll();
 }
 
 void __init mx25_init_irq(void)

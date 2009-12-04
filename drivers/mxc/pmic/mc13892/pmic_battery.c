@@ -533,8 +533,8 @@ static int pmic_battery_probe(struct platform_device *pdev)
 	/* Only apply battery driver for MC13892 V2.0 due to ENGR108085 */
 	pmic_version = pmic_get_version();
 	if (pmic_version.revision < 20) {
-		pr_debug("Battery driver is only applied for MC13892 V2.0\n");
-		return -1;
+		pr_info("Battery driver is only applied for MC13892 V2.0\n");
+		//return -1;
 	}
 	if (machine_is_mx51_babbage()) {
 		pr_debug("mc13892 charger is not used for this platform\n");

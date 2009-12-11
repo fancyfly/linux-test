@@ -766,7 +766,8 @@ static int sgtl5000_set_bias_level(struct snd_soc_codec *codec,
 		reg = sgtl5000_read(codec, SGTL5000_CHIP_ANA_POWER);
 		reg |= SGTL5000_VAG_POWERUP;
 		sgtl5000_write(codec, SGTL5000_CHIP_ANA_POWER, reg);
-		msleep(400);
+		if (!cpu_is_mx25())
+			msleep(400);
 
 		break;
 
@@ -786,7 +787,7 @@ static int sgtl5000_set_bias_level(struct snd_soc_codec *codec,
 		reg |= SGTL5000_HP_POWERUP;
 		reg |= SGTL5000_LINE_OUT_POWERUP;
 		sgtl5000_write(codec, SGTL5000_CHIP_ANA_POWER, reg);
-		if (delay)
+		if (delay && !cpu_is_mx25())
 			msleep(delay);
 
 		reg = sgtl5000_read(codec, SGTL5000_CHIP_DIG_POWER);
@@ -811,7 +812,8 @@ static int sgtl5000_set_bias_level(struct snd_soc_codec *codec,
 		if (reg & SGTL5000_VAG_POWERUP) {
 			reg &= ~SGTL5000_VAG_POWERUP;
 			sgtl5000_write(codec, SGTL5000_CHIP_ANA_POWER, reg);
-			msleep(400);
+			if (!cpu_is_mx25())
+				msleep(400);
 		}
 		reg &= ~SGTL5000_DAC_POWERUP;
 		reg &= ~SGTL5000_HP_POWERUP;
@@ -836,7 +838,8 @@ static int sgtl5000_set_bias_level(struct snd_soc_codec *codec,
 		/* reg &= ~SGTL5000_REFTOP_POWERUP; */
 
 		sgtl5000_write(codec, SGTL5000_CHIP_ANA_POWER, reg);
-		msleep(600);
+		if (!cpu_is_mx25())
+			msleep(600);
 
 		reg &= ~SGTL5000_HP_POWERUP;
 		reg &= ~SGTL5000_LINE_OUT_POWERUP;
@@ -1030,14 +1033,16 @@ static int sgtl5000_probe(struct platform_device *pdev)
 
 	sgtl5000_write(codec, SGTL5000_CHIP_LINREG_CTRL, lreg_ctrl);
 	sgtl5000_write(codec, SGTL5000_CHIP_ANA_POWER, ana_pwr);
-	msleep(10);
+	if (!cpu_is_mx25())
+		msleep(10);
 
 	/* For rev 0x11, if vddd linear reg has been enabled, we have
 	   to disable simple reg to get proper VDDD voltage.  */
 	if ((ana_pwr & SGTL5000_LINEREG_D_POWERUP) && (sgtl5000->rev >= 0x11)) {
 		ana_pwr &= ~SGTL5000_LINREG_SIMPLE_POWERUP;
 		sgtl5000_write(codec, SGTL5000_CHIP_ANA_POWER, ana_pwr);
-		msleep(10);
+		if (!cpu_is_mx25())
+			msleep(10);
 	}
 
 	sgtl5000_write(codec, SGTL5000_CHIP_REF_CTRL, ref_ctrl);

@@ -242,7 +242,7 @@ static int ipu_probe(struct platform_device *pdev)
 	__raw_writel(0xFFFFFFFF, IPU_INT_CTRL(10));
 
 	/* DMFC Init */
-	_ipu_dmfc_init();
+	_ipu_dmfc_init(DMFC_NORMAL, 1);
 
 	/* Set sync refresh channels as high priority */
 	__raw_writel(0x18800000L, IDMAC_CHA_PRI(0));
@@ -1695,11 +1695,15 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 			ret = ipu_request_irq(irq, disable_chan_irq_handler, 0, NULL, &disable_comp);
 			if (ret < 0) {
 				dev_err(g_ipu_dev, "irq %d in use\n", irq);
+				break;
 			} else {
 				ret = wait_for_completion_timeout(&disable_comp, msecs_to_jiffies(50));
 				ipu_free_irq(irq, &disable_comp);
-				if (ret == msecs_to_jiffies(50))
+				if (ret == 0) {
 					ipu_dump_registers();
+					dev_err(g_ipu_dev, "warning: disable ipu dma channel %d during its busy state\n", irq);
+					break;
+				}
 			}
 		}
 	}
@@ -2276,7 +2280,7 @@ static int ipu_resume(struct platform_device *pdev)
 		__raw_writel(idma_enable_reg[1], IDMAC_CHA_EN(32));
 	} else {
 		clk_enable(g_ipu_clk);
-		_ipu_dmfc_init();
+		_ipu_dmfc_init(DMFC_NORMAL, 0);
 		_ipu_init_dc_mappings();
 
 		/* Set sync refresh channels as high priority */

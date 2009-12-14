@@ -53,6 +53,7 @@ struct dp_csc_param_t {
 
 int dmfc_type_setup;
 static int dmfc_size_28, dmfc_size_29, dmfc_size_24, dmfc_size_27, dmfc_size_23;
+int g_di1_tvout;
 
 void _ipu_dmfc_init(int dmfc_type, int first)
 {

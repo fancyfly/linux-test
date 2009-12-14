@@ -167,6 +167,8 @@ static int _setup_disp_channel1(struct fb_info *fbi)
 			if (mxc_fbi_tmp->ipu_ch == MEM_BG_SYNC) {
 				fbi->var.vmode =
 				registered_fb[i]->var.vmode;
+				mxc_fbi->ipu_di_pix_fmt =
+				mxc_fbi_tmp->ipu_di_pix_fmt;
 				break;
 			}
 		}
@@ -446,6 +448,11 @@ static int swap_channels(struct fb_info *fbi)
 	if (fbi_to == NULL)
 		return -1;
 
+	ipu_clear_irq(mxc_fbi_from->ipu_ch_irq);
+	ipu_clear_irq(mxc_fbi_to->ipu_ch_irq);
+	ipu_free_irq(mxc_fbi_from->ipu_ch_irq, fbi);
+	ipu_free_irq(mxc_fbi_to->ipu_ch_irq, fbi_to);
+
 	if (mxc_fbi_from->blank == FB_BLANK_UNBLANK) {
 		if (mxc_fbi_to->blank == FB_BLANK_UNBLANK)
 			swap_mode = BOTH_ON;
@@ -494,6 +501,19 @@ static int swap_channels(struct fb_info *fbi)
 		break;
 	default:
 		break;
+	}
+
+	if (ipu_request_irq(mxc_fbi_from->ipu_ch_irq, mxcfb_irq_handler, 0,
+		MXCFB_NAME, fbi) != 0) {
+		dev_err(fbi->device, "Error registering irq %d\n",
+			mxc_fbi_from->ipu_ch_irq);
+		return -EBUSY;
+	}
+	if (ipu_request_irq(mxc_fbi_to->ipu_ch_irq, mxcfb_irq_handler, 0,
+		MXCFB_NAME, fbi_to) != 0) {
+		dev_err(fbi_to->device, "Error registering irq %d\n",
+			mxc_fbi_to->ipu_ch_irq);
+		return -EBUSY;
 	}
 
 	return 0;

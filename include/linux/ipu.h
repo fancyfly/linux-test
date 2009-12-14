@@ -396,7 +396,6 @@ typedef union {
 		uint8_t alpha;
 		uint32_t key_color;
 		bool alpha_chan_en;
-		uint32_t out_resize_ratio;
 	} mem_pp_mem;
 	struct {
 		uint32_t temp;
@@ -408,6 +407,7 @@ typedef union {
 		uint32_t out_width;
 		uint32_t out_height;
 		uint32_t out_pixel_fmt;
+		uint32_t out_resize_ratio;
 		bool graphics_combine_en;
 		bool global_alpha_en;
 		bool key_color_en;

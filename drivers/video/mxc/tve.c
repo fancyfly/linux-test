@@ -64,6 +64,7 @@
 #define TVOUT_FMT_720P60		3
 
 static int enabled;		/* enable power on or not */
+DEFINE_SPINLOCK(tve_lock);
 
 static struct fb_info *tve_fbi;
 
@@ -221,9 +222,12 @@ static int tve_setup(int mode)
 	u32 reg;
 	struct clk *pll3_clk;
 	unsigned long pll3_clock_rate = 216000000;
+	unsigned long lock_flags;
 
 	if (tve.cur_mode == mode)
 		return 0;
+
+	spin_lock_irqsave(&tve_lock, lock_flags);
 
 	tve.cur_mode = mode;
 
@@ -273,12 +277,14 @@ static int tve_setup(int mode)
 		pr_debug("TVE: no such video format.\n");
 		if (!enabled)
 			clk_disable(tve.clk);
+		spin_unlock_irqrestore(&tve_lock, lock_flags);
 		return -EINVAL;
 	}
 
 	if (!enabled)
 		clk_disable(tve.clk);
 
+	spin_unlock_irqrestore(&tve_lock, lock_flags);
 	return 0;
 }
 
@@ -289,7 +295,9 @@ static int tve_setup(int mode)
 static void tve_enable(void)
 {
 	u32 reg;
+	unsigned long lock_flags;
 
+	spin_lock_irqsave(&tve_lock, lock_flags);
 	if (!enabled) {
 		enabled = 1;
 		clk_enable(tve.clk);
@@ -304,6 +312,7 @@ static void tve_enable(void)
 				tve.base + tve_regs->tve_stat_reg);
 	__raw_writel(CD_SM_INT | CD_LM_INT | CD_MON_END_INT,
 				tve.base + tve_regs->tve_int_cont_reg);
+	spin_unlock_irqrestore(&tve_lock, lock_flags);
 }
 
 /**
@@ -313,7 +322,9 @@ static void tve_enable(void)
 static void tve_disable(void)
 {
 	u32 reg;
+	unsigned long lock_flags;
 
+	spin_lock_irqsave(&tve_lock, lock_flags);
 	if (enabled) {
 		enabled = 0;
 		reg = __raw_readl(tve.base + tve_regs->tve_com_conf_reg);
@@ -322,31 +333,50 @@ static void tve_disable(void)
 		clk_disable(tve.clk);
 		pr_debug("TVE power off.\n");
 	}
+	spin_unlock_irqrestore(&tve_lock, lock_flags);
 }
 
 static int tve_update_detect_status(void)
 {
 	int old_detect = tve.detect;
 	u32 stat_lm, stat_sm, stat;
-	u32 int_ctl = __raw_readl(tve.base + tve_regs->tve_int_cont_reg);
-	u32 cd_cont_reg =
-		__raw_readl(tve.base + tve_regs->tve_cd_cont_reg);
+	u32 int_ctl;
+	u32 cd_cont_reg;
 	u32 timeout = 40;
+	unsigned long lock_flags;
+
+	spin_lock_irqsave(&tve_lock, lock_flags);
+
+	if (!enabled) {
+		pr_warning("Warning: update tve status while it disabled!\n");
+		tve.detect = 0;
+		goto done;
+	}
+
+	int_ctl = __raw_readl(tve.base + tve_regs->tve_int_cont_reg);
+	cd_cont_reg = __raw_readl(tve.base + tve_regs->tve_cd_cont_reg);
 
 	if ((cd_cont_reg & 0x1) == 0) {
 		pr_warning("Warning: pls enable TVE CD first!\n");
-		return tve.detect;
+		goto done;
 	}
 
 	stat = __raw_readl(tve.base + tve_regs->tve_stat_reg);
 	while (((stat & CD_MON_END_INT) == 0) && (timeout > 0)) {
+		spin_unlock_irqrestore(&tve_lock, lock_flags);
 		msleep(2);
+		spin_lock_irqsave(&tve_lock, lock_flags);
 		timeout -= 2;
-		stat = __raw_readl(tve.base + tve_regs->tve_stat_reg);
+		if (!enabled) {
+			pr_warning("Warning: update tve status while it disabled!\n");
+			tve.detect = 0;
+			goto done;
+		} else
+			stat = __raw_readl(tve.base + tve_regs->tve_stat_reg);
 	}
 	if (((stat & CD_MON_END_INT) == 0) && (timeout <= 0)) {
 		pr_warning("Warning: get detect resultwithout CD_MON_END_INT!\n");
-		return tve.detect;
+		goto done;
 	}
 
 	stat = stat >> tve_reg_fields->cd_ch_stat_offset;
@@ -400,6 +430,8 @@ static int tve_update_detect_status(void)
 
 	dev_dbg(&tve.pdev->dev, "detect = %d mode = %d\n",
 			tve.detect, tve.output_mode);
+done:
+	spin_unlock_irqrestore(&tve_lock, lock_flags);
 	return tve.detect;
 }
 

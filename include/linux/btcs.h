@@ -13,6 +13,7 @@
 extern int __init btcs_init(void);
 extern void btcs_poll(void);
 extern void __init btcs_reserve_sdram(void);
+extern void __init set_fld_for_vaddr(unsigned int vaddr, unsigned int value);
 
 #endif /* __BTCS_H__ */
 

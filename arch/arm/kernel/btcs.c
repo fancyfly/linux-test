@@ -21,6 +21,7 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/bootmem.h>
+#include <asm/pgtable.h>
 #include <mach/hardware.h>
 
 #ifdef CONFIG_BTCS
@@ -33,6 +34,14 @@ void __init btcs_reserve_sdram(void)
 		    CONFIG_BTCS_SIZE, BOOTMEM_DEFAULT);
 	pr_info("Size of 0x%x sdram reserved for BTCS\n", CONFIG_BTCS_SIZE);
 }
+
+void __init set_fld_for_vaddr(unsigned int vaddr, unsigned int value)
+{
+	unsigned int *table = (unsigned int *)cpu_get_pgd();
+	table[vaddr>>20] = value;
+	asm("mcr p15, 0, %0, c8, c7, 1" : : "r" (vaddr) : "cc");
+}
+
 
 static void btcs_printk(void *msg, int arg)
 {
@@ -117,6 +126,11 @@ int __init btcs_init(void)
 }
 
 void __init btcs_reserve_sdram(void)
+{
+
+}
+
+void __init set_fld_for_vaddr(unsigned int vaddr, unsigned int value)
 {
 
 }

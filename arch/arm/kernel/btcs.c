@@ -22,6 +22,7 @@
 #include <linux/ioport.h>
 #include <linux/bootmem.h>
 #include <mach/hardware.h>
+#include <asm/pgtable.h>
 
 #ifdef CONFIG_BTCS
 

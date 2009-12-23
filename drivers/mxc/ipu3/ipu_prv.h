@@ -28,6 +28,7 @@ extern struct clk *g_di_clk[2];
 extern struct clk *g_csi_clk[2];
 extern unsigned char g_dc_di_assignment[];
 extern int g_ipu_hw_rev;
+extern int dmfc_type_setup;
 
 #define IDMA_CHAN_INVALID	0xFF
 #define HIGH_RESOLUTION_WIDTH	1024

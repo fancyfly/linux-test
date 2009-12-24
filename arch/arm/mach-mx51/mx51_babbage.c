@@ -989,7 +989,7 @@ static struct android_usb_platform_data android_usb_pdata = {
 	.version	= 0x0100,
 	.product_name	= "Android Phone",
 	.manufacturer_name = "Freescale",
-	.nluns = 1,
+	.nluns = 3,
 };
 
 static struct platform_device android_usb_device = {

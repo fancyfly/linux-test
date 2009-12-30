@@ -30,6 +30,9 @@ static int fsl_cache_ioctl(struct inode *ip, struct file *fp,
 		return -EFAULT;
 	}
 
+	if (addr.start <= 0 || addr.end <= addr.start)
+		return -EINVAL;
+
 	switch (cmd) {
 	case FSLCACHE_IOCINV:
 		dmac_inv_range(addr.start, addr.end);

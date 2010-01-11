@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -154,6 +154,7 @@ typedef struct _cam_data {
 	int output;
 	struct fb_info *overlay_fb;
 	int vf_frame_len;
+	int fb_origin_std;
 
 	/* v4l2 format */
 	struct v4l2_format v2f;

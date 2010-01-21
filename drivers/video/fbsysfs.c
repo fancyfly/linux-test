@@ -131,15 +131,15 @@ static ssize_t store_mode(struct device *device, struct device_attribute *attr,
 	struct list_head *pos;
 	size_t i;
 	int err;
-    
+
 	memset(&var, 0, sizeof(var));
 
 	list_for_each(pos, &fb_info->modelist) {
 		modelist = list_entry(pos, struct fb_modelist, list);
 		mode = &modelist->mode;
 		i = mode_string(mstr, 0, mode);
+		if (strncmp(mstr, buf, max(count, i)) == 0) {
 
-		if (strncmp(mstr, buf, max(count, i-1)) == 0) {
 			var = fb_info->var;
 			fb_videomode_to_var(&var, mode);
 			if ((err = activate(fb_info, &var)))
@@ -148,7 +148,6 @@ static ssize_t store_mode(struct device *device, struct device_attribute *attr,
 			return count;
 		}
 	}
-
 	return -EINVAL;
 }
 
@@ -156,6 +155,7 @@ static ssize_t show_mode(struct device *device, struct device_attribute *attr,
 			 char *buf)
 {
 	struct fb_info *fb_info = dev_get_drvdata(device);
+
 	if (!fb_info->mode)
 		return 0;
 

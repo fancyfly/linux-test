@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2003, Metrowerks Corporation.
- * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2007-2010 Freescale Semiconductor, Inc.
  *
  * Author: John Rigby, jrigby@freescale.com
  * Original Author: Bernhard Kuhn, bkuhn@freescale.com
@@ -66,7 +66,10 @@ void btcs_poll(void)
 
 irqreturn_t btcs_isr(int irq, void *dev_id)
 {
+	unsigned long flags;
+	local_irq_save(flags);
 	btcs_poll();
+	local_irq_restore(flags);
 	return IRQ_HANDLED;
 }
 
@@ -87,6 +90,10 @@ int __init btcs_init(void)
 	/* Install isr */
 	if (setup_irq(BTCS_IRQ_NUMBER, &btcs_irq) != 0)
 		panic("could not allocate BTCS CAN IRQ!");
+	/* Guarantee the priority */
+	if (imx_irq_set_priority(BTCS_IRQ_NUMBER, 15) != 0)
+		pr_err("BTCS interrupt's priority cann't be
+			    guaranteed as 15(highest)\n");
 	return 0;
 }
 

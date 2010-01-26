@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.31
-# Wed Dec 16 18:26:40 2009
+# Thu Jan 28 09:44:02 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -205,7 +205,7 @@ CONFIG_ARCH_MXC_HAS_NFC_V2_1=y
 #
 # Device options
 #
-# CONFIG_MXC_IRQ_PRIOR is not set
+CONFIG_MXC_IRQ_PRIOR=y
 # CONFIG_MXC_PWM is not set
 
 #

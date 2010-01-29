@@ -421,12 +421,6 @@ struct tve_platform_data {
 	char *dig_reg;
 };
 
-struct fec_platform_data {
-	int (*init) (void);
-	int (*uninit) (void);
-	struct regulator *vddio_reg;
-};
-
 /* The name that links the i.MX NAND Flash Controller driver to its devices. */
 
 #define IMX_NFC_DRIVER_NAME  ("imx_nfc")

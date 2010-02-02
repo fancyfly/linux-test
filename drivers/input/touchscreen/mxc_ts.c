@@ -1,20 +1,27 @@
 /*
- * Copyright 2007-2009 Freescale Semiconductor, Inc. All Rights Reserved.
- */
-
-/*
- * The code contained herein is licensed under the GNU General Public
- * License. You may obtain a copy of the GNU General Public License
- * Version 2 or later at the following locations:
+ * Freescale touchscreen driver
  *
- * http://www.opensource.org/licenses/gpl-license.html
- * http://www.gnu.org/copyleft/gpl.html
+ * Copyright (C) 2007-2010 Freescale Semiconductor, Inc. All Rights Reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
  */
 
 /*!
  * @file mxc_ts.c
  *
- * @brief Driver for the Freescale Semiconductor MXC touchscreen.
+ * @brief Driver for the Freescale Semiconductor MXC touchscreen with calibration support.
  *
  * The touchscreen driver is designed as a standard input driver which is a
  * wrapper over low level PMIC driver. Most of the hardware configuration and
@@ -35,11 +42,12 @@
 #include <linux/freezer.h>
 #include <linux/pmic_external.h>
 #include <linux/pmic_adc.h>
+#include <linux/kthread.h>
 
 #define MXC_TS_NAME	"mxc_ts"
 
-static struct input_dev *mxc_inputdev = NULL;
-static u32 input_ts_installed;
+static struct input_dev *mxc_inputdev;
+static struct task_struct *tstask;
 
 static int calibration[7];
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
@@ -49,8 +57,9 @@ static int ts_thread(void *arg)
 	t_touch_screen ts_sample;
 	s32 wait = 0;
 
-	daemonize("mxc_ts");
-	while (input_ts_installed) {
+	set_freezable();
+
+	do {
 		int x, y;
 		static int last_x = -1, last_y = -1, last_press = -1;
 
@@ -69,12 +78,16 @@ static int ts_thread(void *arg)
 			x = ts_sample.x_position;
 			y = ts_sample.y_position;
 		} else {
-			x = (calibration[0] * (int)ts_sample.x_position +
-				calibration[2]) / calibration[6];
+			x = calibration[0] * (int)ts_sample.x_position +
+				calibration[1] * (int)ts_sample.y_position +
+				calibration[2];
+			x /= calibration[6];
 			if (x < 0)
 				x = 0;
-			y = (calibration[4] * (int)ts_sample.y_position +
-				calibration[5]) / calibration[6];
+			y = calibration[3] * (int)ts_sample.x_position +
+				calibration[4] * (int)ts_sample.y_position +
+				calibration[5];
+			y /= calibration[6];
 			if (y < 0)
 				y = 0;
 		}
@@ -88,6 +101,9 @@ static int ts_thread(void *arg)
 			last_y = y;
 		}
 
+		/* report pressure */
+		input_report_abs(mxc_inputdev, ABS_PRESSURE,
+				 ts_sample.contact_resistance);
 #ifdef CONFIG_MXC_PMIC_MC13892
 		/* workaround for aplite ADC resistance large range value */
 		if (ts_sample.contact_resistance > 22)
@@ -95,7 +111,7 @@ static int ts_thread(void *arg)
 		else
 			ts_sample.contact_resistance = 0;
 #endif
-
+		/* report the BTN_TOUCH */
 		if (ts_sample.contact_resistance != last_press)
 			input_event(mxc_inputdev, EV_KEY,
 					BTN_TOUCH, ts_sample.contact_resistance);
@@ -105,7 +121,8 @@ static int ts_thread(void *arg)
 
 		wait = ts_sample.contact_resistance;
 		msleep(20);
-	}
+
+	} while (!kthread_should_stop());
 
 	return 0;
 }
@@ -120,7 +137,7 @@ static int __init mxc_ts_init(void)
 	mxc_inputdev = input_allocate_device();
 	if (!mxc_inputdev) {
 		printk(KERN_ERR
-		       "mxc_ts_init: not enough memory for input device\n");
+		       "mxc_ts_init: not enough memory\n");
 		return -ENOMEM;
 	}
 
@@ -135,15 +152,22 @@ static int __init mxc_ts_init(void)
 		return retval;
 	}
 
-	input_ts_installed = 1;
-	kernel_thread(ts_thread, NULL, CLONE_VM | CLONE_FS);
+	tstask = kthread_run(ts_thread, NULL, "mxc_ts");
+	if (IS_ERR(tstask)) {
+		printk(KERN_ERR
+			"mxc_ts_init: failed to create kthread");
+		tstask = NULL;
+		return -1;
+	}
 	printk("mxc input touchscreen loaded\n");
 	return 0;
 }
 
 static void __exit mxc_ts_exit(void)
 {
-	input_ts_installed = 0;
+	if (tstask)
+		kthread_stop(tstask);
+
 	input_unregister_device(mxc_inputdev);
 
 	if (mxc_inputdev) {
@@ -155,6 +179,6 @@ static void __exit mxc_ts_exit(void)
 late_initcall(mxc_ts_init);
 module_exit(mxc_ts_exit);
 
-MODULE_DESCRIPTION("MXC input touchscreen driver");
+MODULE_DESCRIPTION("MXC touchscreen driver with calibration");
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_LICENSE("GPL");

@@ -43,21 +43,21 @@
 pmic_version_t mxc_pmic_version;
 unsigned int active_events[MAX_ACTIVE_EVENTS];
 
+
 static struct completion event_completion;
 static struct task_struct *tstask;
 
-static int pmic_event_thread_func(void* v)
+static int pmic_event_thread_func(void *v)
 {
 	unsigned int loop;
 	unsigned int count = 0;
-	unsigned int value1,value2;
 	unsigned int irq = (int)v;
 
 	while (1) {
-		if (kthread_should_stop())
-			break;
 		wait_for_completion_interruptible(
 				&event_completion);
+		if (kthread_should_stop())
+			break;
 
 		count = pmic_get_active_events(
 				active_events);
@@ -82,11 +82,19 @@ int pmic_start_event_thread(int irq_num)
 	init_completion(&event_completion);
 
 	tstask = kthread_run(pmic_event_thread_func,
-		(void*)irq_num, "pmic-event-thread");
+		(void *)irq_num, "pmic-event-thread");
 	ret = IS_ERR(tstask) ? -1 : 0;
 	if (IS_ERR(tstask))
 		tstask = NULL;
 	return ret;
+}
+
+void pmic_stop_event_thread(void)
+{
+	if (tstask) {
+		complete(&event_completion);
+		kthread_stop(tstask);
+	}
 }
 
 /*!
@@ -100,7 +108,7 @@ int pmic_start_event_thread(int irq_num)
  */
 irqreturn_t pmic_irq_handler(int irq, void *dev_id)
 {
-	disable_irq(irq);
+	disable_irq_nosync(irq);
 	complete(&event_completion);
 
 	return IRQ_HANDLED;

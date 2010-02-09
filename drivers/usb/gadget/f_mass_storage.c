@@ -79,7 +79,7 @@
 #include "gadget_chips.h"
 
 
-#define BULK_BUFFER_SIZE           4096
+#define BULK_BUFFER_SIZE           16318
 
 /*-------------------------------------------------------------------------*/
 
@@ -2770,7 +2770,11 @@ fsg_function_bind(struct usb_configuration *c, struct usb_function *f)
 		else
 			curlun->dev.parent = &cdev->gadget->dev;
 		dev_set_drvdata(&curlun->dev, fsg);
-		sprintf(dev_name(&curlun->dev), "lun%d", i);
+
+		if (kobject_set_name(&curlun->dev.kobj, "lun%d", i)) {
+			INFO(fsg, "failed to alloc kobj dev name\n");
+			goto out;
+		}
 
 		rc = device_register(&curlun->dev);
 		if (rc != 0) {
@@ -2969,7 +2973,6 @@ int __init mass_storage_function_add(struct usb_composite_dev *cdev,
 	rc = usb_add_function(c, &fsg->function);
 	if (rc != 0)
 		goto err_usb_add_function;
-
 
 	return 0;
 

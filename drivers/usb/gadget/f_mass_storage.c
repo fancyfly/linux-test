@@ -79,7 +79,7 @@
 #include "gadget_chips.h"
 
 
-#define BULK_BUFFER_SIZE           4096
+#define BULK_BUFFER_SIZE           16384
 
 /*-------------------------------------------------------------------------*/
 
@@ -680,15 +680,15 @@ static int fsg_function_setup(struct usb_function *f,
 		}
 	}
 
-		/* respond with data transfer or status phase? */
-		if (value >= 0) {
-			int rc;
-			cdev->req->zero = value < w_length;
-			cdev->req->length = value;
-			rc = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
-			if (rc < 0)
-				printk("%s setup response queue error\n", __func__);
-		}
+	/* respond with data transfer or status phase? */
+	if (value >= 0) {
+		int rc;
+		cdev->req->zero = value < w_length;
+		cdev->req->length = value;
+		rc = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
+		if (rc < 0)
+			printk("%s setup response queue error\n", __func__);
+	}
 
 	if (value == -EOPNOTSUPP)
 		VDBG(fsg,
@@ -696,17 +696,6 @@ static int fsg_function_setup(struct usb_function *f,
 			"%02x.%02x v%04x i%04x l%u\n",
 			ctrl->bRequestType, ctrl->bRequest,
 			le16_to_cpu(ctrl->wValue), w_index, w_length);
-
-	/* respond with data transfer before status phase? */
-	if (value >= 0 && value != DELAYED_STATUS) {
-		cdev->req->length = value;
-		cdev->req->zero = value < w_length;
-		value = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
-		if (value < 0) {
-			cdev->req->status = 0;
-			cdev->req->complete(cdev->gadget->ep0, cdev->req);
-		}
-	}
 
 	return value;
 }
@@ -2770,7 +2759,11 @@ fsg_function_bind(struct usb_configuration *c, struct usb_function *f)
 		else
 			curlun->dev.parent = &cdev->gadget->dev;
 		dev_set_drvdata(&curlun->dev, fsg);
-		sprintf(dev_name(&curlun->dev), "lun%d", i);
+
+		if (kobject_set_name(&curlun->dev.kobj, "lun%d", i)) {
+			INFO(fsg, "failed to alloc kobj dev name\n");
+			goto out;
+		}
 
 		rc = device_register(&curlun->dev);
 		if (rc != 0) {
@@ -2969,7 +2962,6 @@ int __init mass_storage_function_add(struct usb_composite_dev *cdev,
 	rc = usb_add_function(c, &fsg->function);
 	if (rc != 0)
 		goto err_usb_add_function;
-
 
 	return 0;
 

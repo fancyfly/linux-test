@@ -57,13 +57,10 @@ static int ts_thread(void *arg)
 	t_touch_screen ts_sample;
 	s32 wait = 0;
 
-	set_freezable();
-
 	do {
 		int x, y;
 		static int last_x = -1, last_y = -1, last_press = -1;
 
-		try_to_freeze();
 		memset(&ts_sample, 0, sizeof(t_touch_screen));
 		if (0 != pmic_adc_get_touch_sample(&ts_sample, !wait))
 			continue;

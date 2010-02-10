@@ -353,6 +353,32 @@ static int prpvf_stop(void *private)
 }
 
 /*!
+ * Enable csi
+ * @param private       struct cam_data * mxc capture instance
+ *
+ * @return  status
+ */
+static int prp_vf_enable_csi(void *private)
+{
+	cam_data *cam = (cam_data *) private;
+
+	return ipu_enable_csi(cam->csi);
+}
+
+/*!
+ * Disable csi
+ * @param private       struct cam_data * mxc capture instance
+ *
+ * @return  status
+ */
+static int prp_vf_disable_csi(void *private)
+{
+	cam_data *cam = (cam_data *) private;
+
+	return ipu_disable_csi(cam->csi);
+}
+
+/*!
  * function to select PRP-VF as the working path
  *
  * @param private    cam_data * mxc v4l2 main structure
@@ -367,6 +393,8 @@ int prp_vf_sdc_select(void *private)
 		cam = (cam_data *) private;
 		cam->vf_start_sdc = prpvf_start;
 		cam->vf_stop_sdc = prpvf_stop;
+		cam->vf_enable_csi = prp_vf_enable_csi;
+		cam->vf_disable_csi = prp_vf_disable_csi;
 		cam->overlay_active = false;
 	} else
 		err = -EIO;
@@ -391,6 +419,8 @@ int prp_vf_sdc_deselect(void *private)
 		cam = (cam_data *) private;
 		cam->vf_start_sdc = NULL;
 		cam->vf_stop_sdc = NULL;
+		cam->vf_enable_csi = NULL;
+		cam->vf_disable_csi = NULL;
 	}
 	return err;
 }

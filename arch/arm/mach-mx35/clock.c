@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -26,7 +26,6 @@
 #define PRE_DIV_MIN_FREQ    10000000	/* Minimum Frequency after Predivider */
 #define PROPAGATE_RATE_DIS  2
 
-struct timer_list dptcen_timer;
 static int cpu_curr_wp;
 static struct cpu_wp *cpu_wp_tbl;
 static int cpu_wp_nr;
@@ -1884,6 +1883,12 @@ static void mxc_update_clocks(void)
 	mxc_clockout_scan();
 }
 
+#ifdef CONFIG_BTCS
+#define BTCS_CLK_ENABLE (1 << MXC_CCM_CGR0_CAN1_OFFSET)
+#else
+#define BTCS_CLK_ENABLE 0
+#endif
+
 int __init mx35_clocks_init(void)
 {
 	struct clk **clkp;
@@ -1893,7 +1898,7 @@ int __init mx35_clocks_init(void)
 	/* Turn off all possible clocks */
 	__raw_writel(MXC_CCM_CGR0_ECT_MASK | MXC_CCM_CGR0_EMI_MASK |
 		     MXC_CCM_CGR0_ESDHC1_MASK | MXC_CCM_CGR0_ESDHC2_MASK |
-		     MXC_CCM_CGR0_ESDHC3_MASK,
+		     MXC_CCM_CGR0_ESDHC3_MASK | BTCS_CLK_ENABLE,
 		     MXC_CCM_CGR0);
 	__raw_writel(MXC_CCM_CGR1_GPIO1_MASK | MXC_CCM_CGR1_GPIO2_MASK |
 		     MXC_CCM_CGR1_GPIO3_MASK | MXC_CCM_CGR1_GPT_MASK |

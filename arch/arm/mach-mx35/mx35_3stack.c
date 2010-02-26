@@ -36,6 +36,8 @@
 
 #include <asm/mach/flash.h>
 #endif
+#include <linux/bootmem.h>
+#include <linux/btcs.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -1307,6 +1309,9 @@ static void __init mx35_3stack_timer_init(void)
 	mx35_clocks_init();
 	uart_clk = clk_get(NULL, "uart_clk.0");
 	early_console_setup(UART1_BASE_ADDR, uart_clk);
+
+	btcs_init();
+	btcs_poll();
 }
 
 static struct sys_timer mxc_timer = {

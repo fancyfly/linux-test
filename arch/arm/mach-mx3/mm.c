@@ -2,7 +2,7 @@
  *  Copyright (C) 1999,2000 Arm Limited
  *  Copyright (C) 2000 Deep Blue Solutions Ltd
  *  Copyright (C) 2002 Shane Nay (shane@minirl.com)
- *  Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright 2005-2010 Freescale Semiconductor, Inc.
  *    - add MX31 specific definitions
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,6 +23,7 @@
 #include <linux/mm.h>
 #include <linux/init.h>
 #include <linux/err.h>
+#include <linux/btcs.h>
 
 #include <asm/pgtable.h>
 #include <asm/mach/map.h>
@@ -94,6 +95,8 @@ void __init mx35_map_io(void)
 	mxc_arch_reset_init(IO_ADDRESS(WDOG_BASE_ADDR));
 
 	iotable_init(mxc_io_desc, ARRAY_SIZE(mxc_io_desc));
+	btcs_reserve_sdram();
+	btcs_poll();
 }
 #endif
 

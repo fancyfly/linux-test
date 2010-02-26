@@ -31,6 +31,8 @@
 #include <linux/mtd/map.h>
 #include <linux/mtd/partitions.h>
 #include <linux/delay.h>
+#include <linux/bootmem.h>
+#include <linux/btcs.h>
 
 #include <asm/mach/flash.h>
 #include <asm/mach-types.h>
@@ -415,6 +417,8 @@ static void __init mxc_board_init(void)
 static void __init mx35pdk_timer_init(void)
 {
 	mx35_clocks_init();
+	btcs_init();
+	btcs_poll();
 }
 
 struct sys_timer mx35pdk_timer = {

@@ -62,6 +62,8 @@
 #include "crm_regs.h"
 #include "devices.h"
 #include "usb.h"
+#include <linux/android_pmem.h>
+#include <linux/usb/android.h>
 
 /*!
  * @file mach-mx53/mx53_evk.c
@@ -838,6 +840,31 @@ static int __init apc_setup(char *__unused)
 }
 __setup("apc", apc_setup);
 
+static struct android_pmem_platform_data android_pmem_pdata = {
+	.name = "pmem_adsp",
+	.start = 0,
+	.size = SZ_64M,
+	.no_allocator = 0,
+	.cached = 0,
+};
+
+static struct android_pmem_platform_data android_pmem_gpu_pdata = {
+	.name = "pmem_gpu",
+	.start = 0,
+	.size = SZ_32M,
+	.no_allocator = 0,
+	.cached = 1,
+};
+
+static struct android_usb_platform_data android_usb_pdata = {
+	.vendor_id      = 0x0bb4,
+	.product_id     = 0x0c01,
+	.adb_product_id = 0x0c02,
+	.version        = 0x0100,
+	.product_name   = "Android Phone",
+	.manufacturer_name = "Freescale",
+	.nluns = 3,
+};
 
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
@@ -860,17 +887,33 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 	int gpu_mem = SZ_128M;
 	int fb_mem = SZ_32M;
 	char *str;
+	int size;
 
 	mxc_set_cpu_type(MXC_CPU_MX53);
 
 	get_cpu_wp = mx53_evk_get_cpu_wp;
 	set_num_cpu_wp = mx53_evk_set_num_cpu_wp;
 
+	for_each_tag(t, tags) {
+		if (t->hdr.tag != ATAG_MEM)
+			continue;
+		size = t->u.mem.size;
+
+		android_pmem_pdata.start =
+				PHYS_OFFSET + size - android_pmem_pdata.size;
+		android_pmem_gpu_pdata.start =
+				android_pmem_pdata.start - android_pmem_gpu_pdata.size;
+		size -= android_pmem_pdata.size;
+		size -= android_pmem_gpu_pdata.size;
+		t->u.mem.size = size;
+	}
+#if 0
 	for_each_tag(mem_tag, tags) {
 		if (mem_tag->hdr.tag == ATAG_MEM) {
 			total_mem = mem_tag->u.mem.size;
 			left_mem = total_mem - gpu_mem - fb_mem;
 			break;
+
 		}
 	}
 
@@ -922,6 +965,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 		}
 #endif
 	}
+#endif
 }
 extern void mx53_gpio_usbotg_driver_vbus(bool on);
 extern void mx53_gpio_host1_driver_vbus(bool on);
@@ -1005,6 +1049,9 @@ static void __init mxc_board_init(void)
 				ARRAY_SIZE(mxc_i2c0_board_info));
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 				ARRAY_SIZE(mxc_i2c1_board_info));
+	mxc_register_device(&mxc_android_pmem_device, &android_pmem_pdata);
+	mxc_register_device(&mxc_android_pmem_gpu_device, &android_pmem_gpu_pdata);
+	mxc_register_device(&android_usb_device, &android_usb_pdata);
 
 	mx53_evk_init_mc13892();
 /*

@@ -26,7 +26,11 @@
 
 #ifdef CONFIG_BTCS
 
+#if defined CONFIG_ARCH_MX25
 #define BTCS_IRQ_NUMBER    MXC_INT_CAN2
+#elif defined CONFIG_ARCH_MX35
+#define BTCS_IRQ_NUMBER    MXC_INT_CAN1
+#endif
 
 void __init btcs_reserve_sdram(void)
 {
@@ -92,8 +96,8 @@ int __init btcs_init(void)
 		panic("could not allocate BTCS CAN IRQ!");
 	/* Guarantee the priority */
 	if (imx_irq_set_priority(BTCS_IRQ_NUMBER, 15) != 0)
-		pr_err("BTCS interrupt's priority cann't be
-			    guaranteed as 15(highest)\n");
+		pr_err("BTCS interrupt's priority cann't be \
+				guaranteed as 15(highest)\n");
 	return 0;
 }
 

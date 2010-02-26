@@ -1005,6 +1005,21 @@ static inline void mxc_init_gpu2d(void)
 }
 #endif
 
+struct platform_device mxc_android_pmem_device = {
+	.name = "android_pmem",
+	.id = 0,
+};
+
+struct platform_device mxc_android_pmem_gpu_device = {
+	.name = "android_pmem",
+	.id = 1,
+};
+
+struct platform_device android_usb_device = {
+	.name   = "android_usb",
+	.id     = -1,
+};
+
 void __init mx5_init_irq(void)
 {
 	unsigned long tzic_addr;

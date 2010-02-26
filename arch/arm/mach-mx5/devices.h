@@ -58,4 +58,6 @@ extern struct platform_device mxc_usbdr_otg_device;
 extern struct platform_device mxc_usbdr_host_device;
 extern struct platform_device mxc_usbh1_device;
 extern struct platform_device mxc_usbh2_device;
-
+extern struct platform_device mxc_android_pmem_device;
+extern struct platform_device mxc_android_pmem_gpu_device;
+extern struct platform_device android_usb_device;

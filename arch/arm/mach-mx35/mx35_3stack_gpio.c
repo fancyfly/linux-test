@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -361,12 +361,13 @@ void gpio_i2c_active(int i2c_num)
 		mxc_iomux_set_pad(MX35_PIN_I2C1_DAT, PAD_CONFIG);
 		break;
 	case 1:
+#if !defined(CONFIG_CAN_FLEXCAN) && !defined(CONFIG_BTCS) /* used for CAN1 */
 		mxc_request_iomux(MX35_PIN_I2C2_CLK, MUX_CONFIG_SION);
 		mxc_request_iomux(MX35_PIN_I2C2_DAT, MUX_CONFIG_SION);
 
 		mxc_iomux_set_pad(MX35_PIN_I2C2_CLK, PAD_CONFIG);
 		mxc_iomux_set_pad(MX35_PIN_I2C2_DAT, PAD_CONFIG);
-
+#endif
 		break;
 	case 2:
 		mxc_request_iomux(MX35_PIN_TX3_RX2, MUX_CONFIG_ALT1);
@@ -792,14 +793,16 @@ int gpio_usbh2_active(void)
 		/* CAN_PWDN to be high for USB Host2 Power&OC */
 		pmic_gpio_set_bit_val(MCU_GPIO_REG_GPIO_CONTROL_2, 1, 1);
 	}
-
+#if !defined(CONFIG_CAN_FLEXCAN) && !defined(CONFIG_BTCS) /* used for CAN1 */
 	mxc_request_iomux(MX35_PIN_I2C2_CLK, MUX_CONFIG_ALT2);
 	mxc_iomux_set_pad(MX35_PIN_I2C2_CLK, 0x0040);
 
 	mxc_request_iomux(MX35_PIN_I2C2_DAT, MUX_CONFIG_ALT2);
+#endif
 	mxc_iomux_set_input(MUX_IN_USB_UH2_USB_OC, INPUT_CTL_PATH0);
+#if !defined(CONFIG_CAN_FLEXCAN) && !defined(CONFIG_BTCS) /* used for CAN1 */
 	mxc_iomux_set_pad(MX35_PIN_I2C2_DAT, 0x01c0);
-
+#endif
 	return 0;
 }
 
@@ -807,10 +810,12 @@ EXPORT_SYMBOL(gpio_usbh2_active);
 
 void gpio_usbh2_inactive(void)
 {
+#if !defined(CONFIG_CAN_FLEXCAN) && !defined(CONFIG_BTCS) /* used for CAN1 */
 	gpio_request(IOMUX_TO_GPIO(MX35_PIN_I2C2_DAT), NULL);
 	mxc_free_iomux(MX35_PIN_I2C2_DAT, MUX_CONFIG_GPIO);
 	gpio_request(IOMUX_TO_GPIO(MX35_PIN_I2C2_CLK), NULL);
 	mxc_free_iomux(MX35_PIN_I2C2_CLK, MUX_CONFIG_GPIO);
+#endif
 }
 
 EXPORT_SYMBOL(gpio_usbh2_inactive);

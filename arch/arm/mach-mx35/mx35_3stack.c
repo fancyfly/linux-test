@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -36,6 +36,8 @@
 
 #include <asm/mach/flash.h>
 #endif
+#include <linux/bootmem.h>
+#include <linux/btcs.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -1231,6 +1233,8 @@ struct cpu_wp *get_cpu_wp(int *wp)
 static void __init mx35_3stack_timer_init(void)
 {
 	mx35_clocks_init();
+	btcs_init();
+	btcs_poll();
 }
 
 static struct sys_timer mxc_timer = {

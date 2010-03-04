@@ -777,6 +777,7 @@ int mxc_spi_setup(struct spi_device *spi)
 	return 0;
 }
 
+static DECLARE_MUTEX(poll_mutex);
 /*!
  * This function is called when the data has to transfer from/to the
  * current SPI device in poll mode
@@ -794,6 +795,8 @@ int mxc_spi_poll_transfer(struct spi_device *spi, struct spi_transfer *t)
 	u32 rx_tmp;
 	u32 fifo_size;
 	int chipselect_status;
+
+	down(&poll_mutex);
 
 	mxc_spi_chipselect(spi, BITBANG_CS_ACTIVE);
 
@@ -823,7 +826,7 @@ int mxc_spi_poll_transfer(struct spi_device *spi, struct spi_transfer *t)
 
 	while ((((status = __raw_readl(master_drv_data->test_addr)) &
 		 master_drv_data->spi_ver_def->rx_cnt_mask) >> master_drv_data->
-		spi_ver_def->rx_cnt_off) != count) ;
+		spi_ver_def->rx_cnt_off) != count);
 
 	for (i = 0; i < count; i++) {
 		rx_tmp = __raw_readl(master_drv_data->base + MXC_CSPIRXDATA);
@@ -836,6 +839,7 @@ int mxc_spi_poll_transfer(struct spi_device *spi, struct spi_transfer *t)
 						     chipselect_status,
 						     (spi->chip_select &
 						      MXC_CSPICTRL_CSMASK) + 1);
+	up(&poll_mutex);
 	return 0;
 }
 
@@ -1279,6 +1283,7 @@ static struct platform_driver mxc_spi_driver = {
 static int __init mxc_spi_init(void)
 {
 	pr_debug("Registering the SPI Controller Driver\n");
+	sema_init(&poll_mutex, 1);
 	return platform_driver_register(&mxc_spi_driver);
 }
 

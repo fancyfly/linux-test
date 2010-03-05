@@ -1183,6 +1183,7 @@ static void sdhci_tasklet_finish(unsigned long param)
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	/* Stop the clock when the req is done */
+	/* Don't disable clock, Atheros wifi sdio irq need it.
 	flags = SDHCI_DATA_ACTIVE | SDHCI_DOING_WRITE | SDHCI_DOING_READ;
 	if (!(readl(host->ioaddr + SDHCI_PRESENT_STATE) & flags)) {
 		if (host->plat_data->clk_flg) {
@@ -1190,6 +1191,7 @@ static void sdhci_tasklet_finish(unsigned long param)
 			host->plat_data->clk_flg = 0;
 		}
 	}
+	*/
 
 	mmc_request_done(host->mmc, mrq);
 }

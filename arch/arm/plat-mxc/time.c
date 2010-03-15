@@ -53,6 +53,15 @@ static struct clocksource clocksource_mxc = {
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 };
 
+/*
+ * Returns current time from boot in nsecs. It's OK for this to wrap
+ * around for now, as it's just a relative time stamp.
+ */
+unsigned long long sched_clock(void)
+{
+	return cyc2ns(&clocksource_mxc, mxc_get_cycles());
+}
+
 static int __init mxc_clocksource_init(void)
 {
 	unsigned int clock;

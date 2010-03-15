@@ -89,6 +89,9 @@
 
 #define COULOMB_TO_UAH(c) (10000 * c / 36)
 
+#define VOLTAGE_MAX_DESIGN 4000000
+#define VOLTAGE_MIN_DESIGN 3400000
+
 enum chg_setting {
        TRICKLE_CHG_EN,
        LOW_POWER_BOOT_ACK,
@@ -204,86 +207,6 @@ static int pmic_get_batt_current(unsigned short *curr)
 	return 0;
 }
 
-static int coulomb_counter_calibration;
-static unsigned int coulomb_counter_start_time_msecs;
-
-static int pmic_start_coulomb_counter(void)
-{
-	/* set scaler */
-	CHECK_ERROR(pmic_write_reg(REG_ACC1,
-		ACC_COULOMB_PER_LSB * ACC_ONEC_VALUE, BITFMASK(ACC1_ONEC)));
-
-	CHECK_ERROR(pmic_write_reg(
-		REG_ACC0, ACC_START_COUNTER, ACC_CONTROL_BIT_MASK));
-	coulomb_counter_start_time_msecs = jiffies_to_msecs(jiffies);
-	pr_debug("coulomb counter start time %u\n",
-		coulomb_counter_start_time_msecs);
-	return 0;
-}
-
-static int pmic_stop_coulomb_counter(void)
-{
-	CHECK_ERROR(pmic_write_reg(
-		REG_ACC0, ACC_STOP_COUNTER, ACC_CONTROL_BIT_MASK));
-	return 0;
-}
-
-static int pmic_calibrate_coulomb_counter(void)
-{
-	int ret;
-	unsigned int value;
-
-	/* set scaler */
-	CHECK_ERROR(pmic_write_reg(REG_ACC1,
-		0x1, BITFMASK(ACC1_ONEC)));
-
-	CHECK_ERROR(pmic_write_reg(
-		REG_ACC0, ACC_CALIBRATION, ACC_CONTROL_BIT_MASK));
-	msleep(ACC_CALIBRATION_DURATION_MSECS);
-
-	ret = pmic_read_reg(REG_ACC0, &value, BITFMASK(ACC_CCOUT));
-	if (ret != 0)
-		return -1;
-	value = BITFEXT(value, ACC_CCOUT);
-	pr_debug("calibrate value = %x\n", value);
-	coulomb_counter_calibration = (int)((s16)((u16) value));
-	pr_debug("coulomb_counter_calibration = %d\n",
-		coulomb_counter_calibration);
-
-	return 0;
-
-}
-
-static int pmic_get_charger_coulomb(int *coulomb)
-{
-	int ret;
-	unsigned int value;
-	int calibration;
-	unsigned int time_diff_msec;
-
-	ret = pmic_read_reg(REG_ACC0, &value, BITFMASK(ACC_CCOUT));
-	if (ret != 0)
-		return -1;
-	value = BITFEXT(value, ACC_CCOUT);
-	pr_debug("counter value = %x\n", value);
-	*coulomb = ((s16)((u16)value)) * ACC_COULOMB_PER_LSB;
-
-	if (abs(*coulomb) >= ACC_COULOMB_PER_LSB) {
-			/* calibrate */
-		time_diff_msec = jiffies_to_msecs(jiffies);
-		time_diff_msec =
-			(time_diff_msec > coulomb_counter_start_time_msecs) ?
-			(time_diff_msec - coulomb_counter_start_time_msecs) :
-			(0xffffffff - coulomb_counter_start_time_msecs
-			+ time_diff_msec);
-		calibration = coulomb_counter_calibration * (int)time_diff_msec
-			/ (ACC_ONEC_VALUE * ACC_CALIBRATION_DURATION_MSECS);
-		*coulomb -= calibration;
-	}
-
-	return 0;
-}
-
 static int pmic_restart_charging(void)
 {
 	pmic_set_chg_misc(BAT_TH_CHECK_DIS, 1);
@@ -302,7 +225,6 @@ struct mc13892_dev_info {
 	unsigned short current_raw;
 	int current_uA;
 	int battery_status;
-	int full_counter;
 	int charger_online;
 	int charger_voltage_uV;
 	int accum_current_uAh;
@@ -321,8 +243,10 @@ struct mc13892_dev_info {
 static enum power_supply_property mc13892_battery_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
-	POWER_SUPPLY_PROP_CHARGE_NOW,
 	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
+	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
+	POWER_SUPPLY_PROP_CAPACITY,
 };
 
 static enum power_supply_property mc13892_charger_props[] = {
@@ -348,11 +272,8 @@ static int mc13892_charger_update_status(struct mc13892_dev_info *di)
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 				&di->monitor_work, HZ / 10);
-			if (online) {
-				pmic_start_coulomb_counter();
+			if (online)
 				pmic_restart_charging();
-			} else
-				pmic_stop_coulomb_counter();
 		}
 	}
 
@@ -394,9 +315,6 @@ static int mc13892_battery_read_status(struct mc13892_dev_info *di)
 			di->current_uA =
 				(di->current_raw & 0x1FF) * BAT_CURRENT_UNIT_UA;
 	}
-	retval = pmic_get_charger_coulomb(&coulomb);
-	if (retval == 0)
-		di->accum_current_uAh = COULOMB_TO_UAH(coulomb);
 
 	return retval;
 }
@@ -406,9 +324,6 @@ static void mc13892_battery_update_status(struct mc13892_dev_info *di)
 	unsigned int value;
 	int retval;
 	int old_battery_status = di->battery_status;
-
-	if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN)
-		di->full_counter = 0;
 
 	if (di->charger_online) {
 		retval = pmic_read_reg(REG_INT_SENSE0,
@@ -424,14 +339,8 @@ static void mc13892_battery_update_status(struct mc13892_dev_info *di)
 					POWER_SUPPLY_STATUS_NOT_CHARGING;
 		}
 
-		if (di->battery_status == POWER_SUPPLY_STATUS_NOT_CHARGING)
-			di->full_counter++;
-		else
-			di->full_counter = 0;
-	} else {
+	} else
 		di->battery_status = POWER_SUPPLY_STATUS_DISCHARGING;
-		di->full_counter = 0;
-	}
 
 	dev_dbg(di->bat.dev, "bat status: %d\n",
 		di->battery_status);
@@ -468,10 +377,8 @@ static int mc13892_battery_get_property(struct power_supply *psy,
 	struct mc13892_dev_info *di = to_mc13892_dev_info(psy);
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
-		if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN) {
-			mc13892_charger_update_status(di);
+		if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN)
 			mc13892_battery_update_status(di);
-		}
 		val->intval = di->battery_status;
 		return 0;
 	default:
@@ -487,14 +394,15 @@ static int mc13892_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		val->intval = di->current_uA;
 		break;
-	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		val->intval = di->accum_current_uAh;
-		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
-		val->intval = 3800000;
+		val->intval = VOLTAGE_MAX_DESIGN;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
-		val->intval = 3300000;
+		val->intval = VOLTAGE_MIN_DESIGN;
+		break;
+	case POWER_SUPPLY_PROP_CAPACITY:
+		val->intval = (di->voltage_uV - VOLTAGE_MIN_DESIGN) * 100
+			/ (VOLTAGE_MAX_DESIGN - VOLTAGE_MIN_DESIGN);
 		break;
 	default:
 		return -EINVAL;
@@ -586,8 +494,6 @@ static int pmic_battery_probe(struct platform_device *pdev)
 	bat_event_callback.param = (void *) di;
 	pmic_event_subscribe(EVENT_CHGDETI, bat_event_callback);
 
-	pmic_stop_coulomb_counter();
-	pmic_calibrate_coulomb_counter();
 	goto success;
 
 workqueue_failed:

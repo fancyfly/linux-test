@@ -30,7 +30,7 @@
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
-#include <linux/videodev.h>
+#include <linux/videodev2.h>
 
 #include <media/videobuf-dma-contig.h>
 #include <media/v4l2-common.h>
@@ -40,7 +40,7 @@
 #include <mach/hardware.h>
 #include <mach/regs-pxp.h>
 
-#include "pxp.h"
+#include "mxs_pxp.h"
 
 #define	PXP_BASE_ADDR	IO_ADDRESS(PXP_PHYS_ADDR)
 
@@ -1153,7 +1153,9 @@ static const struct v4l2_ioctl_ops pxp_ioctl_ops = {
 
 static const struct video_device pxp_template = {
 	.name = "PxP",
-	.vfl_type = VID_TYPE_OVERLAY | VID_TYPE_CLIPPING | VID_TYPE_SCALES,
+	.vfl_type = V4L2_CAP_VIDEO_OUTPUT |
+		    V4L2_CAP_VIDEO_OVERLAY |
+		    V4L2_CAP_STREAMING,
 	.fops = &pxp_fops,
 	.release = pxp_release,
 	.minor = -1,

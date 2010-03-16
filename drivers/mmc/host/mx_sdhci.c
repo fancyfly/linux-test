@@ -1296,7 +1296,8 @@ static void sdhci_tasklet_finish(unsigned long param)
 	 * The root cause is that the ROM code don't ensure
 	 * the SD/MMC clk is running when boot system.
 	 * */
-	if (!machine_is_mx35_3ds() && req_done && host->plat_data->clk_flg &&
+	if (!machine_is_mx35_3ds() && !machine_is_mx51_babbage()
+		&& req_done && host->plat_data->clk_flg &&
 	    !(host->mmc && host->mmc->card && mmc_card_sdio(host->mmc->card))) {
 		clk_disable(host->clk);
 		host->plat_data->clk_flg = 0;

@@ -116,6 +116,20 @@ static struct clocksource clocksource_mxc = {
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 };
 
+static int timer_initialed;
+unsigned long long sched_clock(void)
+{
+	unsigned long long ret;
+
+	if (!timer_initialed)
+		return (unsigned long long)(jiffies - INITIAL_JIFFIES)
+					* (NSEC_PER_SEC / HZ);
+
+	ret = (unsigned long long)clocksource_mxc.read(&clocksource_mxc);
+	ret = (ret * clocksource_mxc.mult_orig) >> clocksource_mxc.shift;
+	return ret;
+}
+
 static int __init mxc_clocksource_init(struct clk *timer_clk)
 {
 	unsigned int c = clk_get_rate(timer_clk);
@@ -330,4 +344,6 @@ void __init mxc_timer_init(struct clk *timer_clk, void __iomem *base, int irq)
 
 	/* Make irqs happen */
 	setup_irq(irq, &mxc_timer_irq);
+
+	timer_initialed = 1;
 }

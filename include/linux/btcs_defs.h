@@ -29,6 +29,7 @@ struct btcs_shm {
 
 struct btcs_cb_interface {
 	int magic;
+	char *version;
 	int size;
 	int state;
 	int (*printk) (void *, int);

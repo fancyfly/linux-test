@@ -79,7 +79,7 @@
 #include "gadget_chips.h"
 
 
-#define BULK_BUFFER_SIZE           16318
+#define BULK_BUFFER_SIZE           16384
 
 /*-------------------------------------------------------------------------*/
 

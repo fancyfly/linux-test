@@ -680,15 +680,15 @@ static int fsg_function_setup(struct usb_function *f,
 		}
 	}
 
-		/* respond with data transfer or status phase? */
-		if (value >= 0) {
-			int rc;
-			cdev->req->zero = value < w_length;
-			cdev->req->length = value;
-			rc = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
-			if (rc < 0)
-				printk("%s setup response queue error\n", __func__);
-		}
+	/* respond with data transfer or status phase? */
+	if (value >= 0) {
+		int rc;
+		cdev->req->zero = value < w_length;
+		cdev->req->length = value;
+		rc = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
+		if (rc < 0)
+			printk("%s setup response queue error\n", __func__);
+	}
 
 	if (value == -EOPNOTSUPP)
 		VDBG(fsg,
@@ -696,17 +696,6 @@ static int fsg_function_setup(struct usb_function *f,
 			"%02x.%02x v%04x i%04x l%u\n",
 			ctrl->bRequestType, ctrl->bRequest,
 			le16_to_cpu(ctrl->wValue), w_index, w_length);
-
-	/* respond with data transfer before status phase? */
-	if (value >= 0 && value != DELAYED_STATUS) {
-		cdev->req->length = value;
-		cdev->req->zero = value < w_length;
-		value = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
-		if (value < 0) {
-			cdev->req->status = 0;
-			cdev->req->complete(cdev->gadget->ep0, cdev->req);
-		}
-	}
 
 	return value;
 }

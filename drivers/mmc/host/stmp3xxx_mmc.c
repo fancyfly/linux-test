@@ -4,7 +4,7 @@
  * Portions copyright (C) 2003 Russell King, PXA MMCI Driver
  * Portions copyright (C) 2004-2005 Pierre Ossman, W83L51xD SD/MMC driver
  *
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright 2008 Embedded Alley Solutions, Inc All Rights Reserved.
  */
 
@@ -93,6 +93,9 @@ struct stmp3xxx_mmc_host {
 	u32 status;
 	int read_uA, write_uA;
 	struct regulator *regulator;
+
+	spinlock_t lock;
+	int sdio_irq_en;
 };
 
 /* Return read only state of card */
@@ -155,6 +158,13 @@ static irqreturn_t mmc_irq_handler(int irq, void *dev_id)
 	if (host->cmd)		/* else it is a bogus interrupt */
 		complete(&host->dma_done);
 
+	if ((c1 & BM_SSP_CTRL1_SDIO_IRQ) && (c1 & BM_SSP_CTRL1_SDIO_IRQ_EN)) {
+		__raw_writel(BM_SSP_CTRL0_SDIO_IRQ_CHECK, host->ssp_base + \
+			HW_SSP_CTRL0_CLR);
+		__raw_writel(BM_SSP_CTRL1_SDIO_IRQ_EN, host->ssp_base + \
+			HW_SSP_CTRL1_CLR);
+		mmc_signal_sdio_irq(host->mmc);
+	}
 	return IRQ_HANDLED;
 }
 
@@ -191,6 +201,11 @@ static void stmp3xxx_mmc_bc(struct stmp3xxx_mmc_host *host)
 	dma_desc->command->pio_words[1] = BF(cmd->opcode, SSP_CMD0_CMD) |
 	    BM_SSP_CMD0_APPEND_8CYC;
 	dma_desc->command->pio_words[2] = BF(cmd->arg, SSP_CMD1_CMD_ARG);
+
+	if (host->sdio_irq_en) {
+		dma_desc->command->pio_words[0] |= BM_SSP_CTRL0_SDIO_IRQ_CHECK;
+		dma_desc->command->pio_words[1] |= BM_SSP_CMD0_CONT_CLKING_EN;
+	}
 
 	init_completion(&host->dma_done);
 	stmp3xxx_dma_reset_channel(host->dmach);
@@ -235,6 +250,11 @@ static void stmp3xxx_mmc_ac(struct stmp3xxx_mmc_host *host)
 	ssp_ctrl0 = BM_SSP_CTRL0_ENABLE | ignore_crc | long_resp | resp;
 	ssp_cmd0 = BF(cmd->opcode, SSP_CMD0_CMD);
 	ssp_cmd1 = BF(cmd->arg, SSP_CMD1_CMD_ARG);
+
+	if (host->sdio_irq_en) {
+		ssp_ctrl0 |= BM_SSP_CTRL0_SDIO_IRQ_CHECK;
+		ssp_cmd0 |= BM_SSP_CMD0_CONT_CLKING_EN;
+	}
 
 	dma_desc->command->pio_words[0] = ssp_ctrl0;
 	dma_desc->command->pio_words[1] = ssp_cmd0;
@@ -413,7 +433,7 @@ static void stmp3xxx_mmc_adtc(struct stmp3xxx_mmc_host *host)
 	}
 
 	BUG_ON(cmd->data->flags & MMC_DATA_STREAM);
-	BUG_ON((data_size % 8) > 0);
+	/*BUG_ON((data_size % 8) > 0);*/
 
 	dma_desc->command->cmd =
 	    BM_APBH_CHn_CMD_WAIT4ENDCMD |
@@ -446,10 +466,24 @@ static void stmp3xxx_mmc_adtc(struct stmp3xxx_mmc_host *host)
 	 */
 	log2_block_size = ilog2(cmd->data->blksz);
 
-	ssp_cmd0 =
-	    BF(log2_block_size, SSP_CMD0_BLOCK_SIZE) |
-	    BF(cmd->opcode, SSP_CMD0_CMD) |
-	    BF(cmd->data->blocks - 1, SSP_CMD0_BLOCK_COUNT);
+	 if ((1<<log2_block_size) != cmd->data->blksz) {
+		BUG_ON(cmd->data->blocks > 1);
+		ssp_cmd0 =
+			BF(0, SSP_CMD0_BLOCK_SIZE) |
+			BF(cmd->opcode, SSP_CMD0_CMD) |
+			BF(0, SSP_CMD0_BLOCK_COUNT);
+	} else
+		ssp_cmd0 =
+			BF(log2_block_size, SSP_CMD0_BLOCK_SIZE) |
+			BF(cmd->opcode, SSP_CMD0_CMD) |
+			BF(cmd->data->blocks - 1, SSP_CMD0_BLOCK_COUNT);
+
+
+	if (host->sdio_irq_en) {
+
+		ssp_ctrl0 |= BM_SSP_CTRL0_SDIO_IRQ_CHECK;
+		ssp_cmd0 |= BM_SSP_CMD0_CONT_CLKING_EN;
+	}
 
 	if (cmd->opcode == 12)
 		ssp_cmd0 |= BM_SSP_CMD0_APPEND_8CYC;
@@ -666,10 +700,46 @@ static void stmp3xxx_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		stmp3xxx_set_sclk_speed(host, ios->clock);
 }
 
+static void mxs_mmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
+{
+	unsigned long flags;
+	struct stmp3xxx_mmc_host *host = mmc_priv(mmc);
+
+	spin_lock_irqsave(&host->lock, flags);
+
+	if (enable) {
+		if (host->sdio_irq_en)
+			goto exit;
+		host->sdio_irq_en = 1;
+		__raw_writel(BM_SSP_CTRL0_SDIO_IRQ_CHECK, host->ssp_base + \
+			HW_SSP_CTRL0_SET);
+		__raw_writel(BM_SSP_CTRL1_SDIO_IRQ_EN, host->ssp_base + \
+			HW_SSP_CTRL1_SET);
+
+		if (__raw_readl(host->ssp_base + \
+		HW_SSP_STATUS) & BM_SSP_STATUS_SDIO_IRQ)
+			mmc_signal_sdio_irq(host->mmc);
+
+	} else {
+		if (host->sdio_irq_en == 0)
+			goto exit;
+		host->sdio_irq_en = 0;
+		__raw_writel(BM_SSP_CTRL0_SDIO_IRQ_CHECK, \
+			host->ssp_base + HW_SSP_CTRL0_CLR);
+		__raw_writel(BM_SSP_CTRL1_SDIO_IRQ_EN, \
+			host->ssp_base + HW_SSP_CTRL1_CLR);
+	}
+
+exit:
+	spin_unlock_irqrestore(&host->lock, flags);
+	return;
+}
+
 static const struct mmc_host_ops stmp3xxx_mmc_ops = {
 	.request = stmp3xxx_mmc_request,
 	.get_ro = stmp3xxx_mmc_get_ro,
 	.set_ios = stmp3xxx_mmc_set_ios,
+	.enable_sdio_irq = mxs_mmc_enable_sdio_irq,
 };
 
 /*
@@ -706,9 +776,16 @@ static void stmp3xxx_mmc_reset(struct stmp3xxx_mmc_host *host)
 		     BF(0, SSP_TIMING_CLOCK_RATE),
 		     host->ssp_base + HW_SSP_TIMING);
 
+	if (host->sdio_irq_en) {
+		ssp_ctrl1 |= BM_SSP_CTRL1_SDIO_IRQ_EN;
+		ssp_ctrl0 |= BM_SSP_CTRL0_SDIO_IRQ_CHECK;
+	}
+
 	/* Write the SSP Control Register 0 and 1 values out to the interface */
 	__raw_writel(ssp_ctrl0, host->ssp_base + HW_SSP_CTRL0);
 	__raw_writel(ssp_ctrl1, host->ssp_base + HW_SSP_CTRL1);
+
+	host->sdio_irq_en = 0;
 }
 
 static void stmp3xxx_mmc_irq_release(struct stmp3xxx_mmc_host *host)
@@ -937,6 +1014,7 @@ static int __init stmp3xxx_mmc_probe(struct platform_device *pdev)
 	mmc->f_min = CLOCKRATE_MIN;
 	mmc->f_max = CLOCKRATE_MAX;
 	mmc->caps = MMC_CAP_4_BIT_DATA;
+	mmc->caps = MMC_CAP_SDIO_IRQ;
 
 	/* Maximum block count requests. */
 	mmc->max_blk_size = 512;
@@ -949,6 +1027,8 @@ static int __init stmp3xxx_mmc_probe(struct platform_device *pdev)
 	mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
 
 	platform_set_drvdata(pdev, mmc);
+
+	spin_lock_init(&host->lock);
 
 	err = mmc_add_host(mmc);
 	if (err) {

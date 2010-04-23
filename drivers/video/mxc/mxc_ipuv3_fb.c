@@ -230,7 +230,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	}
 
 	mxc_fbi->cur_ipu_buf = 1;
-	sema_init(&mxc_fbi->flip_sem, 1);
+	sema_init(&mxc_fbi->flip_sem, 0);
 	if (mxc_fbi->alpha_chan_en) {
 		mxc_fbi->cur_ipu_alpha_buf = 1;
 		sema_init(&mxc_fbi->alpha_flip_sem, 1);
@@ -956,6 +956,8 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 			} else if (retval > 0) {
 				retval = 0;
 			}
+
+			down(&mxc_fbi->flip_sem);
 			break;
 		}
 	case FBIO_ALLOC:
@@ -1235,7 +1237,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		}
 	}
 
-	down(&mxc_fbi->flip_sem);
+	init_completion(&mxc_fbi->vsync_complete);
 
 	mxc_fbi->cur_ipu_buf = !mxc_fbi->cur_ipu_buf;
 
@@ -1269,6 +1271,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		return -EBUSY;
 	}
 
+	down(&mxc_fbi->flip_sem);
 	dev_dbg(info->device, "Update complete\n");
 
 	info->var.xoffset = var->xoffset;

@@ -141,6 +141,12 @@ static void stmp3xxx_mmc_detect_poll(unsigned long arg)
 				BM_SSP_CTRL1_RECV_TIMEOUT_IRQ   | \
 				BM_SSP_CTRL1_FIFO_OVERRUN_IRQ)
 
+#define STMP3XXX_MMC_ERR_BITS	(BM_SSP_CTRL1_RESP_ERR_IRQ       | \
+				BM_SSP_CTRL1_RESP_TIMEOUT_IRQ   | \
+				BM_SSP_CTRL1_DATA_TIMEOUT_IRQ   | \
+				BM_SSP_CTRL1_DATA_CRC_IRQ       | \
+				BM_SSP_CTRL1_RECV_TIMEOUT_IRQ)
+
 /* SSP DMA interrupt handler */
 static irqreturn_t mmc_irq_handler(int irq, void *dev_id)
 {
@@ -153,13 +159,16 @@ static irqreturn_t mmc_irq_handler(int irq, void *dev_id)
 	if (irq == host->dmairq)
 		stmp3xxx_dma_clear_interrupt(host->dmach);
 
-	host->status =
-	    __raw_readl(host->ssp_base + HW_SSP_STATUS);
+	if ((irq == host->dmairq) || (c1 & STMP3XXX_MMC_ERR_BITS)) {
+		if (host->cmd) {
+			host->status =
+				__raw_readl(host->ssp_base + HW_SSP_STATUS);
+			complete(&host->dma_done);
+		}
+	}
 
 	if ((c1 & BM_SSP_CTRL1_SDIO_IRQ) && (c1 & BM_SSP_CTRL1_SDIO_IRQ_EN))
 		mmc_signal_sdio_irq(host->mmc);
-	else
-		complete(&host->dma_done);
 
 	return IRQ_HANDLED;
 }
@@ -612,6 +621,8 @@ static void stmp3xxx_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct stmp3xxx_mmc_host *host = mmc_priv(mmc);
 
 	dev_dbg(host->dev, "MMC request\n");
+
+	BUG_ON(host->mrq != NULL);
 
 	host->mrq = mrq;
 

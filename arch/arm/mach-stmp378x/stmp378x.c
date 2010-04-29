@@ -3,7 +3,7 @@
  *
  * Embedded Alley Solutions, Inc <source@embeddedalley.com>
  *
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright 2008 Embedded Alley Solutions, Inc All Rights Reserved.
  */
 
@@ -278,7 +278,13 @@ static struct resource i2c_resources[] = {
 		.flags = IORESOURCE_IRQ,
 		.start = IRQ_I2C_ERROR,
 		.end = IRQ_I2C_ERROR,
-	}, {
+	},
+	{
+		.flags = IORESOURCE_IRQ,
+		.start = IRQ_I2C_DMA,
+		.end = IRQ_I2C_DMA,
+	},
+	{
 		.flags = IORESOURCE_MEM,
 		.start = REGS_I2C_PHYS,
 		.end = REGS_I2C_PHYS + REGS_I2C_SIZE - 1,
@@ -290,7 +296,7 @@ static struct resource i2c_resources[] = {
 };
 
 struct platform_device stmp378x_i2c = {
-	.name = "i2c_stmp3xxx",
+	.name = "i2c_stmp",
 	.id = 0,
 	.dev	= {
 		.release = mxc_nop_release,

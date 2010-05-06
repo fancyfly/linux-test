@@ -892,7 +892,6 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 				break;
 			}
 
-			down(&mxc_fbi->flip_sem);
 			init_completion(&mxc_fbi->vsync_complete);
 
 			ipu_clear_irq(mxc_fbi->ipu_ch_irq);
@@ -907,6 +906,8 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 			} else if (retval > 0) {
 				retval = 0;
 			}
+
+			down(&mxc_fbi->flip_sem);
 			break;
 		}
 	case FBIO_ALLOC:

@@ -3,7 +3,7 @@
  *
  * Author: Drew Benedetti <drewb@embeddedalley.com>
  *
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc.
  * Copyright 2008 Embedded Alley Solutions, Inc All Rights Reserved.
  */
 
@@ -26,6 +26,7 @@
 #include <mach/regs-clkctrl.h>
 #include <mach/pwm-led.h>
 #include <mach/stmp3xxx.h>
+#include <mach/platform.h>
 
 /* Up to 5 PWM lines are available. */
 #define PWM_MAX 5
@@ -55,11 +56,11 @@ static void stmp378x_pwm_led_brightness_set(struct led_classdev *pled,
 	pwmn = container_of(pled, struct stmp378x_led, led_dev) - leds;
 
 	if (pwmn < PWM_MAX && leds[pwmn].in_use) {
-		HW_PWM_CTRL_CLR(BM_PWM_CTRL_PWM_ENABLE(pwmn));
-		HW_PWM_ACTIVEn_WR(pwmn, BF_PWM_ACTIVEn_INACTIVE(value) |
-				BF_PWM_ACTIVEn_ACTIVE(0));
-		HW_PWM_PERIODn_WR(pwmn, BF_PWM_PERIODn_SETTINGS);
-		HW_PWM_CTRL_SET(BM_PWM_CTRL_PWM_ENABLE(pwmn));
+		__raw_writel(BM_PWM_CTRL_PWM_ENABLE(pwmn), HW_PWM_CTRL_CLR_ADDR);
+		__raw_writel(BF_PWM_ACTIVEn_INACTIVE(value) | BF_PWM_ACTIVEn_ACTIVE(0),
+			HW_PWM_ACTIVEn_ADDR(pwmn));
+		__raw_writel(BF_PWM_PERIODn_SETTINGS, HW_PWM_PERIODn_ADDR(pwmn));
+		__raw_writel(BM_PWM_CTRL_PWM_ENABLE(pwmn), HW_PWM_CTRL_SET_ADDR);
 	}
 }
 
@@ -145,10 +146,10 @@ static int stmp378x_pwm_led_remove(struct platform_device *pdev)
 			continue;
 
 		/* Disable LED */
-		HW_PWM_CTRL_CLR(BM_PWM_CTRL_PWM_ENABLE(pwmn));
-		HW_PWM_ACTIVEn_WR(pwmn, BF_PWM_ACTIVEn_INACTIVE(0) |
-				BF_PWM_ACTIVEn_ACTIVE(0));
-		HW_PWM_PERIODn_WR(pwmn, BF_PWM_PERIODn_SETTINGS);
+		__raw_writel(BM_PWM_CTRL_PWM_ENABLE(pwmn), HW_PWM_CTRL_CLR_ADDR);
+		__raw_writel(BF_PWM_ACTIVEn_INACTIVE(0) | BF_PWM_ACTIVEn_ACTIVE(0),
+			HW_PWM_ACTIVEn_ADDR(pwmn));
+		__raw_writel(BF_PWM_PERIODn_SETTINGS, HW_PWM_PERIODn_ADDR(pwmn));
 
 		led_classdev_unregister(&leds[pwmn].led_dev);
 		pwm_led_pinmux_free(pwmn, "stmp378x_pwm_led");

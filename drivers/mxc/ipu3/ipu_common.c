@@ -46,7 +46,7 @@ bool g_ipu_clk_enabled;
 struct clk *g_di_clk[2];
 struct clk *g_csi_clk[2];
 unsigned char g_dc_di_assignment[10];
-ipu_channel_t g_ipu_csi_channel[2];
+ipu_channel_t g_ipu_csi_channel[2][2];
 int g_ipu_irq[2];
 int g_ipu_hw_rev;
 bool g_sec_chan_en[22];
@@ -151,6 +151,7 @@ static int ipu_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct mxc_ipu_config *plat_data = pdev->dev.platform_data;
 	unsigned long ipu_base;
+	int csi, i;
 
 	spin_lock_init(&ipu_lock);
 
@@ -251,6 +252,11 @@ static int ipu_probe(struct platform_device *pdev)
 	__raw_writel(0x00400000L | (IPU_MCU_T_DEFAULT << 18), IPU_DISP_GEN);
 
 	clk_disable(g_ipu_clk);
+
+	/* Set CSI related channels to be NONE chan */
+	for (csi = 0; csi < 2; csi++)
+		for (i = 0; i < 2; i++)
+			g_ipu_csi_channel[csi][i] = CHAN_NONE;
 
 	register_ipu_device();
 
@@ -377,7 +383,12 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 
 		ipu_smfc_use_count++;
 		ipu_csi_use_count[params->csi_mem.csi]++;
-		g_ipu_csi_channel[params->csi_mem.csi] = channel;
+		if (g_ipu_csi_channel[params->csi_mem.csi][0] == CHAN_NONE)
+			g_ipu_csi_channel[params->csi_mem.csi][0] = channel;
+		else {
+			ret = -EINVAL;
+			goto err;
+		}
 
 		/*SMFC setting*/
 		if (params->csi_mem.mipi_en) {
@@ -407,7 +418,18 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 
 		ipu_ic_use_count++;
 		ipu_csi_use_count[params->csi_prp_enc_mem.csi]++;
-		g_ipu_csi_channel[params->csi_prp_enc_mem.csi] = channel;
+		if (g_ipu_csi_channel[params->csi_prp_enc_mem.csi][0] ==
+			CHAN_NONE)
+			g_ipu_csi_channel[params->csi_prp_enc_mem.csi][0] =
+								channel;
+		else if (g_ipu_csi_channel[params->csi_prp_enc_mem.csi][1] ==
+			CHAN_NONE)
+			g_ipu_csi_channel[params->csi_prp_enc_mem.csi][1] =
+								channel;
+		else {
+			ret = -EINVAL;
+			goto err;
+		}
 
 		/*Without SMFC, CSI only support parallel data source*/
 		ipu_conf &= ~(1 << (IPU_CONF_CSI0_DATA_SOURCE_OFFSET +
@@ -441,7 +463,18 @@ int32_t ipu_init_channel(ipu_channel_t channel, ipu_channel_params_t *params)
 
 		ipu_ic_use_count++;
 		ipu_csi_use_count[params->csi_prp_vf_mem.csi]++;
-		g_ipu_csi_channel[params->csi_prp_vf_mem.csi] = channel;
+		if (g_ipu_csi_channel[params->csi_prp_vf_mem.csi][0] ==
+			CHAN_NONE)
+			g_ipu_csi_channel[params->csi_prp_vf_mem.csi][0] =
+								channel;
+		else if (g_ipu_csi_channel[params->csi_prp_vf_mem.csi][1] ==
+			CHAN_NONE)
+			g_ipu_csi_channel[params->csi_prp_vf_mem.csi][1] =
+								channel;
+		else {
+			ret = -EINVAL;
+			goto err;
+		}
 
 		/*Without SMFC, CSI only support parallel data source*/
 		ipu_conf &= ~(1 << (IPU_CONF_CSI0_DATA_SOURCE_OFFSET +
@@ -647,6 +680,7 @@ void ipu_uninit_channel(ipu_channel_t channel)
 	uint32_t reg;
 	uint32_t in_dma, out_dma = 0;
 	uint32_t ipu_conf;
+	int csi = 0, i = 0;
 
 	if ((g_channel_init_mask & (1L << IPU_CHAN_ID(channel))) == 0) {
 		dev_err(g_ipu_dev, "Channel already uninitialized %d\n",
@@ -684,11 +718,11 @@ void ipu_uninit_channel(ipu_channel_t channel)
 	case CSI_MEM2:
 	case CSI_MEM3:
 		ipu_smfc_use_count--;
-		if (g_ipu_csi_channel[0] == channel) {
-			g_ipu_csi_channel[0] = CHAN_NONE;
+		if (g_ipu_csi_channel[0][0] == channel) {
+			g_ipu_csi_channel[0][0] = CHAN_NONE;
 			ipu_csi_use_count[0]--;
-		} else if (g_ipu_csi_channel[1] == channel) {
-			g_ipu_csi_channel[1] = CHAN_NONE;
+		} else if (g_ipu_csi_channel[1][0] == channel) {
+			g_ipu_csi_channel[1][0] = CHAN_NONE;
 			ipu_csi_use_count[1]--;
 		}
 		break;
@@ -697,26 +731,24 @@ void ipu_uninit_channel(ipu_channel_t channel)
 		if (using_ic_dirct_ch == CSI_PRP_ENC_MEM)
 			using_ic_dirct_ch = 0;
 		_ipu_ic_uninit_prpenc();
-		if (g_ipu_csi_channel[0] == channel) {
-			g_ipu_csi_channel[0] = CHAN_NONE;
-			ipu_csi_use_count[0]--;
-		} else if (g_ipu_csi_channel[1] == channel) {
-			g_ipu_csi_channel[1] = CHAN_NONE;
-			ipu_csi_use_count[1]--;
-		}
+		for (csi = 0; csi < 2; csi++)
+			for (i = 0; i < 2; i++)
+				if (g_ipu_csi_channel[csi][i] == channel) {
+					g_ipu_csi_channel[csi][i] = CHAN_NONE;
+					ipu_csi_use_count[csi]--;
+				}
 		break;
 	case CSI_PRP_VF_MEM:
 		ipu_ic_use_count--;
 		if (using_ic_dirct_ch == CSI_PRP_VF_MEM)
 			using_ic_dirct_ch = 0;
 		_ipu_ic_uninit_prpvf();
-		if (g_ipu_csi_channel[0] == channel) {
-			g_ipu_csi_channel[0] = CHAN_NONE;
-			ipu_csi_use_count[0]--;
-		} else if (g_ipu_csi_channel[1] == channel) {
-			g_ipu_csi_channel[1] = CHAN_NONE;
-			ipu_csi_use_count[1]--;
-		}
+		for (csi = 0; csi < 2; csi++)
+			for (i = 0; i < 2; i++)
+				if (g_ipu_csi_channel[csi][i] == channel) {
+					g_ipu_csi_channel[csi][i] = CHAN_NONE;
+					ipu_csi_use_count[csi]--;
+				}
 		break;
 	case MEM_PRP_VF_MEM:
 		ipu_ic_use_count--;

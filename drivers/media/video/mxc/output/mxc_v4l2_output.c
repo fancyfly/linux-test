@@ -1060,17 +1060,6 @@ static int mxc_v4l2out_streamon(vout_data * vout)
 
 	dev_dbg(dev, "mxc_v4l2out_streamon: field format=%d\n",
 		vout->field_fmt);
-	if (INTERLACED_CONTENT(vout)) {
-		ipu_request_irq(IPU_IRQ_PRP_VF_OUT_EOF,
-				mxc_v4l2out_pp_in_irq_handler,
-				0, &vout->video_dev->name, vout);
-		display_input_ch = MEM_VDI_PRP_VF_MEM;
-	} else {
-		ipu_request_irq(IPU_IRQ_PP_IN_EOF,
-				mxc_v4l2out_pp_in_irq_handler,
-				0, &vout->video_dev->name, vout);
-		display_input_ch = MEM_PP_MEM;
-	}
 
 	if (!vout)
 		return -EINVAL;
@@ -1247,15 +1236,26 @@ static int mxc_v4l2out_streamon(vout_data * vout)
 		 * Bypass IC if resizing and rotation are not needed
 		 * Meanwhile, apply IC bypass to SDC only
 		 */
-      vout->pp_split = 0;/* no pp_split by default */
+        vout->pp_split = 0;/* no pp_split by default */
 		if (out_width == vout->v2f.fmt.pix.width &&
 			out_height == vout->v2f.fmt.pix.height &&
 			ipu_can_rotate_in_place(vout->rotate)) {
 			vout->ic_bypass = 1;
-			ipu_disable_irq(IPU_IRQ_PP_IN_EOF);
 		} else {
 			vout->ic_bypass = 0;
 		}
+
+        if (INTERLACED_CONTENT(vout)) {
+            ipu_request_irq(IPU_IRQ_PRP_VF_OUT_EOF,
+                    mxc_v4l2out_pp_in_irq_handler,
+                    0, &vout->video_dev->name, vout);
+            display_input_ch = MEM_VDI_PRP_VF_MEM;
+        } else if(!vout->ic_bypass){
+            ipu_request_irq(IPU_IRQ_PP_IN_EOF,
+                    mxc_v4l2out_pp_in_irq_handler,
+                    0, &vout->video_dev->name, vout);
+            display_input_ch = MEM_PP_MEM;
+        }
 
 #ifdef CONFIG_MXC_IPU_V1
 		/* IPUv1 needs IC to do CSC */
@@ -1617,6 +1617,7 @@ static inline int valid_mode(u32 palette)
 		(palette == V4L2_PIX_FMT_RGB32) ||
 		(palette == V4L2_PIX_FMT_NV12) ||
 		(palette == V4L2_PIX_FMT_YUV422P) ||
+		(palette == V4L2_PIX_FMT_UYVY) ||
 		(palette == V4L2_PIX_FMT_YUV420));
 }
 

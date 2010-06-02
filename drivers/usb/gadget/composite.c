@@ -150,15 +150,16 @@ int usb_function_deactivate(struct usb_function *function)
 {
 	struct usb_composite_dev	*cdev = function->config->cdev;
 	int				status = 0;
+	unsigned long flags;
 
-	spin_lock(&cdev->lock);
+	spin_lock_irqsave(&cdev->lock, flags);
 
 	if (cdev->deactivations == 0)
 		status = usb_gadget_disconnect(cdev->gadget);
 	if (status == 0)
 		cdev->deactivations++;
 
-	spin_unlock(&cdev->lock);
+	spin_unlock_irqrestore(&cdev->lock, flags);
 	return status;
 }
 
@@ -235,6 +236,7 @@ static int config_buf(struct usb_configuration *config,
 	int				len = USB_BUFSIZ - USB_DT_CONFIG_SIZE;
 	struct usb_function		*f;
 	int				status;
+	int             interfaceCount = 0;
 
 	/* write the config descriptor */
 	c = buf;
@@ -265,8 +267,18 @@ static int config_buf(struct usb_configuration *config,
 			descriptors = f->hs_descriptors;
 		else
 			descriptors = f->descriptors;
-		if (!descriptors)
+
+		if (!descriptors || descriptors[0] == NULL) {
+			for (; f != config->interface[interfaceCount];) {
+				interfaceCount++;
+				c->bNumInterfaces--;
+			}
 			continue;
+		}
+
+		for (; f != config->interface[interfaceCount];)
+			interfaceCount++;
+
 		status = usb_descriptor_fillbuf(next, len,
 			(const struct usb_descriptor_header **) descriptors);
 		if (status < 0)
@@ -685,6 +697,7 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	u16				w_index = le16_to_cpu(ctrl->wIndex);
 	u16				w_value = le16_to_cpu(ctrl->wValue);
 	u16				w_length = le16_to_cpu(ctrl->wLength);
+	u8				intf = w_index & 0xFF;	
 	struct usb_function		*f = NULL;
 
 	/* partial re-init of the response message; the function or the
@@ -754,11 +767,13 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	case USB_REQ_GET_CONFIGURATION:
 		if (ctrl->bRequestType != USB_DIR_IN)
 			goto unknown;
-		if (cdev->config)
+
+		if (cdev->config) {
 			*(u8 *)req->buf = cdev->config->bConfigurationValue;
-		else
+			value = min(w_length, (u16) 1);
+		}else
 			*(u8 *)req->buf = 0;
-		value = min(w_length, (u16) 1);
+
 		break;
 
 	/* function drivers must handle get/set altsetting; if there's
@@ -769,10 +784,10 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			goto unknown;
 		if (!cdev->config || w_index >= MAX_CONFIG_INTERFACES)
 			break;
-		f = cdev->config->interface[w_index];
+		f = cdev->config->interface[intf];
 		if (!f)
 			break;
-		if (w_value && !f->get_alt)
+		if (w_value && !f->set_alt)
 			break;
 		value = f->set_alt(f, w_index, w_value);
 		break;
@@ -781,7 +796,7 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			goto unknown;
 		if (!cdev->config || w_index >= MAX_CONFIG_INTERFACES)
 			break;
-		f = cdev->config->interface[w_index];
+		f = cdev->config->interface[intf];
 		if (!f)
 			break;
 		/* lots of interfaces only need altsetting zero... */
@@ -808,7 +823,11 @@ unknown:
 		 */
 		if ((ctrl->bRequestType & USB_RECIP_MASK)
 				== USB_RECIP_INTERFACE) {
-			f = cdev->config->interface[w_index];
+			if (cdev->config == NULL)
+				return value;
+
+			f = cdev->config->interface[intf];
+
 			if (f && f->setup)
 				value = f->setup(f, ctrl);
 			else
@@ -820,6 +839,23 @@ unknown:
 			c = cdev->config;
 			if (c && c->setup)
 				value = c->setup(c, ctrl);
+		}
+		/* If the vendor request is not processed (value < 0),
+		* call all device registered configure setup callbacks
+		* to process it.
+		* This is used to handle the following cases:
+		* - vendor request is for the device and arrives before
+		* setconfiguration.
+		* - Some devices are required to handle vendor request before
+		* setconfiguration such as MTP, USBNET.
+		*/
+		if (value < 0) {
+			struct usb_configuration *cfg;
+
+			list_for_each_entry(cfg, &cdev->configs, list) {
+				if (cfg && cfg->setup)
+					value = cfg->setup(cfg, ctrl);
+			}
 		}
 
 		goto done;

@@ -46,6 +46,7 @@
 #define MXC_DMA_ZONE_SIZE	((12 * SZ_1M) >> PAGE_SHIFT)
 #endif
 
+#if 0
 static inline void __arch_adjust_zones(int node, unsigned long *zone_size,
 				       unsigned long *zhole_size)
 {
@@ -61,6 +62,7 @@ static inline void __arch_adjust_zones(int node, unsigned long *zone_size,
 #define arch_adjust_zones(node, size, holes) \
 	__arch_adjust_zones(node, size, holes)
 
+#endif
 #endif
 
 /*

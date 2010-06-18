@@ -318,6 +318,33 @@ static inline int valid_mode(u32 palette)
 		(palette == V4L2_PIX_FMT_NV12));
 }
 
+uint32_t bits_per_pixel(uint32_t fmt)
+{
+	switch (fmt) {
+	case V4L2_PIX_FMT_NV12:
+	case V4L2_PIX_FMT_YUV420:
+		return 12;
+		break;
+	case V4L2_PIX_FMT_YUV422P:
+	case V4L2_PIX_FMT_YUYV:
+	case V4L2_PIX_FMT_UYVY:
+		return 16;
+		break;
+	case V4L2_PIX_FMT_BGR24:
+	case V4L2_PIX_FMT_RGB24:
+		return 24;
+		break;
+	case V4L2_PIX_FMT_BGR32:
+	case V4L2_PIX_FMT_RGB32:
+		return 32;
+		break;
+	default:
+		return 12;
+		break;
+	}
+	return 0;
+}
+
 /*!
  * Start the encoder job
  *
@@ -1529,7 +1556,6 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 			    loff_t *ppos)
 {
 	int err = 0;
-	u8 *v_address;
 	struct video_device *dev = video_devdata(file);
 	cam_data *cam = video_get_drvdata(dev);
 
@@ -1540,11 +1566,19 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 	if (cam->overlay_on == true)
 		stop_preview(cam);
 
-	v_address = dma_alloc_coherent(0,
-				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
-				       &cam->still_buf, GFP_DMA | GFP_KERNEL);
+	if (cam->still_frame_len < PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage) &&
+	    cam->still_buf_vaddr) {
+		dma_free_coherent(0, cam->still_frame_len,
+				  cam->still_buf_vaddr,
+				  (dma_addr_t) cam->still_buf);
 
-	if (!v_address) {
+		cam->still_buf_vaddr = dma_alloc_coherent(0,
+						PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
+						&cam->still_buf, GFP_DMA | GFP_KERNEL);
+		cam->still_frame_len = PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage);
+	}
+
+	if (!cam->still_buf_vaddr) {
 		err = -ENOBUFS;
 		goto exit0;
 	}
@@ -1552,14 +1586,14 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 	err = prp_still_select(cam);
 	if (err != 0) {
 		err = -EIO;
-		goto exit1;
+		goto exit0;
 	}
 
 	cam->still_counter = 0;
 	err = cam->csi_start(cam);
 	if (err != 0) {
 		err = -EIO;
-		goto exit2;
+		goto exit0;
 	}
 
 	if (!wait_event_interruptible_timeout(cam->still_queue,
@@ -1568,17 +1602,12 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 		pr_err("ERROR: v4l2 capture: mxc_v4l_read timeout counter %x\n",
 		       cam->still_counter);
 		err = -ETIME;
-		goto exit2;
+		goto exit1;
 	}
-	err = copy_to_user(buf, v_address, cam->v2f.fmt.pix.sizeimage);
-
-      exit2:
-	prp_still_deselect(cam);
+	err = copy_to_user(buf, cam->still_buf_vaddr, cam->v2f.fmt.pix.sizeimage);
 
       exit1:
-	dma_free_coherent(0, cam->v2f.fmt.pix.sizeimage, v_address,
-			  cam->still_buf);
-	cam->still_buf = 0;
+	prp_still_deselect(cam);
 
       exit0:
 	if (cam->overlay_on == true) {
@@ -1681,14 +1710,18 @@ static int mxc_v4l_do_ioctl(struct inode *inode, struct file *file,
 		}
 
 		mxc_streamoff(cam);
-		mxc_free_frame_buf(cam);
+		if (cam->enc_frame_len < PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage))
+			mxc_free_frame_buf(cam);
 		cam->enc_counter = 0;
 		cam->skip_frame = 0;
 		INIT_LIST_HEAD(&cam->ready_q);
 		INIT_LIST_HEAD(&cam->working_q);
 		INIT_LIST_HEAD(&cam->done_q);
 
-		retval = mxc_allocate_frame_buf(cam, req->count);
+		if (cam->enc_frame_len < PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage)) {
+			retval = mxc_allocate_frame_buf(cam, req->count);
+			cam->enc_frame_len = PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage);
+		}
 		break;
 	}
 
@@ -2286,9 +2319,9 @@ static void init_camera_struct(cam_data *cam)
 
 	/* setup cropping */
 	cam->crop_bounds.left = 0;
-	cam->crop_bounds.width = 640;
+	cam->crop_bounds.width = ENC_WIDTH;
 	cam->crop_bounds.top = 0;
-	cam->crop_bounds.height = 480;
+	cam->crop_bounds.height = ENC_HEIGHT;
 	cam->crop_current = cam->crop_defrect = cam->crop_bounds;
 	ipu_csi_set_window_size(cam->crop_current.width,
 				cam->crop_current.height, cam->csi);
@@ -2300,7 +2333,7 @@ static void init_camera_struct(cam_data *cam)
 	cam->standard.id = V4L2_STD_UNKNOWN;
 	cam->standard.frameperiod.denominator = 30;
 	cam->standard.frameperiod.numerator = 1;
-	cam->standard.framelines = 480;
+	cam->standard.framelines = ENC_HEIGHT;
 	cam->standard_autodetect = true;
 	cam->streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	cam->streamparm.parm.capture.timeperframe = cam->standard.frameperiod;
@@ -2310,15 +2343,21 @@ static void init_camera_struct(cam_data *cam)
 	cam->skip_frame = 0;
 	cam->v4l2_fb.flags = V4L2_FBUF_FLAG_OVERLAY;
 
-	cam->v2f.fmt.pix.sizeimage = 352 * 288 * 3 / 2;
-	cam->v2f.fmt.pix.bytesperline = 288 * 3 / 2;
-	cam->v2f.fmt.pix.width = 288;
-	cam->v2f.fmt.pix.height = 352;
-	cam->v2f.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
+	cam->v2f.fmt.pix.sizeimage = ENC_FRAME_DEF_RES*bits_per_pixel(ENC_FORMAT)/8;
+	cam->v2f.fmt.pix.bytesperline = ENC_WIDTH*bits_per_pixel(ENC_FORMAT)/8;
+	cam->v2f.fmt.pix.width = ENC_WIDTH;
+	cam->v2f.fmt.pix.height = ENC_HEIGHT;
+	cam->v2f.fmt.pix.pixelformat = ENC_FORMAT;
+	cam->enc_frame_len = PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage);
 	cam->win.w.width = 160;
 	cam->win.w.height = 160;
 	cam->win.w.left = 0;
 	cam->win.w.top = 0;
+
+	cam->vf_bufs_size[0] = cam->vf_bufs_size[1] = cam->vf_frame_len =
+			PAGE_ALIGN(VF_FRAME_DEF_RES*bits_per_pixel(VF_FORMAT)/8);
+
+	cam->still_frame_len = PAGE_ALIGN(STILL_FRAME_DEF_RES*bits_per_pixel(STILL_FORMAT)/8);
 
 	cam->csi = 0;  /* Need to determine how to set this correctly with
 			* multiple video input devices. */
@@ -2523,6 +2562,67 @@ static __init int camera_init(void)
 	}
 	init_camera_struct(g_cam);
 
+	/* Reserve buffers for encoder */
+	mxc_allocate_frame_buf(g_cam, FRAME_NUM);
+
+	/* Reserve buffers for viewfinder */
+	g_cam->vf_bufs_vaddr[0] = (void *)dma_alloc_coherent(0,
+							     g_cam->vf_bufs_size[0],
+							     (dma_addr_t *) &
+							     g_cam->vf_bufs[0],
+							     GFP_DMA |
+							     GFP_KERNEL);
+	if (g_cam->vf_bufs_vaddr[0] == NULL) {
+		printk(KERN_ERR "Error to allocate vf buffer\n");
+		platform_driver_unregister(&mxc_v4l2_driver);
+		mxc_free_frame_buf(g_cam);
+		kfree(g_cam);
+		g_cam = NULL;
+		err = -ENOMEM;
+		return err;
+	}
+	g_cam->vf_bufs_vaddr[1] = (void *)dma_alloc_coherent(0,
+							     g_cam->vf_bufs_size[1],
+							     (dma_addr_t *) &
+							     g_cam->vf_bufs[1],
+							     GFP_DMA |
+							     GFP_KERNEL);
+	if (g_cam->vf_bufs_vaddr[1] == NULL) {
+		printk(KERN_ERR "Error to allocate vf buffer\n");
+		platform_driver_unregister(&mxc_v4l2_driver);
+		mxc_free_frame_buf(g_cam);
+		dma_free_coherent(0, g_cam->vf_bufs_size[0],
+				  g_cam->vf_bufs_vaddr[0],
+				  (dma_addr_t) g_cam->vf_bufs[0]);
+		kfree(g_cam);
+		g_cam = NULL;
+		err = -ENOMEM;
+		return err;
+	}
+
+	/* Reserve buffers for still capture */
+	g_cam->still_buf_vaddr = (void *)dma_alloc_coherent(0,
+							    g_cam->still_frame_len,
+							    (dma_addr_t *) &
+							    g_cam->still_buf,
+							    GFP_DMA |
+							    GFP_KERNEL);
+	if (g_cam->still_buf_vaddr == NULL) {
+		printk(KERN_ERR "Error to allocate still buffer\n");
+		platform_driver_unregister(&mxc_v4l2_driver);
+		mxc_free_frame_buf(g_cam);
+		dma_free_coherent(0, g_cam->vf_bufs_size[0],
+				  g_cam->vf_bufs_vaddr[0],
+				  (dma_addr_t) g_cam->vf_bufs[0]);
+		dma_free_coherent(0, g_cam->vf_bufs_size[1],
+				  g_cam->vf_bufs_vaddr[1],
+				  (dma_addr_t) g_cam->vf_bufs[1]);
+		kfree(g_cam);
+		g_cam = NULL;
+		err = -ENOMEM;
+		return err;
+	}
+
 	/* Set up the v4l2 device and register it*/
 	mxc_v4l2_int_device.priv = g_cam;
 	/* This function contains a bug that won't let this be rmmod'd. */
@@ -2534,6 +2634,16 @@ static __init int camera_init(void)
 		pr_err("ERROR: v4l2 capture: camera_init: "
 		       "platform_device_register failed.\n");
 		platform_driver_unregister(&mxc_v4l2_driver);
+		mxc_free_frame_buf(g_cam);
+		dma_free_coherent(0, g_cam->vf_bufs_size[0],
+				  g_cam->vf_bufs_vaddr[0],
+				  (dma_addr_t) g_cam->vf_bufs[0]);
+		dma_free_coherent(0, g_cam->vf_bufs_size[1],
+				  g_cam->vf_bufs_vaddr[1],
+				  (dma_addr_t) g_cam->vf_bufs[1]);
+		dma_free_coherent(0, g_cam->still_frame_len,
+				  g_cam->still_buf_vaddr,
+				  (dma_addr_t) g_cam->still_buf);
 		kfree(g_cam);
 		g_cam = NULL;
 		return err;
@@ -2544,6 +2654,16 @@ static __init int camera_init(void)
 	    == -1) {
 		platform_device_unregister(&mxc_v4l2_devices);
 		platform_driver_unregister(&mxc_v4l2_driver);
+		mxc_free_frame_buf(g_cam);
+		dma_free_coherent(0, g_cam->vf_bufs_size[0],
+				  g_cam->vf_bufs_vaddr[0],
+				  (dma_addr_t) g_cam->vf_bufs[0]);
+		dma_free_coherent(0, g_cam->vf_bufs_size[1],
+				  g_cam->vf_bufs_vaddr[1],
+				  (dma_addr_t) g_cam->vf_bufs[1]);
+		dma_free_coherent(0, g_cam->still_frame_len,
+				  g_cam->still_buf_vaddr,
+				  (dma_addr_t) g_cam->still_buf);
 		kfree(g_cam);
 		g_cam = NULL;
 		pr_err("ERROR: v4l2 capture: video_register_device failed\n");
@@ -2575,6 +2695,18 @@ static void __exit camera_exit(void)
 		platform_device_unregister(&mxc_v4l2_devices);
 
 		mxc_free_frame_buf(g_cam);
+		if (g_cam->vf_bufs_vaddr[0])
+			dma_free_coherent(0, g_cam->vf_bufs_size[0],
+					  g_cam->vf_bufs_vaddr[0],
+					  (dma_addr_t) g_cam->vf_bufs[0]);
+		if (g_cam->vf_bufs_vaddr[1])
+			dma_free_coherent(0, g_cam->vf_bufs_size[1],
+					  g_cam->vf_bufs_vaddr[1],
+					  (dma_addr_t) g_cam->vf_bufs[1]);
+		if (g_cam->still_buf_vaddr)
+			dma_free_coherent(0, g_cam->still_frame_len,
+					  g_cam->still_buf_vaddr,
+					  (dma_addr_t) g_cam->still_buf);
 		kfree(g_cam);
 		g_cam = NULL;
 	}

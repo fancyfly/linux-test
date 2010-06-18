@@ -37,6 +37,20 @@
 
 #define FRAME_NUM 3
 
+/* For reserved v4l2 capture buffers */
+#define ENC_WIDTH		(720)
+#define ENC_HEIGHT		(576)
+#define	ENC_FRAME_DEF_RES	(ENC_WIDTH*ENC_HEIGHT)
+#define ENC_FORMAT		(V4L2_PIX_FMT_NV12)
+#define VF_WIDTH		(720)
+#define VF_HEIGHT		(576)
+#define	VF_FRAME_DEF_RES	(VF_WIDTH*VF_HEIGHT)
+#define VF_FORMAT		(V4L2_PIX_FMT_UYVY)
+#define STILL_WIDTH		(720)
+#define STILL_HEIGHT		(576)
+#define	STILL_FRAME_DEF_RES	(STILL_WIDTH*STILL_HEIGHT)
+#define STILL_FORMAT		(V4L2_PIX_FMT_UYVY)
+
 /*!
  * v4l2 frame structure.
  */
@@ -117,12 +131,14 @@ typedef struct _cam_data {
 	void *rot_enc_bufs_vaddr[2];
 	int rot_enc_buf_size[2];
 	enum v4l2_buf_type type;
+	int enc_frame_len;
 
 	/* still image capture */
 	wait_queue_head_t still_queue;
 	int still_counter;
 	dma_addr_t still_buf;
 	void *still_buf_vaddr;
+	int still_frame_len;
 
 	/* overlay */
 	struct v4l2_window win;
@@ -136,6 +152,7 @@ typedef struct _cam_data {
 	bool overlay_active;
 	int output;
 	struct fb_info *overlay_fb;
+	int vf_frame_len;
 
 	/* v4l2 format */
 	struct v4l2_format v2f;

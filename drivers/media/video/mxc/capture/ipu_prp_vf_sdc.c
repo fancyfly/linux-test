@@ -99,43 +99,46 @@ static int prpvf_start(void *private)
 
 	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, true, true);
 
-	if (cam->vf_bufs_vaddr[0]) {
-		dma_free_coherent(0, cam->vf_bufs_size[0],
-				  cam->vf_bufs_vaddr[0],
-				  (dma_addr_t) cam->vf_bufs[0]);
-	}
-	if (cam->vf_bufs_vaddr[1]) {
-		dma_free_coherent(0, cam->vf_bufs_size[1],
-				  cam->vf_bufs_vaddr[1],
-				  (dma_addr_t) cam->vf_bufs[1]);
-	}
-	cam->vf_bufs_size[0] = PAGE_ALIGN(size);
-	cam->vf_bufs_vaddr[0] = (void *)dma_alloc_coherent(0,
-							   cam->vf_bufs_size[0],
-							   (dma_addr_t *) &
-							   cam->vf_bufs[0],
-							   GFP_DMA |
-							   GFP_KERNEL);
-	if (cam->vf_bufs_vaddr[0] == NULL) {
-		printk(KERN_ERR "Error to allocate vf buffer\n");
-		err = -ENOMEM;
-		goto out_4;
-	}
-	cam->vf_bufs_size[1] = PAGE_ALIGN(size);
-	cam->vf_bufs_vaddr[1] = (void *)dma_alloc_coherent(0,
-							   cam->vf_bufs_size[1],
-							   (dma_addr_t *) &
-							   cam->vf_bufs[1],
-							   GFP_DMA |
-							   GFP_KERNEL);
-	if (cam->vf_bufs_vaddr[1] == NULL) {
-		printk(KERN_ERR "Error to allocate vf buffer\n");
-		err = -ENOMEM;
-		goto out_3;
-	}
-	pr_debug("vf_bufs %x %x\n", cam->vf_bufs[0], cam->vf_bufs[1]);
-
 	if (cam->vf_rotation >= IPU_ROTATE_VERT_FLIP) {
+		if (cam->vf_bufs_vaddr[0] && (cam->vf_frame_len < PAGE_ALIGN(size))) {
+			dma_free_coherent(0, cam->vf_bufs_size[0],
+					  cam->vf_bufs_vaddr[0],
+					  (dma_addr_t) cam->vf_bufs[0]);
+		}
+		if (cam->vf_bufs_vaddr[1] && (cam->vf_frame_len < PAGE_ALIGN(size))) {
+			dma_free_coherent(0, cam->vf_bufs_size[1],
+					  cam->vf_bufs_vaddr[1],
+					  (dma_addr_t) cam->vf_bufs[1]);
+		}
+		if (cam->vf_frame_len < PAGE_ALIGN(size)) {
+			cam->vf_bufs_size[0] = PAGE_ALIGN(size);
+			cam->vf_bufs_vaddr[0] = (void *)dma_alloc_coherent(0,
+									   cam->vf_bufs_size[0],
+									   (dma_addr_t *) &
+									   cam->vf_bufs[0],
+									   GFP_DMA |
+									   GFP_KERNEL);
+			if (cam->vf_bufs_vaddr[0] == NULL) {
+				printk(KERN_ERR "Error to allocate vf buffer\n");
+				err = -ENOMEM;
+				goto out_4;
+			}
+			cam->vf_bufs_size[1] = PAGE_ALIGN(size);
+			cam->vf_bufs_vaddr[1] = (void *)dma_alloc_coherent(0,
+									   cam->vf_bufs_size[1],
+									   (dma_addr_t *) &
+									   cam->vf_bufs[1],
+									   GFP_DMA |
+									   GFP_KERNEL);
+			if (cam->vf_bufs_vaddr[1] == NULL) {
+				printk(KERN_ERR "Error to allocate vf buffer\n");
+				err = -ENOMEM;
+				goto out_3;
+			}
+			cam->vf_frame_len = PAGE_ALIGN(size);
+		}
+		pr_debug("vf_bufs %x %x\n", cam->vf_bufs[0], cam->vf_bufs[1]);
+
 		err = ipu_init_channel_buffer(CSI_PRP_VF_MEM, IPU_OUTPUT_BUFFER,
 					      format,
 					      vf.csi_prp_vf_mem.out_width,
@@ -318,21 +321,6 @@ static int prpvf_stop(void *private)
 	release_console_sem();
 
 	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, false, false);
-
-	if (cam->vf_bufs_vaddr[0]) {
-		dma_free_coherent(0, cam->vf_bufs_size[0],
-				  cam->vf_bufs_vaddr[0],
-				  (dma_addr_t) cam->vf_bufs[0]);
-		cam->vf_bufs_vaddr[0] = NULL;
-		cam->vf_bufs[0] = 0;
-	}
-	if (cam->vf_bufs_vaddr[1]) {
-		dma_free_coherent(0, cam->vf_bufs_size[1],
-				  cam->vf_bufs_vaddr[1],
-				  (dma_addr_t) cam->vf_bufs[1]);
-		cam->vf_bufs_vaddr[1] = NULL;
-		cam->vf_bufs[1] = 0;
-	}
 
 	cam->overlay_active = false;
 	return err;

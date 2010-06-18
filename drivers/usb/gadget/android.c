@@ -129,7 +129,7 @@ static int __init android_bind_config(struct usb_configuration *c)
 	return adb_function_add(c);
 }
 
-static struct usb_configuration android_config __initdata = {
+static struct usb_configuration android_config = {
 	.label		= "android",
 	.bind		= android_bind_config,
 	.bConfigurationValue = 1,

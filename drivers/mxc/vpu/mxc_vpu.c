@@ -655,6 +655,11 @@ static int vpu_dev_probe(struct platform_device *pdev)
 	if (err)
 		goto err_out_class;
 
+	/* reserve 1M working buffer when module init */
+	bitwork_mem.size = 1024 * 1024;
+	if (vpu_alloc_dma_buffer(&bitwork_mem) == -1)
+		goto err_out_class;
+
 	printk(KERN_INFO "VPU initialized\n");
 	goto out;
 

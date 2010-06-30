@@ -448,12 +448,10 @@ static void dr_controller_run(struct fsl_udc *udc)
 
 	fsl_writel(temp, &dr_regs->usbintr);
 
-	if (device_may_wakeup(udc_controller->gadget.dev.parent)) {
-		/* enable BSV irq */
-		temp = fsl_readl(&dr_regs->otgsc);
-		temp |= OTGSC_B_SESSION_VALID_IRQ_EN;
-		fsl_writel(temp, &dr_regs->otgsc);
-	}
+	/* enable BSV irq */
+	temp = fsl_readl(&dr_regs->otgsc);
+	temp |= OTGSC_B_SESSION_VALID_IRQ_EN;
+	fsl_writel(temp, &dr_regs->otgsc);
 
 	/* If vbus not on and used low power mode */
 	if (!(fsl_readl(&dr_regs->otgsc) & OTGSC_B_SESSION_VALID)
@@ -2086,6 +2084,8 @@ bool try_wake_up_udc(struct fsl_udc *udc)
 			printk(KERN_INFO "udc out low power mode\n");
 		} else {
 			printk(KERN_INFO "udc enter low power mode \n");
+			if (udc->driver)
+				udc->driver->disconnect(&udc->gadget);
 			fsl_writel(tmp & ~USB_CMD_RUN_STOP, &dr_regs->usbcmd);
 			/* enable wake up */
 			dr_wake_up_enable(udc, true);
@@ -2105,7 +2105,7 @@ bool try_wake_up_udc(struct fsl_udc *udc)
 static irqreturn_t fsl_udc_irq(int irq, void *_udc)
 {
 	struct fsl_udc *udc = _udc;
-	u32 irq_src;
+	u32 irq_src, otgsc;;
 	irqreturn_t status = IRQ_NONE;
 	unsigned long flags;
 
@@ -2168,6 +2168,17 @@ static irqreturn_t fsl_udc_irq(int irq, void *_udc)
 
 	if (irq_src & (USB_STS_ERR | USB_STS_SYS_ERR)) {
 		VDBG("Error IRQ %x ", irq_src);
+	}
+	if (!device_can_wakeup(udc_controller->gadget.dev.parent)) {
+		otgsc = fsl_readl(&dr_regs->otgsc);
+		if (otgsc & OTGSC_B_SESSION_VALID_IRQ_STS) {
+			fsl_writel(otgsc, &dr_regs->otgsc);
+			if (!(otgsc & OTGSC_B_SESSION_VALID)) {
+				if (udc->driver)
+					udc->driver->disconnect(&udc->gadget);
+			}
+			status = IRQ_HANDLED;
+		}
 	}
 
 	spin_unlock_irqrestore(&udc->lock, flags);

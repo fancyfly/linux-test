@@ -27,9 +27,14 @@
 #ifdef CONFIG_BTCS
 
 #if defined CONFIG_ARCH_MX25
-#define BTCS_IRQ_NUMBER    MXC_INT_CAN2
+#define BTCS_IRQ_NUMBER	    MXC_INT_CAN2
+#define CAN_PHYS_ADDR	    CAN2_BASE_ADDR
 #elif defined CONFIG_ARCH_MX35
-#define BTCS_IRQ_NUMBER    MXC_INT_CAN1
+#define BTCS_IRQ_NUMBER	    MXC_INT_CAN1
+#define CAN_PHYS_ADDR	    CAN1_BASE_ADDR
+#elif defined CONFIG_ARCH_MX28
+#define BTCS_IRQ_NUMBER	    IRQ_CAN0
+#define CAN_PHYS_ADDR	    CAN0_PHYS_ADDR
 #endif
 
 void __init btcs_reserve_sdram(void)
@@ -91,13 +96,16 @@ int __init btcs_init(void)
 	if (btcs->magic == 0xdeadbeef)
 		btcs->printk = (void *)btcs_printk;
 
+	btcs->io_base = ioremap(CAN_PHYS_ADDR, 0x1FFF);
 	/* Install isr */
 	if (setup_irq(BTCS_IRQ_NUMBER, &btcs_irq) != 0)
 		panic("could not allocate BTCS CAN IRQ!");
 	/* Guarantee the priority */
+#ifdef CONFIG_ARCH_MXC
 	if (imx_irq_set_priority(BTCS_IRQ_NUMBER, 15) != 0)
 		pr_err("BTCS interrupt's priority cann't be \
 				guaranteed as 15(highest)\n");
+#endif
 	return 0;
 }
 

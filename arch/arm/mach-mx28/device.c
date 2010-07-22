@@ -31,6 +31,7 @@
 #include <linux/fec.h>
 #include <linux/gpmi-nfc.h>
 #include <linux/fsl_devices.h>
+#include <linux/btcs.h>
 
 #include <asm/mach/map.h>
 
@@ -1594,6 +1595,7 @@ static struct __initdata map_desc mx28_io_desc[] = {
 void __init mx28_map_io(void)
 {
 	iotable_init(mx28_io_desc, ARRAY_SIZE(mx28_io_desc));
+	btcs_reserve_sdram();
 }
 
 void __init mx28_irq_init(void)
@@ -1604,6 +1606,10 @@ void __init mx28_irq_init(void)
 static void mx28_timer_init(void)
 {
 	int i, reg;
+
+	btcs_init();
+	btcs_poll();
+
 	mx28_clock_init();
 
 	mx28_timer.clk = clk_get(NULL, "clk_32k");

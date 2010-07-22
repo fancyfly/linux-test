@@ -32,6 +32,7 @@ struct btcs_cb_interface {
 	char *version;
 	int size;
 	int state;
+	unsigned int io_base;
 	int (*printk) (void *, int);
 	int (*setup) (void);
 	int (*start) (void);

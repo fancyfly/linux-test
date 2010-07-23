@@ -998,6 +998,8 @@ static void __init mxc_board_init(void)
 	mxc_register_device(&mxc_android_pmem_device, &android_pmem_pdata);
 	mxc_register_device(&mxc_android_pmem_gpu_device, &android_pmem_gpu_pdata);
 	mxc_register_device(&android_usb_device, &android_usb_pdata);
+	mxc_register_device(&mxc_v4l2_device, NULL);
+	mxc_register_device(&mxc_v4l2out_device, NULL);
 
 	mx51_babbage_init_mc13892();
 

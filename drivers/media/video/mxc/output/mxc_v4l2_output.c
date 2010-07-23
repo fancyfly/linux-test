@@ -2557,10 +2557,7 @@ static int mxc_v4l2out_remove(struct platform_device *pdev)
 	vout_data *vout = platform_get_drvdata(pdev);
 
 	if (vout->video_dev) {
-		if (-1 != vout->video_dev->minor)
-			video_unregister_device(vout->video_dev);
-		else
-			video_device_release(vout->video_dev);
+		video_unregister_device(g_vout->video_dev);
 		vout->video_dev = NULL;
 	}
 
@@ -2582,24 +2579,13 @@ static struct platform_driver mxc_v4l2out_driver = {
 	.remove = mxc_v4l2out_remove,
 };
 
-static struct platform_device mxc_v4l2out_device = {
-	.name = "MXC Video Output",
-	.id = 0,
-};
-
 /*!
  * mxc v4l2 init function
  *
  */
 static int mxc_v4l2out_init(void)
 {
-	u8 err = 0;
-
-	err = platform_driver_register(&mxc_v4l2out_driver);
-	if (err == 0) {
-		platform_device_register(&mxc_v4l2out_device);
-	}
-	return err;
+	return platform_driver_register(&mxc_v4l2out_driver);
 }
 
 /*!
@@ -2608,12 +2594,7 @@ static int mxc_v4l2out_init(void)
  */
 static void mxc_v4l2out_clean(void)
 {
-	video_unregister_device(g_vout->video_dev);
-
 	platform_driver_unregister(&mxc_v4l2out_driver);
-	platform_device_unregister(&mxc_v4l2out_device);
-	kfree(g_vout);
-	g_vout = NULL;
 }
 
 module_init(mxc_v4l2out_init);

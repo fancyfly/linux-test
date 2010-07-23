@@ -73,3 +73,5 @@ extern struct platform_device elcdif_device;
 extern struct platform_device mxc_android_pmem_device;
 extern struct platform_device mxc_android_pmem_gpu_device;
 extern struct platform_device android_usb_device;
+extern struct platform_device mxc_v4l2_device;
+extern struct platform_device mxc_v4l2out_device;

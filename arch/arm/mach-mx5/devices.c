@@ -1271,6 +1271,16 @@ struct platform_device android_usb_device = {
 	.id     = -1,
 };
 
+struct platform_device mxc_v4l2_device = {
+	.name = "mxc_v4l2",
+	.id = 0,
+};
+
+struct platform_device mxc_v4l2out_device = {
+	.name = "MXC Video Output",
+	.id = 0,
+};
+
 void __init mx5_init_irq(void)
 {
 	unsigned long tzic_addr;

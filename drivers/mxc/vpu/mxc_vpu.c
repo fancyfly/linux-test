@@ -682,6 +682,7 @@ static int vpu_suspend(struct platform_device *pdev, pm_message_t state)
 	int i;
 	unsigned long timeout;
 
+	printk("vpu_suspend start\n");
 	/* Wait for vpu go to idle state, suspect vpu cannot be changed
 	   to idle state after about 1 sec */
 	if (open_count > 0) {
@@ -699,6 +700,10 @@ static int vpu_suspend(struct platform_device *pdev, pm_message_t state)
 	vpu_clk_usercount = clk_get_usecount(vpu_clk);
 	for (i = 0; i < vpu_clk_usercount; i++)
 		clk_disable(vpu_clk);
+
+	printk("vpu_suspend end\n");
+	if (cpu_is_mx51())
+	   return 0;
 
 	clk_enable(vpu_clk);
 	if (bitwork_mem.cpu_addr != 0) {
@@ -729,8 +734,12 @@ static int vpu_resume(struct platform_device *pdev)
 {
 	int i;
 
-	if (cpu_is_mx37() || cpu_is_mx51())
+	printk("vpu_resume start\n");
+	if (cpu_is_mx37())
 		mxc_pg_disable(pdev);
+
+	if (cpu_is_mx51())
+		goto out;
 
 	clk_enable(vpu_clk);
 
@@ -799,10 +808,11 @@ static int vpu_resume(struct platform_device *pdev)
 
 	clk_disable(vpu_clk);
 
+out:
 	/* Recover vpu clock */
 	for (i = 0; i < vpu_clk_usercount; i++)
 		clk_enable(vpu_clk);
-
+	printk("vpu_resume end\n");
 	return 0;
 }
 #else

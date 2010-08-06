@@ -1290,6 +1290,7 @@ static int mxc_v4l_dqueue(cam_data *cam, struct v4l2_buffer *buf)
 {
 	int retval = 0;
 	struct mxc_v4l_frame *frame;
+	unsigned long lock_flags;
 
 	pr_debug("In MVC:mxc_v4l_dqueue\n");
 
@@ -1304,6 +1305,8 @@ static int mxc_v4l_dqueue(cam_data *cam, struct v4l2_buffer *buf)
 			"interrupt received\n");
 		return -ERESTARTSYS;
 	}
+
+	spin_lock_irqsave(&cam->dqueue_int_lock, lock_flags);
 
 	cam->enc_counter--;
 
@@ -1326,6 +1329,8 @@ static int mxc_v4l_dqueue(cam_data *cam, struct v4l2_buffer *buf)
 	buf->index = frame->index;
 	buf->flags = frame->buffer.flags;
 	buf->m = cam->frame[frame->index].buffer.m;
+
+	spin_unlock_irqrestore(&cam->dqueue_int_lock, lock_flags);
 
 	return retval;
 }
@@ -1757,7 +1762,7 @@ static int mxc_v4l_do_ioctl(struct inode *inode, struct file *file,
 		int index = buf->index;
 		pr_debug("   case VIDIOC_QBUF\n");
 
-		spin_lock_irqsave(&cam->int_lock, lock_flags);
+		spin_lock_irqsave(&cam->queue_int_lock, lock_flags);
 		cam->frame[index].buffer.m.offset = buf->m.offset;
 		if ((cam->frame[index].buffer.flags & 0x7) ==
 		    V4L2_BUF_FLAG_MAPPED) {
@@ -1794,7 +1799,7 @@ static int mxc_v4l_do_ioctl(struct inode *inode, struct file *file,
 		}
 
 		buf->flags = cam->frame[index].buffer.flags;
-		spin_unlock_irqrestore(&cam->int_lock, lock_flags);
+		spin_unlock_irqrestore(&cam->queue_int_lock, lock_flags);
 		break;
 	}
 
@@ -2363,7 +2368,8 @@ static void init_camera_struct(cam_data *cam)
 
 	cam->enc_callback = camera_callback;
 	init_waitqueue_head(&cam->power_queue);
-	spin_lock_init(&cam->int_lock);
+	spin_lock_init(&cam->queue_int_lock);
+	spin_lock_init(&cam->dqueue_int_lock);
 }
 
 /*!

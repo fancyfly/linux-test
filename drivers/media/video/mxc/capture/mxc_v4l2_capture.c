@@ -1527,7 +1527,6 @@ static int mxc_v4l_close(struct inode *inode, struct file *file)
 #endif
 		}
 
-		mxc_free_frame_buf(cam);
 		file->private_data = NULL;
 
 		/* capture off */

@@ -40,14 +40,17 @@
 #include <asm/system.h>
 #include <mach/clock.h>
 #include <mach/bus_freq.h>
+#include <mach/arc_otg.h>
 
 #include "regs-clkctrl.h"
 #include "regs-digctl.h"
 
 #define CLKCTRL_BASE_ADDR IO_ADDRESS(CLKCTRL_PHYS_ADDR)
 #define DIGCTRL_BASE_ADDR IO_ADDRESS(DIGCTL_PHYS_ADDR)
-#define BF(value, field) (((value) << BP_##field) & BM_##field)
+#define USBCTRL0_BASE_ADDR IO_ADDRESS(USBCTRL0_PHYS_ADDR)
+#define USBCTRL1_BASE_ADDR IO_ADDRESS(USBCTRL1_PHYS_ADDR)
 
+#define BF(value, field) (((value) << BP_##field) & BM_##field)
 struct profile profiles[] = {
 	{ 454736, 151580, 196360, 0, 1550000,
 	1450000, 355000, 3300000, 1750000, 24000, 0 },
@@ -64,26 +67,58 @@ struct profile profiles[] = {
 };
 
 static struct device *busfreq_dev;
-static struct clk *usb_clk0;
-static struct clk *usb_clk1;
 static struct clk *lcdif_clk;
 u32 clkseq_setting;
 
+/*
+ * How to judge the usb port is in use
+ *
+ * Device port (usb0)
+ * ID=1 and B Session Valid = 1
+ *
+ * Host port (usb0 and usb1)
+ * ID=0(usb1 ID is always 1) and Current Connect Status = 1
+ */
+static int usb_is_in_use(void)
+{
+	void __iomem *addr_usb0_portsc1 = USBCTRL0_BASE_ADDR + UOG_PORTSC1;
+	void __iomem *addr_usb0_otgsc = USBCTRL0_BASE_ADDR + UOG_OTGSC;
+	void __iomem *addr_usb1_portsc1 = USBCTRL1_BASE_ADDR + UOG_PORTSC1;
+
+	if ((__raw_readl(addr_usb0_otgsc) & OTGSC_STS_USB_ID) &&
+		(__raw_readl(addr_usb0_otgsc) & OTGSC_STS_B_SESSION_VALID)) {
+			pr_debug("usb device is in use \n");
+			return 1;
+	}
+
+	if (!(__raw_readl(addr_usb0_otgsc) & OTGSC_STS_USB_ID) &&
+		((__raw_readl(addr_usb0_portsc1) & PORTSC_CURRENT_CONNECT_STATUS) ||
+		(__raw_readl(addr_usb1_portsc1) & PORTSC_CURRENT_CONNECT_STATUS))) {
+			pr_debug("usb host is in use \n");
+			return 1;
+	} else {
+		pr_debug("usb is not in use \n");
+		return 0;
+	}
+}
+
 int low_freq_used(void)
 {
-	if ((clk_get_usecount(usb_clk0) == 0)
-	    && (clk_get_usecount(usb_clk1) == 0)
-	    && (clk_get_usecount(lcdif_clk) == 0))
+	if (((clk_get_usecount(lcdif_clk) == 0))
+	    && (!usb_is_in_use())) {
+		pr_debug("low freq\n");
 		return 1;
+	}
 	else
 		return 0;
 }
 
 int is_hclk_autoslow_ok(void)
 {
-	if ((clk_get_usecount(usb_clk0) == 0)
-	    && (clk_get_usecount(usb_clk1) == 0))
+	if (!usb_is_in_use()) {
+		pr_debug("autoslow\n");
 		return 1;
+	}
 	else
 		return 0;
 }
@@ -109,35 +144,16 @@ int timing_ctrl_rams(int ss)
  */
 static int __devinit busfreq_probe(struct platform_device *pdev)
 {
-	int ret = 0;
+	int ret = -EINVAL;
 
 	busfreq_dev = &pdev->dev;
-
-	usb_clk0 = clk_get(NULL, "usb_clk0");
-	if (IS_ERR(usb_clk0)) {
-		ret = PTR_ERR(usb_clk0);
-		goto out_usb0;
-	}
-
-	usb_clk1 = clk_get(NULL, "usb_clk1");
-	if (IS_ERR(usb_clk1)) {
-		ret = PTR_ERR(usb_clk1);
-		goto out_usb1;
-	}
 
 	lcdif_clk = clk_get(NULL, "dis_lcdif");
 	if (IS_ERR(lcdif_clk)) {
 		ret = PTR_ERR(lcdif_clk);
-		goto out_lcd;
+		return ret;
 	}
 	return 0;
-
-out_lcd:
-	clk_put(usb_clk1);
-out_usb1:
-	clk_put(usb_clk0);
-out_usb0:
-	return ret;
 }
 
 static struct platform_driver busfreq_driver = {

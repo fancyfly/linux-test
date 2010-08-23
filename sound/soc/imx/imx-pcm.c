@@ -554,7 +554,8 @@ imx_pcm_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma)
 	if (dev_data)
 		ext_ram = dev_data->ext_ram;
 
-	if ( ext_ram || !UseIram) {
+	if ((substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+	    || ext_ram || !UseIram) {
 		ret =
 		    dma_mmap_writecombine(substream->pcm->card->
 					  dev, vma,
@@ -596,7 +597,7 @@ static int imx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 	buf->dev.dev = pcm->card->dev;
 	buf->private_data = NULL;
 
-	if (ext_ram || !UseIram)
+	if ((stream == SNDRV_PCM_STREAM_CAPTURE) || ext_ram || !UseIram)
 		buf->area =
 		    dma_alloc_writecombine(pcm->card->dev, size,
 					   &buf->addr, GFP_KERNEL);

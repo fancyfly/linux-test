@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.31
-# Mon Aug  2 20:22:09 2010
+# Tue Aug 24 17:17:36 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -532,7 +532,7 @@ CONFIG_HW_RANDOM=m
 # CONFIG_R3964 is not set
 # CONFIG_RAW_DRIVER is not set
 # CONFIG_TCG_TPM is not set
-# CONFIG_BTCS_MOD is not set
+CONFIG_BTCS_MOD=y
 CONFIG_I2C=y
 CONFIG_I2C_BOARDINFO=y
 # CONFIG_I2C_CHARDEV is not set

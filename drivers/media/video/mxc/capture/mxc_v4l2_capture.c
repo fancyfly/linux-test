@@ -1607,18 +1607,25 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 		stop_preview(cam);
 
 	if (cam->still_frame_len < PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage) &&
-	    cam->still_buf_vaddr) {
+	    cam->still_buf_vaddr[0] && cam->still_buf_vaddr[1]) {
 		dma_free_coherent(0, cam->still_frame_len,
-				  cam->still_buf_vaddr,
-				  (dma_addr_t) cam->still_buf);
-
-		cam->still_buf_vaddr = dma_alloc_coherent(0,
-						PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
-						&cam->still_buf, GFP_DMA | GFP_KERNEL);
+				  cam->still_buf_vaddr[0],
+				  (dma_addr_t) cam->still_buf[0]);
+		dma_free_coherent(0, cam->still_frame_len,
+				  cam->still_buf_vaddr[1],
+				  (dma_addr_t) cam->still_buf[1]);
+		cam->still_buf_vaddr[0] = dma_alloc_coherent(0,
+				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
+				       &cam->still_buf[0],
+				       GFP_DMA | GFP_KERNEL);
+		cam->still_buf_vaddr[1] = dma_alloc_coherent(0,
+				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
+				       &cam->still_buf[1],
+				       GFP_DMA | GFP_KERNEL);
 		cam->still_frame_len = PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage);
 	}
 
-	if (!cam->still_buf_vaddr) {
+	if (!cam->still_buf_vaddr[0] || !cam->still_buf_vaddr[1]) {
 		err = -ENOBUFS;
 		goto exit0;
 	}
@@ -1642,12 +1649,16 @@ static ssize_t mxc_v4l_read(struct file *file, char *buf, size_t count,
 		pr_err("ERROR: v4l2 capture: mxc_v4l_read timeout counter %x\n",
 		       cam->still_counter);
 		err = -ETIME;
-		goto exit1;
+		prp_still_deselect(cam);
+		goto exit0;
 	}
-	err = copy_to_user(buf, cam->still_buf_vaddr, cam->v2f.fmt.pix.sizeimage);
 
-      exit1:
 	prp_still_deselect(cam);
+
+	err = copy_to_user(buf, cam->still_buf_vaddr[1], cam->v2f.fmt.pix.sizeimage);
+
+      //exit1:
+//	prp_still_deselect(cam);
 
       exit0:
 	if (cam->overlay_on == true) {
@@ -2722,13 +2733,13 @@ static __init int camera_init(void)
 	}
 
 	/* Reserve buffers for still capture */
-	g_cam->still_buf_vaddr = (void *)dma_alloc_coherent(0,
+	g_cam->still_buf_vaddr[0] = (void *)dma_alloc_coherent(0,
 							    g_cam->still_frame_len,
 							    (dma_addr_t *) &
-							    g_cam->still_buf,
+							    g_cam->still_buf[0],
 							    GFP_DMA |
 							    GFP_KERNEL);
-	if (g_cam->still_buf_vaddr == NULL) {
+	if (g_cam->still_buf_vaddr[0] == NULL) {
 		printk(KERN_ERR "Error to allocate still buffer\n");
 		platform_driver_unregister(&mxc_v4l2_driver);
 		mxc_free_frame_buf(g_cam);
@@ -2738,6 +2749,30 @@ static __init int camera_init(void)
 		dma_free_coherent(0, g_cam->vf_bufs_size[1],
 				  g_cam->vf_bufs_vaddr[1],
 				  (dma_addr_t) g_cam->vf_bufs[1]);
+		kfree(g_cam);
+		g_cam = NULL;
+		err = -ENOMEM;
+		return err;
+	}
+	g_cam->still_buf_vaddr[1] = (void *)dma_alloc_coherent(0,
+							    g_cam->still_frame_len,
+							    (dma_addr_t *) &
+							    g_cam->still_buf[1],
+							    GFP_DMA |
+							    GFP_KERNEL);
+	if (g_cam->still_buf_vaddr[1] == NULL) {
+		printk(KERN_ERR "Error to allocate still buffer\n");
+		platform_driver_unregister(&mxc_v4l2_driver);
+		mxc_free_frame_buf(g_cam);
+		dma_free_coherent(0, g_cam->vf_bufs_size[0],
+				  g_cam->vf_bufs_vaddr[0],
+				  (dma_addr_t) g_cam->vf_bufs[0]);
+		dma_free_coherent(0, g_cam->vf_bufs_size[1],
+				  g_cam->vf_bufs_vaddr[1],
+				  (dma_addr_t) g_cam->vf_bufs[1]);
+		dma_free_coherent(0, g_cam->still_frame_len,
+				  g_cam->still_buf_vaddr[0],
+				  (dma_addr_t) g_cam->still_buf[0]);
 		kfree(g_cam);
 		g_cam = NULL;
 		err = -ENOMEM;

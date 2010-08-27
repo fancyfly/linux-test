@@ -1189,6 +1189,24 @@ int32_t ipu_enable_channel(ipu_channel_t channel)
 }
 
 /*!
+ * This function clear buffer ready for a logical channel.
+ *
+ * @param       channel         Input parameter for the logical channel ID.
+ *
+ * @param       type            Input parameter which buffer to clear.
+ *
+ * @param       bufNum          Input parameter for which buffer number clear
+ * 				ready state.
+ *
+ */
+void ipu_clear_buffer_ready(ipu_channel_t channel, ipu_buffer_t type,
+		uint32_t bufNum)
+{
+	/*TODO*/
+}
+EXPORT_SYMBOL(ipu_clear_buffer_ready);
+
+/*!
  * This function disables a logical channel.
  *
  * @param       channel         Input parameter for the logical channel ID.

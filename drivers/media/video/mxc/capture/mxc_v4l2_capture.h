@@ -46,8 +46,8 @@
 #define VF_HEIGHT		(576)
 #define	VF_FRAME_DEF_RES	(VF_WIDTH*VF_HEIGHT)
 #define VF_FORMAT		(V4L2_PIX_FMT_UYVY)
-#define STILL_WIDTH		(720)
-#define STILL_HEIGHT		(576)
+#define STILL_WIDTH		(2048)
+#define STILL_HEIGHT		(1536)
 #define	STILL_FRAME_DEF_RES	(STILL_WIDTH*STILL_HEIGHT)
 #define STILL_FORMAT		(V4L2_PIX_FMT_UYVY)
 
@@ -138,8 +138,8 @@ typedef struct _cam_data {
 	/* still image capture */
 	wait_queue_head_t still_queue;
 	int still_counter;
-	dma_addr_t still_buf;
-	void *still_buf_vaddr;
+	dma_addr_t still_buf[2];
+	void *still_buf_vaddr[2];
 	int still_frame_len;
 
 	/* overlay */

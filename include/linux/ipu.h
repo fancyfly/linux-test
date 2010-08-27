@@ -896,6 +896,8 @@ int32_t ipu_link_channels(ipu_channel_t src_ch, ipu_channel_t dest_ch);
 int32_t ipu_unlink_channels(ipu_channel_t src_ch, ipu_channel_t dest_ch);
 
 int32_t ipu_is_channel_busy(ipu_channel_t channel);
+void ipu_clear_buffer_ready(ipu_channel_t channel, ipu_buffer_t type,
+		uint32_t bufNum);
 int32_t ipu_enable_channel(ipu_channel_t channel);
 int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop);
 int32_t ipu_swap_channel(ipu_channel_t from_ch, ipu_channel_t to_ch);

@@ -1602,6 +1602,45 @@ int32_t ipu_enable_channel(ipu_channel_t channel)
 }
 EXPORT_SYMBOL(ipu_enable_channel);
 
+/*!
+ * This function clear buffer ready for a logical channel.
+ *
+ * @param       channel         Input parameter for the logical channel ID.
+ *
+ * @param       type            Input parameter which buffer to clear.
+ *
+ * @param       bufNum          Input parameter for which buffer number clear
+ * 				ready state.
+ *
+ */
+void ipu_clear_buffer_ready(ipu_channel_t channel, ipu_buffer_t type,
+		uint32_t bufNum)
+{
+	unsigned long lock_flags;
+	uint32_t dma_ch = channel_2_dma(channel, type);
+
+	if (!idma_is_valid(dma_ch))
+		return;
+
+	spin_lock_irqsave(&ipu_lock, lock_flags);
+
+	__raw_writel(0xF0000000, IPU_GPR); /* write one to clear */
+	if (bufNum == 0) {
+		if (idma_is_set(IPU_CHA_BUF0_RDY, dma_ch)) {
+			__raw_writel(idma_mask(dma_ch),
+					IPU_CHA_BUF0_RDY(dma_ch));
+		}
+	} else {
+		if (idma_is_set(IPU_CHA_BUF1_RDY, dma_ch)) {
+			__raw_writel(idma_mask(dma_ch),
+					IPU_CHA_BUF1_RDY(dma_ch));
+		}
+	}
+	__raw_writel(0x0, IPU_GPR); /* write one to set */
+	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+}
+EXPORT_SYMBOL(ipu_clear_buffer_ready);
+
 static irqreturn_t disable_chan_irq_handler(int irq, void *dev_id)
 {
 	struct completion *comp = dev_id;

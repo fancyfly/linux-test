@@ -74,9 +74,6 @@ static int prpvf_start(void *private)
 
 	fbvar = fbi->var;
 
-	/* Store the overlay frame buffer's original std */
-	cam->fb_origin_std = fbvar.nonstd;
-
 	if (OVERLAY_FB_SUPPORT_NONSTD) {
 		/* Use DP to do CSC so that we can get better performance */
 		vf_out_format = IPU_PIX_FMT_UYVY;
@@ -301,7 +298,6 @@ static int prpvf_stop(void *private)
 	cam_data *cam = (cam_data *) private;
 	int err = 0, i = 0;
 	struct fb_info *fbi = NULL;
-	struct fb_var_screeninfo fbvar;
 
 	if (cam->overlay_active == false)
 		return 0;
@@ -339,12 +335,6 @@ static int prpvf_stop(void *private)
 	acquire_console_sem();
 	fb_blank(fbi, FB_BLANK_POWERDOWN);
 	release_console_sem();
-
-	/* Set the overlay frame buffer std to what it is used to be */
-	fbvar = fbi->var;
-	fbvar.nonstd = cam->fb_origin_std;
-	fbvar.activate |= FB_ACTIVATE_FORCE;
-	fb_set_var(fbi, &fbvar);
 
 	ipu_csi_enable_mclk_if(CSI_MCLK_VF, cam->csi, false, false);
 

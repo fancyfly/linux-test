@@ -155,7 +155,6 @@ typedef struct _cam_data {
 	int output;
 	struct fb_info *overlay_fb;
 	int vf_frame_len;
-	int fb_origin_std;
 
 	/* v4l2 format */
 	struct v4l2_format v2f;

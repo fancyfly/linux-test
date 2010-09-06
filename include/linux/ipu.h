@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2009 Freescale Semiconductor, Inc.
+ * Copyright 2005-2010 Freescale Semiconductor, Inc.
  */
 
 /*
@@ -26,10 +26,13 @@
 #define __ASM_ARCH_IPU_H__
 
 #include <linux/types.h>
+#include <linux/videodev2.h>
 #ifdef __KERNEL__
 #include <linux/interrupt.h>
 #else
-#define bool char
+#ifndef __cplusplus
+typedef unsigned char bool;
+#endif
 #define irqreturn_t int
 #define dma_addr_t int
 #define u32 unsigned int
@@ -70,6 +73,15 @@ typedef enum {
 	IPU_PANEL_TFT,
 } ipu_panel_t;
 
+/*!
+ * Enumeration of VDI MOTION select
+ */
+typedef enum {
+	MED_MOTION = 0,
+	LOW_MOTION = 1,
+	HIGH_MOTION = 2,
+} ipu_motion_sel;
+
 /*  IPU Pixel format definitions */
 /*  Four-character-code (FOURCC) */
 #define fourcc(a, b, c, d)\
@@ -109,6 +121,8 @@ typedef enum {
 /*! @{ */
 #define IPU_PIX_FMT_YUYV    fourcc('Y', 'U', 'Y', 'V')	/*!< 16 YUV 4:2:2 */
 #define IPU_PIX_FMT_UYVY    fourcc('U', 'Y', 'V', 'Y')	/*!< 16 YUV 4:2:2 */
+#define IPU_PIX_FMT_YVYU    fourcc('Y', 'V', 'Y', 'U')  /*!< 16 YVYU 4:2:2 */
+#define IPU_PIX_FMT_VYUY    fourcc('V', 'Y', 'U', 'Y')  /*!< 16 VYYU 4:2:2 */
 #define IPU_PIX_FMT_Y41P    fourcc('Y', '4', '1', 'P')	/*!< 12 YUV 4:1:1 */
 #define IPU_PIX_FMT_YUV444  fourcc('Y', '4', '4', '4')	/*!< 24 YUV 4:4:4 */
 /* two planes -- one Y, one Cb + Cr interleaved  */
@@ -191,6 +205,9 @@ typedef enum {
 	MEM_DC_SYNC = CHAN_NONE,
 	DIRECT_ASYNC0 = CHAN_NONE,
 	DIRECT_ASYNC1 = CHAN_NONE,
+	MEM_VDI_PRP_VF_MEM_P = CHAN_NONE,
+	MEM_VDI_PRP_VF_MEM = CHAN_NONE,
+	MEM_VDI_PRP_VF_MEM_N = CHAN_NONE,
 #else
 	MEM_ROT_ENC_MEM = _MAKE_CHAN(1, 45, NO_DMA, NO_DMA, 48),
 	MEM_ROT_VF_MEM = _MAKE_CHAN(2, 46, NO_DMA, NO_DMA, 49),
@@ -222,6 +239,10 @@ typedef enum {
 
 	CSI_PRP_ENC_MEM = _MAKE_CHAN(19, NO_DMA, NO_DMA, NO_DMA, 20),
 	CSI_PRP_VF_MEM = _MAKE_CHAN(20, NO_DMA, NO_DMA, NO_DMA, 21),
+
+	MEM_VDI_PRP_VF_MEM_P = _MAKE_CHAN(21, 8, 14, 17, 21),
+	MEM_VDI_PRP_VF_MEM = _MAKE_CHAN(22, 9, 14, 17, 21),
+	MEM_VDI_PRP_VF_MEM_N = _MAKE_CHAN(23, 10, 14, 17, 21),
 
 	MEM_PP_ADC = CHAN_NONE,
 	ADC_SYS2 = CHAN_NONE,
@@ -302,6 +323,8 @@ typedef union {
 		uint32_t out_width;
 		uint32_t out_height;
 		uint32_t out_pixel_fmt;
+		uint32_t outh_resize_ratio;
+		uint32_t outv_resize_ratio;
 	} mem_prp_enc_mem;
 	struct {
 		uint32_t in_width;
@@ -344,6 +367,8 @@ typedef union {
 		uint32_t out_width;
 		uint32_t out_height;
 		uint32_t out_pixel_fmt;
+		uint32_t outh_resize_ratio;
+		uint32_t outv_resize_ratio;
 		bool graphics_combine_en;
 		bool global_alpha_en;
 		bool key_color_en;
@@ -351,6 +376,8 @@ typedef union {
 		uint8_t alpha;
 		uint32_t key_color;
 		bool alpha_chan_en;
+		ipu_motion_sel motion_sel;
+		enum v4l2_field field_fmt;
 	} mem_prp_vf_mem;
 	struct {
 		uint32_t temp;
@@ -365,6 +392,8 @@ typedef union {
 		uint32_t out_width;
 		uint32_t out_height;
 		uint32_t out_pixel_fmt;
+		uint32_t outh_resize_ratio;
+		uint32_t outv_resize_ratio;
 		bool graphics_combine_en;
 		bool global_alpha_en;
 		bool key_color_en;
@@ -396,6 +425,8 @@ typedef union {
 	struct {
 		uint32_t di;
 		bool interlaced;
+		uint32_t in_pixel_fmt;
+		uint32_t out_pixel_fmt;
 	} mem_dc_sync;
 	struct {
 		uint32_t temp;
@@ -580,6 +611,9 @@ enum ipu_irq_line {
 	IPU_IRQ_CSI1_OUT_EOF = 1,
 	IPU_IRQ_CSI2_OUT_EOF = 2,
 	IPU_IRQ_CSI3_OUT_EOF = 3,
+	IPU_IRQ_VDI_P_IN_EOF = 8,
+	IPU_IRQ_VDI_C_IN_EOF = 9,
+	IPU_IRQ_VDI_N_IN_EOF = 10,
 	IPU_IRQ_PP_IN_EOF = 11,
 	IPU_IRQ_PRP_IN_EOF = 12,
 	IPU_IRQ_PRP_GRAPH_IN_EOF = 14,
@@ -699,8 +733,7 @@ enum {
 typedef enum {
 	RGB,
 	YCbCr,
-	YUV,
-	NONE
+	YUV
 } ipu_color_space_t;
 
 /*!
@@ -810,6 +843,7 @@ enum {
 	STOP,
 };
 
+
 /*Define template constants*/
 #define     ATM_ADDR_RANGE      0x20	/*offset address of DISP */
 #define     TEMPLATE_BUF_SIZE   0x20	/*size of template */
@@ -856,16 +890,32 @@ int32_t ipu_init_channel_buffer(ipu_channel_t channel, ipu_buffer_t type,
 int32_t ipu_update_channel_buffer(ipu_channel_t channel, ipu_buffer_t type,
 				  uint32_t bufNum, dma_addr_t phyaddr);
 
+int32_t ipu_update_channel_offset(ipu_channel_t channel, ipu_buffer_t type,
+				uint32_t pixel_fmt,
+				uint16_t width, uint16_t height,
+				uint32_t stride,
+				uint32_t u, uint32_t v,
+				uint32_t vertical_offset, uint32_t horizontal_offset);
+
 int32_t ipu_select_buffer(ipu_channel_t channel,
 			  ipu_buffer_t type, uint32_t bufNum);
+int32_t ipu_select_multi_vdi_buffer(uint32_t bufNum);
 
 int32_t ipu_link_channels(ipu_channel_t src_ch, ipu_channel_t dest_ch);
 int32_t ipu_unlink_channels(ipu_channel_t src_ch, ipu_channel_t dest_ch);
 
 int32_t ipu_is_channel_busy(ipu_channel_t channel);
+int32_t ipu_check_buffer_busy(ipu_channel_t channel, ipu_buffer_t type,
+		uint32_t bufNum);
+void ipu_clear_buffer_ready(ipu_channel_t channel, ipu_buffer_t type,
+		uint32_t bufNum);
+uint32_t ipu_get_cur_buffer_idx(ipu_channel_t channel, ipu_buffer_t type);
 int32_t ipu_enable_channel(ipu_channel_t channel);
 int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop);
 int32_t ipu_swap_channel(ipu_channel_t from_ch, ipu_channel_t to_ch);
+
+int32_t ipu_enable_csi(uint32_t csi);
+int32_t ipu_disable_csi(uint32_t csi);
 
 int ipu_lowpwr_display_enable(void);
 int ipu_lowpwr_display_disable(void);
@@ -906,10 +956,14 @@ int32_t ipu_init_sync_panel(int disp,
 
 int32_t ipu_disp_set_window_pos(ipu_channel_t channel, int16_t x_pos,
 				int16_t y_pos);
+int32_t ipu_disp_get_window_pos(ipu_channel_t channel, int16_t *x_pos,
+				int16_t *y_pos);
 int32_t ipu_disp_set_global_alpha(ipu_channel_t channel, bool enable,
 				  uint8_t alpha);
 int32_t ipu_disp_set_color_key(ipu_channel_t channel, bool enable,
 			       uint32_t colorKey);
+int32_t ipu_disp_set_gamma_correction(ipu_channel_t channel, bool enable,
+				int constk[], int slopek[]);
 
 int ipu_init_async_panel(int disp, int type, uint32_t cycle_time,
 			 uint32_t pixel_fmt, ipu_adc_sig_cfg_t sig);
@@ -981,6 +1035,30 @@ int ipu_open(void);
 int ipu_register_generic_isr(int irq, void *dev);
 void ipu_close(void);
 
+/* two stripe calculations */
+struct stripe_param{
+	unsigned int input_width; /* width of the input stripe */
+	unsigned int output_width; /* width of the output stripe */
+	unsigned int input_column; /* the first column on the input stripe */
+	unsigned int output_column; /* the first column on the output stripe */
+	unsigned int idr;
+	/* inverse downisizing ratio parameter; expressed as a power of 2 */
+	unsigned int irr;
+	/* inverse resizing ratio parameter; expressed as a multiple of 2^-13 */
+};
+
+typedef struct _ipu_stripe_parm {
+	unsigned int input_width;
+	unsigned int output_width;
+	unsigned int maximal_stripe_width;
+	unsigned long long cirr;
+	unsigned int equal_stripes;
+	u32 input_pixelformat;
+	u32 output_pixelformat;
+	struct stripe_param left;
+	struct stripe_param right;
+} ipu_stripe_parm;
+
 typedef struct _ipu_channel_parm {
 	ipu_channel_t channel;
 	ipu_channel_params_t params;
@@ -1001,6 +1079,19 @@ typedef struct _ipu_channel_buf_parm {
 	uint32_t v_offset;
 	uint32_t bufNum;
 } ipu_channel_buf_parm;
+
+typedef struct _ipu_buf_offset_parm {
+	ipu_channel_t channel;
+	ipu_buffer_t type;
+	uint32_t pixel_fmt;
+	uint16_t width;
+	uint16_t height;
+	uint16_t stride;
+	uint32_t u_offset;
+	uint32_t v_offset;
+	uint32_t vertical_offset;
+	uint32_t horizontal_offset;
+} ipu_buf_offset_parm;
 
 typedef struct _ipu_channel_link {
 	ipu_channel_t src_ch;
@@ -1135,6 +1226,11 @@ typedef struct _ipu_mem_info {
 	int size;
 } ipu_mem_info;
 
+typedef struct _ipu_csc_update {
+	ipu_channel_t channel;
+	int **param;
+} ipu_csc_update;
+
 /* IOCTL commands */
 
 #define IPU_INIT_CHANNEL              _IOW('I',0x1,ipu_channel_parm)
@@ -1175,5 +1271,18 @@ typedef struct _ipu_mem_info {
 #define IPU_ALOC_MEM		      _IOWR('I', 0x24, ipu_mem_info)
 #define IPU_FREE_MEM		      _IOW('I', 0x25, ipu_mem_info)
 #define IPU_IS_CHAN_BUSY	      _IOW('I', 0x26, ipu_channel_t)
+#define IPU_CALC_STRIPES_SIZE	      _IOWR('I', 0x27, ipu_stripe_parm)
+#define IPU_UPDATE_BUF_OFFSET         _IOW('I', 0x28, ipu_buf_offset_parm)
+#define IPU_CSC_UPDATE                _IOW('I', 0x29, ipu_csc_update)
+#define IPU_SELECT_MULTI_VDI_BUFFER   _IOW('I', 0x2A, uint32_t)
 
+int ipu_calc_stripes_sizes(const unsigned int input_frame_width,
+				unsigned int output_frame_width,
+				const unsigned int maximal_stripe_width,
+				const unsigned long long cirr,
+				const unsigned int equal_stripes,
+				u32 input_pixelformat,
+				u32 output_pixelformat,
+				struct stripe_param *left,
+				struct stripe_param *right);
 #endif

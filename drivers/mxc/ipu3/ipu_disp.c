@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -51,52 +51,163 @@ struct dp_csc_param_t {
 #define DC_DISP_ID_SERIAL	2
 #define DC_DISP_ID_ASYNC	3
 
+int dmfc_type_setup;
+static int dmfc_size_28, dmfc_size_29, dmfc_size_24, dmfc_size_27, dmfc_size_23;
 
-/* all value below is determined by fix reg setting in _ipu_dmfc_init*/
-#define DMFC_FIFO_SIZE_28	(128*4)
-#define DMFC_FIFO_SIZE_29	(64*4)
-#define DMFC_FIFO_SIZE_24	(64*4)
-#define DMFC_FIFO_SIZE_27	(128*4)
-#define DMFC_FIFO_SIZE_23	(128*4)
-
-void _ipu_dmfc_init(void)
+void _ipu_dmfc_init(int dmfc_type, int first)
 {
-	/* disable DMFC-IC channel*/
-	__raw_writel(0x2, DMFC_IC_CTRL);
-	/* 1 - segment 0 and 1; 2, 1C and 2C unused */
-	__raw_writel(0x00000090, DMFC_WR_CHAN);
-	__raw_writel(0x20202000, DMFC_WR_CHAN_DEF);
-	/* 5B - segment 2 and 3; 5F - segment 4 and 5; */
-	/* 6B - segment 6; 6F - segment 7 */
-	__raw_writel(0x1F1E9492, DMFC_DP_CHAN);
+	u32 dmfc_wr_chan, dmfc_dp_chan;
+
+	if (first) {
+		if (dmfc_type_setup > dmfc_type)
+			dmfc_type = dmfc_type_setup;
+		else
+			dmfc_type_setup = dmfc_type;
+
+		/* disable DMFC-IC channel*/
+		__raw_writel(0x2, DMFC_IC_CTRL);
+	} else if (dmfc_type_setup >= DMFC_HIGH_RESOLUTION_DC) {
+		printk(KERN_DEBUG "DMFC high resolution has set, will not change\n");
+		return;
+	} else
+		dmfc_type_setup = dmfc_type;
+
+	if (dmfc_type == DMFC_HIGH_RESOLUTION_DC) {
+		/* 1 - segment 0~3;
+		 * 5B - segement 4, 5;
+		 * 5F - segement 6, 7;
+		 * 1C, 2C and 6B, 6F unused;
+		 */
+		printk(KERN_INFO "IPU DMFC DC HIGH RESOLUTION: 1(0~3), 5B(4,5), 5F(6,7)\n");
+		dmfc_wr_chan = 0x00000088;
+		dmfc_dp_chan = 0x00009694;
+		dmfc_size_28 = 256*4;
+		dmfc_size_29 = 0;
+		dmfc_size_24 = 0;
+		dmfc_size_27 = 128*4;
+		dmfc_size_23 = 128*4;
+	} else if (dmfc_type == DMFC_HIGH_RESOLUTION_DP) {
+		/* 1 - segment 0, 1;
+		 * 5B - segement 2~5;
+		 * 5F - segement 6,7;
+		 * 1C, 2C and 6B, 6F unused;
+		 */
+		printk(KERN_INFO "IPU DMFC DP HIGH RESOLUTION: 1(0,1), 5B(2~5), 5F(6,7)\n");
+		dmfc_wr_chan = 0x00000090;
+		dmfc_dp_chan = 0x0000968a;
+		dmfc_size_28 = 128*4;
+		dmfc_size_29 = 0;
+		dmfc_size_24 = 0;
+		dmfc_size_27 = 128*4;
+		dmfc_size_23 = 256*4;
+	} else if (dmfc_type == DMFC_HIGH_RESOLUTION_ONLY_DP) {
+		/* 5B - segement 0~3;
+		 * 5F - segement 4~7;
+		 * 1, 1C, 2C and 6B, 6F unused;
+		 */
+		printk(KERN_INFO "IPU DMFC ONLY-DP HIGH RESOLUTION: 5B(0~3), 5F(4~7)\n");
+		dmfc_wr_chan = 0x00000000;
+		dmfc_dp_chan = 0x00008c88;
+		dmfc_size_28 = 0;
+		dmfc_size_29 = 0;
+		dmfc_size_24 = 0;
+		dmfc_size_27 = 256*4;
+		dmfc_size_23 = 256*4;
+	} else {
+		/* 1 - segment 0, 1;
+		 * 5B - segement 4, 5;
+		 * 5F - segement 6, 7;
+		 * 1C, 2C and 6B, 6F unused;
+		 */
+		printk(KERN_INFO "IPU DMFC NORMAL mode: 1(0~1), 5B(4,5), 5F(6,7)\n");
+		dmfc_wr_chan = 0x00000090;
+		dmfc_dp_chan = 0x00009694;
+		dmfc_size_28 = 128*4;
+		dmfc_size_29 = 0;
+		dmfc_size_24 = 0;
+		dmfc_size_27 = 128*4;
+		dmfc_size_23 = 128*4;
+	}
+	__raw_writel(dmfc_wr_chan, DMFC_WR_CHAN);
+	__raw_writel(0x202020F6, DMFC_WR_CHAN_DEF);
+	__raw_writel(dmfc_dp_chan, DMFC_DP_CHAN);
+	/* Enable chan 5 watermark set at 5 bursts and clear at 7 bursts */
+	__raw_writel(0x2020F6F6, DMFC_DP_CHAN_DEF);
+}
+
+static int __init dmfc_setup(char *options)
+{
+	get_option(&options, &dmfc_type_setup);
+	if (dmfc_type_setup > DMFC_HIGH_RESOLUTION_ONLY_DP)
+		dmfc_type_setup = DMFC_HIGH_RESOLUTION_ONLY_DP;
+	return 1;
+}
+__setup("dmfc=", dmfc_setup);
+
+static bool _ipu_update_dmfc_used_size(int dma_chan, int width, int dmfc_size)
+{
+	u32 fifo_size_5f = 1;
+	u32 dmfc_dp_chan = __raw_readl(DMFC_DP_CHAN);
+
+	if ((width > 352) && (dmfc_size == (256 * 4)))
+		fifo_size_5f = 1;
+	else if (width > 176)
+		fifo_size_5f = 2;
+	else if (width > 88)
+		fifo_size_5f = 3;
+	else if (width > 44)
+		fifo_size_5f = 4;
+	else if (width > 22)
+		fifo_size_5f = 5;
+	else if (width > 11)
+		fifo_size_5f = 6;
+	else if (width > 6)
+		fifo_size_5f = 7;
+	else
+		return false;
+
+	if (dma_chan == 27) {
+		dmfc_dp_chan &= ~DMFC_FIFO_SIZE_5F;
+		dmfc_dp_chan |= fifo_size_5f << 11;
+		__raw_writel(dmfc_dp_chan, DMFC_DP_CHAN);
+	}
+
+	return true;
 }
 
 void _ipu_dmfc_set_wait4eot(int dma_chan, int width)
 {
 	u32 dmfc_gen1 = __raw_readl(DMFC_GENERAL1);
 
+	if (width >= HIGH_RESOLUTION_WIDTH) {
+		if (dma_chan == 23)
+			_ipu_dmfc_init(DMFC_HIGH_RESOLUTION_DP, 0);
+		else if (dma_chan == 28)
+			_ipu_dmfc_init(DMFC_HIGH_RESOLUTION_DC, 0);
+	}
+
 	if (dma_chan == 23) { /*5B*/
-		if (DMFC_FIFO_SIZE_23/width > 3)
+		if (dmfc_size_23/width > 3)
 			dmfc_gen1 |= 1UL << 20;
 		else
 			dmfc_gen1 &= ~(1UL << 20);
 	} else if (dma_chan == 24) { /*6B*/
-		if (DMFC_FIFO_SIZE_24/width > 1)
+		if (dmfc_size_24/width > 1)
 			dmfc_gen1 |= 1UL << 22;
 		else
 			dmfc_gen1 &= ~(1UL << 22);
 	} else if (dma_chan == 27) { /*5F*/
-		if (DMFC_FIFO_SIZE_27/width > 2)
+		if (!_ipu_update_dmfc_used_size(dma_chan, width, dmfc_size_27))
 			dmfc_gen1 |= 1UL << 21;
 		else
 			dmfc_gen1 &= ~(1UL << 21);
 	} else if (dma_chan == 28) { /*1*/
-		if (DMFC_FIFO_SIZE_28/width > 2)
+		if (dmfc_size_28/width > 2)
 			dmfc_gen1 |= 1UL << 16;
 		else
 			dmfc_gen1 &= ~(1UL << 16);
 	} else if (dma_chan == 29) { /*6F*/
-		if (DMFC_FIFO_SIZE_29/width > 1)
+		if (dmfc_size_29/width > 1)
 			dmfc_gen1 |= 1UL << 23;
 		else
 			dmfc_gen1 &= ~(1UL << 23);
@@ -179,22 +290,34 @@ static void _ipu_dc_map_clear(int map)
 }
 
 static void _ipu_dc_write_tmpl(int word, u32 opcode, u32 operand, int map,
-			       int wave, int glue, int sync)
+			       int wave, int glue, int sync, int stop)
 {
 	u32 reg;
-	int stop = 1;
 
-	reg = sync;
-	reg |= (glue << 4);
-	reg |= (++wave << 11);
-	reg |= (++map << 15);
-	reg |= (operand << 20) & 0xFFF00000;
-	__raw_writel(reg, ipu_dc_tmpl_reg + word * 2);
+	if (opcode == WRG) {
+		reg = sync;
+		reg |= (glue << 4);
+		reg |= (++wave << 11);
+		reg |= ((operand & 0x1FFFF) << 15);
+		__raw_writel(reg, ipu_dc_tmpl_reg + word * 2);
 
-	reg = (operand >> 12);
-	reg |= opcode << 4;
-	reg |= (stop << 9);
-	__raw_writel(reg, ipu_dc_tmpl_reg + word * 2 + 1);
+		reg = (operand >> 17);
+		reg |= opcode << 7;
+		reg |= (stop << 9);
+		__raw_writel(reg, ipu_dc_tmpl_reg + word * 2 + 1);
+	} else {
+		reg = sync;
+		reg |= (glue << 4);
+		reg |= (++wave << 11);
+		reg |= (++map << 15);
+		reg |= (operand << 20) & 0xFFF00000;
+		__raw_writel(reg, ipu_dc_tmpl_reg + word * 2);
+
+		reg = (operand >> 12);
+		reg |= opcode << 4;
+		reg |= (stop << 9);
+		__raw_writel(reg, ipu_dc_tmpl_reg + word * 2 + 1);
+	}
 }
 
 static void _ipu_dc_link_event(int chan, int event, int addr, int priority)
@@ -393,7 +516,7 @@ void _ipu_dc_init(int dc_chan, int di, bool interlaced)
 		} else {
 			_ipu_dc_link_event(dc_chan, DC_EVT_NL, 2, 3);
 			_ipu_dc_link_event(dc_chan, DC_EVT_EOL, 3, 2);
-			_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA, 4, 1);
+			_ipu_dc_link_event(dc_chan, DC_EVT_NEW_DATA, 5, 1);
 		}
 		_ipu_dc_link_event(dc_chan, DC_EVT_NF, 0, 0);
 		_ipu_dc_link_event(dc_chan, DC_EVT_NFIELD, 0, 0);
@@ -1108,7 +1231,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 		}
 
 		/* Init template microcode */
-		_ipu_dc_write_tmpl(0, WROD(0), 0, map, SYNC_WAVE, 0, 8);
+		_ipu_dc_write_tmpl(0, WROD(0), 0, map, SYNC_WAVE, 0, 8, 1);
 
 		if (sig.Hsync_pol)
 			di_gen |= DI_GEN_POLARITY_3;
@@ -1126,7 +1249,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 		_ipu_di_sync_config(disp, DI_SYNC_HSYNC, h_total - 1,
 				    DI_SYNC_CLK, div * v_to_h_sync, DI_SYNC_CLK,
 				    0, DI_SYNC_NONE, 0, DI_SYNC_NONE,
-				    DI_SYNC_NONE, 0, div * h_sync_width * 2);
+				    DI_SYNC_CLK, 0, h_sync_width * 2);
 		/* Setup VSYNC waveform */
 		vsync_cnt = DI_SYNC_VSYNC;
 		_ipu_di_sync_config(disp, DI_SYNC_VSYNC, v_total - 1,
@@ -1137,7 +1260,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 
 		/* Setup active data waveform to sync with DC */
 		_ipu_di_sync_config(disp, 4, 0, DI_SYNC_HSYNC,
-				    v_start_width, DI_SYNC_HSYNC, height,
+				    v_sync_width + v_start_width, DI_SYNC_HSYNC, height,
 				    DI_SYNC_VSYNC, 0, DI_SYNC_NONE,
 				    DI_SYNC_NONE, 0, 0);
 		_ipu_di_sync_config(disp, 5, 0, DI_SYNC_CLK,
@@ -1146,9 +1269,9 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 				    0);
 
 		/* Init template microcode */
-		_ipu_dc_write_tmpl(2, WROD(0), 0, map, SYNC_WAVE, 8, 5);
-		_ipu_dc_write_tmpl(3, WROD(0), 0, map, SYNC_WAVE, 4, 5);
-		_ipu_dc_write_tmpl(4, WROD(0), 0, map, SYNC_WAVE, 0, 5);
+		_ipu_dc_write_tmpl(2, WROD(0), 0, map, SYNC_WAVE, 8, 5, 1);
+		_ipu_dc_write_tmpl(3, WRG,     0, map, SYNC_WAVE, 4, 5, 1);
+		_ipu_dc_write_tmpl(5, WROD(0), 0, map, SYNC_WAVE, 0, 5, 1);
 
 		if (sig.Hsync_pol)
 			di_gen |= DI_GEN_POLARITY_2;
@@ -1209,7 +1332,7 @@ int ipu_init_async_panel(int disp, int type, uint32_t cycle_time,
 		_ipu_di_data_pin_config(disp, ASYNC_SER_WAVE, DI_PIN_SER_RS,
 					2, 0, 0);
 
-		_ipu_dc_write_tmpl(0x64, WROD(0), 0, map, ASYNC_SER_WAVE, 0, 0);
+		_ipu_dc_write_tmpl(0x64, WROD(0), 0, map, ASYNC_SER_WAVE, 0, 0, 1);
 
 		/* Configure DC for serial panel */
 		__raw_writel(0x14, DC_DISP_CONF1(DC_DISP_ID_SERIAL));

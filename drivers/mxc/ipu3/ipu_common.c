@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -236,7 +236,7 @@ static int ipu_probe(struct platform_device *pdev)
 	__raw_writel(0xFFFFFFFF, IPU_INT_CTRL(10));
 
 	/* DMFC Init */
-	_ipu_dmfc_init();
+	_ipu_dmfc_init(DMFC_NORMAL, 1);
 
 	/* Set sync refresh channels as high priority */
 	__raw_writel(0x18800000L, IDMAC_CHA_PRI(0));
@@ -1352,6 +1352,69 @@ int32_t ipu_is_channel_busy(ipu_channel_t channel)
 EXPORT_SYMBOL(ipu_is_channel_busy);
 
 /*!
+ * This function is called to initialize a buffer for logical IPU channel.
+ *
+ * @param       channel         Input parameter for the logical channel ID.
+ *
+ * @param       type            Input parameter which buffer to initialize.
+ *
+ * @param       pixel_fmt       Input parameter for pixel format of buffer.
+ *                              Pixel format is a FOURCC ASCII code.
+ *
+ * @param       width           Input parameter for width of buffer in pixels.
+ *
+ * @param       height          Input parameter for height of buffer in pixels.
+ *
+ * @param       stride          Input parameter for stride length of buffer
+ *                              in pixels.
+ *
+ * @param       u		predefined private u offset for additional cropping,
+ *								zero if not used.
+ *
+ * @param       v		predefined private v offset for additional cropping,
+ *								zero if not used.
+ *
+ * @param			vertical_offset vertical offset for Y coordinate
+ * 								in the existed frame
+ *
+ *
+ * @param			horizontal_offset horizontal offset for X coordinate
+ * 								in the existed frame
+ *
+ *
+ * @return      Returns 0 on success or negative error code on fail
+ *              This function will fail if any buffer is set to ready.
+ */
+
+int32_t ipu_update_channel_offset(ipu_channel_t channel, ipu_buffer_t type,
+				uint32_t pixel_fmt,
+				uint16_t width, uint16_t height,
+				uint32_t stride,
+				uint32_t u, uint32_t v,
+				uint32_t vertical_offset, uint32_t horizontal_offset)
+{
+	int ret = 0;
+	unsigned long lock_flags;
+	uint32_t dma_chan = channel_2_dma(channel, type);
+
+	if (dma_chan == IDMA_CHAN_INVALID)
+		return -EINVAL;
+
+	spin_lock_irqsave(&ipu_lock, lock_flags);
+
+	if ((__raw_readl(IPU_CHA_BUF0_RDY(dma_chan)) & idma_mask(dma_chan)) ||
+		(__raw_readl(IPU_CHA_BUF0_RDY(dma_chan)) & idma_mask(dma_chan)))
+		ret = -EACCES;
+	else
+		_ipu_ch_offset_update(dma_chan, pixel_fmt, width, height, stride,
+				      u, v, 0, vertical_offset, horizontal_offset);
+
+	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+	return ret;
+}
+EXPORT_SYMBOL(ipu_update_channel_offset);
+
+/*!
  * This function enables a logical channel.
  *
  * @param       channel         Input parameter for the logical channel ID.
@@ -1413,8 +1476,11 @@ int32_t ipu_enable_channel(ipu_channel_t channel)
 	}
 
 	if ((channel == MEM_DC_SYNC) || (channel == MEM_BG_SYNC) ||
-	    (channel == MEM_FG_SYNC))
+	   (channel == MEM_FG_SYNC)) {
+		reg = __raw_readl(IDMAC_WM_EN(in_dma));
+		__raw_writel(reg | idma_mask(in_dma), IDMAC_WM_EN(in_dma));
 		_ipu_dp_dc_enable(channel);
+	}
 
 	if (_ipu_is_ic_chan(in_dma) || _ipu_is_ic_chan(out_dma) ||
 		_ipu_is_irt_chan(in_dma) || _ipu_is_irt_chan(out_dma))
@@ -1496,6 +1562,12 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 	}
 
 	spin_lock_irqsave(&ipu_lock, lock_flags);
+
+	if ((channel == MEM_BG_SYNC) || (channel == MEM_FG_SYNC) ||
+			(channel == MEM_DC_SYNC)) {
+		reg = __raw_readl(IDMAC_WM_EN(in_dma));
+		__raw_writel(reg & ~idma_mask(in_dma), IDMAC_WM_EN(in_dma));
+	}
 
 	/* Disable IC task */
 	if (_ipu_is_ic_chan(in_dma) || _ipu_is_ic_chan(out_dma) ||
@@ -2065,7 +2137,7 @@ static int ipu_resume(struct platform_device *pdev)
 		__raw_writel(idma_enable_reg[1], IDMAC_CHA_EN(32));
 	} else {
 		clk_enable(g_ipu_clk);
-		_ipu_dmfc_init();
+		_ipu_dmfc_init(dmfc_type_setup, 1);
 		_ipu_init_dc_mappings();
 
 		/* Set sync refresh channels as high priority */

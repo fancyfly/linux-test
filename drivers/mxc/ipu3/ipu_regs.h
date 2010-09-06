@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -596,6 +596,8 @@ enum {
 	DI_SER_CONF_SERIAL_RS_POL = 0x00000004,
 	DI_SER_CONF_SERIAL_CS_POL = 0x00000002,
 	DI_SER_CONF_WAIT4SERIAL = 0x00000001,
+
+	DMFC_FIFO_SIZE_5F = 0x00003800,
 };
 
 enum di_pins {
@@ -623,5 +625,6 @@ enum di_sync_wave {
 
 /* DC template opcodes */
 #define WROD(lf)		(0x18 | (lf << 1))
+#define WRG	        	(0x01)
 
 #endif

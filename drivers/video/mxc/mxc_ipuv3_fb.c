@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -360,7 +360,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 					fbi->var.upper_margin,
 					fbi->var.vsync_len,
 					fbi->var.lower_margin,
-					480, sig_cfg) != 0) {
+					0, sig_cfg) != 0) {
 			dev_err(fbi->device,
 				"mxcfb: Error initializing panel.\n");
 			return -EINVAL;
@@ -1405,6 +1405,8 @@ static int mxcfb_probe(struct platform_device *pdev)
 
 	mxcfb_check_var(&fbi->var, fbi);
 	mxcfb_set_fix(fbi);
+
+	fbi->var.yres_virtual = fbi->var.yres * 2;
 
 	ret = register_framebuffer(fbi);
 	if (ret < 0)

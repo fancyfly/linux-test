@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -28,8 +28,17 @@ extern struct clk *g_di_clk[2];
 extern struct clk *g_csi_clk[2];
 extern unsigned char g_dc_di_assignment[];
 extern int g_ipu_hw_rev;
+extern int dmfc_type_setup;
 
 #define IDMA_CHAN_INVALID	0xFF
+#define HIGH_RESOLUTION_WIDTH   1024
+
+enum ipu_dmfc_type {
+	DMFC_NORMAL = 0,
+	DMFC_HIGH_RESOLUTION_DC,
+	DMFC_HIGH_RESOLUTION_DP,
+	DMFC_HIGH_RESOLUTION_ONLY_DP,
+};
 
 struct ipu_channel {
 	u8 video_in_dma;
@@ -54,7 +63,7 @@ void _ipu_dc_init(int dc_chan, int di, bool interlaced);
 void _ipu_dc_uninit(int dc_chan);
 void _ipu_dp_dc_enable(ipu_channel_t channel);
 void _ipu_dp_dc_disable(ipu_channel_t channel, bool swap);
-void _ipu_dmfc_init(void);
+void _ipu_dmfc_init(int dmfc_type, int first);
 void _ipu_dmfc_set_wait4eot(int dma_chan, int width);
 int _ipu_chan_is_interlaced(ipu_channel_t channel);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -374,6 +374,59 @@ static int mxc_ipu_ioctl(struct inode *inode, struct file *file,
 				ret = 0;
 		}
 		break;
+	case IPU_CALC_STRIPES_SIZE:
+		{
+			ipu_stripe_parm stripe_parm;
+
+			if (copy_from_user (&stripe_parm, (ipu_stripe_parm *)arg,
+					 sizeof(ipu_stripe_parm)))
+				return -EFAULT;
+			ipu_calc_stripes_sizes(stripe_parm.input_width,
+						stripe_parm.output_width,
+						stripe_parm.maximal_stripe_width,
+						stripe_parm.cirr,
+						stripe_parm.equal_stripes,
+						stripe_parm.input_pixelformat,
+						stripe_parm.output_pixelformat,
+						&stripe_parm.left,
+						&stripe_parm.right);
+			if (copy_to_user((ipu_stripe_parm *) arg, &stripe_parm,
+					sizeof(ipu_stripe_parm)) > 0)
+				return -EFAULT;
+		}
+		break;
+	case IPU_UPDATE_BUF_OFFSET:
+		{
+			ipu_buf_offset_parm offset_parm;
+
+			if (copy_from_user (&offset_parm, (ipu_buf_offset_parm *)arg,
+					 sizeof(ipu_buf_offset_parm)))
+				return -EFAULT;
+			ret = ipu_update_channel_offset(offset_parm.channel,
+							offset_parm.type,
+							offset_parm.pixel_fmt,
+							offset_parm.width,
+							offset_parm.height,
+							offset_parm.stride,
+							offset_parm.u_offset,
+							offset_parm.v_offset,
+							offset_parm.vertical_offset,
+							offset_parm.horizontal_offset);
+		}
+		break;
+	case IPU_CSC_UPDATE:
+		{
+			int param[5][3];
+			ipu_csc_update csc;
+			if (copy_from_user(&csc, (void *) arg,
+					   sizeof(ipu_csc_update)))
+				return -EFAULT;
+			if (copy_from_user(&param[0][0], (void *) csc.param,
+					   sizeof(param)))
+				return -EFAULT;
+			ipu_set_csc_coefficients(csc.channel, param);
+		}
+		break;
 	default:
 		break;
 	}
@@ -399,12 +452,20 @@ static int mxc_ipu_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+int mxc_ipu_fsync(struct file *filp, struct dentry *dentry, int datasync)
+{
+	flush_cache_all();
+	outer_flush_all();
+	return 0;
+}
+
 static struct file_operations mxc_ipu_fops = {
 	.owner = THIS_MODULE,
 	.open = mxc_ipu_open,
 	.mmap = mxc_ipu_mmap,
 	.release = mxc_ipu_release,
-	.ioctl = mxc_ipu_ioctl
+	.ioctl = mxc_ipu_ioctl,
+	.fsync = mxc_ipu_fsync
 };
 
 int register_ipu_device()

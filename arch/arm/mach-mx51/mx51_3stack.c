@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -27,6 +27,7 @@
 #include <linux/i2c.h>
 #include <linux/ata.h>
 #include <linux/pmic_external.h>
+#include <linux/mxcfb.h>
 #include <linux/ipu.h>
 #if defined(CONFIG_MTD) || defined(CONFIG_MTD_MODULE)
 #include <linux/mtd/mtd.h>
@@ -87,6 +88,19 @@ static struct cpu_wp cpu_wp_auto[] = {
 	 .mfn = 1,
 	 .cpu_podf = 3,
 	 .cpu_voltage = 1000000,},
+};
+
+static struct fb_videomode video_modes[] = {
+	{
+	/* 720p60 TV output */
+	"720P60", 60, 1280, 720, 13468,
+	220, 110,
+	20, 5,
+	40, 5,
+	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT |
+		FB_SYNC_EXT,
+	FB_VMODE_NONINTERLACED,
+	0,},
 };
 
 struct cpu_wp *get_cpu_wp(int *wp)
@@ -449,6 +463,21 @@ static struct platform_device lcd_wvga_device = {
 
 extern void gpio_lcd_active(void);
 
+static struct mxc_fb_platform_data fb_data[] = {
+	{
+	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
+	.mode = &video_modes[0],
+	},
+};
+
+static int __initdata enable_720p = { 0 };
+static int __init dvi_720p_setup(char *__unused)
+{
+	enable_720p = 1;
+	return 1;
+}
+__setup("dvi_720p", dvi_720p_setup);
+
 static void mxc_init_fb(void)
 {
 	gpio_lcd_active();
@@ -458,6 +487,22 @@ static void mxc_init_fb(void)
 
 	(void)platform_device_register(&mxc_lcd_device);
 	(void)platform_device_register(&lcd_wvga_device);
+
+	if (enable_720p) {
+		struct clk *pll3_clk;
+		struct clk *ipu_di0_clk;
+
+		printk("Set 720p clk\n");
+		fb_data[0].mode = &(video_modes[0]);
+		pll3_clk = clk_get(NULL, "pll3");
+		ipu_di0_clk = clk_get(NULL, "ipu_di0_clk");
+		clk_disable(pll3_clk);
+		clk_set_rate(pll3_clk, 297000000);
+		clk_enable(pll3_clk);
+		clk_set_rate(ipu_di0_clk, 74250000);
+
+		mxc_fb_device[0].dev.platform_data = &fb_data[0];
+	}
 
 	(void)platform_device_register(&mxc_fb_device[0]);
 	(void)platform_device_register(&mxc_fb_device[1]);

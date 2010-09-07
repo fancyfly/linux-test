@@ -3,7 +3,7 @@
  *
  * Author: Vladislav Buzov <vbuzov@embeddedalley.com>
  *
- * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc.
  * Copyright 2008 Embedded Alley Solutions, Inc All Rights Reserved.
  */
 
@@ -103,12 +103,18 @@ static int stmp3xxx_adc_trigger(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *dai)
 {
 	int playback = substream->stream == SNDRV_PCM_STREAM_PLAYBACK ? 1 : 0;
+	struct stmp3xxx_runtime_data *prtd = substream->runtime->private_data;
 	int ret = 0;
 	u32 reg = 0;
 	u32 reg1 = 0;
+	u32 xfer_count1 = 0;
+	u32 xfer_count2 = 0;
+	u32 cur_addr1 = 0;
+	u32 cur_addr2 = 0;
 	u32 l, r;
 	u32 ll, rr;
 	int i;
+	int dma_ch = STMP3XXX_DMA_CHANNEL(prtd->dma_ch);
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
@@ -120,8 +126,12 @@ static int stmp3xxx_adc_trigger(struct snd_pcm_substream *substream,
 			__raw_writel(reg1, REGS_AUDIOOUT_BASE + \
 				HW_AUDIOOUT_HPVOL);
 
-			__raw_writel(BM_AUDIOOUT_CTRL_RUN,
+			/* enable the fifo error interrupt */
+			__raw_writel(BM_AUDIOOUT_CTRL_FIFO_ERROR_IRQ_EN,
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_SET);
+			/* write a data to data reg to trigger the transfer */
+			__raw_writel(0x0,
+				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_DATA);
 
 			__raw_writel(BM_AUDIOOUT_ANACTRL_HP_HOLD_GND,
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_ANACTRL_CLR);
@@ -145,10 +155,24 @@ static int stmp3xxx_adc_trigger(struct snd_pcm_substream *substream,
 			}
 			__raw_writel(BM_AUDIOOUT_SPEAKERCTRL_MUTE,
 				REGS_AUDIOIN_BASE + HW_AUDIOOUT_SPEAKERCTRL_CLR);
+		} else {
+		   cur_addr1 = __raw_readl(HW_APBX_CHn_CURCMDAR_ADDR(dma_ch));
+		   xfer_count1 = (__raw_readl(HW_APBX_CHn_CMD_ADDR(dma_ch)) & \
+		      BM_APBX_CHn_CMD_XFER_COUNT) >> BP_APBX_CHn_CMD_XFER_COUNT;
+
+		   __raw_writel(BM_AUDIOIN_CTRL_RUN,
+		      REGS_AUDIOIN_BASE + HW_AUDIOIN_CTRL_SET);
+		   udelay(100);
+
+		   cur_addr2 = __raw_readl(HW_APBX_CHn_CURCMDAR_ADDR(dma_ch));
+		   xfer_count2 = (__raw_readl(HW_APBX_CHn_CMD_ADDR(dma_ch)) & \
+		      BM_APBX_CHn_CMD_XFER_COUNT) >> BP_APBX_CHn_CMD_XFER_COUNT;
+
+		   /* check if DMA getting stuck */
+		   if ((xfer_count1 == xfer_count2) && (cur_addr1 == cur_addr2))
+			/* read a data from data reg to trigger the receive */
+			reg = __raw_readl(REGS_AUDIOIN_BASE + HW_AUDIOIN_DATA);
 		}
-		else
-			__raw_writel(BM_AUDIOIN_CTRL_RUN,
-				REGS_AUDIOIN_BASE + HW_AUDIOIN_CTRL_SET);
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -157,8 +181,10 @@ static int stmp3xxx_adc_trigger(struct snd_pcm_substream *substream,
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_ANACTRL_SET);
 			__raw_writel(BM_AUDIOOUT_SPEAKERCTRL_MUTE,
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_SPEAKERCTRL_SET);
-			__raw_writel(BM_AUDIOOUT_CTRL_RUN,
+			/* disable the fifo error interrupt */
+			__raw_writel(BM_AUDIOOUT_CTRL_FIFO_ERROR_IRQ_EN,
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_CLR);
+			mdelay(50);
 		}
 		else
 			__raw_writel(BM_AUDIOIN_CTRL_RUN,
@@ -208,8 +234,6 @@ static int stmp3xxx_adc_startup(struct snd_pcm_substream *substream,
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_CLR);
 		__raw_writel(BM_AUDIOOUT_CTRL_FIFO_UNDERFLOW_IRQ,
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_CLR);
-		__raw_writel(BM_AUDIOOUT_CTRL_FIFO_ERROR_IRQ_EN,
-			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_SET);
 	} else {
 		__raw_writel(BM_AUDIOIN_CTRL_FIFO_OVERFLOW_IRQ,
 			REGS_AUDIOIN_BASE + HW_AUDIOIN_CTRL_CLR);

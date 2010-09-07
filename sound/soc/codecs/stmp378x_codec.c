@@ -3,7 +3,7 @@
  *
  * Author: Vladislav Buzov <vbuzov@embeddedalley.com>
  *
- * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc.
  * Copyright 2008 Embedded Alley Solutions, Inc All Rights Reserved.
  */
 
@@ -544,6 +544,10 @@ stmp378x_codec_dac_power_on(struct stmp378x_codec_priv *stmp378x_adc)
 	__raw_writel(BM_AUDIOOUT_CTRL_WORD_LENGTH,
 		      REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_SET);
 
+	/* Set DMA wait count to 31*/
+	__raw_writel(BF_AUDIOOUT_CTRL_DMAWAIT_COUNT(31),
+		      REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_SET);
+
 	/* Powerup DAC */
 	__raw_writel(BM_AUDIOOUT_PWRDN_DAC,
 		REGS_AUDIOOUT_BASE + HW_AUDIOOUT_PWRDN_CLR);
@@ -580,11 +584,17 @@ stmp378x_codec_dac_power_on(struct stmp378x_codec_priv *stmp378x_adc)
 	/* Mute speaker amp */
 	__raw_writel(BM_AUDIOOUT_SPEAKERCTRL_MUTE,
 		      REGS_AUDIOOUT_BASE + HW_AUDIOOUT_SPEAKERCTRL_SET);
+	/* Enable the audioout */
+	__raw_writel(BM_AUDIOOUT_CTRL_RUN,
+			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_SET);
 }
 
 static void
 stmp378x_codec_dac_power_down(struct stmp378x_codec_priv *stmp378x_adc)
 {
+	/* Disable the audioout */
+	__raw_writel(BM_AUDIOOUT_CTRL_RUN,
+			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_CLR);
 	/* Disable class AB */
 	__raw_writel(BM_AUDIOOUT_ANACTRL_HP_CLASSAB,
 			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_ANACTRL_CLR);
@@ -635,6 +645,10 @@ stmp378x_codec_adc_power_on(struct stmp378x_codec_priv *stmp378x_adc)
 
 	/* 16 bit word length */
 	__raw_writel(BM_AUDIOIN_CTRL_WORD_LENGTH,
+		      REGS_AUDIOIN_BASE + HW_AUDIOIN_CTRL_SET);
+
+	/* Set DMA wait count to 31*/
+	__raw_writel(BF_AUDIOIN_CTRL_DMAWAIT_COUNT(31),
 		      REGS_AUDIOIN_BASE + HW_AUDIOIN_CTRL_SET);
 
 	/* Unmute ADC channels */

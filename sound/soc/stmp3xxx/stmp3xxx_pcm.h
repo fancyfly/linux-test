@@ -3,7 +3,7 @@
  *
  * Author: Vladislav Buzov <vbuzov@embeddedalley.com>
  *
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc.
  * Copyright 2008 Embedded Alley Solutions, Inc All Rights Reserved.
  */
 
@@ -23,6 +23,15 @@ struct stmp3xxx_pcm_dma_params {
 	int dma_bus;	/* DMA bus */
 	int dma_ch;	/* DMA channel number */
 	int irq;	/* DMA interrupt number */
+};
+
+struct stmp3xxx_runtime_data {
+	u32 dma_ch;
+	u32 dma_period;
+	u32 dma_totsize;
+
+	struct stmp3xxx_pcm_dma_params *params;
+	struct stmp3xxx_dma_descriptor *dma_desc_array;
 };
 
 extern struct snd_soc_platform stmp3xxx_soc_platform;

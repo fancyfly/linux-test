@@ -3,7 +3,7 @@
  *
  * Author: Vladislav Buzov <vbuzov@embeddedalley.com>
  *
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc.
  * Copyright 2008 Embedded Alley Solutions, Inc All Rights Reserved.
  */
 
@@ -57,15 +57,6 @@ static const struct snd_pcm_hardware stmp3xxx_pcm_hardware = {
  * Required to request DMA channels
  */
 struct device *stmp3xxx_pcm_dev;
-
-struct stmp3xxx_runtime_data {
-	u32 dma_ch;
-	u32 dma_period;
-	u32 dma_totsize;
-
-	struct stmp3xxx_pcm_dma_params *params;
-	struct stmp3xxx_dma_descriptor *dma_desc_array;
-};
 
 static irqreturn_t stmp3xxx_pcm_dma_irq(int irq, void *dev_id)
 {

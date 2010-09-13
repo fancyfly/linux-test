@@ -1313,21 +1313,29 @@ static struct clk ipumux2_clk = {
 	.disable = _clk_ipmux_disable,
 };
 
-static int _clk_ocram_enable(struct clk *clk)
-{
-	return 0;
-}
+static struct clk pl301_4x1 = {
+	.name = "pl301_4x1",
+	.enable_reg = MXC_CCM_CCGR6,
+	.enable_shift = MXC_CCM_CCGR6_CG12_OFFSET,
+	.enable = _clk_enable,
+	.disable = _clk_disable_inwait,
+};
 
-static void _clk_ocram_disable(struct clk *clk)
-{
-}
+static struct clk pl301_2x2 = {
+	.name = "pl301_2x2",
+	.enable_reg = MXC_CCM_CCGR6,
+	.enable_shift = MXC_CCM_CCGR6_CG13_OFFSET,
+	.enable = _clk_enable,
+	.disable = _clk_disable_inwait,
+};
 
 static struct clk ocram_clk = {
 	.name = "ocram_clk",
+	.secondary = &pl301_2x2,
 	.enable_reg = MXC_CCM_CCGR6,
 	.enable_shift = MXC_CCM_CCGR6_CG1_OFFSET,
-	.enable = _clk_ocram_enable,
-	.disable = _clk_ocram_disable,
+	.enable = _clk_enable,
+	.disable = _clk_disable_inwait,
 };
 
 
@@ -3386,6 +3394,11 @@ static struct clk mlb_clk[] = {
 	.secondary = &mlb_clk[1],
 	},
 	{
+	.name = "mlb_abiter",
+	.parent = &pl301_4x1,
+	.secondary = &mlb_clk[2],
+	},
+	{
 	.name = "mlb_mem_clk",
 	.parent = &emi_fast_clk,
 	.secondary = &emi_intr_clk[1],
@@ -4775,6 +4788,11 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 #ifdef CONFIG_SDMA_IRAM
 	sdma_clk[1].secondary = &emi_intr_clk[1];
 #endif
+	sdma_clk[0].secondary = &pl301_4x1;
+	sata_clk.secondary = &pl301_4x1;
+	fec_clk[1].parent = &pl301_4x1;
+	garb_clk.secondary = &pl301_2x2;
+	emi_intr_clk[1].secondary = &ocram_clk;
 
 	clk_tree_init();
 
@@ -4792,6 +4810,7 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	clk_register(&sata_clk);
 	clk_register(&ieee_1588_clk);
 	clk_register(&mlb_clk[0]);
+	clk_register(&mlb_clk[1]);
 	clk_register(&can1_clk[0]);
 	clk_register(&can2_clk[0]);
 	clk_register(&ldb_di_clk[0]);

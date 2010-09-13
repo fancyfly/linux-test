@@ -158,6 +158,7 @@ static void stmp3xxx_pcm_stop(struct snd_pcm_substream *substream)
 	struct stmp3xxx_runtime_data *prtd = runtime->private_data;
 	dma_addr_t pos;
 	int desc;
+	int periods_num = prtd->dma_totsize / prtd->dma_period;
 
 	/* Freez DMA channel for a moment */
 	stmp3xxx_dma_freeze(prtd->dma_ch);
@@ -166,6 +167,11 @@ static void stmp3xxx_pcm_stop(struct snd_pcm_substream *substream)
 	pos = __raw_readl(REGS_APBX_BASE +
 			HW_APBX_CHn_BAR(prtd->params->dma_ch));
 	desc = (pos - runtime->dma_addr) / prtd->dma_period;
+
+	if (desc >= periods_num)
+		desc = 0;
+	else if (desc < 0)
+		desc = 0;
 
 	/* Set up the next descriptor to decrement DMA channel sempahore */
 	prtd->dma_desc_array[desc].next_descr->command->cmd

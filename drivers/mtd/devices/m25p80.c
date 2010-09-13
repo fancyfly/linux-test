@@ -74,6 +74,7 @@ struct m25p {
 	unsigned		partitioned:1;
 	u8			erase_opcode;
 	u8			command[CMD_SIZE + FAST_READ_DUMMY_BYTE];
+	u8			priv_buf[4096];
 };
 
 static inline struct m25p *mtd_to_m25p(struct mtd_info *mtd)
@@ -313,7 +314,7 @@ static int m25p80_read(struct mtd_info *mtd, loff_t from, size_t len,
 	t[0].len = CMD_SIZE + FAST_READ_DUMMY_BYTE;
 	spi_message_add_tail(&t[0], &m);
 
-	t[1].rx_buf = buf;
+	t[1].rx_buf = flash->priv_buf;
 	t[1].len = len;
 	spi_message_add_tail(&t[1], &m);
 
@@ -344,6 +345,7 @@ static int m25p80_read(struct mtd_info *mtd, loff_t from, size_t len,
 	spi_sync(flash->spi, &m);
 
 	*retlen = m.actual_length - CMD_SIZE - FAST_READ_DUMMY_BYTE;
+	memcpy(flash->priv_buf, buf, len);
 
 	mutex_unlock(&flash->lock);
 
@@ -384,7 +386,7 @@ static int m25p80_write(struct mtd_info *mtd, loff_t to, size_t len,
 	t[0].len = CMD_SIZE;
 	spi_message_add_tail(&t[0], &m);
 
-	t[1].tx_buf = buf;
+	t[1].tx_buf = flash->priv_buf;
 	spi_message_add_tail(&t[1], &m);
 
 	mutex_lock(&flash->lock);
@@ -409,7 +411,7 @@ static int m25p80_write(struct mtd_info *mtd, loff_t to, size_t len,
 	/* do all the bytes fit onto one page? */
 	if (page_offset + len <= FLASH_PAGESIZE) {
 		t[1].len = len;
-
+		memcpy((void *)buf, flash->priv_buf, len);
 		spi_sync(flash->spi, &m);
 
 		*retlen = m.actual_length - CMD_SIZE;
@@ -419,6 +421,7 @@ static int m25p80_write(struct mtd_info *mtd, loff_t to, size_t len,
 		/* the size of data remaining on the first page */
 		page_size = FLASH_PAGESIZE - page_offset;
 
+		memcpy((void *)buf, flash->priv_buf, page_size);
 		t[1].len = page_size;
 		spi_sync(flash->spi, &m);
 
@@ -435,7 +438,7 @@ static int m25p80_write(struct mtd_info *mtd, loff_t to, size_t len,
 			flash->command[2] = (to + i) >> 8;
 			flash->command[3] = (to + i);
 
-			t[1].tx_buf = buf + i;
+			memcpy((void *)(buf + i), flash->priv_buf, page_size);
 			t[1].len = page_size;
 
 			wait_till_ready(flash);
@@ -641,7 +644,6 @@ static int __devinit m25p_probe(struct spi_device *spi)
 	flash = kzalloc(sizeof *flash, GFP_KERNEL);
 	if (!flash)
 		return -ENOMEM;
-
 	flash->spi = spi;
 	mutex_init(&flash->lock);
 	dev_set_drvdata(&spi->dev, flash);

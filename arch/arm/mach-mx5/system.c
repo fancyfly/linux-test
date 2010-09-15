@@ -34,11 +34,13 @@
 
 extern int mxc_jtag_enabled;
 extern int iram_ready;
+extern int dvfs_core_is_active;
 extern void __iomem *ccm_base;
 extern void __iomem *databahn_base;
 extern void (*wait_in_iram)(void *ccm_addr, void *databahn_addr);
 extern void *wait_in_iram_base;
 extern void mx50_wait(u32 ccm_base, u32 databahn_addr);
+extern void stop_dvfs(void);
 
 static struct clk *gpc_dvfs_clk;
 
@@ -187,6 +189,9 @@ void arch_reset(char mode)
 	if (cpu_is_mx51() || cpu_is_mx53())
 		__raw_writel(0x20600, IO_ADDRESS(NFC_BASE_ADDR) + 0x28);
 
+	/* Stop DVFS-CORE before reboot. */
+	if (dvfs_core_is_active)
+		stop_dvfs();
 	/* Assert SRS signal */
 	mxc_wd_reset();
 }

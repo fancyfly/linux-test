@@ -53,6 +53,7 @@
 #include <asm/mach/flash.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
+#include <mach/arc_otg.h>
 #include <mach/memory.h>
 #include <mach/gpio.h>
 #include <mach/mmc.h>
@@ -828,6 +829,16 @@ static struct spi_board_info mxc_dataflash_device[] __initdata = {
 	 .platform_data = &mxc_spi_flash_data[0],},
 };
 
+static void mx50_arm2_usb_set_vbus(bool enable)
+{
+	printk(KERN_DEBUG "%s, enable is %d\n", __func__, enable);
+	if (enable)
+		USBCTRL |= UCTRL_O_PWR_POL;
+	else
+		USBCTRL &= ~UCTRL_O_PWR_POL;
+}
+
+
 static int sdhc_write_protect(struct device *dev)
 {
 	unsigned short rc = 0;
@@ -1184,6 +1195,8 @@ static void __init mxc_board_init(void)
 	*/
 	mxc_register_device(&mxc_sgtl5000_device, &sgtl5000_data);
 	mxc_register_device(&gpmi_nfc_device, &gpmi_nfc_platform_data);
+
+	mx5_set_otghost_vbus_func(mx50_arm2_usb_set_vbus);
 	mx5_usb_dr_init();
 	mx5_usbh1_init();
 

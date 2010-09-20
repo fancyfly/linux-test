@@ -13,7 +13,7 @@
 
 #include <linux/mm.h>
 #include <linux/init.h>
-
+#include <linux/btcs.h>
 #include <asm/mach/map.h>
 #include <mach/iomux-v3.h>
 
@@ -59,6 +59,7 @@ void __init mx5_map_io(void)
 	}
 
 	iotable_init(mx5_io_desc, ARRAY_SIZE(mx5_io_desc));
+	btcs_reserve_sdram();
 	mxc_arch_reset_init(IO_ADDRESS(WDOG1_BASE_ADDR));
 }
 

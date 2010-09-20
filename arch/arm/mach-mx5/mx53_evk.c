@@ -45,6 +45,7 @@
 #include <linux/fec.h>
 #include <linux/ahci_platform.h>
 #include <linux/powerkey.h>
+#include <linux/btcs.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -1706,6 +1707,9 @@ static void __init mxc_board_init(void)
 static void __init mx53_evk_timer_init(void)
 {
 	struct clk *uart_clk;
+
+	btcs_init();
+	btcs_poll();
 
 	mx53_clocks_init(32768, 24000000, 22579200, 24576000);
 

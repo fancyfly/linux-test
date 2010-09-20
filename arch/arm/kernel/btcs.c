@@ -102,9 +102,11 @@ int __init btcs_init(void)
 		panic("could not allocate BTCS CAN IRQ!");
 	/* Guarantee the priority */
 #ifdef CONFIG_ARCH_MXC
+#if defined CONFIG_ARCH_MX25 || defined CONFIG_ARCH_MX35
 	if (imx_irq_set_priority(BTCS_IRQ_NUMBER, 15) != 0)
 		pr_err("BTCS interrupt's priority cann't be \
 				guaranteed as 15(highest)\n");
+#endif
 #endif
 	return 0;
 }

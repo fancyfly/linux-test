@@ -35,6 +35,10 @@
 #elif defined CONFIG_ARCH_MX28
 #define BTCS_IRQ_NUMBER	    IRQ_CAN0
 #define CAN_PHYS_ADDR	    CAN0_PHYS_ADDR
+#elif defined CONFIG_ARCH_MX53
+#define MX53_OFFSET	    0x20000000
+#define BTCS_IRQ_NUMBER	    MXC_INT_CAN1
+#define CAN_PHYS_ADDR	    (CAN1_BASE_ADDR - MX53_OFFSET)
 #endif
 
 void __init btcs_reserve_sdram(void)

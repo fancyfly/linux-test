@@ -102,6 +102,7 @@
 #define EPDC_ELCDIF_BACKLIGHT	(1*32 + 18)	/*GPIO_2_18 */
 #define CSPI_CS1	(3*32 + 13)	/*GPIO_4_13 */
 #define CSPI_CS2	(3*32 + 11) /*GPIO_4_11*/
+#define USB_OTG_PWR	(5*32 + 25) /*GPIO_6_25*/
 
 extern int __init mx50_arm2_init_mc13892(void);
 extern struct cpu_wp *(*get_cpu_wp)(int *wp);
@@ -229,7 +230,8 @@ static struct pad_desc  mx50_armadillo2[] = {
 	 * one needs to debug owire.
 	 */
 	MX50_PAD_OWIRE__USBH1_OC,
-	MX50_PAD_PWM2__USBOTG_PWR,
+	/* using gpio to control otg pwr */
+	MX50_PAD_PWM2__GPIO_6_25,
 	MX50_PAD_PWM1__USBOTG_OC,
 
 	MX50_PAD_SSI_RXC__FEC_MDIO,
@@ -832,10 +834,7 @@ static struct spi_board_info mxc_dataflash_device[] __initdata = {
 static void mx50_arm2_usb_set_vbus(bool enable)
 {
 	printk(KERN_DEBUG "%s, enable is %d\n", __func__, enable);
-	if (enable)
-		USBCTRL |= UCTRL_O_PWR_POL;
-	else
-		USBCTRL &= ~UCTRL_O_PWR_POL;
+	gpio_set_value(USB_OTG_PWR, enable);
 }
 
 
@@ -1125,6 +1124,11 @@ static void __init mx50_arm2_io_init(void)
 	if (enable_gpmi_nand)
 		mxc_iomux_v3_setup_multiple_pads(mx50_gpmi_nand, \
 					ARRAY_SIZE(mx50_gpmi_nand));
+
+	/* USB OTG PWR */
+	gpio_request(USB_OTG_PWR, "usb otg power");
+	gpio_direction_output(USB_OTG_PWR, 1);
+	gpio_set_value(USB_OTG_PWR, 0);
 }
 
 /*!

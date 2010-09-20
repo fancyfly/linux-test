@@ -708,9 +708,6 @@ static void otg_set_utmi_xcvr(void)
 		USBCTRL &= ~UCTRL_PP;
 	} else if (cpu_is_mx50()) {
 		USB_PHY_CTR_FUNC |= USB_UTMI_PHYCTRL_OC_DIS;
-		if (machine_is_mx50_arm2())
-			/* OTG Power pin polarity low */
-			USBCTRL |= UCTRL_O_PWR_POL;
 	} else {
 		/* USBOTG_PWR low active */
 		USBCTRL &= ~UCTRL_PP;
@@ -882,7 +879,10 @@ int usb_host_wakeup_irq(struct device *wkup_dev)
 		wakeup_req = USBCTRL & UCTRL_H1WIR;
 	} else if (!strcmp("DR", pdata->name)) {
 		wakeup_req = USBCTRL & UCTRL_OWIR;
-		/* If not ID wakeup, let udc handle it */
+		/* If not ID wakeup, let udc handle it
+		 * The IC needs 2 msec to get the real ID value
+		 */
+		mdelay(3);
 		if (wakeup_req && (UOG_OTGSC & OTGSC_STS_USB_ID))
 			wakeup_req = 0;
 	}

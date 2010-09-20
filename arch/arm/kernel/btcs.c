@@ -117,9 +117,6 @@ int __init btcs_init(void)
 
 static struct resource btcs_resources = {
 	.name = "BTCS mem",
-	.start = __virt_to_phys(CONFIG_BTCS_START),
-	.end = __virt_to_phys(CONFIG_BTCS_START +
-		    CONFIG_BTCS_SIZE - 1),
 	.flags = IORESOURCE_MEM,
 };
 
@@ -135,6 +132,10 @@ static int __exit btcs_release_resource(void)
 static int __init btcs_request_resource(void)
 {
 	int ret = 0;
+	btcs_resources.start = __virt_to_phys(CONFIG_BTCS_START);
+	btcs_resources.end = __virt_to_phys(CONFIG_BTCS_START +
+					    CONFIG_BTCS_SIZE - 1);
+
 	ret = request_resource(iomem_resource.child, &btcs_resources);
 	if (ret)
 		pr_err("BTCS: Cannot reserve resource\n");

@@ -1884,11 +1884,7 @@ irqreturn_t usb_hcd_irq (int irq, void *__hcd)
 	 * assume it's never used.
 	 */
 	local_irq_save(flags);
-	/* At otg mode, the host does need to handle device interrupt */
-	if (hcd->self.is_b_host) {
-		local_irq_restore(flags);
-		return IRQ_NONE;
-	} else if (unlikely(hcd->state == HC_STATE_HALT ||
+	if (unlikely(hcd->state == HC_STATE_HALT ||
 		!test_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags))) {
 		rc = IRQ_NONE;
 	} else if (hcd->driver->irq(hcd) == IRQ_NONE) {

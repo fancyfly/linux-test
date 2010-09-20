@@ -705,7 +705,6 @@ static void fsl_otg_event(struct work_struct *work)
 		otg->gadget->is_a_peripheral = !fsm->id;
 
 	if (fsm->id) {		/* switch to gadget */
-		b_session_irq_enable(true);
 		fsl_otg_start_host(fsm, 0);
 		otg_drv_vbus(fsm, 0);
 		fsl_otg_start_gadget(fsm, 1);

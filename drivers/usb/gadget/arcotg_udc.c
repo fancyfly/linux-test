@@ -415,7 +415,7 @@ static int dr_controller_setup(struct fsl_udc *udc)
 	fsl_platform_set_device_mode(pdata);
 
 	/* Clear the setup status */
-	fsl_writel(0, &dr_regs->usbsts);
+	fsl_writel(0xffffffff, &dr_regs->usbsts);
 
 	tmp = udc->ep_qh_dma;
 	tmp &= USB_EP_LIST_ADDRESS_MASK;
@@ -2039,12 +2039,12 @@ static void suspend_irq(struct fsl_udc *udc)
 	if (fsl_readl(&dr_regs->otgsc) & OTGSC_STS_USB_ID) {
 		dr_wake_up_enable(udc_controller, false);
 		dr_phy_low_power_mode(udc, false);
-		printk("device wake up event\n");
+		printk(KERN_DEBUG "device wake up event\n");
 		return true;
 	} else {/* wakeup is vbus wake event, but not for device so we need to clear b session */
 		int irq_src = fsl_readl(&dr_regs->otgsc) & (~OTGSC_ID_CHANGE_IRQ_STS);
 		fsl_writel(irq_src, &dr_regs->otgsc);
-		printk("The host wakeup event, should be handled by host\n");
+		printk(KERN_DEBUG "The host wakeup event, should be handled by host\n");
 		return false;
 	}
  }
@@ -3159,7 +3159,7 @@ static int fsl_udc_resume(struct platform_device *pdev)
 {
 	pr_debug("%s(): stopped %d  suspended %d\n", __func__,
 		 udc_controller->stopped, udc_controller->suspended);
-	printk("udc resume\n");
+	printk(KERN_DEBUG "udc resume\n");
 #ifdef CONFIG_USB_OTG
 	if (udc_controller->transceiver->gadget == NULL)
 		return 0;

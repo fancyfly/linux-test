@@ -69,6 +69,8 @@ extern void __init mx51_babbage_io_init(void);
 extern struct cpu_wp *(*get_cpu_wp)(int *wp);
 extern void (*set_num_cpu_wp)(int num);
 static int num_cpu_wp = 3;
+extern struct resource mxc_gpu_resources[];
+extern struct platform_device gpu_device; 
 
 /* working point(wp): 0 - 800MHz; 1 - 166.25MHz; */
 static struct cpu_wp cpu_wp_auto[] = {
@@ -1038,8 +1040,13 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				PHYS_OFFSET + size - android_pmem_pdata.size;
 		android_pmem_gpu_pdata.start =
 				android_pmem_pdata.start - android_pmem_gpu_pdata.size;
+		gpu_device.resource[5].start =
+				android_pmem_gpu_pdata.start - SZ_16M;
+		gpu_device.resource[5].end =
+				gpu_device.resource[5].start + SZ_16M - 1;
 		size -= android_pmem_pdata.size;
 		size -= android_pmem_gpu_pdata.size;
+		size -= SZ_16M;
 		t->u.mem.size = size;
 	}
 #endif
@@ -1104,6 +1111,7 @@ static void __init mxc_board_init(void)
 	mxc_init_mmc();
 	mxc_init_gpio_button();
 	mx51_babbage_init_mc13892();
+	platform_device_register(&gpu_device);
 
 	if (board_is_babbage_2_5() == 1)
 		/* BB2.5 */

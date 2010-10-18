@@ -133,11 +133,11 @@ static void __clk_disable(struct clk *clk)
 		return;
 
 	if (!(--clk->usecount)) {
-		if (clk->disable)
-			clk->disable(clk);
-
 		__clk_disable(clk->parent);
 		__clk_disable(clk->secondary);
+
+		if (clk->disable)
+			clk->disable(clk);
 	}
 }
 

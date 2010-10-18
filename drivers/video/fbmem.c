@@ -952,14 +952,7 @@ fb_set_var(struct fb_info *info, struct fb_var_screeninfo *var)
 			info->var = *var;
 
 			if (info->fbops->fb_set_par) {
-				static int ft = 1;
-
-				if (ft && info->node == 0) {
-					info->fbops->fb_set_par(info);
-					ft = 0;
-				} else if (info->node != 0) {
-					info->fbops->fb_set_par(info);
-				}
+				info->fbops->fb_set_par(info);
 			}
 
 			fb_pan_display(info, &info->var);

@@ -198,7 +198,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
 
 	mxc_fbi->cur_ipu_buf = 1;
-	sema_init(&mxc_fbi->flip_sem, 1);
+	sema_init(&mxc_fbi->flip_sem, 0);
 	if (mxc_fbi->alpha_chan_en) {
 		mxc_fbi->cur_ipu_alpha_buf = 1;
 		sema_init(&mxc_fbi->alpha_flip_sem, 1);
@@ -844,7 +844,7 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 			if (mxc_fbi->blank != FB_BLANK_UNBLANK)
 				break;
 
-			down(&mxc_fbi->flip_sem);
+
 			init_completion(&mxc_fbi->vsync_complete);
 
 			ipu_clear_irq(mxc_fbi->ipu_ch_irq);
@@ -859,6 +859,8 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 			} else if (retval > 0) {
 				retval = 0;
 			}
+
+			down(&mxc_fbi->flip_sem);
 			break;
 		}
 	case FBIO_ALLOC:
@@ -1497,12 +1499,12 @@ static int mxcfb_probe(struct platform_device *pdev)
 	}
 
 	/* Default Y virtual size is 2x panel size */
-	fbi->var.yres_virtual = fbi->var.yres * 2;
+	fbi->var.yres_virtual = fbi->var.yres * 3;
 
 	mxcfb_check_var(&fbi->var, fbi);
 
 	/* Default Y virtual size is 2x panel size */
-	fbi->var.yres_virtual = fbi->var.yres * 2;
+	fbi->var.yres_virtual = fbi->var.yres * 3;
 
 	mxcfb_set_fix(fbi);
 

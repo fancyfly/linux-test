@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.28
-# Wed Nov 25 15:10:50 2009
+# Sun Sep 19 18:57:38 2010
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1774,6 +1774,11 @@ CONFIG_GPS_IOCTRL=y
 # i.MX ADC support
 #
 # CONFIG_IMX_ADC is not set
+
+#
+# MXC GPU support
+#
+CONFIG_MXC_AMD_GPU=m
 
 #
 # File systems

@@ -63,7 +63,8 @@ static struct clk *periph_apm_clk;
 static struct clk *lp_apm;
 static struct clk *osc;
 static struct clk *gpc_dvfs_clk;
-static struct clk *mipi_hsp_clk;
+static struct clk *emi_garb_clk;
+
 struct regulator *lp_regulator;
 int low_bus_freq_mode;
 int high_bus_freq_mode;
@@ -187,9 +188,13 @@ int set_low_bus_freq(void)
 				| 3 << MXC_CCM_CBCDR_NFC_PODF_OFFSET);
 		__raw_writel(reg, MXC_CCM_CBCDR);
 
+		clk_enable(emi_garb_clk);
 		while (__raw_readl(MXC_CCM_CDHIPR) & 0x1F)
 			udelay(10);
+
 		clk_set_parent(main_bus_clk, pll2);
+
+		clk_disable(emi_garb_clk);
 
 		low_bus_freq_mode = 1;
 		high_bus_freq_mode = 0;
@@ -222,6 +227,8 @@ int set_high_bus_freq(int high_bus_freq)
 					| 4 << MXC_CCM_CBCDR_EMI_PODF_OFFSET
 					| 3 << MXC_CCM_CBCDR_NFC_PODF_OFFSET);
 			__raw_writel(reg, MXC_CCM_CBCDR);
+
+			clk_enable(emi_garb_clk);
 			while (__raw_readl(MXC_CCM_CDHIPR) & 0x1F)
 				udelay(10);
 
@@ -269,6 +276,9 @@ int set_high_bus_freq(int high_bus_freq)
 			__raw_writel(reg, MXC_DVFSPER_PMCR0);
 
 			clk_set_parent(main_bus_clk, pll2);
+
+			clk_disable(emi_garb_clk);
+
 			clk_disable(gpc_dvfs_clk);
 #ifdef DISABLE_PLL1
 			tclk = clk_get(NULL, "ddr_clk");
@@ -475,11 +485,11 @@ static int __devinit busfreq_probe(struct platform_device *pdev)
 		return PTR_ERR(ipu_clk);
 	}
 
-	mipi_hsp_clk = clk_get(NULL, "mipi_hsp_clk");
-	if (IS_ERR(mipi_hsp_clk)) {
-		printk(KERN_DEBUG "%s: failed to get mipi_hsp_clk\n",
+	emi_garb_clk = clk_get(NULL, "emi_garb_clk");
+	if (IS_ERR(emi_garb_clk)) {
+		printk(KERN_DEBUG "%s: failed to get emi_garb_clk\n",
 		       __func__);
-		return PTR_ERR(mipi_hsp_clk);
+		return PTR_ERR(emi_garb_clk);
 	}
 
 	vpu_clk = clk_get(NULL, "vpu_clk");

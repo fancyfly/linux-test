@@ -1140,38 +1140,58 @@ static inline void mxc_init_iim(void)
 }
 #endif
 
-static struct resource mxc_gpu_resources[] = {
-	[0] = {
+struct resource mxc_gpu_resources[] = {
+	{
 		.start = MXC_INT_GPU2_IRQ,
 		.end = MXC_INT_GPU2_IRQ,
 		.name = "gpu_2d_irq",
-		.flags = IORESOURCE_IRQ,},
-	[1] = {
+		.flags = IORESOURCE_IRQ,
+	},
+	{
 		.start = MXC_INT_GPU,
 		.end = MXC_INT_GPU,
 		.name = "gpu_3d_irq",
-		.flags = IORESOURCE_IRQ,},
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.start = MX51_GPU2D_BASE_ADDR,
+		.end = MX51_GPU2D_BASE_ADDR + SZ_4K - 1,
+		.name = "gpu_2d_registers",
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = GPU_BASE_ADDR,
+		.end = GPU_BASE_ADDR + SZ_128K - 1,
+		.name = "gpu_3d_registers",
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = MX51_GPU_GMEM_BASE_ADDR,
+		.end = MX51_GPU_GMEM_BASE_ADDR + SZ_128K - 1,
+		.name = "gpu_graphics_mem",
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = 0,
+		.end = 0,
+		.name = "gpu_reserved_mem",
+		.flags = IORESOURCE_MEM,
+	},
+
 };
 
-static struct platform_device gpu_device = {
+struct platform_device gpu_device = {
 	.name = "mxc_gpu",
 	.id = 0,
-	.dev = {
-		.release = mxc_nop_release,
-		},
 	.num_resources = ARRAY_SIZE(mxc_gpu_resources),
 	.resource = mxc_gpu_resources,
 };
 
-static void __init mxc_init_gpu(void)
-{
-	platform_device_register(&gpu_device);
-}
-
+#if defined(CONFIG_UIO_PDRV_GENIRQ) || defined(CONFIG_UIO_PDRV_GENIRQ_MODULE)
 static struct resource mxc_gpu2d_resources[] = {
 	{
-	 .start = GPU2D_BASE_ADDR,
-	 .end = GPU2D_BASE_ADDR + SZ_4K - 1,
+	 .start = MX51_GPU2D_BASE_ADDR,
+	 .end = MX51_GPU2D_BASE_ADDR + SZ_4K - 1,
 	 .flags = IORESOURCE_MEM,
 	 },
 	{
@@ -1182,7 +1202,6 @@ static struct resource mxc_gpu2d_resources[] = {
 	 },
 };
 
-#if defined(CONFIG_UIO_PDRV_GENIRQ) || defined(CONFIG_UIO_PDRV_GENIRQ_MODULE)
 static struct clk *gpu_clk;
 
 int gpu2d_open(struct uio_info *info, struct inode *inode)
@@ -1275,7 +1294,6 @@ int __init mxc_init_devices(void)
 	mxc_init_sdram_autogating();
 	mxc_init_dvfs();
 	mxc_init_iim();
-	mxc_init_gpu();
 	mxc_init_gpu2d();
 	mxc_init_pwm();
 	mxc_init_pwm_backlight();

@@ -2491,7 +2491,7 @@ static struct clk cspi2_clk[] = {
 };
 
 static struct clk cspi3_clk = {
-	.name = "cspi_ipg_clk",
+	.name = "cspi_clk",
 	.id = 2,
 	.parent = &ipg_clk,
 	.enable_reg = MXC_CCM_CCGR4,

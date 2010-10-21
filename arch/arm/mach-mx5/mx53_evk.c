@@ -515,6 +515,7 @@ static struct platform_pwm_backlight_data mxc_pwm_backlight_data = {
 	.pwm_period_ns = 78770,
 };
 
+#if defined(CONFIG_CAN_FLEXCAN) || defined(CONFIG_CAN_FLEXCAN_MODULE)
 static void flexcan_xcvr_enable(int id, int en)
 {
 	static int pwdn;
@@ -582,7 +583,7 @@ static struct flexcan_platform_data flexcan1_data = {
 	.ext_msg = 1,
 	.std_msg = 1,
 };
-
+#endif
 
 extern void mx5_ipu_reset(void);
 static struct mxc_ipu_config mxc_ipu_data = {
@@ -1573,6 +1574,7 @@ static void __init mx53_evk_io_init(void)
 	msleep(5);
 	gpio_set_value(MX53_TVIN_RESET, 1);
 
+#if defined(CONFIG_CAN_FLEXCAN)
 	/* CAN1 enable GPIO*/
 	gpio_request(MX53_CAN1_EN1, "can1-en1");
 	gpio_direction_output(MX53_CAN1_EN1, 0);
@@ -1586,15 +1588,19 @@ static void __init mx53_evk_io_init(void)
 
 	gpio_request(MX53_CAN2_EN2, "can2-en2");
 	gpio_direction_output(MX53_CAN2_EN2, 0);
-
+#endif
 	if (enable_spdif) {
 		struct pad_desc spdif_pin = MX53_PAD_GPIO_19__SPDIF_TX1;
 		mxc_iomux_v3_setup_pad(&spdif_pin);
+#if defined(CONFIG_CAN_FLEXCAN)
 	} else {
 		/* GPIO for 12V */
 		gpio_request(MX53_12V_EN, "12v-en");
 		gpio_direction_output(MX53_12V_EN, 0);
 	}
+#else
+	}
+#endif
 }
 
 extern void mx53_gpio_usbotg_driver_vbus(bool on);
@@ -1661,9 +1667,10 @@ static void __init mxc_board_init(void)
 		mxc_register_device(&mxc_pwm1_backlight_device,
 			&mxc_pwm_backlight_data);
 	}
+#if defined(CONFIG_CAN_FLEXCAN)
 	mxc_register_device(&mxc_flexcan0_device, &flexcan0_data);
 	mxc_register_device(&mxc_flexcan1_device, &flexcan1_data);
-
+#endif
 /*	mxc_register_device(&mxc_keypad_device, &keypad_plat_data); */
 
 	mxc_register_device(&mxcsdhc1_device, &mmc1_data);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -1037,15 +1037,14 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)info->par;
 	u_int y_bottom;
 	unsigned long base;
-	static __u32 last_xoff, last_yoff;
 
 	if (var->xoffset > 0) {
 		dev_dbg(info->device, "x panning not supported\n");
 		return -EINVAL;
 	}
 
-	if ((last_xoff == var->xoffset) &&
-	    (last_yoff == var->yoffset))
+	if ((info->var.xoffset == var->xoffset) &&
+	    (info->var.yoffset == var->yoffset))
 		return 0;	/* No change, do nothing */
 
 	y_bottom = var->yoffset;
@@ -1082,8 +1081,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 
 	down(&mxc_fbi->flip_sem);
 
-	last_xoff = var->xoffset;
-	last_yoff = var->yoffset;
+	info->var.xoffset = var->xoffset;
+	info->var.yoffset = var->yoffset;
 
 	if (var->vmode & FB_VMODE_YWRAP)
 		info->var.vmode |= FB_VMODE_YWRAP;

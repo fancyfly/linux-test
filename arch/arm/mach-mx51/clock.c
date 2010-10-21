@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -27,6 +27,7 @@
 #include <mach/spba.h>
 
 #include "crm_regs.h"
+#include "serial.h"
 
 static unsigned long pll_base[] = {
 	(unsigned long)MXC_DPLL1_BASE,
@@ -1753,7 +1754,7 @@ static struct clk uart1_clk[] = {
 	 .enable_shift = MXC_CCM_CCGR1_CG4_OFFSET,
 	 .enable = _clk_enable,
 	 .disable = _clk_disable,
-#ifdef UART1_DMA_ENABLE
+#if UART1_DMA_ENABLE
 	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
 #endif
 	 },
@@ -1761,7 +1762,7 @@ static struct clk uart1_clk[] = {
 	 .name = "uart_ipg_clk",
 	 .id = 0,
 	 .parent = &ipg_clk,
-#ifdef UART1_DMA_ENABLE
+#if UART1_DMA_ENABLE
 	 .secondary = &aips_tz1_clk,
 #endif
 	 .enable_reg = MXC_CCM_CCGR1,
@@ -1781,7 +1782,7 @@ static struct clk uart2_clk[] = {
 	 .enable_shift = MXC_CCM_CCGR1_CG6_OFFSET,
 	 .enable = _clk_enable,
 	 .disable = _clk_disable,
-#ifdef UART2_DMA_ENABLE
+#if UART2_DMA_ENABLE
 	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
 #endif
 	 },
@@ -1789,7 +1790,7 @@ static struct clk uart2_clk[] = {
 	 .name = "uart_ipg_clk",
 	 .id = 1,
 	 .parent = &ipg_clk,
-#ifdef UART2_DMA_ENABLE
+#if UART2_DMA_ENABLE
 	 .secondary = &aips_tz1_clk,
 #endif
 	 .enable_reg = MXC_CCM_CCGR1,
@@ -1809,7 +1810,7 @@ static struct clk uart3_clk[] = {
 	 .enable_shift = MXC_CCM_CCGR1_CG8_OFFSET,
 	 .enable = _clk_enable,
 	 .disable = _clk_disable,
-#ifdef UART3_DMA_ENABLE
+#if UART3_DMA_ENABLE
 	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
 #endif
 	 },

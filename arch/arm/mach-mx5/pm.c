@@ -27,9 +27,7 @@
 #include <asm/mach/map.h>
 #include <mach/hardware.h>
 #include <mach/gpio.h>
-#ifdef CONFIG_ARCH_MX50
 #include <mach/iomux-mx50.h>
-#endif
 
 #define MXC_SRPG_EMPGC0_SRPGCR	(IO_ADDRESS(GPC_BASE_ADDR) + 0x2C0)
 #define MXC_SRPG_EMPGC1_SRPGCR	(IO_ADDRESS(GPC_BASE_ADDR) + 0x2D0)

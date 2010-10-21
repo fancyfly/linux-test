@@ -29,6 +29,7 @@
 #include <mach/sdram_autogating.h>
 
 #include "crm_regs.h"
+#include "serial.h"
 
 static struct clk pll1_main_clk;
 static struct clk pll1_sw_clk;
@@ -2137,7 +2138,7 @@ static struct clk uart1_clk[] = {
 	 .enable_shift = MXC_CCM_CCGR1_CG4_OFFSET,
 	 .enable = _clk_enable,
 	 .disable = _clk_disable,
-#ifdef UART1_DMA_ENABLE
+#if UART1_DMA_ENABLE
 	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
 #endif
 	 },
@@ -2145,7 +2146,7 @@ static struct clk uart1_clk[] = {
 	 .name = "uart_ipg_clk",
 	 .id = 0,
 	 .parent = &ipg_clk,
-#ifdef UART1_DMA_ENABLE
+#if UART1_DMA_ENABLE
 	 .secondary = &aips_tz1_clk,
 #endif
 	 .enable_reg = MXC_CCM_CCGR1,
@@ -2165,7 +2166,7 @@ static struct clk uart2_clk[] = {
 	 .enable_shift = MXC_CCM_CCGR1_CG6_OFFSET,
 	 .enable = _clk_enable,
 	 .disable = _clk_disable,
-#ifdef UART2_DMA_ENABLE
+#if UART2_DMA_ENABLE
 	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
 #endif
 	 },
@@ -2173,7 +2174,7 @@ static struct clk uart2_clk[] = {
 	 .name = "uart_ipg_clk",
 	 .id = 1,
 	 .parent = &ipg_clk,
-#ifdef UART2_DMA_ENABLE
+#if UART2_DMA_ENABLE
 	 .secondary = &aips_tz1_clk,
 #endif
 	 .enable_reg = MXC_CCM_CCGR1,
@@ -2193,7 +2194,7 @@ static struct clk uart3_clk[] = {
 	 .enable_shift = MXC_CCM_CCGR1_CG8_OFFSET,
 	 .enable = _clk_enable,
 	 .disable = _clk_disable,
-#ifdef UART3_DMA_ENABLE
+#if UART3_DMA_ENABLE
 	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
 #endif
 	 },
@@ -2219,7 +2220,7 @@ static struct clk uart4_clk[] = {
 	 .enable_shift = MXC_CCM_CCGR7_CG5_OFFSET,
 	 .enable = _clk_enable,
 	 .disable = _clk_disable,
-#ifdef UART4_DMA_ENABLE
+#if UART4_DMA_ENABLE
 	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
 #endif
 	 },
@@ -2245,7 +2246,7 @@ static struct clk uart5_clk[] = {
 	 .enable_shift = MXC_CCM_CCGR7_CG7_OFFSET,
 	 .enable = _clk_enable,
 	 .disable = _clk_disable,
-#ifdef UART5_DMA_ENABLE
+#if UART5_DMA_ENABLE
 	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
 #endif
 	 },

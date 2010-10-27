@@ -1324,6 +1324,124 @@ err:
 }
 EXPORT_SYMBOL(ipu_unlink_channels);
 
+uint32_t ipu_get_cur_buffer_idx(ipu_channel_t channel, ipu_buffer_t type)
+{
+	uint32_t reg, dma_chan;
+
+	dma_chan = channel_2_dma(channel, type);
+	if (!idma_is_valid(dma_chan))
+		return -EINVAL;
+
+	reg = __raw_readl(IPU_CHA_CUR_BUF(dma_chan/32));
+	if (reg & idma_mask(dma_chan))
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(ipu_get_cur_buffer_idx);
+
+/*!
+ * This function check buffer ready for a logical channel.
+ *
+ * @param       channel         Input parameter for the logical channel ID.
+ *
+ * @param       type            Input parameter which buffer to clear.
+ *
+ * @param       bufNum          Input parameter for which buffer number clear
+ * 				ready state.
+ *
+ */
+int32_t ipu_check_buffer_busy(ipu_channel_t channel, ipu_buffer_t type,
+		uint32_t bufNum)
+{
+	uint32_t dma_chan = channel_2_dma(channel, type);
+	uint32_t reg;
+
+	if (dma_chan == IDMA_CHAN_INVALID)
+		return -EINVAL;
+
+	if (bufNum == 0)
+		reg = __raw_readl(IPU_CHA_BUF0_RDY(dma_chan));
+	else
+		reg = __raw_readl(IPU_CHA_BUF1_RDY(dma_chan));
+
+	if (reg & idma_mask(dma_chan))
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(ipu_check_buffer_busy);
+
+/*!
+ * This function clear buffer ready for a logical channel.
+ *
+ * @param       channel         Input parameter for the logical channel ID.
+ *
+ * @param       type            Input parameter which buffer to clear.
+ *
+ * @param       bufNum          Input parameter for which buffer number clear
+ * 				ready state.
+ *
+ */
+void ipu_clear_buffer_ready(ipu_channel_t channel, ipu_buffer_t type,
+		uint32_t bufNum)
+{
+	unsigned long lock_flags;
+	uint32_t dma_ch = channel_2_dma(channel, type);
+
+	if (!idma_is_valid(dma_ch))
+		return;
+
+	spin_lock_irqsave(&ipu_lock, lock_flags);
+
+	__raw_writel(0xF0000000, IPU_GPR); /* write one to clear */
+	if (bufNum == 0) {
+		if (idma_is_set(IPU_CHA_BUF0_RDY, dma_ch)) {
+			__raw_writel(idma_mask(dma_ch),
+					IPU_CHA_BUF0_RDY(dma_ch));
+		}
+	} else {
+		if (idma_is_set(IPU_CHA_BUF1_RDY, dma_ch)) {
+			__raw_writel(idma_mask(dma_ch),
+					IPU_CHA_BUF1_RDY(dma_ch));
+		}
+	}
+	__raw_writel(0x0, IPU_GPR); /* write one to set */
+	spin_unlock_irqrestore(&ipu_lock, lock_flags);
+}
+EXPORT_SYMBOL(ipu_clear_buffer_ready);
+
+/*!
+ * This function is called to set a channel's buffer as ready.
+ *
+ * @param       bufNum          Input parameter for which buffer number set to
+ *                              ready state.
+ *
+ * @return      Returns 0 on success or negative error code on fail
+ */
+int32_t ipu_select_multi_vdi_buffer(uint32_t bufNum)
+{
+
+	uint32_t dma_chan = channel_2_dma(MEM_VDI_PRP_VF_MEM, IPU_INPUT_BUFFER);
+	uint32_t mask_bit =
+		idma_mask(channel_2_dma(MEM_VDI_PRP_VF_MEM_P, IPU_INPUT_BUFFER))|
+		idma_mask(dma_chan)|
+		idma_mask(channel_2_dma(MEM_VDI_PRP_VF_MEM_N, IPU_INPUT_BUFFER));
+	uint32_t reg;
+
+	if (bufNum == 0) {
+		/*Mark buffer 0 as ready. */
+		reg = __raw_readl(IPU_CHA_BUF0_RDY(dma_chan));
+		__raw_writel(mask_bit | reg, IPU_CHA_BUF0_RDY(dma_chan));
+	} else {
+		/*Mark buffer 1 as ready. */
+		reg = __raw_readl(IPU_CHA_BUF1_RDY(dma_chan));
+		__raw_writel(mask_bit | reg, IPU_CHA_BUF1_RDY(dma_chan));
+	}
+	return 0;
+}
+EXPORT_SYMBOL(ipu_select_multi_vdi_buffer);
+
 /*!
  * This function check whether a logical channel was enabled.
  *

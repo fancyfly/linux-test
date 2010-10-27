@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -58,6 +58,7 @@ struct mxcfb_pos {
 #define MXCFB_GET_FB_IPU_CHAN 	_IOR('F', 0x25, u_int32_t)
 #define MXCFB_SET_LOC_ALPHA     _IOWR('F', 0x26, struct mxcfb_loc_alpha)
 #define MXCFB_SET_LOC_ALP_BUF    _IOW('F', 0x27, unsigned long)
+#define MXCFB_GET_FB_BLANK     _IOR('F', 0x28, u_int32_t)
 
 #ifdef __KERNEL__
 

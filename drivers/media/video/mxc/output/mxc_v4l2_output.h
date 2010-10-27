@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2010 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -32,13 +32,14 @@
 
 #include <linux/ipu.h>
 #include <linux/mxc_v4l2.h>
+#include <linux/videodev2.h>
 
 #define MIN_FRAME_NUM 2
 #define MAX_FRAME_NUM 30
 
 #define MXC_V4L2_OUT_NUM_OUTPUTS        6
 #define MXC_V4L2_OUT_2_SDC              0
-#define MXC_V4L2_OUT_2_ADC              1
+
 
 typedef struct {
 	int list[MAX_FRAME_NUM + 1];
@@ -77,6 +78,10 @@ typedef struct _vout_data {
 	struct semaphore param_lock;
 
 	struct timer_list output_timer;
+	struct workqueue_struct *v4l_wq;
+	struct work_struct icbypass_work;
+	int disp_buf_num;
+	int fb_blank;
 	unsigned long start_jiffies;
 	u32 frame_count;
 
@@ -85,7 +90,10 @@ typedef struct _vout_data {
 
 	s8 next_rdy_ipu_buf;
 	s8 next_done_ipu_buf;
+	s8 next_disp_ipu_buf;
 	s8 ipu_buf[2];
+	s8 ipu_buf_p[2];
+	s8 ipu_buf_n[2];
 	volatile v4lout_state state;
 
 	int cur_disp_output;
@@ -93,8 +101,10 @@ typedef struct _vout_data {
 	int output_enabled[MXC_V4L2_OUT_NUM_OUTPUTS];
 	struct v4l2_framebuffer v4l2_fb;
 	int ic_bypass;
+	u32 work_irq;
 	ipu_channel_t display_ch;
 	ipu_channel_t post_proc_ch;
+	ipu_channel_t display_input_ch;
 
 	/*!
 	 * FRAME_NUM-buffering, so we need a array
@@ -125,8 +135,22 @@ typedef struct _vout_data {
 	/* crop */
 	struct v4l2_rect crop_bounds[MXC_V4L2_OUT_NUM_OUTPUTS];
 	struct v4l2_rect crop_current;
+	u32 bytesperline;
+	enum v4l2_field field_fmt;
+	ipu_motion_sel motion_sel;
 
-	struct work_struct timer_work;
+	/* PP split fot two stripes*/
+	int pp_split; /* 0,1 */
+	struct stripe_param pp_left_stripe;
+	struct stripe_param pp_right_stripe; /* struct for split parameters */
+	struct stripe_param pp_up_stripe;
+	struct stripe_param pp_down_stripe;
+	/* IC ouput buffer number. Counting from 0 to 7 */
+	int pp_split_buf_num; /*  0..7 */
+	u16 bpp ; /* bit per pixel */
+	u16 xres; /* width of physical frame (BGs) */
+	u16 yres; /* heigth of physical frame (BGs)*/
+
 } vout_data;
 
 #endif

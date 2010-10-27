@@ -881,8 +881,26 @@ int32_t ipu_init_channel_buffer(ipu_channel_t channel, ipu_buffer_t type,
 	} else if (_ipu_is_irt_chan(dma_chan)) {
 		_ipu_ch_param_set_burst_size(dma_chan, 8);
 		_ipu_ch_param_set_block_mode(dma_chan);
-	} else if (_ipu_is_dmfc_chan(dma_chan))
+	} else if (_ipu_is_dmfc_chan(dma_chan)) {
+		u32 dmfc_dp_chan;
+		if ((dma_chan == 27) &&
+			((pixel_fmt == IPU_PIX_FMT_YUV420P) ||
+			(pixel_fmt == IPU_PIX_FMT_YUV420P2) ||
+			(pixel_fmt == IPU_PIX_FMT_NV12))) {
+			dmfc_dp_chan = __raw_readl(DMFC_DP_CHAN);
+			dmfc_dp_chan &= ~(0xc000);
+			dmfc_dp_chan |= 0x4000;
+			__raw_writel(dmfc_dp_chan, DMFC_DP_CHAN);
+			_ipu_ch_param_set_burst_size(dma_chan, 64);
+		} else if (dma_chan == 27) {
+			dmfc_dp_chan = __raw_readl(DMFC_DP_CHAN);
+			dmfc_dp_chan &= ~(0xc000);
+			dmfc_dp_chan |= 0x8000;
+			__raw_writel(dmfc_dp_chan, DMFC_DP_CHAN);
+			_ipu_ch_param_set_burst_size(dma_chan, 32);
+		}
 		_ipu_dmfc_set_wait4eot(dma_chan, width);
+	}
 
 	if (_ipu_chan_is_interlaced(channel))
 		_ipu_ch_param_set_interlaced_scan(dma_chan);

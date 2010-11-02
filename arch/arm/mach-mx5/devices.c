@@ -1494,6 +1494,16 @@ struct platform_device mxc_android_pmem_gpu_device = {
 	.id = 1,
 };
 
+struct platform_device usb_mass_storage_device = {
+	.name	= "usb_mass_storage",
+	.id	= -1,
+};
+
+struct platform_device usb_rndis_device = {
+	.name	= "rndis",
+	.id	= -1,
+};
+
 struct platform_device android_usb_device = {
 	.name   = "android_usb",
 	.id     = -1,

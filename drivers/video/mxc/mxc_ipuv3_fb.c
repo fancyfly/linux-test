@@ -47,6 +47,7 @@
 #include <linux/uaccess.h>
 #include <linux/fsl_devices.h>
 #include <asm/mach-types.h>
+#include <linux/earlysuspend.h>
 
 /*
  * Driver name
@@ -1437,6 +1438,37 @@ static int mxcfb_resume(struct platform_device *pdev)
 	return 0;
 }
 
+static void mxcfb_early_suspend(struct early_suspend *h)
+{
+	int i;
+	struct platform_device *pdev;
+	pm_message_t state = { .event = PM_EVENT_SUSPEND };
+
+	for (i = 2; i >= 0; i--)
+		if (mxcfb_info[i]) {
+			pdev = to_platform_device(mxcfb_info[i]->device);
+			mxcfb_suspend(pdev, state);
+		}
+}
+
+static void mxcfb_later_resume(struct early_suspend *h)
+{
+	int i;
+	struct platform_device *pdev;
+
+	for (i = 0; i < 3; i++)
+		if (mxcfb_info[i]) {
+			pdev = to_platform_device(mxcfb_info[i]->device);
+			mxcfb_resume(pdev);
+		}
+}
+
+struct early_suspend fbdrv_earlysuspend = {
+	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB,
+	.suspend = mxcfb_early_suspend,
+	.resume = mxcfb_later_resume,
+};
+
 /*
  * Main framebuffer functions
  */
@@ -1788,8 +1820,10 @@ static struct platform_driver mxcfb_driver = {
 		   },
 	.probe = mxcfb_probe,
 	.remove = mxcfb_remove,
+#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend = mxcfb_suspend,
 	.resume = mxcfb_resume,
+#endif
 };
 
 /*
@@ -1876,11 +1910,17 @@ static int mxcfb_option_setup(struct fb_info *info, char *options)
  */
 int __init mxcfb_init(void)
 {
-	return platform_driver_register(&mxcfb_driver);
+	int ret;
+
+	ret =  platform_driver_register(&mxcfb_driver);
+	if (!ret)
+		register_early_suspend(&fbdrv_earlysuspend);
+	return ret;
 }
 
 void mxcfb_exit(void)
 {
+	unregister_early_suspend(&fbdrv_earlysuspend);
 	platform_driver_unregister(&mxcfb_driver);
 }
 

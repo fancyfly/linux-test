@@ -4704,6 +4704,12 @@ int __init mx51_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	return 0;
 }
 
+#ifdef CONFIG_BTCS
+#define BTCS_CLK_ENABLE (3 << MXC_CCM_CCGRx_CG11_OFFSET | 3 << MXC_CCM_CCGRx_CG10_OFFSET)
+#else
+#define BTCS_CLK_ENABLE 0
+#endif
+
 int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long ckih1, unsigned long ckih2)
 {
 	__iomem void *base;
@@ -4756,7 +4762,8 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 				3 << MXC_CCM_CCGRx_CG1_OFFSET |
 				1 << MXC_CCM_CCGRx_CG4_OFFSET |
 				3 << MXC_CCM_CCGRx_CG12_OFFSET |
-				3 << MXC_CCM_CCGRx_CG13_OFFSET , MXC_CCM_CCGR6);
+				3 << MXC_CCM_CCGRx_CG13_OFFSET |
+				BTCS_CLK_ENABLE, MXC_CCM_CCGR6);
 
 	__raw_writel(0, MXC_CCM_CCGR7);
 

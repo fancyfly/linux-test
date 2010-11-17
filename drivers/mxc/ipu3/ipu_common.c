@@ -1694,6 +1694,9 @@ int32_t ipu_disable_channel(ipu_channel_t channel, bool wait_for_stop)
 
 	if ((channel == MEM_BG_SYNC) || (channel == MEM_FG_SYNC) ||
 	    (channel == MEM_DC_SYNC)) {
+        if (channel == MEM_FG_SYNC)
+            ipu_disp_set_window_pos(channel, 0, 0);
+
 		_ipu_dp_dc_disable(channel, false);
 	} else if (wait_for_stop) {
 		while (idma_is_set(IDMAC_CHA_BUSY, in_dma) ||

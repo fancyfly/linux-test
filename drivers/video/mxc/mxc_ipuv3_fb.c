@@ -198,7 +198,10 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
 
 	mxc_fbi->cur_ipu_buf = 1;
-	sema_init(&mxc_fbi->flip_sem, 0);
+	if (mxc_fbi->ipu_ch != MEM_BG_SYNC)
+        sema_init(&mxc_fbi->flip_sem, 1);
+    else
+        sema_init(&mxc_fbi->flip_sem, 0);
 	if (mxc_fbi->alpha_chan_en) {
 		mxc_fbi->cur_ipu_alpha_buf = 1;
 		sema_init(&mxc_fbi->alpha_flip_sem, 1);
@@ -1062,6 +1065,9 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	dev_dbg(info->device, "Updating SDC BG buf %d address=0x%08lX\n",
 		mxc_fbi->cur_ipu_buf, base);
 
+	if (mxc_fbi->ipu_ch != MEM_BG_SYNC)
+        down(&mxc_fbi->flip_sem);
+
 	init_completion(&mxc_fbi->vsync_complete);
 
 	mxc_fbi->cur_ipu_buf = !mxc_fbi->cur_ipu_buf;
@@ -1079,7 +1085,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 
 	dev_dbg(info->device, "Update complete\n");
 
-	down(&mxc_fbi->flip_sem);
+	if (mxc_fbi->ipu_ch == MEM_BG_SYNC)
+        down(&mxc_fbi->flip_sem);
 
 	info->var.xoffset = var->xoffset;
 	info->var.yoffset = var->yoffset;

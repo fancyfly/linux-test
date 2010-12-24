@@ -48,6 +48,7 @@
 #include <linux/fsl_devices.h>
 #include <asm/mach-types.h>
 #include <linux/earlysuspend.h>
+#include <mach/hardware.h>
 
 /*
  * Driver name
@@ -1987,16 +1988,18 @@ int __init mxcfb0_init(void)
 	struct fb_info *fbi = registered_fb[0];
 	struct mxcfb_info *mxcfbi;
 
-	mxcfbi = (struct mxcfb_info *)(fbi->par);
-	if ((mxcfbi->ipu_ch == MEM_BG_SYNC)
-		&& (mxcfbi->cur_blank != FB_BLANK_UNBLANK)
-		&& (mxcfbi->next_blank == FB_BLANK_UNBLANK)) {
-		acquire_console_sem();
-		fb_blank(fbi, FB_BLANK_UNBLANK);
-		release_console_sem();
+	if (cpu_is_mx51() || cpu_is_mx53() || cpu_is_mx37()) {
+		mxcfbi = (struct mxcfb_info *)(fbi->par);
+		if ((mxcfbi->ipu_ch == MEM_BG_SYNC)
+				&& (mxcfbi->cur_blank != FB_BLANK_UNBLANK)
+				&& (mxcfbi->next_blank == FB_BLANK_UNBLANK)) {
+			acquire_console_sem();
+			fb_blank(fbi, FB_BLANK_UNBLANK);
+			release_console_sem();
 
-		fb_prepare_logo(fbi, 0);
-		fb_show_logo(fbi, 0);
+			fb_prepare_logo(fbi, 0);
+			fb_show_logo(fbi, 0);
+		}
 	}
 	return 0;
 }

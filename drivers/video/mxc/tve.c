@@ -1262,9 +1262,14 @@ static int tve_probe(struct platform_device *pdev)
 		release_console_sem();
 
 		acquire_console_sem();
+		fb_blank(tve_fbi, FB_BLANK_POWERDOWN);
+		release_console_sem();
+
+		acquire_console_sem();
 		fb_blank(tve_fbi, FB_BLANK_UNBLANK);
 		release_console_sem();
 
+		fb_prepare_logo(tve_fbi, 0);
 		fb_show_logo(tve_fbi, 0);
 	}
 

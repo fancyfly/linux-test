@@ -3505,7 +3505,7 @@ static void mxc_epdc_early_suspend(struct early_suspend *h)
 		for (i = 0; i < 40; i++) {
 			if (!epdc_is_lut_active(0)) {
 				dev_dbg(epdc_fb_data->dev, "Mode0 init complete\n");
-				return;
+				break;
 			}
 			msleep(100);
 		}

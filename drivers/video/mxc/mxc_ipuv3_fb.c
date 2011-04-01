@@ -306,7 +306,10 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	}
 
 	mxc_fbi->cur_ipu_buf = 1;
-	sema_init(&mxc_fbi->flip_sem, 1);
+	if (mxc_fbi->ipu_ch != MEM_BG_SYNC)
+		sema_init(&mxc_fbi->flip_sem, 1);
+	else
+		sema_init(&mxc_fbi->flip_sem, 0);
 	if (mxc_fbi->alpha_chan_en) {
 		mxc_fbi->cur_ipu_alpha_buf = 1;
 		sema_init(&mxc_fbi->alpha_flip_sem, 1);
@@ -1309,7 +1312,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		}
 	}
 
-	down(&mxc_fbi->flip_sem);
+	if (mxc_fbi->ipu_ch != MEM_BG_SYNC)
+		down(&mxc_fbi->flip_sem);
 
 	mxc_fbi->cur_ipu_buf = !mxc_fbi->cur_ipu_buf;
 
@@ -1342,6 +1346,9 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		ipu_enable_irq(mxc_fbi->ipu_ch_irq);
 		return -EBUSY;
 	}
+
+	if (mxc_fbi->ipu_ch == MEM_BG_SYNC)
+		down(&mxc_fbi->flip_sem);
 
 	dev_dbg(info->device, "Update complete\n");
 
@@ -1433,30 +1440,35 @@ static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id)
 		ipu_disable_irq(irq);
 		mxc_fbi->wait4vsync = 0;
 	} else {
-		if (!ipu_check_buffer_ready(mxc_fbi->ipu_ch,
-				IPU_INPUT_BUFFER, mxc_fbi->cur_ipu_buf)
-				|| (mxc_fbi->waitcnt > 1)) {
-			/*
-			 * This code wait for EOF irq to make sure current
-			 * buffer showed.
-			 *
-			 * Buffer ready will be clear after this buffer
-			 * begin to show. If it keep 1, it represents this
-			 * irq come from previous buffer. If so, wait for
-			 * EOF irq again.
-			 *
-			 * Normally, waitcnt will not > 1, if so, something
-			 * is wrong, then clear it manually.
-			 */
-			if (mxc_fbi->waitcnt > 1)
-				ipu_clear_buffer_ready(mxc_fbi->ipu_ch,
-						IPU_INPUT_BUFFER,
-						mxc_fbi->cur_ipu_buf);
+		if (mxc_fbi->ipu_ch != MEM_BG_SYNC) {
+			if (!ipu_check_buffer_ready(mxc_fbi->ipu_ch,
+					IPU_INPUT_BUFFER, mxc_fbi->cur_ipu_buf)
+					|| (mxc_fbi->waitcnt > 1)) {
+				/*
+				 * This code wait for EOF irq to make sure current
+				 * buffer showed.
+				 *
+				 * Buffer ready will be clear after this buffer
+				 * begin to show. If it keep 1, it represents this
+				 * irq come from previous buffer. If so, wait for
+				 * EOF irq again.
+				 *
+				 * Normally, waitcnt will not > 1, if so, something
+				 * is wrong, then clear it manually.
+				 */
+				if (mxc_fbi->waitcnt > 1)
+					ipu_clear_buffer_ready(mxc_fbi->ipu_ch,
+							IPU_INPUT_BUFFER,
+							mxc_fbi->cur_ipu_buf);
+				up(&mxc_fbi->flip_sem);
+				ipu_disable_irq(irq);
+				mxc_fbi->waitcnt = 0;
+			} else
+				mxc_fbi->waitcnt++;
+		} else {
 			up(&mxc_fbi->flip_sem);
 			ipu_disable_irq(irq);
-			mxc_fbi->waitcnt = 0;
-		} else
-			mxc_fbi->waitcnt++;
+		}
 	}
 	return IRQ_HANDLED;
 }

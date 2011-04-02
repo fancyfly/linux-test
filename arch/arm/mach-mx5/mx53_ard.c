@@ -1393,7 +1393,7 @@ static void __init mxc_board_init(void)
 		mxc_register_device(&mxc_asrc_device, &mxc_asrc_data);
 	}
 
-	mxc_register_device(&mxc_alsa_spdif_device, &mxc_spdif_data);
+	/* mxc_register_device(&mxc_alsa_spdif_device, &mxc_spdif_data); */
 
 	spi_register_board_info(mxc_dataflash_device,
 				ARRAY_SIZE(mxc_dataflash_device));

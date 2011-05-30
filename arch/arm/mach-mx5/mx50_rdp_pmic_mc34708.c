@@ -78,6 +78,11 @@
 
 #define SWHOLD_MASK		(0x1 << 12)
 
+#define VCOIN_MASK			(0x7 << 20)
+#define VCOIN_VALUE			(0x4 << 20)
+#define DRM_VALUE			(0x1 << 4)
+#define COINCHEN_MASK		(0x1 << 23)
+
 #define	ECSPI2_MISO_GP4_18	(3 * 32 + 18)
 
 struct mc34708;
@@ -263,6 +268,14 @@ static int mc34708_regulator_init(struct mc34708 *mc34708)
 
 	pmic_read_reg(REG_MC34708_IDENTIFICATION, &value, 0xffffff);
 	pr_info("PMIC MC34708 ID:0x%x\n", value);
+
+	/* enable coin cell charger, charging voltage set to 3V */
+	pmic_read_reg(REG_MC34708_POWER_CTL0, &value, 0xffffff);
+	value &= ~VCOIN_MASK;
+	value |= VCOIN_VALUE;
+	value |= DRM_VALUE;
+	value |= COINCHEN_MASK;
+	pmic_write_reg(REG_MC34708_POWER_CTL0, value, 0xffffff);
 
 	/* enable standby controll for mode0 regulators */
 	pmic_read_reg(REG_MC34708_MODE_0, &value, 0xffffff);

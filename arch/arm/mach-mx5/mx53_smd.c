@@ -1196,6 +1196,9 @@ static void __init mx53_smd_io_init(void)
 	gpio_request(MX53_SMD_WiFi_BT_PWR_EN, "bt-wifi-pwren");
 	gpio_direction_output(MX53_SMD_WiFi_BT_PWR_EN, 1);
 
+	gpio_request(MX53_SMD_WLAN_HOST_WAKE, "wifi-host-wakeup");
+	gpio_direction_input(MX53_SMD_WLAN_HOST_WAKE);
+
 	/* WiFi Power up sequence */
 	gpio_request(MX53_SMD_WLAN_PD, "wifi-pd");
 	gpio_direction_output(MX53_SMD_WLAN_PD, 1);

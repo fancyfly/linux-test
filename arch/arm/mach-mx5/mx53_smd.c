@@ -866,6 +866,7 @@ static struct mxc_audio_platform_data sgtl5000_data = {
 	.hp_status = headphone_det_status,
 	.amp_enable = mxc_sgtl5000_amp_enable,
 	.init = mxc_sgtl5000_init,
+	.ext_ram_rx = 1,
 };
 
 static int mxc_sgtl5000_init(void)
@@ -893,6 +894,14 @@ static struct mxc_spdif_platform_data mxc_spdif_data = {
 	.spdif_clk_48000 = 1,
 	.spdif_clkid = 0,
 	.spdif_clk = NULL,	/* spdif bus clk */
+};
+
+static struct mxc_audio_platform_data spdif_audio_data = {
+	.ext_ram_tx = 1,
+};
+
+static struct platform_device mxc_spdif_audio_device = {
+	.name = "imx-spdif-audio-device",
 };
 
 static void mx53_smd_bt_reset(void)
@@ -1216,7 +1225,14 @@ static void __init mxc_board_init(void)
 	i2c_register_board_info(2, mxc_i2c2_board_info,
 				ARRAY_SIZE(mxc_i2c2_board_info));
 
+	sgtl5000_data.ext_ram_clk = clk_get(NULL, "emi_fast_clk");
+	clk_put(sgtl5000_data.ext_ram_clk);
 	mxc_register_device(&mxc_sgtl5000_device, &sgtl5000_data);
+
+	spdif_audio_data.ext_ram_clk = clk_get(NULL, "emi_fast_clk");
+	clk_put(spdif_audio_data.ext_ram_clk);
+	mxc_register_device(&mxc_spdif_audio_device, &spdif_audio_data);
+
 	mx5_set_otghost_vbus_func(mx53_gpio_usbotg_driver_vbus);
 	mx5_usb_dr_init();
 	mx5_usbh1_init();

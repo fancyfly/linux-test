@@ -4861,6 +4861,10 @@ int __init mx51_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 
 	base = ioremap(GPT1_BASE_ADDR, SZ_4K);
 	mxc_timer_init(&gpt_clk[0], base, MXC_INT_GPT);
+
+	lp_med_freq = 0;
+	lp_high_freq = 0;
+
 	return 0;
 }
 
@@ -5130,6 +5134,10 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 			1190000));
 	base = ioremap(MX53_BASE_ADDR(GPT1_BASE_ADDR), SZ_4K);
 	mxc_timer_init(&gpt_clk[0], base, MXC_INT_GPT);
+
+	lp_med_freq = 0;
+	lp_high_freq = 0;
+
 	return 0;
 }
 

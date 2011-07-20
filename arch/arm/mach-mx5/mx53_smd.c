@@ -1362,6 +1362,7 @@ static void __init mxc_board_init(void)
 	mxc_register_device(&usb_rndis_device, &rndis_data);
 	mxc_register_device(&android_usb_device, &android_usb_data);
 	mxc_register_device(&ahci_fsl_device, &sata_data);
+	mxc_register_device(&imx_ahci_device_hwmon, NULL);
 	/* AHCI SATA PWR EN(DCDC_5V, DCDC_3V3_BB) on SATA bus */
 	gpio_request(MX53_SMD_SATA_PWR_EN, "sata-pwr-en");
 	gpio_direction_output(MX53_SMD_SATA_PWR_EN, 1);

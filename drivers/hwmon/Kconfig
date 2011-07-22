@@ -1222,4 +1222,9 @@ config MXC_MMA8451
 	depends on I2C
 	default y
 
+config L3G4200D_GYR
+	tristate "L3G4200D_GYR device driver"
+	depends on I2C
+	default y
+
 endif # HWMON

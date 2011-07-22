@@ -24,6 +24,8 @@ obj-$(CONFIG_SND_MXC_SOC_SPDIF_DAI) += snd-soc-imx-spdif-dai.o
 # i.MX Machine Support
 snd-soc-imx-3stack-wm8350-objs := imx-3stack-wm8350.o
 obj-$(CONFIG_SND_SOC_IMX_3STACK_WM8350) += snd-soc-imx-3stack-wm8350.o
+snd-soc-imx-3stack-wm8994-objs := imx-3stack-wm8994.o
+obj-$(CONFIG_SND_SOC_IMX_3STACK_WM8994) += snd-soc-imx-3stack-wm8994.o
 snd-soc-imx-3stack-sgtl5000-objs := imx-3stack-sgtl5000.o
 obj-$(CONFIG_SND_SOC_IMX_3STACK_SGTL5000) += snd-soc-imx-3stack-sgtl5000.o
 snd-soc-imx-3stack-ak4647-objs := imx-3stack-ak4647.o

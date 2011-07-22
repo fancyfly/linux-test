@@ -131,10 +131,19 @@ static struct regulator_ops wm8994_ldo1_ops = {
 static int wm8994_ldo2_list_voltage(struct regulator_dev *rdev,
 				    unsigned int selector)
 {
+	struct wm8994_ldo *ldo = rdev_get_drvdata(rdev);
+
 	if (selector > WM8994_LDO2_MAX_SELECTOR)
 		return -EINVAL;
 
-	return (selector * 100000) + 900000;
+	switch (ldo->wm8994->type) {
+	case WM8994:
+		return (selector * 100000) + 900000;
+	case WM8958:
+		return (selector * 100000) + 1000000;
+	default:
+		return -EINVAL;
+	}
 }
 
 static int wm8994_ldo2_get_voltage(struct regulator_dev *rdev)
@@ -157,7 +166,17 @@ static int wm8994_ldo2_set_voltage(struct regulator_dev *rdev,
 	struct wm8994_ldo *ldo = rdev_get_drvdata(rdev);
 	int selector, v;
 
-	selector = (min_uV - 900000) / 100000;
+	switch (ldo->wm8994->type) {
+	case WM8994:
+		selector = (min_uV - 900000) / 100000;
+		break;
+	case WM8958:
+		selector = (min_uV - 1000000) / 100000;
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	v = wm8994_ldo2_list_voltage(rdev, selector);
 	if (v < 0 || v > max_uV)
 		return -EINVAL;
@@ -218,9 +237,6 @@ static __devinit int wm8994_ldo_probe(struct platform_device *pdev)
 	}
 
 	ldo->wm8994 = wm8994;
-
-	ldo->is_enabled = true;
-
 	if (pdata->ldo[id].enable && gpio_is_valid(pdata->ldo[id].enable)) {
 		ldo->enable = pdata->ldo[id].enable;
 
@@ -237,7 +253,8 @@ static __devinit int wm8994_ldo_probe(struct platform_device *pdev)
 				ret);
 			goto err_gpio;
 		}
-	}
+	} else
+		ldo->is_enabled = true;
 
 	ldo->regulator = regulator_register(&wm8994_ldo_desc[id], &pdev->dev,
 					     pdata->ldo[id].init_data, ldo);

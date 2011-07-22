@@ -371,6 +371,13 @@ config MXS_PERFMON
 	depends on ARCH_MX28 || ARCH_MX50
 	default y
 
+config SENSORS_AK8975
+	tristate "AK8975 device driver"
+	depends on I2C
+	default y
+	help
+	  Say Y here if you have AK8975 hooked to an I2C bus.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

@@ -4176,6 +4176,88 @@ static int cko1_set_parent(struct clk *clk, struct clk *parent)
 	__raw_writel(reg, MXC_CCM_CCOSR);
 	return 0;
 }
+
+static unsigned long cko2_get_rate(struct clk *clk)
+{
+	u32 reg;
+
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg &= MXC_CCM_CCOSR_CKO2_DIV_MASK;
+	reg = reg >> MXC_CCM_CCOSR_CKO2_DIV_OFFSET;
+	return clk_get_rate(clk->parent) / (reg + 1);
+}
+
+static int cko2_enable(struct clk *clk)
+{
+	u32 reg;
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg |= MXC_CCM_CCOSR_CKO2_EN_OFFSET;
+	__raw_writel(reg, MXC_CCM_CCOSR);
+	return 0;
+}
+
+static void cko2_disable(struct clk *clk)
+{
+	u32 reg;
+
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg &= ~MXC_CCM_CCOSR_CKO2_EN_OFFSET;
+	__raw_writel(reg, MXC_CCM_CCOSR);
+}
+
+static int cko2_set_rate(struct clk *clk, unsigned long rate)
+{
+	u32 reg, div;
+	u32 parent_rate = clk_get_rate(clk->parent);
+
+	div = (parent_rate/rate - 1) & 0x7;
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg &= ~MXC_CCM_CCOSR_CKO2_DIV_MASK;
+	reg |= div << MXC_CCM_CCOSR_CKO2_DIV_OFFSET;
+	__raw_writel(reg, MXC_CCM_CCOSR);
+	return 0;
+}
+
+static unsigned long cko2_round_rate(struct clk *clk, unsigned long rate)
+{
+	u32 div;
+	u32 parent_rate = clk_get_rate(clk->parent);
+
+	div = parent_rate / rate;
+	div = div < 1 ? 1 : div;
+	div = div > 8 ? 8 : div;
+	return parent_rate / div;
+}
+
+static int cko2_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 sel, reg;
+
+	if (parent == &ddr_clk)
+		sel = 9;
+	else if (parent == &axi_b_clk)
+		sel = 10;
+	else if (parent == &usb_phy_clk[0])
+		sel = 11;
+	else if (parent == &vpu_clk[0])
+		sel = 12;
+	else if (parent == &ipu_clk[0])
+		sel = 13;
+	else if (parent == &osc_clk)
+		sel = 14;
+	else if (parent == &ckih_clk)
+		sel = 15;
+	else
+		return -EINVAL;
+
+	reg = __raw_readl(MXC_CCM_CCOSR);
+	reg &= ~MXC_CCM_CCOSR_CKO2_SEL_MASK;
+	reg |= sel << MXC_CCM_CCOSR_CKO2_SEL_OFFSET;
+	__raw_writel(reg, MXC_CCM_CCOSR);
+	return 0;
+}
+
+
 static struct clk cko1_clk = {
 	.get_rate = cko1_get_rate,
 	.enable = cko1_enable,
@@ -4184,6 +4266,16 @@ static struct clk cko1_clk = {
 	.round_rate = cko1_round_rate,
 	.set_parent = cko1_set_parent,
 };
+
+static struct clk cko2_clk = {
+	.get_rate = cko2_get_rate,
+	.enable = cko2_enable,
+	.disable = cko2_disable,
+	.set_rate = cko2_set_rate,
+	.round_rate = cko2_round_rate,
+	.set_parent = cko2_set_parent,
+};
+
 static int _clk_asrc_set_parent(struct clk *clk, struct clk *parent)
 {
 	u32 reg;
@@ -4388,6 +4480,7 @@ static struct clk_lookup mx53_lookups[] = {
 	_REGISTER_CLOCK(NULL, "esai_ipg_clk", esai_clk[1]),
 	_REGISTER_CLOCK(NULL, "asrc_clk", asrc_clk[1]),
 	_REGISTER_CLOCK(NULL, "asrc_serial_clk", asrc_clk[0]),
+	_REGISTER_CLOCK(NULL, "cko2", cko2_clk),
 };
 
 static struct mxc_clk mx51_clks[ARRAY_SIZE(lookups) + ARRAY_SIZE(mx51_lookups)];
@@ -4830,7 +4923,6 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	external_high_reference = ckih1;
 	ckih2_reference = ckih2;
 	oscillator_reference = osc;
-
 	usb_phy_clk[0].enable_reg = MXC_CCM_CCGR4;
 	usb_phy_clk[0].enable_shift = MXC_CCM_CCGRx_CG5_OFFSET;
 
@@ -4932,6 +5024,10 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	/* Initialise the parents to be axi_b, parents are set to
 	 * axi_a when the clocks are enabled.
 	 */
+
+	clk_set_parent(&cko2_clk, &axi_b_clk);
+	clk_set_rate(&cko2_clk, 25000000);
+	clk_enable(&cko2_clk);
 
 	clk_set_parent(&vpu_clk[0], &axi_b_clk);
 	clk_set_parent(&vpu_clk[1], &axi_b_clk);

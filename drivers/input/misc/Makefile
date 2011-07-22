@@ -39,3 +39,7 @@ obj-$(CONFIG_INPUT_WM831X_ON)		+= wm831x-on.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_DA9052_ONKEY)	+= da9052_onkey.o
 obj-$(CONFIG_INPUT_ISL29023)		+= isl29023.o
+obj-$(CONFIG_INPUT_ADXL34X)		+= adxl34x.o
+obj-$(CONFIG_INPUT_ADXL34X_I2C)		+= adxl34x-i2c.o
+obj-$(CONFIG_MXC_LIS3DH)		+= lis3dh_acc.o
+obj-$(CONFIG_INPUT_APS_12D)		+= aps-12d.o

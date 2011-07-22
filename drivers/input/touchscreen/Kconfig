@@ -684,4 +684,17 @@ config TOUCHSCREEN_MAX11801
         To compile this driver as a module, choose M here: the
 	  module will be called max11801_ts
 
+config TOUCHSCREEN_GOODIX
+        tristate "Goodix GT801 TouchScreen driver"
+        default y
+        depends on I2C
+        help
+         Driver to support Gooidx's touchscreen whose name is
+	 guitar on imx5x platform. The touchscreen can support multi-touch
+	 not more than two fingers.
+	 Say Y here to enable the driver for the touchscreen.
+	 If unsure, say N.
+	 To compile this driver as a module, choose M here: the
+	 module will be called goodix_touch.ko.
+
 endif

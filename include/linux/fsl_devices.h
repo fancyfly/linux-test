@@ -394,6 +394,15 @@ struct mxc_camera_platform_data {
 	void (*pwdn)(int pwdn);
 };
 
+struct goodix_i2c_platform_data {
+	uint32_t gpio_irq;			/*IRQ port, use macro such as "gpio_to_irq" to get Interrupt Number.*/
+	uint32_t irq_cfg;			/*IRQ port config, must refer to master's Datasheet.*/
+	uint32_t gpio_shutdown;		/*Shutdown port number*/
+	uint32_t shutdown_cfg;		/*Shutdown port config*/
+	uint32_t screen_width;		/*screen width*/
+	uint32_t screen_height;		/*screen height*/
+};
+
 /*gpo1-3 is in fixed state by hardware design,
  * only deal with reset pin and clock_enable pin
  * only poll mode can be used to control the chip,

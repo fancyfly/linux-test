@@ -220,7 +220,7 @@ static void mma8451_dev_poll(struct input_polled_dev *dev)
 static int __devinit mma8451_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
-	int result, id;
+	int result, client_id;
 	struct input_dev *idev;
 	struct i2c_adapter *adapter;
 
@@ -232,9 +232,9 @@ static int __devinit mma8451_probe(struct i2c_client *client,
 	if (!result)
 		goto err_out;
 
-	id = i2c_smbus_read_byte_data(client, MMA8451_WHO_AM_I);
+	client_id = i2c_smbus_read_byte_data(client, MMA8451_WHO_AM_I);
 
-	if (id != MMA8451_ID && id != MMA8452_ID) {
+	if (client_id != MMA8451_ID && client_id != MMA8452_ID) {
 		dev_err(&client->dev,
 			"read chip ID 0x%x is not equal to 0x%x or 0x%x!\n",
 			result, MMA8451_ID, MMA8452_ID);
@@ -269,7 +269,7 @@ static int __devinit mma8451_probe(struct i2c_client *client,
 	mma8451_idev->poll_interval_min = POLL_INTERVAL_MIN;
 	mma8451_idev->poll_interval_max = POLL_INTERVAL_MAX;
 	idev = mma8451_idev->input;
-	if (id == MMA8451_ID)
+	if (client_id == MMA8451_ID)
 		idev->name = "mma8451";
 	else
 		idev->name = "mma8452";

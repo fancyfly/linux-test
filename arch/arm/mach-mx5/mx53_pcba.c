@@ -84,7 +84,7 @@
 /* MX53 PCBA GPIO PIN configurations */
 #define MX53_PCBA_CAM2_PWR_DOWN		(0*32 + 2)	/* GPIO1_2 */
 #define MX53_PCBA_GPS_RESET		(0*32 + 4)	/* GPIO1_4 */
-#define MX53_PCBA_KEY_LED		(0*32 + 22)	/* GPIO1_22 */
+#define MX53_PCBA_CKIH_EN		(0*32 + 22)	/* GPIO1_22 */
 #define MX53_PCBA_TCXO_PWR_EN		(0*32 + 23)	/* GPIO1_23 */
 #define MX53_PCBA_GPS_ONOFF		(0*32 + 24)	/* GPIO1_24 */
 #define MX53_PCBA_GPS_TSYNC		(0*32 + 25)	/* GPIO1_25 */
@@ -96,7 +96,7 @@
 #define MX53_PCBA_AUD_REQ		(0*32 + 31)	/* GPIO1_31 */
 
 #define MX53_PCBA_USB_OTG_PWR_EN	(1*32 + 4)	/* GPIO2_4 */
-#define MX53_PCBA_LVDS_PWR_EN		(1*32 + 5)	/* GPIO2_5 */
+#define MX53_PCBA_LCD_MODE		(1*32 + 5)	/* GPIO2_5 */
 #define MX53_PCBA_SD_PWR_EN		(1*32 + 6)	/* GPIO2_6 */
 #define MX53_PCBA_HDMI_PWR_EN		(1*32 + 7)	/* GPIO2_7 */
 #define MX53_PCBA_LCD_UD		(1*32 + 12)	/* GPIO2_12 */
@@ -112,16 +112,13 @@
 #define MX53_PCBA_BT_HOST_WAKE		(2*32 + 14)	/* GPIO3_14 */
 #define MX53_PCBA_COMPASS_INT		(2*32 + 15)	/* GPIO3_15 */
 #define MX53_PCBA_WLAN_CLK_REQ		(2*32 + 20)	/* GPIO3_20 */
-#define MX53_PCBA_SDIO1_CD		(3*32 + 6)	/* GPIO4_6 */
+#define MX53_PCBA_SD1_CD		(3*32 + 6)	/* GPIO4_6 */
 #define MX53_PCBA_GYRO_INT		(2*32 + 29)	/* GPIO3_29 */
 
-#define MX53_PCBA_KEY_SEARCH		(3*32 + 0)	/* GPIO4_0 */
-#define MX53_PCBA_KEY_BACK		(3*32 + 2)	/* GPIO4_2 */
-#define MX53_PCBA_KEY_MENU		(3*32 + 3)	/* GPIO4_3 */
-#define MX53_PCBA_KEY_HOME		(3*32 + 4)	/* GPIO4_4 */
-#define MX53_PCBA_SD1_CD		(2*32 + 22)	/* GPIO3_22 */
-#define MX53_PCBA_PMIC_SHUTDOWN		(3*32 + 7)	/* GPIO4_7 */
-#define MX53_PCBA_5V_BOOST_EN		(3*32 + 10)	/* GPIO4_10 */
+#define MX53_PCBA_LCD_PWR_EN		(2*32 + 22)	/* GPIO3_22 */
+#define MX53_PCBA_BL_PWR_EN		(3*32 + 7)	/* GPIO4_7 */
+#define MX53_PCBA_TOUCH_ID0             (3*32 + 8)      /* GPIO4_8 */
+#define MX53_PCBA_TOUCH_ID1		(3*32 + 10)	/* GPIO4_10 */
 #define MX53_PCBA_KEY_VOL_DOWN		(3*32 + 11)	/* GPIO4_11 */
 #define MX53_PCBA_KEY_VOL_UP		(3*32 + 14)	/* GPIO4_14 */
 #define MX53_PCBA_KEY_FLASH_LED3	(3*32 + 15)	/* GPIO4_15 */
@@ -129,12 +126,14 @@
 
 #define MX53_PCBA_HDMI_INT		(4*32 + 0)	/* GPIO5_0 */
 #define MX53_PCBA_PMIC_ICTEST		(4*32 + 2) 	/* GPIO5_2 */
-#define MX53_PCBA_CAMERA_RESET		(4*32 + 20)	/* GPIO5_20 */
+#define MX53_PCBA_CAMERA_RESET          (4*32 + 20)     /* GPIO5_20 */
+#define MX53_PCBA_KEY_HOME		(4*32 + 26)	/* GPIO5_26*/
+#define MX53_PCBA_CAM1_PDN_VCM		(4*32 + 27)	/* GPIO5_27 */
 
-#define MX53_PCBA_TOUCH_ID1		(5*32 + 7)	/* GPIO6_7 */
-#define MX53_PCBA_TOUCH_ID0		(5*32 + 8)	/* GPIO6_8 */
+#define MX53_PCBA_KEY_MENU		(5*32 + 7)	/* GPIO6_7 */
+#define MX53_PCBA_KEY_BACK		(5*32 + 8)	/* GPIO6_8 */
 #define MX53_PCBA_BT_ENABLE		(5*32 + 9)	/* GPIO6_9 */
-#define MX53_PCBA_TOUCH_ATT		(5*32 + 10)	/* GPIO6_10 */
+#define MX53_PCBA_KEY_SEARCH		(5*32 + 10)	/* GPIO6_10 */
 #define MX53_PCBA_WLAN_ENABLE		(5*32 + 11)	/* GPIO6_11 */
 #define MX53_PCBA_GSENSOR_INT1		(5*32 + 12)	/* GPIO6_12 */
 #define MX53_PCBA_GSENSOR_INT2		(5*32 + 13)	/* GPIO6_13 */
@@ -146,12 +145,12 @@
 #define MX53_PCBA_HDMI_PWR_FAULT	(6*32 + 1)	/* GPIO7_1 */
 #define MX53_PCBA_HEADSET_DECT		(6*32 + 2)	/* GPIO7_2 */
 #define MX53_PCBA_TOUCH_RST		(6*32 + 3)	/* GPIO7_3 */
-#define MX53_PCBA_LCD_PWR_EN		(6*32 + 7)	/* GPIO7_7 */
-#define MX53_PCBA_BL_PWR_EN		(6*32 + 8)	/* GPIO7_8 */
+#define MX53_PCBA_TOUCH_ATT		(6*32 + 6)	/* GPIO7_6 */
+#define MX53_PCBA_LCD_CABC_EN3		(6*32 + 7)	/* GPIO7_7 */
+#define MX53_PCBA_LCD_SEL		(6*32 + 8)	/* GPIO7_8 */
 #define MX53_PCBA_LCD_ID		(6*32 + 9)	/* GPIO7_9 */
 #define MX53_PCBA_LCD_BL_EN		(6*32 + 10)	/* GPIO7_10 */
 #define MX53_PCBA_PMIC_INT		(6*32 + 11)	/* GPIO7_11 */
-#define MX53_PCBA_CAM1_PDN_VCM		(6*32 + 12)	/* GPIO7_12 */
 #define MX53_PCBA_CAM1_PWR_DOWN		(6*32 + 13)	/* GPIO7_13 */
 
 extern int __init mx53_pcba_init_mc34708(void);
@@ -212,7 +211,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_EIM_D20__GPIO3_20,
 	/* WLAN VCC EN */
 	MX53_PAD_DI0_PIN4__GPIO4_20,
-	/* TOUCH RST */
+	/* LCD_PWR_EN */
 	MX53_PAD_EIM_D22__GPIO3_22,
 	/* GYRO INT */
 	MX53_PAD_EIM_D29__GPIO3_29,
@@ -224,15 +223,17 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_EIM_DA15__GPIO3_15,
 	/* GSENSOR INT2 */
 	MX53_PAD_NANDF_RE_B__GPIO6_13,
+	/* KEY_SEARCH */
+	MX53_PAD_NANDF_RB0__GPIO6_10,
 	/* BT ENABLE */
 	MX53_PAD_NANDF_WP_B__GPIO6_9,
 	/* GSENSOR INT1 */
 	MX53_PAD_NANDF_WE_B__GPIO6_12,
 	/* TOUCH ATT */
 	MX53_PAD_PATA_DA_0__GPIO7_6,
-	/* TOUCH ID0 */
+	/* KEY_BACK */
 	MX53_PAD_NANDF_ALE__GPIO6_8,
-	/* TOUCH ID1 */
+	/* KEY_MENU */
 	MX53_PAD_NANDF_CLE__GPIO6_7,
 	/* WLAN ENABLE */
 	MX53_PAD_NANDF_CS0__GPIO6_11,
@@ -250,11 +251,10 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	/* I2C1 */
 	MX53_PAD_EIM_D28__I2C1_SDA,
 	MX53_PAD_EIM_D21__I2C1_SCL,
+	/* KEY_HOME */
+	MX53_PAD_CSI0_DAT8__GPIO5_26,
+	MX53_PAD_CSI0_DAT9__GPIO5_27,
 	/* CSI0 */
-	MX53_PAD_CSI0_DAT8__IPU_CSI0_D_8,
-	MX53_PAD_CSI0_DAT9__IPU_CSI0_D_9,
-	MX53_PAD_CSI0_DAT10__IPU_CSI0_D_10,
-	MX53_PAD_CSI0_DAT11__IPU_CSI0_D_11,
 	MX53_PAD_CSI0_DAT12__IPU_CSI0_D_12,
 	MX53_PAD_CSI0_DAT13__IPU_CSI0_D_13,
 	MX53_PAD_CSI0_DAT14__IPU_CSI0_D_14,
@@ -315,17 +315,17 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_FEC_CRS_DV__GPIO1_25,
 	/* AUD REQ */
 	MX53_PAD_FEC_MDC__GPIO1_31,
-	/* KEYPAD LED */
+	/* CKIH EN */
 	MX53_PAD_FEC_MDIO__GPIO1_22,
-	/* SDIO1 CD */
+	/* SD1 CD */
 	MX53_PAD_KEY_COL0__GPIO4_6,
-	/* 5V BOOST EN */
+	/* TOUCH_ID1 */
 	MX53_PAD_KEY_COL2__GPIO4_10,
 	/* KEY VOL+ */
 	MX53_PAD_KEY_COL4__GPIO4_14,
 	/* KEY VOL- */
 	MX53_PAD_KEY_ROW2__GPIO4_11,
-	/* PMIC nSHUTDOWN */
+	/* BL_PWR_EN */
 	MX53_PAD_KEY_ROW0__GPIO4_7,
 	/* I2C2 */
 	MX53_PAD_KEY_COL3__I2C2_SCL,
@@ -352,9 +352,9 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_PATA_CS_0__GPIO7_9,
 	/* LCD BL EN */
 	MX53_PAD_PATA_CS_1__GPIO7_10,
-	/* LCD PWR EN */
+	/* LCD CABC_EN3 */
 	MX53_PAD_PATA_DA_1__GPIO7_7,
-	/* BL PWER EN */
+	/* LCD SEL */
 	MX53_PAD_PATA_DA_2__GPIO7_8,
 	/* SD3 */
 	MX53_PAD_PATA_DATA8__ESDHC3_DAT0,
@@ -369,7 +369,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_PATA_RESET_B__ESDHC3_CMD,
 	/* OTG PWR EN */
 	MX53_PAD_PATA_DATA4__GPIO2_4,
-	/* LVDS PWR EN */
+	/* LDC MODE */
 	MX53_PAD_PATA_DATA5__GPIO2_5,
 	/* SD PWR EN */
 	MX53_PAD_PATA_DATA6__GPIO2_6,
@@ -400,7 +400,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_GPIO_2__GPIO1_2,
 	/* AU MCLK1 */
 	MX53_PAD_GPIO_3__CCM_CLKO2,
-	/* GPS RESET */
+	/* GPS_RESET */
 	MX53_PAD_GPIO_4__GPIO1_4,
 	/* I2C3 */
 	MX53_PAD_GPIO_5__I2C3_SCL,
@@ -408,22 +408,12 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	/* GPS UART2 */
 	MX53_PAD_GPIO_7__UART2_TXD_MUX,
 	MX53_PAD_GPIO_8__UART2_RXD_MUX,
-	/* KEY SEARCH */
-	MX53_PAD_GPIO_10__GPIO4_0,
-	/* KEY BACK */
-	MX53_PAD_GPIO_12__GPIO4_2,
-	/* KEY MENU */
-	MX53_PAD_GPIO_13__GPIO4_3,
-	/* KEY HOME */
-	MX53_PAD_GPIO_14__GPIO4_4,
 	/* PMIC INT */
 	MX53_PAD_GPIO_16__GPIO7_11,
 	/* CAM1 PWDN VCM */
-	MX53_PAD_GPIO_17__GPIO7_12,
+	MX53_PAD_GPIO_17__SPDIF_OUT1,
 	/* CAM1 POWER DOWN */
 	MX53_PAD_GPIO_18__GPIO7_13,
-	/* SPDIF TX */
-	MX53_PAD_GPIO_19__SPDIF_OUT1,
 	/* LVDS */
 	MX53_PAD_LVDS0_TX3_P__LDB_LVDS0_TX3,
 	MX53_PAD_LVDS0_CLK_P__LDB_LVDS0_CLK,
@@ -435,6 +425,8 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_LVDS1_CLK_P__LDB_LVDS1_CLK,
 	MX53_PAD_LVDS1_TX1_P__LDB_LVDS1_TX1,
 	MX53_PAD_LVDS1_TX0_P__LDB_LVDS1_TX0,
+	/* TOUCH_ID0 */
+	MX53_PAD_KEY_COL1__GPIO4_8,
 };
 
 static struct fb_videomode video_modes[] = {
@@ -948,6 +940,7 @@ static struct mxc_audio_platform_data wm8958_data = {
 	.hp_status  = headphone_det_status,
 	.amp_enable = mxc_wm8958_amp_enable,
 	.init       = mxc_wm8958_init,
+	.ext_ram_rx = 1,
 };
 
 static struct platform_device mxc_wm8958_device = {
@@ -1081,10 +1074,6 @@ static void __init mx53_pcba_io_init(void)
 	mxc_iomux_v3_setup_multiple_pads(mx53_pcba_pads,
 					ARRAY_SIZE(mx53_pcba_pads));
 
-	/* 5V boost */
-	gpio_request(MX53_PCBA_5V_BOOST_EN, "5v-boost");
-	gpio_direction_output(MX53_PCBA_5V_BOOST_EN, 1);
-
 	/* SD1 CD */
 	gpio_request(MX53_PCBA_SD1_CD, "sd1-cd");
 	gpio_direction_input(MX53_PCBA_SD1_CD);
@@ -1125,9 +1114,6 @@ static void __init mx53_pcba_io_init(void)
 	/* LCD id */
 	gpio_request(MX53_PCBA_LCD_ID, "lcd-id");
 	gpio_direction_input(MX53_PCBA_LCD_ID);
-	/* LVDS power enable */
-	gpio_request(MX53_PCBA_LVDS_PWR_EN, "lvds-pwr-en");
-	gpio_direction_output(MX53_PCBA_LVDS_PWR_EN, 1);
 	/* LCD misc */
 	gpio_request(MX53_PCBA_LCD_UD, "lcd-ud");
 	gpio_direction_output(MX53_PCBA_LCD_UD, 0);
@@ -1206,10 +1192,6 @@ static void __init mx53_pcba_io_init(void)
 	gpio_direction_input(MX53_PCBA_GYRO_DRDY);
 	gpio_request(MX53_PCBA_GYRO_INT, "gyro-int");
 	gpio_direction_input(MX53_PCBA_GYRO_INT);
-
-	/* LEDs */
-	gpio_request(MX53_PCBA_KEY_LED, "key-led");
-	gpio_direction_output(MX53_PCBA_KEY_LED, 0);
 
 	/* TCXO power */
 	gpio_request(MX53_PCBA_TCXO_PWR_EN, "tcxo-pwr");
@@ -1307,7 +1289,11 @@ static void __init mxc_board_init(void)
 	i2c_register_board_info(2, mxc_i2c2_board_info,
 				ARRAY_SIZE(mxc_i2c2_board_info));
 
+	wm8958_data.ext_ram_clk = clk_get(NULL, "emi_fast_clk");
+	clk_put(wm8958_data.ext_ram_clk);
 	mxc_register_device(&mxc_wm8958_device, &wm8958_data);
+	spdif_audio_data.ext_ram_clk = clk_get(NULL, "emi_fast_clk");
+	clk_put(spdif_audio_data.ext_ram_clk);
 	mxc_register_device(&mxc_spdif_audio_device, &spdif_audio_data);
 	mx5_set_otghost_vbus_func(mx53_gpio_usbotg_driver_vbus);
 	mx5_usb_dr_init();

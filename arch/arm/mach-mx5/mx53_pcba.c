@@ -625,9 +625,14 @@ static struct mxc_camera_platform_data camera_data = {
 
 
 static struct wm8994_pdata wm8958_pdata = {
-	.gpio_defaults = {
+	.gpio_defaults =
+	{
 		[0] = WM8994_GP_FN_MICBIAS1_DET,
-		[5] = WM8994_GPN_DIR | WM8994_GPN_DB | WM8994_GP_FN_GPIO,
+		[1] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
+		[2] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
+		[3] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
+		[4] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,        
+		[5] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
 	},
 	.micdet_irq = gpio_to_irq(MX53_PCBA_AUD_REQ),
 };
@@ -933,6 +938,7 @@ static struct mxc_audio_platform_data wm8958_data = {
 	.amp_enable = mxc_wm8958_amp_enable,
 	.init       = mxc_wm8958_init,
 	.ext_ram_rx = 1,
+	.ext_ram_tx = 1,
 };
 
 static struct platform_device mxc_wm8958_device = {

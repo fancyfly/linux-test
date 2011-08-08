@@ -1060,6 +1060,8 @@ static int aif1clk_ev(struct snd_soc_dapm_widget *w,
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		wm8994->aif1clk_disable = 1;
+		snd_soc_update_bits(codec, WM8994_AIF1_CLOCKING_1,
+					    WM8994_AIF1CLK_ENA_MASK, 0);
 		break;
 	}
 
@@ -1078,6 +1080,8 @@ static int aif2clk_ev(struct snd_soc_dapm_widget *w,
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		wm8994->aif2clk_disable = 1;
+		snd_soc_update_bits(codec, WM8994_AIF2_CLOCKING_1,
+					    WM8994_AIF2CLK_ENA_MASK, 0);
 		break;
 	}
 
@@ -1392,7 +1396,8 @@ SND_SOC_DAPM_PGA_E("Late DAC2L Enable PGA", SND_SOC_NOPM, 0, 0, NULL, 0,
 SND_SOC_DAPM_PGA_E("Late DAC2R Enable PGA", SND_SOC_NOPM, 0, 0, NULL, 0,
 	late_enable_ev, SND_SOC_DAPM_PRE_PMU),
 
-SND_SOC_DAPM_POST("Late Disable PGA", late_disable_ev)
+/*when suspend ,this will not be called, so remove it*/
+/*SND_SOC_DAPM_POST("Late Disable PGA", late_disable_ev)*/
 };
 
 static const struct snd_soc_dapm_widget wm8994_lateclk_widgets[] = {

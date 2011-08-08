@@ -52,76 +52,13 @@ static struct imx_3stack_priv card_priv;
 static struct snd_soc_jack jack;
 static struct snd_soc_card snd_soc_card_imx_3stack;
 
-#if defined(CONFIG_MXC_ASRC) || defined(CONFIG_MXC_ASRC_MODULE)
-#include <linux/mxc_asrc.h>
-
-static unsigned int wm8994_rates[] = {
-	0,
-	8000,
-	11025,
-	12000,
-	16000,
-	22050,
-	24000,
-	32000,
-	44100,
-	48000,
-	88200,
-	96000,
-};
-
-struct asrc_esai {
-	unsigned int cpu_dai_rates;
-	unsigned int codec_dai_rates;
-	enum asrc_pair_index asrc_index;
-	unsigned int output_sample_rate;
-};
-
-static struct asrc_esai asrc_ssi_data;
-#endif
-
 static int imx_3stack_startup(struct snd_pcm_substream *substream)
 {
-
-#if defined(CONFIG_MXC_ASRC) || defined(CONFIG_MXC_ASRC_MODULE)
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (asrc_ssi_data.output_sample_rate != 0) {
-			struct snd_soc_pcm_runtime *rtd =
-			    substream->private_data;
-			struct snd_soc_dai_link *pcm_link = rtd->dai;
-			struct snd_soc_dai *cpu_dai = pcm_link->cpu_dai;
-			struct snd_soc_dai *codec_dai = pcm_link->codec_dai;
-			asrc_ssi_data.cpu_dai_rates = cpu_dai->playback.rates;
-			asrc_ssi_data.codec_dai_rates =
-			    codec_dai->playback.rates;
-			cpu_dai->playback.rates =
-			    SNDRV_PCM_RATE_8000_192000 | SNDRV_PCM_RATE_KNOT;
-			codec_dai->playback.rates =
-			    SNDRV_PCM_RATE_8000_192000 | SNDRV_PCM_RATE_KNOT;
-		}
-	}
-#endif
-
 	return 0;
 }
 
 static void imx_3stack_shutdown(struct snd_pcm_substream *substream)
 {
-#if defined(CONFIG_MXC_ASRC) || defined(CONFIG_MXC_ASRC_MODULE)
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (asrc_ssi_data.output_sample_rate != 0) {
-			struct snd_soc_pcm_runtime *rtd =
-			    substream->private_data;
-			struct snd_soc_dai_link *pcm_link = rtd->dai;
-			struct snd_soc_dai *cpu_dai = pcm_link->cpu_dai;
-			struct snd_soc_dai *codec_dai = pcm_link->codec_dai;
-			codec_dai->playback.rates =
-			    asrc_ssi_data.codec_dai_rates;
-			cpu_dai->playback.rates = asrc_ssi_data.cpu_dai_rates;
-			asrc_release_pair(asrc_ssi_data.asrc_index);
-		}
-	}
-#endif
 
 }
 
@@ -191,50 +128,12 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 	u32 dai_format;
 	/* only need to do this once as capture and playback are sync */
 
-#if defined(CONFIG_MXC_ASRC) || defined(CONFIG_MXC_ASRC_MODULE)
-	if ((asrc_ssi_data.output_sample_rate != 0)
-	    && (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)) {
-		unsigned int asrc_input_rate = rate;
-		unsigned int channel = params_channels(params);
-		struct mxc_runtime_data *pcm_data =
-		    substream->runtime->private_data;
-		struct imx_3stack_priv *priv = &card_priv;
-
-		struct asrc_config config;
-		struct mxc_audio_platform_data *plat =
-		    priv->pdev->dev.platform_data;
-		int retVal = 0;
-		retVal = asrc_req_pair(channel, &asrc_ssi_data.asrc_index);
-		if (retVal < 0) {
-			pr_err("asrc_req_pair fail\n");
-			return -1;
-		}
-		config.pair = asrc_ssi_data.asrc_index;
-		config.channel_num = channel;
-		config.input_sample_rate = asrc_input_rate;
-		config.output_sample_rate = asrc_ssi_data.output_sample_rate;
-		config.inclk = INCLK_NONE;
-		config.word_width = 32;
-		if (plat->src_port == 1)
-			config.outclk = OUTCLK_SSI1_TX;
-		else
-			config.outclk = OUTCLK_SSI2_TX;
-		retVal = asrc_config_pair(&config);
-		if (retVal < 0) {
-			pr_err("Fail to config asrc\n");
-			asrc_release_pair(asrc_ssi_data.asrc_index);
-			return retVal;
-		}
-		rate = asrc_ssi_data.output_sample_rate;
-		pcm_data->asrc_index = asrc_ssi_data.asrc_index;
-		pcm_data->asrc_enable = 1;
-	}
-#endif
-
+/*
 	if (params_rate(params) == 8000 || params_rate(params) == 11025)
 		pll_out = params_rate(params) * 512;
 	else
-		pll_out = params_rate(params) * 256;
+*/
+	pll_out = params_rate(params) * 256;
 
 	ret =
 	    snd_soc_dai_set_pll(codec_dai, WM8994_FLL1, WM8994_FLL_SRC_MCLK1,
@@ -248,13 +147,11 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		return ret;
 
-	pll2_out = 2822400;
-	/* set the codec FLL */
-	ret =
-	    snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_MCLK1,
-				priv->sysclk, pll2_out);
-	if (ret < 0)
-		return ret;
+//    pll2_out = 2822400;
+    /* set the codec FLL */
+//	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_MCLK1, priv->sysclk, pll2_out);
+//	if (ret < 0)
+//		return ret;
 
 #if WM8994_CODEC_MASTER
 	dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
@@ -305,7 +202,6 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 
 	/* set the SSI system clock as input (unused) */
 	snd_soc_dai_set_sysclk(cpu_dai, IMX_SSP_SYS_CLK, 0, SND_SOC_CLOCK_IN);
-
 	return 0;
 }
 
@@ -319,30 +215,23 @@ static int imx_3stack_voice_hw_params(struct snd_pcm_substream *substream,
 	struct imx_3stack_priv *priv = &card_priv;
 	int ret = 0;
 	unsigned int pll_out;
+
 	/* only need to do this once as capture and playback are sync */
 
-	if (params_rate(params) == 8000 || params_rate(params) == 11025)
-		pll_out = params_rate(params) * 512;
-	else
-		pll_out = params_rate(params) * 256;
-
-	/* set codec DAI configuration */
-	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
-				  SND_SOC_DAIFMT_NB_NF |
-				  SND_SOC_DAIFMT_CBM_CFM);
-	if (ret < 0)
-		return ret;
-	/* set the codec FLL */
-	ret =
-	    snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_MCLK1,
-				priv->sysclk, pll_out);
-	if (ret < 0)
-		return ret;
+	pll_out = params_rate(params) * 256;
 
 	/* set the codec system clock */
-	ret =
-	    snd_soc_dai_set_sysclk(codec_dai, WM8994_SYSCLK_FLL2, pll_out,
-				   SND_SOC_CLOCK_IN);
+	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_MCLK1, priv->sysclk, pll_out);
+	if (ret < 0)
+		return ret;
+        	
+	ret = snd_soc_dai_set_sysclk(codec_dai, WM8994_SYSCLK_FLL2, pll_out, SND_SOC_CLOCK_IN);
+	if (ret < 0)
+		return ret;
+
+	/* set codec DAI configuration */
+	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_IB_NF | SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
 		return ret;
 
@@ -524,55 +413,9 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"Modem voice uplink", NULL, "LINEOUT2N"},
 };
 
-#if defined(CONFIG_MXC_ASRC) || defined(CONFIG_MXC_ASRC_MODULE)
-static int asrc_func;
-
-static const char *asrc_function[] = {
-	"disable", "32KHz", "44.1KHz", "48KHz", "96KHz"
-};
-
-static const struct soc_enum asrc_enum[] = {
-	SOC_ENUM_SINGLE_EXT(5, asrc_function),
-};
-
-static int asrc_get_rate(struct snd_kcontrol *kcontrol,
-			 struct snd_ctl_elem_value *ucontrol)
-{
-	ucontrol->value.enumerated.item[0] = asrc_func;
-	return 0;
-}
-
-static int asrc_set_rate(struct snd_kcontrol *kcontrol,
-			 struct snd_ctl_elem_value *ucontrol)
-{
-	if (asrc_func == ucontrol->value.enumerated.item[0])
-		return 0;
-
-	asrc_func = ucontrol->value.enumerated.item[0];
-	asrc_ssi_data.output_sample_rate = wm8994_rates[asrc_func];
-
-	return 1;
-}
-
-static const struct snd_kcontrol_new asrc_controls[] = {
-	SOC_ENUM_EXT("ASRC", asrc_enum[0], asrc_get_rate,
-		     asrc_set_rate),
-};
-#endif
-
 static int imx_3stack_wm8994_init(struct snd_soc_codec *codec)
 {
 	int i, ret;
-
-#if defined(CONFIG_MXC_ASRC) || defined(CONFIG_MXC_ASRC_MODULE)
-	for (i = 0; i < ARRAY_SIZE(asrc_controls); i++) {
-		ret = snd_ctl_add(codec->card,
-				  snd_soc_cnew(&asrc_controls[i], codec, NULL));
-		if (ret < 0)
-			return ret;
-	}
-	asrc_ssi_data.output_sample_rate = wm8994_rates[asrc_func];
-#endif
 
 	snd_soc_dapm_new_controls(codec, imx_3stack_dapm_widgets,
 				  ARRAY_SIZE(imx_3stack_dapm_widgets));
@@ -597,14 +440,62 @@ static int imx_3stack_wm8994_init(struct snd_soc_codec *codec)
 	return 0;
 }
 
+static struct snd_soc_dai voice_dai = {
+	.name = "Voice",
+	.id = 0,
+	.playback = {
+		.channels_min = 1,
+		.channels_max = 2,
+		.rates = SNDRV_PCM_RATE_8000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+        },
+	.capture = {
+		.channels_min = 1,
+		.channels_max = 2,
+		.rates = SNDRV_PCM_RATE_8000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+        }, 
+};
+
+static struct snd_soc_dai bt_dai = {
+	.name = "BT",
+	.id = 1,
+	.playback = {
+		.channels_min = 1,
+		.channels_max = 2,
+		.rates = SNDRV_PCM_RATE_8000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+        },
+	.capture = {
+		.channels_min = 1,
+		.channels_max = 2,
+		.rates = SNDRV_PCM_RATE_8000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+        }, 
+};
+
 static struct snd_soc_dai_link imx_3stack_dai[] = {
-	{
-	 .name = "WM8994",
-	 .stream_name = "WM8994 HiFi",
-	 .codec_dai = &wm8994_dai[0],
-	 .init = imx_3stack_wm8994_init,
-	 .ops = &imx_3stack_hifi_ops,
-	 }
+{
+	.name = "WM8994 HiFi",
+	.stream_name = "WM8994 HiFi",
+	.codec_dai = &wm8994_dai[0],
+	.init = imx_3stack_wm8994_init,
+	.ops = &imx_3stack_hifi_ops,
+},
+{
+	.name = "WM8994 Voice",
+	.stream_name = "WM8994 Voice",
+	.cpu_dai = &voice_dai,
+	.codec_dai = &wm8994_dai[1],
+	.ops = &imx_3stack_voice_ops,
+},
+{
+	.name = "WM8994 BT",
+	.stream_name = "WM8994 BT",
+	.cpu_dai = &bt_dai,
+	.codec_dai = &wm8994_dai[2],
+	.ops = &imx_3stack_bt_ops,
+}
 };
 
 static int imx_3stack_card_remove(struct platform_device *pdev)
@@ -656,7 +547,9 @@ static int __devinit imx_3stack_wm8994_probe(struct platform_device *pdev)
 
 	/* get mxc_audio_platform_data for pcm */
 	imx_3stack_dai[0].cpu_dai->dev = &pdev->dev;
-
+	imx_3stack_dai[1].cpu_dai->dev = &pdev->dev;
+	imx_3stack_dai[2].cpu_dai->dev = &pdev->dev;
+    	
 	ret = driver_create_file(pdev->dev.driver, &driver_attr_headphone);
 	if (ret < 0) {
 		pr_err("%s:failed to create driver_attr_headphone\n", __func__);
@@ -722,6 +615,15 @@ static struct platform_device *imx_3stack_snd_device;
 static int __init imx_3stack_asoc_init(void)
 {
 	int ret;
+	/* register voice DAI here */
+	ret = snd_soc_register_dai(&voice_dai);
+	if (ret)
+		return ret;
+	
+	/* register voice DAI here */
+	ret = snd_soc_register_dai(&bt_dai);
+	if (ret)
+		return ret;
 
 	ret = platform_driver_register(&imx_3stack_wm8994_driver);
 	if (ret < 0)

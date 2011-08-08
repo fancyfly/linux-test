@@ -74,4 +74,42 @@
 #define WM8994_GPN_FN_SHIFT                          0  /* GPN_FN - [4:0] */
 #define WM8994_GPN_FN_WIDTH                          5  /* GPN_FN - [4:0] */
 
+
+
+
+
+#define WM8994_MCLK2_PU                         0x4000  /* MCLK2_PU */
+#define WM8994_MCLK2_PU_MASK                    0x4000  /* MCLK2_PU */
+#define WM8994_MCLK2_PU_SHIFT                       14  /* MCLK2_PU */
+#define WM8994_MCLK2_PU_WIDTH                        1  /* MCLK2_PU */
+#define WM8994_MCLK2_PD                         0x2000  /* MCLK2_PD */
+#define WM8994_MCLK2_PD_MASK                    0x2000  /* MCLK2_PD */
+#define WM8994_MCLK2_PD_SHIFT                       13  /* MCLK2_PD */
+#define WM8994_MCLK2_PD_WIDTH                        1  /* MCLK2_PD */
+#define WM8994_DACDAT2_PU                       0x4000  /* DACDAT2_PU */
+#define WM8994_DACDAT2_PU_MASK                  0x4000  /* DACDAT2_PU */
+#define WM8994_DACDAT2_PU_SHIFT                     14  /* DACDAT2_PU */
+#define WM8994_DACDAT2_PU_WIDTH                      1  /* DACDAT2_PU */
+#define WM8994_DACDAT2_PD                       0x2000  /* DACDAT2_PD */
+#define WM8994_DACDAT2_PD_MASK                  0x2000  /* DACDAT2_PD */
+#define WM8994_DACDAT2_PD_SHIFT                     13  /* DACDAT2_PD */
+#define WM8994_DACDAT2_PD_WIDTH                      1  /* DACDAT2_PD */
+#define WM8994_DACLRCLK2_PU                     0x4000  /* DACLRCLK2_PU */
+#define WM8994_DACLRCLK2_PU_MASK                0x4000  /* DACLRCLK2_PU */
+#define WM8994_DACLRCLK2_PU_SHIFT                   14  /* DACLRCLK2_PU */
+#define WM8994_DACLRCLK2_PU_WIDTH                    1  /* DACLRCLK2_PU */
+#define WM8994_DACLRCLK2_PD                     0x2000  /* DACLRCLK2_PD */
+#define WM8994_DACLRCLK2_PD_MASK                0x2000  /* DACLRCLK2_PD */
+#define WM8994_DACLRCLK2_PD_SHIFT                   13  /* DACLRCLK2_PD */
+#define WM8994_DACLRCLK2_PD_WIDTH                    1  /* DACLRCLK2_PD */
+#define WM8994_BCLK2_PU                         0x4000  /* BCLK2_PU */
+#define WM8994_BCLK2_PU_MASK                    0x4000  /* BCLK2_PU */
+#define WM8994_BCLK2_PU_SHIFT                       14  /* BCLK2_PU */
+#define WM8994_BCLK2_PU_WIDTH                        1  /* BCLK2_PU */
+#define WM8994_BCLK2_PD                         0x2000  /* BCLK2_PD */
+#define WM8994_BCLK2_PD_MASK                    0x2000  /* BCLK2_PD */
+#define WM8994_BCLK2_PD_SHIFT                       13  /* BCLK2_PD */
+#define WM8994_BCLK2_PD_WIDTH                        1  /* BCLK2_PD */
+
+
 #endif

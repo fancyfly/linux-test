@@ -369,7 +369,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_PATA_RESET_B__ESDHC3_CMD,
 	/* OTG PWR EN */
 	MX53_PAD_PATA_DATA4__GPIO2_4,
-	/* LDC MODE */
+	/* LCD MODE */
 	MX53_PAD_PATA_DATA5__GPIO2_5,
 	/* SD PWR EN */
 	MX53_PAD_PATA_DATA6__GPIO2_6,
@@ -441,33 +441,11 @@ static struct fb_videomode video_modes[] = {
 	 0,},
 };
 
-/* pwm for vibrator and key led */
-static struct led_pwm led_pwms[] = {
-	{
-	 .pwm_id = 0,
-	 .name = "vibrator",
-	 .max_brightness = 255,
-	 .pwm_period_ns = 50000,
-	},
-	{
-	 .pwm_id = 1,
-	 .name = "keypad",
-	 .max_brightness = 255,
-	 .pwm_period_ns = 50000,
-	},
-};
-
-static struct led_pwm_platform_data mxc_led_pwm_data = {
-	.leds = led_pwms,
-	.num_leds = ARRAY_SIZE(led_pwms),
-};
-
-static struct platform_device mxc_led_pwm_device = {
-	.name = "leds_pwm",
-	.id   = -1,
-	.dev  = {
-		.platform_data = &mxc_led_pwm_data,
-	}
+static struct platform_pwm_backlight_data mxc_pwm_backlight_data = {
+	.pwm_id = 1,
+	.max_brightness = 255,
+	.dft_brightness = 128,
+	.pwm_period_ns = 50000,
 };
 
 extern void mx5_ipu_reset(void);
@@ -1124,6 +1102,9 @@ static void __init mx53_pcba_io_init(void)
 	gpio_request(MX53_PCBA_LCD_CABC_EN2, "lcd-cabc-en2");
 	gpio_direction_output(MX53_PCBA_LCD_CABC_EN2, 0);
 
+	gpio_request(MX53_PCBA_LCD_MODE, "lcd_mode");
+	gpio_direction_output(MX53_PCBA_LCD_MODE, 1);
+
 	/* ecompass sensor intr */
 	gpio_request(MX53_PCBA_COMPASS_INT, "ecompass int");
 	gpio_direction_input(MX53_PCBA_COMPASS_INT);
@@ -1259,8 +1240,9 @@ static void __init mxc_board_init(void)
 	mxc_register_device(&mxc_dvfs_core_device, &dvfs_core_data);
 	mxc_register_device(&busfreq_device, &bus_freq_data);
 	mxc_register_device(&mxc_iim_device, &iim_data);
-	mxc_register_device(&mxc_pwm1_device, NULL);
 	mxc_register_device(&mxc_pwm2_device, NULL);
+	mxc_register_device(&mxc_pwm1_backlight_device,
+			&mxc_pwm_backlight_data);
 	mxc_register_device(&mxcsdhc3_device, &mmc3_data);
 	mxc_register_device(&mxcsdhc1_device, &mmc1_data);
 	mxc_register_device(&mxcsdhc2_device, &mmc2_data);
@@ -1301,7 +1283,6 @@ static void __init mxc_board_init(void)
 	mxc_register_device(&mxc_v4l2_device, NULL);
 	mxc_register_device(&mxc_v4l2out_device, NULL);
 	mxc_register_device(&mxc_bt_rfkill, &mxc_bt_rfkill_data);
-	mxc_register_device(&mxc_led_pwm_device, &mxc_led_pwm_data);
 	pcba_add_device_buttons();
 
 }

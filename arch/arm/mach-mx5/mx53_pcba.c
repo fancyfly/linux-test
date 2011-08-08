@@ -149,7 +149,7 @@
 #define MX53_PCBA_LCD_CABC_EN3		(6*32 + 7)	/* GPIO7_7 */
 #define MX53_PCBA_LCD_SEL		(6*32 + 8)	/* GPIO7_8 */
 #define MX53_PCBA_LCD_ID		(6*32 + 9)	/* GPIO7_9 */
-#define MX53_PCBA_LCD_BL_EN		(6*32 + 10)	/* GPIO7_10 */
+#define MX53_PCBA_LED_PWM_OUT		(6*32 + 10)	/* GPIO7_10 */
 #define MX53_PCBA_PMIC_INT		(6*32 + 11)	/* GPIO7_11 */
 #define MX53_PCBA_CAM1_PWR_DOWN		(6*32 + 13)	/* GPIO7_13 */
 
@@ -167,6 +167,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_EIM_D16__ECSPI1_SCLK,
 	MX53_PAD_EIM_D17__ECSPI1_MISO,
 	MX53_PAD_EIM_D18__ECSPI1_MOSI,
+	MX53_PAD_EIM_D19__ECSPI1_SS1,
 	/* BT UART3 */
 	MX53_PAD_EIM_D24__UART3_TXD_MUX,
 	MX53_PAD_EIM_D25__UART3_RXD_MUX,
@@ -350,7 +351,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_PATA_BUFFER_EN__GPIO7_1,
 	/* LCD ID */
 	MX53_PAD_PATA_CS_0__GPIO7_9,
-	/* LCD BL EN */
+	/* LED_PWM_OUT */
 	MX53_PAD_PATA_CS_1__GPIO7_10,
 	/* LCD CABC_EN3 */
 	MX53_PAD_PATA_DA_1__GPIO7_7,
@@ -394,7 +395,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_PATA_INTRQ__GPIO7_2,
 	/* CAM MCLK */
 	MX53_PAD_GPIO_0__CCM_SSI_EXT1_CLK,
-	/* KEYPAD LED1 PWM */
+	/* LCD_BL_PWM */
 	MX53_PAD_GPIO_1__PWM2_PWMO,
 	/* CAM2 PWR DWN */
 	MX53_PAD_GPIO_2__GPIO1_2,
@@ -410,7 +411,6 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_GPIO_8__UART2_RXD_MUX,
 	/* PMIC INT */
 	MX53_PAD_GPIO_16__GPIO7_11,
-	/* CAM1 PWDN VCM */
 	MX53_PAD_GPIO_17__SPDIF_OUT1,
 	/* CAM1 POWER DOWN */
 	MX53_PAD_GPIO_18__GPIO7_13,
@@ -420,11 +420,6 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_LVDS0_TX2_P__LDB_LVDS0_TX2,
 	MX53_PAD_LVDS0_TX1_P__LDB_LVDS0_TX1,
 	MX53_PAD_LVDS0_TX0_P__LDB_LVDS0_TX0,
-	MX53_PAD_LVDS1_TX3_P__LDB_LVDS1_TX3,
-	MX53_PAD_LVDS1_TX2_P__LDB_LVDS1_TX2,
-	MX53_PAD_LVDS1_CLK_P__LDB_LVDS1_CLK,
-	MX53_PAD_LVDS1_TX1_P__LDB_LVDS1_TX1,
-	MX53_PAD_LVDS1_TX0_P__LDB_LVDS1_TX0,
 	/* TOUCH_ID0 */
 	MX53_PAD_KEY_COL1__GPIO4_8,
 };
@@ -1083,9 +1078,9 @@ static void __init mx53_pcba_io_init(void)
 	/* LCD power enable */
 	gpio_request(MX53_PCBA_LCD_PWR_EN, "lcd-pwr-en");
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 1);
-	/* LCD backlight power */
-	gpio_request(MX53_PCBA_LCD_BL_EN, "lcd-bl-en");
-	gpio_direction_output(MX53_PCBA_LCD_BL_EN, 1);
+	/* LVDS backlight power */
+	gpio_request(MX53_PCBA_LED_PWM_OUT, "lcd-bl-en");
+	gpio_direction_output(MX53_PCBA_LED_PWM_OUT, 1);
 	/* backlight power */
 	gpio_request(MX53_PCBA_BL_PWR_EN, "bl-pwr-en");
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1);

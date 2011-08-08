@@ -46,6 +46,7 @@
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/mfd/wm8994/gpio.h>
 #include <linux/leds_pwm.h>
+#include <linux/powerkey.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -464,7 +465,7 @@ static struct mxc_spi_master mxcspi1_data = {
 };
 
 static struct mxc_dvfs_platform_data dvfs_core_data = {
-	.reg_id = "DA9052_BUCK_CORE",
+	.reg_id = "SW1A",
 	.clk1_id = "cpu_clk",
 	.clk2_id = "gpc_dvfs_clk",
 	.gpc_cntr_offset = MXC_GPC_CNTR_OFFSET,
@@ -488,12 +489,12 @@ static struct mxc_dvfs_platform_data dvfs_core_data = {
 };
 
 static struct mxc_bus_freq_platform_data bus_freq_data = {
-	.gp_reg_id = "DA9052_BUCK_CORE",
-	.lp_reg_id = "DA9052_BUCK_PRO",
+	.gp_reg_id = "SW1A",
+	.lp_reg_id = "SW2",
 };
 
 static struct tve_platform_data tve_data = {
-	.dac_reg = "DA9052_LDO7",
+	.dac_reg = "",
 };
 
 static struct ldb_platform_data ldb_data = {
@@ -604,8 +605,8 @@ static void sii902x_hdmi_reset(void)
 
 static struct mxc_lcd_platform_data sii902x_hdmi_data = {
 	.reset = sii902x_hdmi_reset,
-	.analog_reg = "DA9052_LDO2",
-	.core_reg = "DA9053_LDO3",
+	.analog_reg = "",
+	.core_reg = "",
 	.boot_enable = 1,
 };
 
@@ -614,8 +615,8 @@ static struct imxi2c_platform_data mxci2c_data = {
 };
 
 static struct mxc_camera_platform_data camera_data = {
-	.analog_regulator = "DA9052_LDO7",
-	.core_regulator = "DA9052_LDO9",
+	.analog_regulator = "",
+	.core_regulator = "",
 	.mclk = 24000000,
 	.csi = 0,
 };
@@ -1042,6 +1043,44 @@ static struct mxc_bt_rfkill_platform_data mxc_bt_rfkill_data = {
 	.power_change = mx53_pcba_bt_power_change,
 };
 
+static void mxc_register_powerkey(pwrkey_callback pk_cb)
+{
+	pmic_event_callback_t power_key_event;
+
+	power_key_event.param = (void *)1;
+	power_key_event.func = (void *)pk_cb;
+	pmic_event_subscribe(EVENT_PWRONI, power_key_event);
+
+	power_key_event.param = (void *)3;
+	pmic_event_subscribe(EVENT_PWRON3I, power_key_event);
+}
+
+static int mxc_pwrkey_getstatus(int id)
+{
+	int sense, off = 3;
+
+	pmic_read_reg(REG_INT_SENSE1, &sense, 0xffffffff);
+	switch (id) {
+	case 2:
+		off = 4;
+		break;
+	case 3:
+		off = 2;
+		break;
+	}
+
+	if (sense & (1 << off))
+		return 0;
+
+	return 1;
+}
+
+static struct power_key_platform_data pwrkey_data = {
+	.key_value = KEY_F4,
+	.register_pwrkey = mxc_register_powerkey,
+	.get_key_status = mxc_pwrkey_getstatus,
+};
+
 static void __init mx53_pcba_io_init(void)
 {
 	mxc_iomux_v3_setup_multiple_pads(mx53_pcba_pads,
@@ -1279,7 +1318,7 @@ static void __init mxc_board_init(void)
 	mxc_register_device(&mxc_v4l2out_device, NULL);
 	mxc_register_device(&mxc_bt_rfkill, &mxc_bt_rfkill_data);
 	pcba_add_device_buttons();
-
+	mxc_register_device(&mxc_powerkey_device, &pwrkey_data);
 }
 
 static void __init mx53_pcba_timer_init(void)

@@ -245,7 +245,8 @@ static int __init pm_init(void)
 		suspend_param1 =
 			cpu_is_mx51() ? (void *)SUSPEND_ID_MX51:(void *)SUSPEND_ID_MX53;
 		/* for mx53 ARD, doesn't operate DDR in suspend */
-		if (machine_is_mx53_ard() || board_is_mx53_loco_mc34708())
+		if (machine_is_mx53_ard() || board_is_mx53_loco_mc34708()||
+			machine_is_mx53_pcba())
 			suspend_param1 = (void *)SUSPEND_ID_NONE;
 		memcpy(suspend_iram_base, cpu_do_suspend_workaround,
 				SZ_4K);

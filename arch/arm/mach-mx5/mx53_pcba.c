@@ -832,12 +832,10 @@ static void __init pcba_add_device_buttons(void) {}
 
 static void mx53_gpio_usbotg_driver_vbus(bool on)
 {
-#if 0
 	if (on)
 		gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 1);
 	else
 		gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
-#endif
 }
 
 static int sdhc_write_protect(struct device *dev)

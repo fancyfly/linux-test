@@ -131,6 +131,14 @@ struct fb_videomode mxcfb_ldb_modedb[] = {
 	 0,
 	 FB_VMODE_NONINTERLACED,
 	 FB_MODE_IS_DETAILED,},
+	{
+	 "AT070TNA2-WSVGA", 60, 1024, 600, 19531,
+	 220, 40,
+	 20, 5,
+	 60, 10,
+	 0,
+	 FB_VMODE_NONINTERLACED,
+	 FB_MODE_IS_DETAILED,},
 };
 int mxcfb_ldb_modedb_sz = ARRAY_SIZE(mxcfb_ldb_modedb);
 
@@ -433,7 +441,7 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 {
 	int ipu_di = 0;
 	struct clk *di_clk, *ldb_clk_parent;
-	unsigned long ldb_clk_prate = 455000000;
+	unsigned long ldb_clk_prate = 455000000, pclk = 0;
 
 	fbi->mode = (struct fb_videomode *)fb_match_mode(&fbi->var,
 			&fbi->modelist);
@@ -442,6 +450,8 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 				fbi->var.xres, fbi->var.yres);
 		return 0;
 	}
+
+	pclk = (PICOS2KHZ(fbi->mode->pixclock)) * 1000UL;
 
 	if (fbi->fbops->fb_ioctl) {
 		mm_segment_t old_fs;
@@ -474,7 +484,8 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 				}
 				ldb.chan_bit_map[0] = LDB_BIT_MAP_SPWG;
 				ldb.chan_bit_map[1] = LDB_BIT_MAP_SPWG;
-			} else if (fb_mode_is_equal(fbi->mode, &mxcfb_ldb_modedb[1])) {
+			} else if (fb_mode_is_equal(fbi->mode, &mxcfb_ldb_modedb[1]) ||
+				   fb_mode_is_equal(fbi->mode, &mxcfb_ldb_modedb[2])) {
 				if (ipu_di == 0) {
 					ldb.chan_mode_opt = LDB_SIN_DI0;
 					ldb.chan_bit_map[0] = LDB_BIT_MAP_SPWG;
@@ -489,7 +500,12 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 			}
 		}
 
-		/* TODO:Set the correct pll4 rate for all situations */
+		if (ldb.chan_mode_opt == LDB_SPL_DI0 ||
+		    ldb.chan_mode_opt == LDB_SPL_DI1)
+			ldb_clk_prate = 7*pclk/2;
+		else
+			ldb_clk_prate = 7*pclk;
+
 		if (ipu_di == 1) {
 			ldb.ldb_di_clk[1] =
 				clk_get(g_ldb_dev, "ldb_di1_clk");

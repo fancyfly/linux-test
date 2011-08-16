@@ -1123,9 +1123,9 @@ static void __init mx53_pcba_io_init(void)
 	/* backlight power */
 	gpio_request(MX53_PCBA_BL_PWR_EN, "bl-pwr-en");
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1);
-	/* LCD id */
+	/* LCD ID RST */
 	gpio_request(MX53_PCBA_LCD_ID, "lcd-id");
-	gpio_direction_input(MX53_PCBA_LCD_ID);
+	gpio_direction_output(MX53_PCBA_LCD_ID, 1);
 	/* LCD misc */
 	gpio_request(MX53_PCBA_LCD_UD, "lcd-ud");
 	gpio_direction_output(MX53_PCBA_LCD_UD, 0);
@@ -1136,8 +1136,14 @@ static void __init mx53_pcba_io_init(void)
 	gpio_request(MX53_PCBA_LCD_CABC_EN2, "lcd-cabc-en2");
 	gpio_direction_output(MX53_PCBA_LCD_CABC_EN2, 0);
 
+	/* LCD normal mode */
 	gpio_request(MX53_PCBA_LCD_MODE, "lcd_mode");
 	gpio_direction_output(MX53_PCBA_LCD_MODE, 1);
+
+	/* LCD 6/8bits select, 0-6bit, 1-8bit */
+	/* 6 bits mode */
+	gpio_request(MX53_PCBA_LCD_SEL, "lcd_sel");
+	gpio_direction_output(MX53_PCBA_LCD_SEL, 1);
 
 	/* ecompass sensor intr */
 	gpio_request(MX53_PCBA_COMPASS_INT, "ecompass int");

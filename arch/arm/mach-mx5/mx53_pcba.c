@@ -543,7 +543,7 @@ static struct resource mxcfb_resources[] = {
 static struct mxc_fb_platform_data fb_data[] = {
 	{
 	 .interface_pix_fmt = IPU_PIX_FMT_RGB666,
-	 .mode_str = "XGA",
+	 .mode_str = "AT070TNA2-WSVGA",
 	 .mode = video_modes,
 	 .num_modes = ARRAY_SIZE(video_modes),
 	},
@@ -607,6 +607,7 @@ static struct mxc_lcd_platform_data sii902x_hdmi_data = {
 	.reset = sii902x_hdmi_reset,
 	.analog_reg = "",
 	.core_reg = "",
+	.fb_id = "DISP3 BG",
 	.boot_enable = 1,
 };
 

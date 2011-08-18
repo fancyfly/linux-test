@@ -43,7 +43,7 @@
 #define MXC_PMIC_REG_NUM_SHIFT		0x19
 #define MXC_PMIC_WRITE_BIT_SHIFT	31
 
-#define PMIC_I2C_RETRY_TIMES		10
+#define PMIC_I2C_RETRY_TIMES		30
 
 static struct mxc_pmic pmic_drv_data;
 static unsigned int events_enabled0;

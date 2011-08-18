@@ -227,8 +227,18 @@ PMIC_STATUS mc34708_pmic_adc_convert(t_channel channel, unsigned short *result)
 			goto error1;
 
 		pr_debug("wait adc done.\n");
-		msleep(100);
-		wait_for_completion_interruptible(&adcdone_it);
+		ret = wait_for_completion_interruptible_timeout(&adcdone_it,
+								HZ);
+		if (ret <= 0) {
+			if (ret == 0)
+				ret = -ETIMEDOUT;
+			pmic_write_reg(MC34708_REG_ADC0, BITFVAL(ADSTART, 0),
+					BITFMASK(ADSTART));
+			pr_err("Channel %d wait ADC DONE timeout, ret = %d\n",
+				channel, ret);
+			goto error1;
+		}
+
 		ret = pmic_write_reg(MC34708_REG_ADC0,
 				     BITFVAL(ADSTART, 0), BITFMASK(ADSTART));
 

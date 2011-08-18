@@ -301,6 +301,7 @@ struct ripley_dev_info {
 
 	struct workqueue_struct *monitor_wqueue;
 	struct delayed_work monitor_work;
+	struct delayed_work ovp_mon_work;
 	struct mc34708_charger_config *chargeConfig;
 };
 
@@ -669,6 +670,28 @@ static void ripley_battery_work(struct work_struct *work)
 	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, interval);
 }
 
+/* Double-Check for OVP */
+static void battery_ovp_work(struct work_struct *work)
+{
+	struct ripley_dev_info *di = container_of(work,
+						  struct ripley_dev_info,
+						  ovp_mon_work.work);
+	const int interval = HZ;
+
+	dev_dbg(di->dev, "%s\n", __func__);
+
+	ripley_battery_update_status(di);
+	if (di->voltage_uV >= 4250000) { /* No more than 4250000 */
+		enable_charger(0);
+		cancel_delayed_work_sync(&di->ovp_mon_work);
+		pr_warning("more than 4.25v, disable charging\n");
+	} else {
+		queue_delayed_work(di->monitor_wqueue, &di->ovp_mon_work, interval);
+
+		pr_debug("Re-checking the OVP\n");
+	}
+}
+
 static void usb_charger_online_event_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
@@ -707,7 +730,10 @@ static void battery_over_temp_event_callback(void *para)
 
 static void battery_charge_complete_event_callback(void *para)
 {
+	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
+
 	pr_info("\n\n battery charge complete event, disable charging\n");
+	queue_delayed_work(di->monitor_wqueue, &di->ovp_mon_work, HZ/10);
 }
 
 static int ripley_battery_get_property(struct power_supply *psy,
@@ -822,6 +848,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	}
 
 	INIT_DELAYED_WORK(&di->monitor_work, ripley_battery_work);
+	INIT_DELAYED_WORK(&di->ovp_mon_work, battery_ovp_work);
 	di->monitor_wqueue =
 	    create_singlethread_workqueue(dev_name(&pdev->dev));
 	if (!di->monitor_wqueue) {

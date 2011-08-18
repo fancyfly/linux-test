@@ -182,8 +182,7 @@ static void pmic_pdev_register(struct device *dev)
 {
 	platform_device_register(&adc_ldm);
 
-	if (!cpu_is_mx53())
-		platform_device_register(&battery_ldm);
+	platform_device_register(&battery_ldm);
 
 	platform_device_register(&rtc_ldm);
 	platform_device_register(&power_ldm);

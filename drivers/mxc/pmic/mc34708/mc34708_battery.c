@@ -313,6 +313,9 @@ static enum power_supply_property ripley_battery_props[] = {
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CHARGE_NOW,
 	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_PRESENT,
+	POWER_SUPPLY_PROP_CAPACITY,
+	POWER_SUPPLY_PROP_TEMP,
 };
 
 static enum power_supply_property ripley_aux_charger_props[] = {
@@ -738,10 +741,19 @@ static int ripley_battery_get_property(struct power_supply *psy,
 		val->intval = di->accum_current_uAh;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
-		val->intval = 3800000;
+		val->intval = 4200000;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
 		val->intval = 3300000;
+		break;
+        case POWER_SUPPLY_PROP_PRESENT:
+		val->intval = 1;
+		break;
+	case POWER_SUPPLY_PROP_CAPACITY:
+		val->intval = 100;	/*TODO*/
+		break;
+	case POWER_SUPPLY_PROP_TEMP:
+		val->intval = 30;	/*TODO*/
 		break;
 	default:
 		return -EINVAL;
@@ -787,7 +799,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, di);
 
-	di->aux_charger.name = "ripley_aux_charger";
+	di->aux_charger.name = "ac";
 	di->aux_charger.type = POWER_SUPPLY_TYPE_MAINS;
 	di->aux_charger.properties = ripley_aux_charger_props;
 	di->aux_charger.num_properties = ARRAY_SIZE(ripley_aux_charger_props);
@@ -798,7 +810,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 		goto charger_failed;
 	}
 
-	di->usb_charger.name = "ripley_usb_charger";
+	di->usb_charger.name = "usb";
 	di->usb_charger.type = POWER_SUPPLY_TYPE_USB;
 	di->usb_charger.properties = ripley_usb_charger_props;
 	di->usb_charger.num_properties = ARRAY_SIZE(ripley_usb_charger_props);
@@ -821,7 +833,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 
 	di->dev = &pdev->dev;
 	di->chargeConfig = &ripley_charge_config;
-	di->bat.name = "ripley_bat";
+	di->bat.name = "battery";
 	di->bat.type = POWER_SUPPLY_TYPE_BATTERY;
 	di->bat.properties = ripley_battery_props;
 	di->bat.num_properties = ARRAY_SIZE(ripley_battery_props);

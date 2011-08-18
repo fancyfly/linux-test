@@ -274,7 +274,7 @@ static void goodix_ts_work_func(struct work_struct *work)
 #endif
 
 		x = x * SCREEN_MAX_WIDTH / TOUCH_MAX_WIDTH;	/*y */
-		y = y * SCREEN_MAX_HEIGHT / TOUCH_MAX_HEIGHT;	/*x */
+		y = (TOUCH_MAX_HEIGHT - y) * SCREEN_MAX_HEIGHT / TOUCH_MAX_HEIGHT;	/*x */
 		swap(x, y);
 
 		p->x = x;

@@ -478,6 +478,22 @@ static int mc34708_vgen1_get_voltage(struct regulator_dev *reg)
 	return mV * 1000;
 }
 
+static int mc34708_vgen1_stby_enable(struct regulator_dev *reg)
+{
+	return 0;
+}
+
+static int mc34708_vgen1_stby_disable(struct regulator_dev *reg)
+{
+	return 0;
+}
+
+static int mc34708_vgen1_set_stby_mode(struct regulator_dev *reg,
+				    unsigned int mode)
+{
+	return 0;
+}
+
 static int mc34708_ldo_enable(struct regulator_dev *reg)
 {
 	unsigned int register_val = 0, register_mask = 0;
@@ -1037,6 +1053,9 @@ static struct regulator_ops mc34708_vgen1_ops = {
 	.get_voltage = mc34708_vgen1_get_voltage,
 	.enable = mc34708_ldo_enable,
 	.disable = mc34708_ldo_disable,
+	.set_suspend_enable = mc34708_vgen1_stby_enable,
+	.set_suspend_disable = mc34708_vgen1_stby_disable,
+	.set_suspend_mode = mc34708_vgen1_set_stby_mode,
 };
 
 static struct regulator_ops mc34708_vgen2_ops = {

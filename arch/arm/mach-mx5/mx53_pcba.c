@@ -607,7 +607,7 @@ static struct mxc_lcd_platform_data sii902x_hdmi_data = {
 	.reset = sii902x_hdmi_reset,
 	.analog_reg = "",
 	.core_reg = "",
-	.fb_id = "DISP3 BG",
+	.fb_id = "DISP3 BG - DI1",
 	.boot_enable = 1,
 };
 
@@ -746,7 +746,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 	.type = "sii902x",
-	.addr = 0x39,
+	.addr = 0x3B,
 	.irq = gpio_to_irq(MX53_PCBA_HDMI_INT),
 	.platform_data = &sii902x_hdmi_data,
 	},

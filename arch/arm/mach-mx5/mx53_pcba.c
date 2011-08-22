@@ -542,7 +542,7 @@ static struct resource mxcfb_resources[] = {
 
 static struct mxc_fb_platform_data fb_data[] = {
 	{
-	 .interface_pix_fmt = IPU_PIX_FMT_RGB666,
+	 .interface_pix_fmt = IPU_PIX_FMT_RGB24,
 	 .mode_str = "AT070TNA2-WSVGA",
 	 .mode = video_modes,
 	 .num_modes = ARRAY_SIZE(video_modes),
@@ -1141,10 +1141,10 @@ static void __init mx53_pcba_io_init(void)
 	gpio_request(MX53_PCBA_LCD_MODE, "lcd_mode");
 	gpio_direction_output(MX53_PCBA_LCD_MODE, 1);
 
-	/* LCD 6/8bits select, 0-6bit, 1-8bit */
-	/* 6 bits mode */
+	/* LCD 6/8bits select, 1-6bit, 0-8bit */
+	/* 8 bits mode */
 	gpio_request(MX53_PCBA_LCD_SEL, "lcd_sel");
-	gpio_direction_output(MX53_PCBA_LCD_SEL, 1);
+	gpio_direction_output(MX53_PCBA_LCD_SEL, 0);
 
 	/* ecompass sensor intr */
 	gpio_request(MX53_PCBA_COMPASS_INT, "ecompass int");

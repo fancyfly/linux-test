@@ -737,10 +737,6 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	.irq = gpio_to_irq(MX53_PCBA_TOUCH_ATT),
 	.platform_data = &goodix_data,
 	},
-	{
-	.type = "aps-12d",
-	.addr = 0x44,
-	},
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
@@ -770,6 +766,10 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	.type = "mma8451",
 	.addr = 0x1C, /* gsensor */
 	 },
+	{
+	.type = "aps-12d",
+	.addr = 0x44,
+	},
 	{
 	I2C_BOARD_INFO("akm8975", 0x0E),
 	.flags = I2C_CLIENT_WAKE,

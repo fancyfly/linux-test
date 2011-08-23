@@ -1573,6 +1573,11 @@ struct mxs_platform_perfmon_data mxc_perfmon_data = {
 	.bit_config_cnt = ARRAY_SIZE(mx50_perfmon_bit_config),
 };
 
+struct platform_device leds_mc34708_device = {
+	.name = "leds-mc34708",
+	.id = -1,
+};
+
 static struct resource dma_apbh_resources[] = {
 	{
 		.start = APBHDMA_BASE_ADDR,

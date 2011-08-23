@@ -97,5 +97,6 @@ extern struct platform_device fixed_volt_reg_device;
 extern struct platform_device mxc_zq_calib_device;
 extern struct platform_device mxc_asrc_device;
 extern struct platform_device mxc_perfmon;
+extern struct platform_device leds_mc34708_device;
 extern struct mxs_platform_perfmon_data mxc_perfmon_data;
 extern struct mxc_gpu_platform_data gpu_data;

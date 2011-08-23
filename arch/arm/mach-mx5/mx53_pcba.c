@@ -45,7 +45,8 @@
 #include <linux/gpio_keys.h>
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/mfd/wm8994/gpio.h>
-#include <linux/leds_pwm.h>
+#include <linux/leds.h>
+#include <linux/leds-mc34708.h>
 #include <linux/powerkey.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -641,6 +642,26 @@ static struct p1003_ts_platform_data p1003_ts_data = {
 	.hw_status = p1003_ts_hw_status,
 };
 
+static struct led_mc34708 leds_mc34708[] = {
+	{
+	 .name = "keypad",
+	 .pwm_id = 0,
+	 .max_brightness = LED_FULL,
+	 .pwm_period_ns = 20000,
+	},
+	{
+	 .name = "vibrator",
+	 .pwm_id = 1,
+	 .max_brightness = LED_FULL,
+	 .pwm_period_ns = 20000,
+	},
+};
+
+static struct led_mc34708_platform_data leds_mc34708_data = {
+	.num_leds = ARRAY_SIZE(leds_mc34708),
+	.leds = leds_mc34708,
+};
+
 static const struct adxl34x_platform_data adxl34x_info = {
 	.x_axis_offset = 0,
 	.y_axis_offset = 0,
@@ -803,10 +824,6 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 static struct gpio_keys_button pcba_buttons[] = {
 	GPIO_BUTTON(MX53_PCBA_KEY_VOL_UP, KEY_VOLUMEUP, 1, "volume-up", 0),
 	GPIO_BUTTON(MX53_PCBA_KEY_VOL_DOWN, KEY_VOLUMEDOWN, 1, "volume-down", 0),
-	GPIO_BUTTON(MX53_PCBA_KEY_SEARCH, KEY_SEARCH, 1, "search", 0),
-	GPIO_BUTTON(MX53_PCBA_KEY_BACK, KEY_BACK, 1, "back", 0),
-	GPIO_BUTTON(MX53_PCBA_KEY_HOME, KEY_HOME, 1, "home", 0),
-	GPIO_BUTTON(MX53_PCBA_KEY_MENU, KEY_MENU, 1, "menu", 0),
 };
 
 static struct gpio_keys_platform_data pcba_button_data = {
@@ -1326,6 +1343,7 @@ static void __init mxc_board_init(void)
 	mxc_register_device(&mxc_bt_rfkill, &mxc_bt_rfkill_data);
 	pcba_add_device_buttons();
 	mxc_register_device(&mxc_powerkey_device, &pwrkey_data);
+	mxc_register_device(&leds_mc34708_device, &leds_mc34708_data);
 }
 
 static void __init mx53_pcba_timer_init(void)

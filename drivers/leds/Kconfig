@@ -323,6 +323,13 @@ config LEDS_MC13783
 	  This option enable support for on-chip LED drivers found
 	  on Freescale Semiconductor MC13783 PMIC.
 
+config LEDS_MC34708
+	tristate "LED Support for MC34708 PMIC"
+	depends on MXC_MC34708_PWM
+	help
+	  This option enable support for PWM LED drivers found
+	  on Freescale Semiconductor MC34708 PMIC.
+
 config LEDS_TRIGGERS
 	bool "LED Trigger support"
 	help

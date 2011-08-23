@@ -39,6 +39,7 @@ obj-$(CONFIG_LEDS_LT3593)		+= leds-lt3593.o
 obj-$(CONFIG_LEDS_ADP5520)		+= leds-adp5520.o
 obj-$(CONFIG_LEDS_DELL_NETBOOKS)	+= dell-led.o
 obj-$(CONFIG_LEDS_MC13783)		+= leds-mc13783.o
+obj-$(CONFIG_LEDS_MC34708)		+= leds-mc34708.o
 obj-$(CONFIG_LEDS_MXS)			+= leds-mxs-pwm.o
 
 # LED SPI Drivers

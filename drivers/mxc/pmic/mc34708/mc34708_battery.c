@@ -159,7 +159,7 @@ static struct mc34708_charger_config ripley_charge_config = {
 	.vauxThresholdLow = 4600000,
 	.vauxThresholdWeak = 4800000,
 	.vauxThresholdHigh = 5000000,
-	.lowBattThreshold = 3100000,
+	.lowBattThreshold = 3200000,
 	.toppingOffMicroAmp = 50000,	/* 50mA */
 	.chargingPoints = ripley_charger_setting_point,
 	.pointsNumber = 1,
@@ -330,10 +330,10 @@ static enum power_supply_property ripley_usb_charger_props[] = {
 #define BATTTEMPH_TO_BITS(temp)	((temp - 45) / 5)
 #define BATTTEMPL_TO_BITS(temp)	(temp / 5)
 #define VBAT_TRKL_UV_TO_BITS(uv)	((uv-2800000) / 100000)
-#define LOWBATT_UV_TO_BITS(uv)	((uv - 3100000) / 100000)
+#define LOWBATT_UV_TO_BITS(uv)	((uv - 3000000) / 100000)
 #define CHRITEM_UV_TO_BITS(uv)	(((uv / 1000) - 50) / 50)
 
-static int init_charger(struct mc34708_charger_config *config)
+static int init_battery_profile(struct mc34708_charger_config *config)
 {
 	/* set charger current termination threshold */
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
@@ -349,29 +349,13 @@ static int init_charger(struct mc34708_charger_config *config)
 	/* enable EOC buck */
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 				   BITFVAL(EOCBUCKEN, 1), BITFMASK(EOCBUCKEN)));
-	/* disable manual switch */
-	CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
-				   BITFVAL(MSW, 0), BITFMASK(MSW)));
-	/* enable 1P5 large current */
-	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
-				   BITFVAL(ILIM1P5, 1), BITFMASK(ILIM1P5)));
-
-	/* enable ISO */
-	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
-				   BITFVAL(BATTISOEN, 1), BITFMASK(BATTISOEN)));
-
-	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_SOURCE,
-				   BITFVAL(AUXWEAKEN, 1), BITFMASK(AUXWEAKEN)));
-
-	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_SOURCE,
-				   BITFVAL(VBUSWEAKEN, 1),
-				   BITFMASK(VBUSWEAKEN)));
 
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 				   BITFVAL(VBAT_TRKL,
 					   VBAT_TRKL_UV_TO_BITS
 					   (config->trickleThreshold)),
 				   BITFMASK(VBAT_TRKL)));
+
 	CHECK_ERROR(pmic_write_reg
 		    (MC34708_REG_BATTERY_PROFILE,
 		     BITFVAL(LOWBATT,
@@ -390,6 +374,32 @@ static int init_charger(struct mc34708_charger_config *config)
 				     BATTTEMPL_TO_BITS(config->batteryTempLow)),
 			     BITFMASK(BATTEMPL)));
 	}
+
+
+	return 0;
+}
+
+static int init_charger(struct mc34708_charger_config *config)
+{
+	init_battery_profile(config);
+
+	/* disable manual switch */
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+				   BITFVAL(MSW, 0), BITFMASK(MSW)));
+	/* enable 1P5 large current */
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
+				   BITFVAL(ILIM1P5, 1), BITFMASK(ILIM1P5)));
+
+	/* enable ISO */
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
+				   BITFVAL(BATTISOEN, 1), BITFMASK(BATTISOEN)));
+
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_SOURCE,
+				   BITFVAL(AUXWEAKEN, 1), BITFMASK(AUXWEAKEN)));
+
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_SOURCE,
+				   BITFVAL(VBUSWEAKEN, 1),
+				   BITFMASK(VBUSWEAKEN)));
 
 	return 0;
 }
@@ -728,6 +738,14 @@ static void battery_over_temp_event_callback(void *para)
 	ripley_charger_update_status(di);
 }
 
+static void battery_low_event_callback(void *para)
+{
+	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
+
+	pr_info("\n\n low battery event\n");
+	ripley_charger_update_status(di);
+}
+
 static void battery_charge_complete_event_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
@@ -875,6 +893,8 @@ static int ripley_battery_probe(struct platform_device *pdev)
 		goto batt_failed;
 	}
 
+	init_battery_profile(di->chargeConfig);
+
 	bat_event_callback.func = usb_over_voltage_event_callback;
 	bat_event_callback.param = (void *)di;
 	pmic_event_subscribe(MC34708_EVENT_USBOVP, bat_event_callback);
@@ -898,6 +918,10 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	bat_event_callback.func = battery_over_temp_event_callback;
 	bat_event_callback.param = (void *)di;
 	pmic_event_subscribe(MC34708_EVENT_BATTOTP, bat_event_callback);
+
+	bat_event_callback.func = battery_low_event_callback;
+	bat_event_callback.param = (void *)di;
+	pmic_event_subscribe(MC34708_EVENT_LOWBATT, bat_event_callback);
 
 	bat_event_callback.func = battery_charge_complete_event_callback;
 	bat_event_callback.param = (void *)di;

@@ -214,7 +214,7 @@ static struct reg_value mt9v114_setting_30fps_CIF_352_288[] = {
 
 static struct reg_value mt9v114_setting_15fps_VGA_640_480[] = {
 	{0x098E, 0x8400, 0, 1},
-	{0x8400, 0x01, 0, 0},
+	{0x8400, 0x01, 20, 0},
 	{0x300A, 0x03BE, 0, 1},
 	{0xA076, 0x000C, 0, 1},
 	{0xA078, 0x000F, 0, 1},
@@ -223,7 +223,7 @@ static struct reg_value mt9v114_setting_15fps_VGA_640_480[] = {
 	{0xA006, 0x01E0, 0, 1},
 	{0xA000, 0x0280, 0, 1},
 	{0xA002, 0x01E0, 0, 1},
-	{0x8400, 0x02, 0, 0},
+	{0x8400, 0x02, 20, 0},
 };
 
 static struct reg_value mt9v114_init_setting[] = {
@@ -231,7 +231,7 @@ static struct reg_value mt9v114_init_setting[] = {
 	{0x001A, 0x0326, 100, 1},  RESET_AND_MISC_CONTROL
 	this command will get no ASK, so do it outside	*/
 
-	{0x001A, 0x0124, 100, 1}, /* RESET_AND_MISC_CONTROL*/
+	{0x001A, 0x0124, 5, 1}, /* RESET_AND_MISC_CONTROL*/
 
 	{0x0010, 0x031A, 0, 1},	/* PLL_DIVIDERS*/
 	{0x0012, 0x0300, 0, 1}, /* PLL_P_DIVIDERS*/
@@ -593,6 +593,14 @@ static struct reg_value mt9v114_init_setting[] = {
 	/*improve the brightness*/
 	{0x098E, 0x0808, 0, 1},	/* LOGICAL_ADDRESS_ACCESS [INT_COARSE_INTEGRATION_TIME]*/
 	{0x8808, 0x0482, 0, 1},	/* INT_COARSE_INTEGRATION_TIME*/
+
+	/*set to UYVY*/
+	{0x098E, 0x8400, 0, 1}, 	// LOGICAL_ADDRESS_ACCESS [SEQ_CMD]	//tried
+	{0x8400, 0x01  , 0, 0}, // SEQ_CMD
+	{0x332E, 0x0000, 0, 1}, 	// OUTPUT_FORMAT_CONFIGURATION
+	{0x3330, 0x0000, 0, 1}, 	// OUTPUT_FORMAT_TEST
+	{0x3C00, 0x1002, 0, 1}, 	// TX_CONTROL
+	{0x8400, 0x02  , 0, 0},// SEQ_CMD
 };
 
 static struct mt9v114_mode_info mt9v114_mode_info_data[2][mt9v114_mode_MAX + 1] = {
@@ -1284,7 +1292,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 
 	/* reset camera */
 	mt9v114_write_reg(0x001a, 0x0326, true);
-	msleep(100);
+	msleep(5);
 
 	for (i = 0; i < iModeSettingArySize; ++i, ++pModeSetting) {
 		Delay_ms = pModeSetting->u32Delay_ms;
@@ -1381,7 +1389,7 @@ static int mt9v114_probe(struct i2c_client *client,
 	mt9v114_data.csi = plat_data->csi;
 
 	mt9v114_data.i2c_client = client;
-	mt9v114_data.pix.pixelformat = IPU_PIX_FMT_YUYV;
+	mt9v114_data.pix.pixelformat = IPU_PIX_FMT_UYVY;
 	mt9v114_data.pix.width = 640;
 	mt9v114_data.pix.height = 480;
 	mt9v114_data.streamcap.capability = V4L2_MODE_HIGHQUALITY |

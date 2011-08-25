@@ -60,6 +60,18 @@ static int imx_3stack_startup(struct snd_pcm_substream *substream)
 static void imx_3stack_shutdown(struct snd_pcm_substream *substream)
 {
 
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai_link *machine = rtd->dai;
+	struct snd_soc_dai *codec_dai = machine->codec_dai;
+	struct imx_3stack_priv *priv = &card_priv;
+	int ret = 0;
+	unsigned int pll2_out;
+
+	pll2_out = 2822400*8;
+	/* set the codec FLL */
+	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_MCLK1, priv->sysclk, pll2_out);
+	if (ret < 0)
+		return;
 }
 
 static void imx_3stack_init_dam(int ssi_port, int dai_port)
@@ -120,11 +132,10 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai = machine->cpu_dai;
 	struct snd_soc_dai *codec_dai = machine->codec_dai;
 	struct imx_3stack_priv *priv = &card_priv;
-	unsigned int rate = params_rate(params);
 	unsigned int channels = params_channels(params);
 	struct imx_ssi *ssi_mode = (struct imx_ssi *)cpu_dai->private_data;
 	int ret = 0;
-	unsigned int pll_out, pll2_out;
+	unsigned int pll_out;
 	u32 dai_format;
 	/* only need to do this once as capture and playback are sync */
 
@@ -146,12 +157,6 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 				   SND_SOC_CLOCK_IN);
 	if (ret < 0)
 		return ret;
-
-//    pll2_out = 2822400;
-    /* set the codec FLL */
-//	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_MCLK1, priv->sysclk, pll2_out);
-//	if (ret < 0)
-//		return ret;
 
 #if WM8994_CODEC_MASTER
 	dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
@@ -241,6 +246,18 @@ static int imx_3stack_voice_hw_params(struct snd_pcm_substream *substream,
 static int imx_3stack_bt_hw_params(struct snd_pcm_substream *substream,
 				   struct snd_pcm_hw_params *params)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai_link *machine = rtd->dai;
+	struct snd_soc_dai *codec_dai = machine->codec_dai;
+	int ret = 0;
+
+	/* only need to do this once as capture and playback are sync */
+
+	/* set codec DAI configuration */
+	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_IB_NF | SND_SOC_DAIFMT_CBM_CFM );
+	if (ret < 0)
+		return ret;
 
 	return 0;
 }
@@ -415,7 +432,7 @@ static const struct snd_soc_dapm_route audio_map[] = {
 
 static int imx_3stack_wm8994_init(struct snd_soc_codec *codec)
 {
-	int i, ret;
+	int ret;
 
 	snd_soc_dapm_new_controls(codec, imx_3stack_dapm_widgets,
 				  ARRAY_SIZE(imx_3stack_dapm_widgets));

@@ -632,8 +632,12 @@ static struct wm8994_pdata wm8958_pdata = {
 		[1] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
 		[2] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
 		[3] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
-		[4] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,        
-		[5] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
+		[4] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
+		[5] = WM8994_GPN_PD |WM8994_GPN_DB|WM8994_GP_FN_FLL2_OUT,
+		[7] = WM8994_GPN_DB,
+		[8] = WM8994_GPN_DIR|WM8994_GPN_DB,
+		[9] = WM8994_GPN_DB,
+		[10]= WM8994_GPN_DB,
 	},
 	.micdet_irq = gpio_to_irq(MX53_PCBA_AUD_REQ),
 };
@@ -1026,7 +1030,7 @@ static struct mxc_asrc_platform_data mxc_asrc_data = {
 static struct mxc_spdif_platform_data mxc_spdif_data = {
 	.spdif_tx = 1,
 	.spdif_rx = 0,
-	.spdif_clk_44100 = 1,	/* Souce from CKIH1 for 44.1K */
+	.spdif_clk_44100 = 0,	/* Souce from CKIH1 for 44.1K */
 	/* Source from CCM spdif_clk (24M) for 48k and 32k
 	 * It's not accurate
 	 */

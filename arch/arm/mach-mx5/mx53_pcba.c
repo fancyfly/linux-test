@@ -256,6 +256,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_EIM_D21__I2C1_SCL,
 	/* KEY_HOME */
 	MX53_PAD_CSI0_DAT8__GPIO5_26,
+	/* CAMERA1 VCM POWERDWON */
 	MX53_PAD_CSI0_DAT9__GPIO5_27,
 	/* CSI0 */
 	MX53_PAD_CSI0_DAT12__IPU_CSI0_D_12,
@@ -269,7 +270,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_CSI0_VSYNC__IPU_CSI0_VSYNC,
 	MX53_PAD_CSI0_MCLK__IPU_CSI0_HSYNC,
 	MX53_PAD_CSI0_PIXCLK__IPU_CSI0_PIXCLK,
-	/* CAMERA RST */
+	/* CAMERA1 RST */
 	MX53_PAD_CSI0_DATA_EN__GPIO5_20,
 	/* DISPLAY */
 	MX53_PAD_DI0_DISP_CLK__IPU_DI0_DISP_CLK,
@@ -773,7 +774,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	.platform_data = &sii902x_hdmi_data,
 	},
 	{
-	.type = "mt9v114",
+	.type = "mt9p111",
 	.addr = 0x3d,
 	.platform_data = (void *)&camera_data,
 	 },
@@ -1109,6 +1110,9 @@ static void __init mx53_pcba_io_init(void)
 {
 	mxc_iomux_v3_setup_multiple_pads(mx53_pcba_pads,
 					ARRAY_SIZE(mx53_pcba_pads));
+	/* Camera1 power down */
+	gpio_request(MX53_PCBA_CAM1_PWR_DOWN, "cam1-pwdn");
+	gpio_direction_output(MX53_PCBA_CAM1_PWR_DOWN, 0);
 
 	/* SD1 CD */
 	gpio_request(MX53_PCBA_SD1_CD, "sd1-cd");
@@ -1216,18 +1220,21 @@ static void __init mx53_pcba_io_init(void)
 	/* Camera2 reset */
 	gpio_request(MX53_PCBA_CAM2_RESET, "cam2-reset");
 	gpio_direction_output(MX53_PCBA_CAM2_RESET, 0);
+	/* Camera1 power down vcm */
+	gpio_request(MX53_PCBA_CAM1_PDN_VCM, "cam1-pwdn-vcm");
+	gpio_direction_output(MX53_PCBA_CAM1_PDN_VCM, 0);
 	/* Camera reset */
+	msleep(3);
 	gpio_request(MX53_PCBA_CAMERA_RESET, "cam-reset");
-	gpio_direction_output(MX53_PCBA_CAMERA_RESET, 0);
-	/* Camera1 power down */
-	gpio_request(MX53_PCBA_CAM1_PWR_DOWN, "cam1-pwdn");
-	gpio_direction_output(MX53_PCBA_CAM1_PWR_DOWN, 1);
+	gpio_direction_output(MX53_PCBA_CAMERA_RESET, 1);
+	msleep(2);
+	gpio_set_value(MX53_PCBA_CAMERA_RESET, 0);
+	msleep(2);
+	gpio_set_value(MX53_PCBA_CAMERA_RESET, 1);
+	msleep(2);
 	/* Camera2 power down */
 	gpio_request(MX53_PCBA_CAM2_PWR_DOWN, "cam2-pwdn");
 	gpio_direction_output(MX53_PCBA_CAM2_PWR_DOWN, 0);
-	/* Camera1 power down vcm */
-	gpio_request(MX53_PCBA_CAM1_PDN_VCM, "cam1-pwdn-vcm");
-	gpio_direction_output(MX53_PCBA_CAM1_PDN_VCM, 1);
 	/* flash led */
 	gpio_request(MX53_PCBA_KEY_FLASH_LED3, "cam-flash");
 	gpio_direction_output(MX53_PCBA_KEY_FLASH_LED3, 0);

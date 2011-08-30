@@ -1277,6 +1277,10 @@ static void __init mx53_pcba_io_init(void)
 	gpio_request(MX53_PCBA_AUD_REQ, "aud-req");
 	gpio_direction_input(MX53_PCBA_AUD_REQ);
 
+	/* WORKAROUND for: Thermal shutdown triggers when the ADCEN bit set */
+	gpio_request(MX53_PCBA_PMIC_ICTEST, "PMIC_ICTEST");
+	gpio_direction_output(MX53_PCBA_PMIC_ICTEST, 1);
+
 }
 
 /*!

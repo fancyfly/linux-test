@@ -124,6 +124,7 @@ static struct mma8451_status mma_status;
 static struct input_polled_dev *mma8451_idev;
 static struct device *hwmon_dev;
 static struct i2c_client *mma8451_i2c_client;
+static int client_id;
 
 static int senstive_mode = MODE_2G;
 static DEFINE_MUTEX(mma8451_lock);
@@ -159,7 +160,7 @@ out:
 static int mma8451_read_data(short *x, short *y, short *z)
 {
 	u8 tmp_data[MMA8451_BUF_SIZE];
-	int ret;
+	int ret, shifter;
 
 	ret = i2c_smbus_read_i2c_block_data(mma8451_i2c_client,
 					    MMA8451_OUT_X_MSB, 7, tmp_data);
@@ -172,9 +173,11 @@ static int mma8451_read_data(short *x, short *y, short *z)
 	*y = ((tmp_data[2] << 8) & 0xff00) | tmp_data[3];
 	*z = ((tmp_data[4] << 8) & 0xff00) | tmp_data[5];
 
-	*x = (short)(*x) >> 2;
-	*y = (short)(*y) >> 2;
-	*z = (short)(*z) >> 2;
+	shifter = client_id == MMA8451_ID ? 2:4;
+
+	*x = (short)(*x) >> shifter;
+	*y = (short)(*y) >> shifter;
+	*z = (short)(*z) >> shifter;
 
 	if (mma_status.mode == MODE_4G) {
 		(*x) = (*x) << 1;
@@ -220,7 +223,7 @@ static void mma8451_dev_poll(struct input_polled_dev *dev)
 static int __devinit mma8451_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
-	int result, client_id;
+	int result, range;
 	struct input_dev *idev;
 	struct i2c_adapter *adapter;
 
@@ -276,9 +279,17 @@ static int __devinit mma8451_probe(struct i2c_client *client,
 	idev->id.bustype = BUS_I2C;
 	idev->evbit[0] = BIT_MASK(EV_ABS);
 
-	input_set_abs_params(idev, ABS_X, -8192, 8191, INPUT_FUZZ, INPUT_FLAT);
-	input_set_abs_params(idev, ABS_Y, -8192, 8191, INPUT_FUZZ, INPUT_FLAT);
-	input_set_abs_params(idev, ABS_Z, -8192, 8191, INPUT_FUZZ, INPUT_FLAT);
+	if (client_id == MMA8451_ID)
+		range = 8192;
+	else
+		range = 4096;
+
+	input_set_abs_params(idev, ABS_X,
+			-range, range - 1, INPUT_FUZZ, INPUT_FLAT);
+	input_set_abs_params(idev, ABS_Y,
+			-range, range - 1, INPUT_FUZZ, INPUT_FLAT);
+	input_set_abs_params(idev, ABS_Z,
+			-range, range - 1, INPUT_FUZZ, INPUT_FLAT);
 
 	result = input_register_polled_device(mma8451_idev);
 	if (result) {

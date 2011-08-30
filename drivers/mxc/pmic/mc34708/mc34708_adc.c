@@ -28,7 +28,11 @@
 #include <linux/pmic_status.h>
 #include <linux/mfd/mc34708/mc34708.h>
 
+#include <mach/gpio.h>
+
 #include "../core/pmic.h"
+
+#define MX53_PCBA_PMIC_ICTEST		(4*32 + 2) 	/* GPIO5_2 */
 
 #define ADSEL0_LSH	0
 #define ADSEL0_WID	4
@@ -196,6 +200,12 @@ PMIC_STATUS mc34708_pmic_adc_convert(t_channel channel, unsigned short *result)
 		return -EBUSY;
 	down(&convert_mutex);
 
+	/* WORKAROUND for: Thermal shutdown triggers when the ADCEN bit set */
+	gpio_set_value(MX53_PCBA_PMIC_ICTEST, 1);
+	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x200000, PMIC_ALL_BITS);
+	pmic_write_reg(MC34708_REG_RTC_TIME, 0x000401, PMIC_ALL_BITS);
+	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x0, PMIC_ALL_BITS);
+
 	if (channel <= BATTERY_CURRENT) {
 		INIT_COMPLETION(adcdone_it);
 		ret = pmic_write_reg(MC34708_REG_ADC2,
@@ -277,6 +287,7 @@ PMIC_STATUS mc34708_pmic_adc_convert(t_channel channel, unsigned short *result)
 		*result = BITFEXT(register_val, ADRESULT0);
 	}
 error1:
+	gpio_set_value(MX53_PCBA_PMIC_ICTEST, 0);
 	up(&convert_mutex);
 
 	return ret;
@@ -578,6 +589,10 @@ static int mc34708_pmic_adc_module_probe(struct platform_device *pdev)
 	pmic_adc_ready = 1;
 	register_adc_apis(&pmic_adc_api);
 	pr_debug("PMIC ADC successfully probed\n");
+
+	gpio_request(MX53_PCBA_PMIC_ICTEST, "PMIC_ICTEST");
+	gpio_direction_output(MX53_PCBA_PMIC_ICTEST, 0);
+
 	return 0;
 
 rm_dev_file:

@@ -578,12 +578,6 @@ static int mc34708_pmic_adc_module_probe(struct platform_device *pdev)
 	pmic_adc_ready = 1;
 	register_adc_apis(&pmic_adc_api);
 	pr_debug("PMIC ADC successfully probed\n");
-
-	/* WORKAROUND for: Thermal shutdown triggers when the ADCEN bit set */
-	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x200000, PMIC_ALL_BITS);
-	pmic_write_reg(MC34708_REG_RTC_TIME, 0x000401, PMIC_ALL_BITS);
-	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x0, PMIC_ALL_BITS);
-
 	return 0;
 
 rm_dev_file:

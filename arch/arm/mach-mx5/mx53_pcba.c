@@ -617,13 +617,37 @@ static struct imxi2c_platform_data mxci2c_data = {
        .bitrate = 100000,
 };
 
-static struct mxc_camera_platform_data camera_data = {
+void camera1_powerdown(int down)
+{
+	if (down)
+		gpio_set_value(MX53_PCBA_CAM1_PWR_DOWN, 1);
+	else
+		gpio_set_value(MX53_PCBA_CAM1_PWR_DOWN, 0);
+}
+
+void camera2_powerdown(int down)
+{
+	if (down)
+		gpio_set_value(MX53_PCBA_CAM2_PWR_DOWN, 1);
+	else
+		gpio_set_value(MX53_PCBA_CAM2_PWR_DOWN, 0);
+}
+
+static struct mxc_camera_platform_data camera_data1 = {
 	.analog_regulator = "",
 	.core_regulator = "",
 	.mclk = 24000000,
 	.csi = 0,
+	.pwdn = camera1_powerdown,
 };
 
+static struct mxc_camera_platform_data camera_data2 = {
+	.analog_regulator = "",
+	.core_regulator = "",
+	.mclk = 24000000,
+	.csi = 0,
+	.pwdn = camera2_powerdown,
+};
 
 static struct wm8994_pdata wm8958_pdata = {
 	.gpio_defaults =
@@ -777,10 +801,15 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	.irq = gpio_to_irq(MX53_PCBA_HDMI_INT),
 	.platform_data = &sii902x_hdmi_data,
 	},
+	/*{
+	.type = "mt9v114",
+	.addr = 0x3d,
+	.platform_data = (void *)&camera_data2,
+	 },*/
 	{
 	.type = "mt9p111",
 	.addr = 0x3d,
-	.platform_data = (void *)&camera_data,
+	.platform_data = (void *)&camera_data1,
 	 },
 	{
 	.type = "lis3dh_acc",

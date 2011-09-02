@@ -463,4 +463,17 @@ config KEYBOARD_MPR121
 	  If unsure, say N.
 
 	  To compile this driver as a module, choose M here
+
+config KEYBOARD_HA2605
+	tristate "Goodix HA2605 Touch Keypad Driver"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you have the  touchkey Freescale Proximity Capacitive
+	  Touch Sensor controller chip in your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here
+
 endif

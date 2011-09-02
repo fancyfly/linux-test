@@ -774,6 +774,15 @@ static struct goodix_i2c_platform_data goodix_data = {
 	.gpio_shutdown = MX53_PCBA_TOUCH_RST,
 };
 
+static u16 pcba_touchkey_martix[] = {
+	 KEY_SEARCH, KEY_BACK, KEY_HOME, KEY_MENU,
+};
+
+static struct ha2605_platform_data ha2605_keyboard_platdata = {
+	.keycount = ARRAY_SIZE(pcba_touchkey_martix),
+	.matrix = pcba_touchkey_martix,
+};
+
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 	.type = "p1003_fwv33",
@@ -791,6 +800,12 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	.addr = 0x55,
 	.irq = gpio_to_irq(MX53_PCBA_TOUCH_ATT),
 	.platform_data = &goodix_data,
+	},
+	{
+	.type = "ha2605_touchkey",
+	.addr = 0x62,
+	.irq = gpio_to_irq(MX53_PCBA_TOUCH_ID0),
+	.platform_data = &ha2605_keyboard_platdata,
 	},
 };
 

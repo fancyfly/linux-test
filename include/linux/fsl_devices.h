@@ -403,6 +403,11 @@ struct goodix_i2c_platform_data {
 	uint32_t screen_height;		/*screen height*/
 };
 
+struct ha2605_platform_data {
+	int keycount;
+	u16 *matrix;
+};
+
 /*gpo1-3 is in fixed state by hardware design,
  * only deal with reset pin and clock_enable pin
  * only poll mode can be used to control the chip,

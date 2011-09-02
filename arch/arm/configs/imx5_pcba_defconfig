@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-# Tue Aug 23 11:16:26 2011
+# Thu Sep  1 13:25:22 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -702,9 +702,9 @@ CONFIG_BT_HIDP=y
 CONFIG_BT_HCIBTUSB=y
 # CONFIG_BT_HCIBTSDIO is not set
 CONFIG_BT_HCIUART=y
-# CONFIG_BT_HCIUART_H4 is not set
+CONFIG_BT_HCIUART_H4=y
 # CONFIG_BT_HCIUART_BCSP is not set
-CONFIG_BT_HCIUART_ATH3K=y
+# CONFIG_BT_HCIUART_ATH3K is not set
 # CONFIG_BT_HCIUART_LL is not set
 # CONFIG_BT_HCIBCM203X is not set
 # CONFIG_BT_HCIBPA10X is not set

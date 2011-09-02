@@ -1220,9 +1220,9 @@ static void __init mx53_pcba_io_init(void)
 	gpio_request(MX53_PCBA_WLAN_CLK_REQ, "wl-clkreq");
 	gpio_direction_input(MX53_PCBA_WLAN_CLK_REQ);
 	gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
-	gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, 0);
+	gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, 1);
 	gpio_request(MX53_PCBA_WLAN_ENABLE, "wl-enable");
-	gpio_direction_output(MX53_PCBA_WLAN_ENABLE, 0);
+	gpio_direction_output(MX53_PCBA_WLAN_ENABLE, 1);
 	gpio_request(MX53_PCBA_WLAN_WAKE_B, "wl-wake");
 	gpio_direction_output(MX53_PCBA_WLAN_WAKE_B, 0);
 	gpio_request(MX53_PCBA_WLAN_HOST_WAKE_B, "wl-host-wake");

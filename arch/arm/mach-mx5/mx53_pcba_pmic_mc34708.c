@@ -51,7 +51,7 @@
 
 #define SW1A_MODE_MASK		(0xf << 0)
 #define SW2_MODE_MASK		(0xf << 14)
-#define SW1A_MODE_VALUE		(0xc << 0)
+#define SW1A_MODE_VALUE		(0xd << 0)
 #define SW2_MODE_VALUE		(0xc << 14)
 
 #define REG_SW_1_2_MASK	(SW1A_MODE_MASK | SW2_MODE_MASK)

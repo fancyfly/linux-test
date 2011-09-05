@@ -155,6 +155,12 @@
 #define MX53_PCBA_PMIC_INT		(6*32 + 11)	/* GPIO7_11 */
 #define MX53_PCBA_CAM1_PWR_DOWN		(6*32 + 13)	/* GPIO7_13 */
 
+#define VUSBSEL_LSH		2
+#define VUSBSEL_WID		1
+
+#define OTGEN_LSH		9
+#define OTGEN_WID		1
+
 extern int __init mx53_pcba_init_mc34708(void);
 
 static iomux_v3_cfg_t mx53_pcba_pads[] = {
@@ -904,10 +910,19 @@ static void __init pcba_add_device_buttons(void) {}
 
 static void mx53_gpio_usbotg_driver_vbus(bool on)
 {
-	if (on)
+	if (on) {
+		pmic_write_reg(REG_USB_CTL, BITFVAL(OTGEN, 1),
+				BITFMASK(OTGEN));
+		pmic_write_reg(REG_MODE_0, BITFVAL(VUSBSEL, 1),
+				BITFMASK(VUSBSEL));
 		gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 1);
-	else
+	} else {
+		pmic_write_reg(REG_USB_CTL, BITFVAL(OTGEN, 0),
+				BITFMASK(OTGEN));
+		pmic_write_reg(REG_MODE_0, BITFVAL(VUSBSEL, 0),
+				BITFMASK(VUSBSEL));
 		gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
+	}
 }
 
 static int sdhc_write_protect(struct device *dev)

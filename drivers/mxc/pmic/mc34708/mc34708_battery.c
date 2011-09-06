@@ -66,6 +66,15 @@
 #define CHREN_LSH 3
 #define CHREN_WID 1
 
+#define CCRES_LSH	22
+#define CCRES_WID	2
+
+#define INTEGTIME_LSH	5
+#define INTEGTIME_WID	2
+
+#define BATTCURRENT_LSH	0
+#define BATTCURRENT_WID	12
+
 #define MUSBCHRG_LSH 13
 #define MUSBCHRG_WID 2
 
@@ -99,7 +108,7 @@
 #define ACC_START_COUNTER 0x07
 #define ACC_STOP_COUNTER 0x2
 #define ACC_CONTROL_BIT_MASK 0x1f
-#define ACC_ONEC_VALUE 2621
+#define ACC_ONEC_VALUE 273
 #define ACC_COULOMB_PER_LSB 1
 #define ACC_CALIBRATION_DURATION_MSECS 20
 
@@ -130,6 +139,8 @@
 #define USBHOST 0x4
 #define USBCHARGER 0x20
 #define DEDICATEDCHARGER 0x40
+
+#define EOC_CURRENT_UA	50000
 
 static int suspend_flag;
 static int charging_flag;
@@ -164,6 +175,73 @@ static struct mc34708_charger_config ripley_charge_config = {
 	.chargingPoints = ripley_charger_setting_point,
 	.pointsNumber = 1,
 };
+
+static enum ccres {
+	CCRES_100_mC_PER_LSB = 0,
+	CCRES_200_mC_PER_LSB,
+	CCRES_500_mC_PER_LSB,
+	CCRES_1000_mC_PER_LSB,
+	CCRES_INVALID,
+};
+
+static u32 ccres_mc [] =
+{
+	[CCRES_100_mC_PER_LSB] = 100,
+	[CCRES_200_mC_PER_LSB] = 200,
+	[CCRES_500_mC_PER_LSB] = 500,
+	[CCRES_1000_mC_PER_LSB] = 1000,
+};
+
+static enum integtime {
+	INTEGTIME_4S = 0,
+	INTEGTIME_8S,
+	INTEGTIME_16S,
+	INTEGTIME_32S,
+};
+
+static int set_coulomb_counter_cres(enum ccres ccres)
+{
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_ACC1,
+				   BITFVAL(CCRES, ccres),
+				   BITFMASK(CCRES)));
+
+	return 0;
+}
+
+static int set_coulomb_counter_integtime(enum integtime integtime)
+{
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_ACC0,
+				   BITFVAL(INTEGTIME, integtime),
+				   BITFMASK(INTEGTIME)));
+
+	return 0;
+}
+
+/* uA */
+static int get_columb_counter_battcur_res_ua_lsb()
+{
+	int ret;
+	unsigned int ccres, ccres_uc;
+	unsigned int integtime;
+
+	ret = pmic_read_reg(MC34708_REG_ACC1, &ccres, BITFMASK(CCRES));
+	if (ret != 0)
+		return -1;
+	ccres = BITFEXT(ccres, CCRES);
+	pr_debug("%s: ccres = %x\n", __func__, ccres);
+
+	ret = pmic_read_reg(MC34708_REG_ACC0, &integtime, BITFMASK(INTEGTIME));
+	if (ret != 0)
+		return -1;
+	integtime = BITFEXT(integtime, INTEGTIME);
+	pr_debug("%s: integtime = %x\n", __func__, integtime);
+
+	if (ccres < CCRES_100_mC_PER_LSB || ccres >= CCRES_INVALID)
+		return -1;
+
+	/* See table: BATTCURRENT Rsolution in RM */
+	return 100000 * (2 << ccres) / ((2 << integtime) * 4);
+}
 
 static int enable_charger(int enable)
 {
@@ -494,6 +572,36 @@ static int adjust_charging_parameter(struct mc34708_charger_config **config)
 	return 0;
 }
 
+static int check_eoc(struct ripley_dev_info *di)
+{
+	int ret;
+	int battcur_res, battcur;
+	unsigned int value;
+
+	battcur_res = get_columb_counter_battcur_res_ua_lsb();
+	pr_debug("battcur_res = %x\n", battcur_res);
+	if (battcur_res < 0)
+		return -1;
+
+	ret = pmic_read_reg(MC34708_REG_ACC2, &battcur, BITFMASK(BATTCURRENT));
+	if (ret != 0)
+		return -1;
+	battcur = BITFEXT(battcur, BATTCURRENT);
+	pr_debug("batt cur reg value = %x\n", battcur);
+
+	battcur *= battcur_res;
+	pr_debug("batt cur value = %d\n", battcur/1000);
+
+
+	if (battcur <= EOC_CURRENT_UA)
+		di->full_counter++;
+
+	if (di->full_counter > 2)
+		di->battery_status = POWER_SUPPLY_STATUS_FULL;
+	else
+		di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
+}
+
 static int ripley_charger_update_status(struct ripley_dev_info *di)
 {
 	int ret;
@@ -643,13 +751,11 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 			init_charger(config);
 			set_charging_point(di, point);
 			enable_charger(1);
-		} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING)
-			adjust_charging_parameter(&(di->chargeConfig));
-		if (di->full_counter > FULL_DEBOUNCE_TIME &&
-		    di->currChargePoint >= di->chargeConfig->pointsNumber) {
-			di->battery_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
-		} else
 			di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
+		} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
+			check_eoc(di);
+		}
+
 	} else {
 		di->battery_status = POWER_SUPPLY_STATUS_DISCHARGING;
 		di->full_counter = 0;
@@ -927,6 +1033,8 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	bat_event_callback.param = (void *)di;
 	pmic_event_subscribe(MC34708_EVENT_CHRCMPL, bat_event_callback);
 
+	set_coulomb_counter_cres(CCRES_200_mC_PER_LSB);
+	set_coulomb_counter_integtime(INTEGTIME_8S);
 	ripley_stop_coulomb_counter();
 	ripley_calibrate_coulomb_counter();
 

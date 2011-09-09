@@ -224,18 +224,13 @@ static ssize_t pmic_show(struct device *dev,
 			    struct device_attribute *attr, char *buf)
 {
 	int i, value;
-	int offset = (REG_TEST4 + 1) / 4;
+	int offset = REG_TEST4 / 4 * 4;
 
 	for (i = 0; i < offset; i++) {
 		pmic_read(i, &value);
 		pr_info("reg%02d: %06x\t\t", i, value);
-		pmic_read(i + offset, &value);
-		pr_info("reg%02d: %06x\t\t", i + offset, value);
-		pmic_read(i + offset * 2, &value);
-		pr_info("reg%02d: %06x\t\t", i + offset * 2, value);
-		pmic_read(i + offset * 3, &value);
-		pr_info("reg%02d: %06x\n", i + offset * 3, value);
 	}
+	pr_info("\n");
 
 	return 0;
 }

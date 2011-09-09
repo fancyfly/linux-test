@@ -141,6 +141,7 @@
 #define DEDICATEDCHARGER 0x40
 
 #define EOC_CURRENT_UA	50000
+#define ADC_MAX_CHANNEL	8
 
 static int suspend_flag;
 static int charging_flag;
@@ -254,27 +255,109 @@ static int enable_charger(int enable)
 
 static int ripley_get_batt_voltage(unsigned short *voltage)
 {
-	t_channel channel;
-	unsigned short result[8];
+	int channel[ADC_MAX_CHANNEL];
+	unsigned short result[ADC_MAX_CHANNEL];
+	unsigned short max, min;
+	int i;
 
-	channel = BATTERY_VOLTAGE;
-	CHECK_ERROR(mc34708_pmic_adc_convert(channel, result));
-	*voltage = result[0];
+	for (i = 0; i < ADC_MAX_CHANNEL; i++)
+		channel[i] = BATTERY_VOLTAGE;
+
+	CHECK_ERROR(mc34708_pmic_adc_convert(channel, result,
+						ADC_MAX_CHANNEL));
+
+	*voltage = 0;
+	min = max = result[0];
+	for (i = 0; i < ADC_MAX_CHANNEL; i++) {
+		if (min > result[i])
+			min = result[i];
+		if (max < result[i])
+			max = result[i];
+		*voltage += result[i];
+	}
+	/* abandon max/min, then get average */
+	*voltage -= (max + min);
+	*voltage /= (ADC_MAX_CHANNEL - 2);
 
 	return 0;
 }
 
 static int ripley_get_batt_current(unsigned short *curr)
 {
-	t_channel channel;
-	unsigned short result[8];
+	int channel[ADC_MAX_CHANNEL];
+	unsigned short result[ADC_MAX_CHANNEL];
+	unsigned short max, min;
+	int i;
 
-	channel = BATTERY_CURRENT;
-	CHECK_ERROR(mc34708_pmic_adc_convert(channel, result));
-	*curr = result[0];
+	for (i = 0; i < ADC_MAX_CHANNEL; i++)
+		channel[i] = BATTERY_CURRENT;
+
+	CHECK_ERROR(mc34708_pmic_adc_convert(channel, result,
+						ADC_MAX_CHANNEL));
+
+	*curr = 0;
+	min = max = result[0];
+	for (i = 0; i < ADC_MAX_CHANNEL; i++) {
+		if (min > result[i])
+			min = result[i];
+		if (max < result[i])
+			max = result[i];
+		*curr += result[i];
+	}
+	/* abandon max/min, then get average */
+	*curr -= (max + min);
+	*curr /= (ADC_MAX_CHANNEL - 2);
 
 	return 0;
 }
+
+static int ripley_get_batt_volt_curr(unsigned short *volt, unsigned short *curr)
+{
+	int channel[ADC_MAX_CHANNEL];
+	unsigned short result[ADC_MAX_CHANNEL];
+	unsigned short max, min;
+	int i;
+
+	for (i = 0; i < ADC_MAX_CHANNEL; i++) {
+		if (i % 2)
+			channel[i] = BATTERY_CURRENT;
+		else
+			channel[i] = BATTERY_VOLTAGE;
+	}
+
+	CHECK_ERROR(mc34708_pmic_adc_convert(channel, result,
+						ADC_MAX_CHANNEL));
+
+	*volt = 0;
+	*curr = 0;
+
+	min = max = result[0];
+	for (i = 0; i < ADC_MAX_CHANNEL; i += 2) {
+		if (min > result[i])
+			min = result[i];
+		if (max < result[i])
+			max = result[i];
+		*volt += result[i];
+	}
+	/* abandon max/min, then get average */
+	*volt -= (max + min);
+	*volt /= ((ADC_MAX_CHANNEL / 2) - 2);
+
+	min = max = result[1];
+	for (i = 1; i < ADC_MAX_CHANNEL; i += 2) {
+		if (min > result[i])
+			min = result[i];
+		if (max < result[i])
+			max = result[i];
+		*curr += result[i];
+	}
+	/* abandon max/min, then get average */
+	*curr -= (max + min);
+	*curr /= ((ADC_MAX_CHANNEL / 2) - 2);
+
+	return 0;
+}
+
 
 static int coulomb_counter_calibration;
 static unsigned int coulomb_counter_start_time_msecs;
@@ -713,6 +796,7 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 {
 	int retval;
 	int coulomb;
+#if 0
 	retval = ripley_get_batt_voltage(&(di->voltage_raw));
 	if (retval == 0)
 		di->voltage_uV = di->voltage_raw * BAT_VOLTAGE_UNIT_UV;
@@ -727,6 +811,22 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 			di->current_uA =
 			    (di->current_raw & 0x1FF) * BAT_CURRENT_UNIT_UA;
 	}
+#else
+	/* AMPD suggest sample volt/curr alternately */
+	retval = ripley_get_batt_volt_curr(&(di->voltage_raw),
+					&(di->current_raw));
+	if (retval == 0) {
+		di->voltage_uV = di->voltage_raw * BAT_VOLTAGE_UNIT_UV;
+
+		if (di->current_raw & 0x200)
+			di->current_uA =
+			    (0x1FF - (di->current_raw & 0x1FF)) *
+			    BAT_CURRENT_UNIT_UA * (-1);
+		else
+			di->current_uA =
+			    (di->current_raw & 0x1FF) * BAT_CURRENT_UNIT_UA;
+	}
+#endif
 	retval = ripley_get_charger_coulomb(&coulomb);
 	if (retval == 0)
 		di->accum_current_uAh = COULOMB_TO_UAH(coulomb);

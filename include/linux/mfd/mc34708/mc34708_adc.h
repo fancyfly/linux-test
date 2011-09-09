@@ -39,7 +39,7 @@ typedef enum {
 	AUX_CHARGER_VOLTAGE,
 	USB_VOLTAGE,
 	RESERVER0,
-	BATTERY_THEMISTOR,
+	BATTERY_THERMISTOR,
 	COINCELL_VOLTAGE,
 	GEN_PURPOSE_AD9,
 	GEN_PURPOSE_AD10,
@@ -80,7 +80,8 @@ PMIC_STATUS mc34708_pmic_adc_deinit(void);
  * @return       This function returns PMIC_SUCCESS if successful.
  */
 
-PMIC_STATUS mc34708_pmic_adc_convert(t_channel channel, unsigned short *result);
+PMIC_STATUS mc34708_pmic_adc_convert(int *channel, unsigned short *result,
+					int num);
 
 
 

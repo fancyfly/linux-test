@@ -34,29 +34,10 @@
 
 #define MX53_PCBA_PMIC_ICTEST		(4*32 + 2) 	/* GPIO5_2 */
 
-#define ADSEL0_LSH	0
-#define ADSEL0_WID	4
-#define ADSEL1_LSH	4
-#define ADSEL1_WID	4
-#define ADSEL2_LSH	8
-#define ADSEL2_WID	4
-#define ADSEL3_LSH	12
-#define ADSEL3_WID	4
-#define ADSEL4_LSH	16
-#define ADSEL4_WID	4
-#define ADSEL5_LSH	20
-#define ADSEL5_WID	4
-
-#define ADSEL6_LSH	0
-#define ADSEL6_WID	4
-#define ADSEL7_LSH	4
-#define ADSEL7_WID	4
-
-#define ADRESULT0_LSH 2
-#define ADRESULT0_WID 10
-
-#define ADRESULT1_LSH 14
-#define ADRESULT1_WID 10
+#define ADCSEL_WID		4
+#define ADCRESULT_WID		10
+#define ADCRESULT_MASK(x)	(((1U << ADCRESULT_WID) - 1) << (x))
+#define ADCRESULT_VALUE(val, x)	(((val) & ADCRESULT_MASK(x)) >> (x))
 
 #define ADEN_LSH 0
 #define ADEN_WID 1
@@ -188,14 +169,16 @@ PMIC_STATUS mc34708_pmic_adc_deinit(void)
 	return PMIC_SUCCESS;
 }
 
-PMIC_STATUS mc34708_pmic_adc_convert(t_channel channel, unsigned short *result)
+PMIC_STATUS mc34708_pmic_adc_convert(int *channel, unsigned short *result,
+					int num)
 {
 	PMIC_STATUS ret;
-	unsigned int register_val = 0;
-	unsigned int register1;
+	unsigned int register_id = MC34708_REG_ADC2, adc_lsh;
+	unsigned int register_val = 0, register_mask = 0;
+	int i;
 
-	register1 = MC34708_REG_ADC2;
-
+	if (num > 8 || num < 1)
+		return -EINVAL;
 	if (suspend_flag == 1)
 		return -EBUSY;
 	down(&convert_mutex);
@@ -206,86 +189,64 @@ PMIC_STATUS mc34708_pmic_adc_convert(t_channel channel, unsigned short *result)
 	pmic_write_reg(MC34708_REG_RTC_TIME, 0x000401, PMIC_ALL_BITS);
 	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x0, PMIC_ALL_BITS);
 
-	if (channel <= BATTERY_CURRENT) {
-		INIT_COMPLETION(adcdone_it);
-		ret = pmic_write_reg(MC34708_REG_ADC2,
-					   BITFVAL(ADSEL0, BATTERY_VOLTAGE),
-					   BITFMASK(ADSEL0));
-		if (PMIC_SUCCESS != ret)
-			goto error1;
-
-		ret = pmic_write_reg(MC34708_REG_ADC2,
-					   BITFVAL(ADSEL1, BATTERY_CURRENT),
-					   BITFMASK(ADSEL1));
-		if (PMIC_SUCCESS != ret)
-			goto error1;
-
-		ret = pmic_write_reg
-			    (MC34708_REG_ADC0, BITFVAL(ADEN, 1),
-			     BITFMASK(ADEN));
-
-		if (PMIC_SUCCESS != ret)
-			goto error1;
-		ret = pmic_write_reg(MC34708_REG_ADC0,
-				     BITFVAL(ADSTOP, ADC_MAX_CHANNEL),
-				     BITFMASK(ADSTOP));
-		if (PMIC_SUCCESS != ret)
-			goto error1;
-		ret = pmic_write_reg(MC34708_REG_ADC0,
-				     BITFVAL(ADSTART, 1), BITFMASK(ADSTART));
-		if (PMIC_SUCCESS != ret)
-			goto error1;
-
-		pr_debug("wait adc done.\n");
-		ret = wait_for_completion_interruptible_timeout(&adcdone_it,
-								HZ);
-		if (ret <= 0) {
-			if (ret == 0)
-				ret = -ETIMEDOUT;
-			pmic_write_reg(MC34708_REG_ADC0, BITFVAL(ADSTART, 0),
-					BITFMASK(ADSTART));
-			pr_err("Channel %d wait ADC DONE timeout, ret = %d\n",
-				channel, ret);
-			goto error1;
+	INIT_COMPLETION(adcdone_it);
+	for (i = 0; i < num; i++) {
+		if (i < 6) {
+			register_id = MC34708_REG_ADC2;
+			adc_lsh = i * 4;
+		} else {
+			register_id = MC34708_REG_ADC3;
+			adc_lsh = (i - 6) * 4;
 		}
+		register_val = channel[i] << adc_lsh;
+		register_mask = ((1U << ADCSEL_WID) - 1) << adc_lsh;
 
-		ret = pmic_write_reg(MC34708_REG_ADC0,
-				     BITFVAL(ADSTART, 0), BITFMASK(ADSTART));
-
-		ret =
-		    pmic_read_reg(MC34708_REG_ADC4, &register_val,
-				  PMIC_ALL_BITS);
-
+		ret = pmic_write_reg(register_id, register_val, register_mask);
 		if (PMIC_SUCCESS != ret)
 			goto error1;
-
-		switch (channel) {
-		case BATTERY_VOLTAGE:
-			*result = BITFEXT(register_val, ADRESULT0);
-			break;
-		case BATTERY_CURRENT:
-			*result = BITFEXT(register_val, ADRESULT1);
-			break;
-		default:
-			*result = BITFEXT(register_val, ADRESULT0);
-			break;
-		}
-
-		pmic_write_reg
-			    (MC34708_REG_ADC0, BITFVAL(ADEN, 0),
-			     BITFMASK(ADEN));
-	} else {
-
-		INIT_COMPLETION(tsdone_int);
-		pr_debug("wait adc done.\n");
-		wait_for_completion_interruptible(&tsdone_int);
-		ret =
-		    pmic_read_reg(MC34708_REG_ADC4, &register_val,
-				  PMIC_ALL_BITS);
-		if (PMIC_SUCCESS != ret)
-			goto error1;
-		*result = BITFEXT(register_val, ADRESULT0);
 	}
+	ret = pmic_write_reg (MC34708_REG_ADC0, BITFVAL(ADEN, 1),
+		     BITFMASK(ADEN));
+	if (PMIC_SUCCESS != ret)
+		goto error1;
+
+	ret = pmic_write_reg(MC34708_REG_ADC0,
+			     BITFVAL(ADSTOP, (num-1)),
+			     BITFMASK(ADSTOP));
+	if (PMIC_SUCCESS != ret)
+		goto error1;
+
+	ret = pmic_write_reg(MC34708_REG_ADC0,
+			     BITFVAL(ADSTART, 1), BITFMASK(ADSTART));
+	if (PMIC_SUCCESS != ret)
+		goto error1;
+
+	pr_debug("wait adc done.\n");
+	ret = wait_for_completion_interruptible_timeout(&adcdone_it, HZ);
+	if (ret <= 0) {
+		if (ret == 0)
+			ret = -ETIMEDOUT;
+		pmic_write_reg(MC34708_REG_ADC0, BITFVAL(ADSTART, 0),
+				BITFMASK(ADSTART));
+		pr_err("Channel %d wait ADC DONE timeout, ret = %d\n",
+			channel, ret);
+		goto error1;
+	}
+	ret = pmic_write_reg(MC34708_REG_ADC0,
+			     BITFVAL(ADSTART, 0), BITFMASK(ADSTART));
+
+	for (i = 0; i < num; i++) {
+		register_id = MC34708_REG_ADC4 + (i / 2);
+		ret = pmic_read_reg(register_id, &register_val, PMIC_ALL_BITS);
+		if (PMIC_SUCCESS != ret)
+			goto error1;
+		adc_lsh = (i % 2) ? 14 : 2;
+		result[i] = ADCRESULT_VALUE(register_val, adc_lsh);
+	}
+
+	pmic_write_reg
+		    (MC34708_REG_ADC0, BITFVAL(ADEN, 0),
+		     BITFMASK(ADEN));
 error1:
 	gpio_set_value(MX53_PCBA_PMIC_ICTEST, 0);
 	up(&convert_mutex);

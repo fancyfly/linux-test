@@ -228,8 +228,7 @@ PMIC_STATUS mc34708_pmic_adc_convert(int *channel, unsigned short *result,
 			ret = -ETIMEDOUT;
 		pmic_write_reg(MC34708_REG_ADC0, BITFVAL(ADSTART, 0),
 				BITFMASK(ADSTART));
-		pr_err("Channel %d wait ADC DONE timeout, ret = %d\n",
-			channel, ret);
+		pr_err("wait for ADC DONE timeout, ret = %d\n", ret);
 		goto error1;
 	}
 	ret = pmic_write_reg(MC34708_REG_ADC0,

@@ -143,6 +143,7 @@
 #define EOC_CURRENT_UA		100000
 #define LOW_VOLT_THRESHOLD	3300000
 #define HIGH_VOLT_THRESHOLD	4200000
+
 #define ADC_MAX_CHANNEL		8
 
 static int suspend_flag;
@@ -154,6 +155,13 @@ bool can_calculate_capacity = false;
 
 static int before_use_calculated_capacity = 1;
 
+#define CC_RECORD_STEP		100000
+#define CC_RECORD_DEVIATION	6000
+#define CC_RECORD_VOLT_IDX(x)	(((x) - LOW_VOLT_THRESHOLD) / CC_RECORD_STEP)
+#define CC_RECORD_VOLT_NUMBERS	(CC_RECORD_VOLT_IDX(HIGH_VOLT_THRESHOLD) + 1)
+#define CC_RECORD_INVALID_VAL	(-100000)
+static int charging_cc_record [CC_RECORD_VOLT_NUMBERS];
+static int discharging_cc_record [CC_RECORD_VOLT_NUMBERS];
 enum batt_complete_id {
 	BATT_FULL = 1,
 	BATT_EMPTY,
@@ -889,8 +897,146 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 	return retval;
 }
 
+static void _gather_capacity_change_statistics(struct ripley_dev_info *di)
+{
+	int i, idx;
+	if (di->voltage_uV < LOW_VOLT_THRESHOLD) //||
+//	    di->voltage_uV > (HIGH_VOLT_THRESHOLD + CC_RECORD_DEVIATION))
+		return;
+
+	for (i = LOW_VOLT_THRESHOLD; i <= HIGH_VOLT_THRESHOLD;
+		i += CC_RECORD_STEP) {
+		if (abs(di->voltage_uV - i) < CC_RECORD_DEVIATION) {
+			idx = CC_RECORD_VOLT_IDX(di->voltage_uV);
+			if (di->battery_status ==
+				POWER_SUPPLY_STATUS_CHARGING) {
+				charging_cc_record[idx] = di->now_coulomb;
+				pr_info("chr: idx %d cc %d\n", idx, charging_cc_record[idx]);
+				if ((idx + 1) < CC_RECORD_VOLT_NUMBERS)
+					charging_cc_record[idx + 1] =
+						CC_RECORD_INVALID_VAL;
+				if (idx > 1 && di->old_battery_status ==
+					POWER_SUPPLY_STATUS_DISCHARGING) {
+					charging_cc_record[idx - 1] =
+						CC_RECORD_INVALID_VAL;
+				}
+			} else if (di->battery_status ==
+				POWER_SUPPLY_STATUS_DISCHARGING) {
+				discharging_cc_record[idx] = di->now_coulomb;
+				pr_info("dischr: idx %d cc %d\n", idx, charging_cc_record[idx]);
+				if ((idx + 1) < CC_RECORD_VOLT_NUMBERS &&
+					di->old_battery_status ==
+						POWER_SUPPLY_STATUS_CHARGING)
+					discharging_cc_record[idx + 1] =
+						CC_RECORD_INVALID_VAL;
+				if (idx > 1) {
+					discharging_cc_record[idx - 1] =
+						CC_RECORD_INVALID_VAL;
+				}
+			}
+		}
+	}
+
+	pr_info ("chr: ");
+	for (i = 0; i <= CC_RECORD_VOLT_NUMBERS;
+		i ++) {
+		pr_info(" %d", charging_cc_record[i]);
+	}
+	pr_info ("\ndischr: ");
+	for (i = 0; i <= CC_RECORD_VOLT_NUMBERS;
+		i ++) {
+		pr_info(" %d", discharging_cc_record[i]);
+	}
+	pr_info ("\n");
+}
+
+static void _get_delta_cc_and_percent(struct ripley_dev_info *di,
+					int *delta_cc, int *percent)
+{
+	int i, j;
+	int min = 0, max = 0;
+
+	if (di->battery_status == POWER_SUPPLY_STATUS_DISCHARGING) {
+		max = CC_RECORD_VOLT_IDX(di->voltage_uV);
+		max = (max + 4) < CC_RECORD_VOLT_NUMBERS ?
+				(max + 4) : (CC_RECORD_VOLT_NUMBERS - 1);
+
+		for (i = max;
+			i >= 0;
+			i -= CC_RECORD_STEP) {
+
+			if (charging_cc_record[i] != CC_RECORD_INVALID_VAL) {
+				max = i;
+				for (j = (i - 1); j > 0;
+					j -= CC_RECORD_STEP) {
+					if (charging_cc_record[j] !=
+						CC_RECORD_INVALID_VAL) {
+						min = j;
+					} else
+						break;
+				}
+
+				break;
+			}
+
+		}
+
+		if (min == max) { /* Not found */
+			delta_cc = 0;
+			percent = 0;
+		} else {
+			delta_cc = abs(discharging_cc_record[max] -
+				charging_cc_record[min]);
+			percent = (max - min ) * CC_RECORD_STEP * 100 /
+				(HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
+		}
+		pr_info("DISCHR delta_cc %d, percent %d", delta_cc,
+						percent);
+
+	} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
+		min = CC_RECORD_VOLT_IDX(di->voltage_uV);
+		min = (min - 4) > 0 ? (min - 4) : 0;
+
+		for (i = min;
+			i < CC_RECORD_VOLT_NUMBERS;
+			i += CC_RECORD_STEP) {
+
+			if (charging_cc_record[i] != CC_RECORD_INVALID_VAL) {
+				min = i;
+				for (j = (i + 1); j < CC_RECORD_VOLT_NUMBERS;
+					j += CC_RECORD_STEP) {
+					if (charging_cc_record[j] !=
+						CC_RECORD_INVALID_VAL) {
+						max = j;
+					} else
+						break;
+				}
+
+				break;
+			}
+
+		}
+
+		if (min == max) { /* Not found */
+			delta_cc = 0;
+			percent = 0;
+		} else {
+			delta_cc = abs(charging_cc_record[max] -
+				charging_cc_record[min]);
+			percent = (max - min ) * CC_RECORD_STEP * 100 /
+				(HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
+		}
+		pr_info("CHR delta_cc %d, percent %d", delta_cc,
+						percent);
+	}
+
+}
+
 static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 {
+	/* Gather the charging statistics */
+	_gather_capacity_change_statistics(di);
+
 	if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN) {
 		di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
 			 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
@@ -914,6 +1060,24 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 		}
 
 		if (before_use_calculated_capacity == 1) {
+			/*
+			 * Here to make it more accurate if base on
+			 * the statistics of charging gathered before
+			 */
+			if (di->old_battery_status ==
+				POWER_SUPPLY_STATUS_CHARGING) {
+				int delta_cc, percent;
+				_get_delta_cc_and_percent(di, &delta_cc,
+							&percent);
+				if (delta_cc != 0 && percent != 0) {
+					di->percent -= di->delta_coulomb *
+							percent / delta_cc;
+					goto out1;
+				} else
+					goto out2;
+			}
+
+out2:
 			di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
 				 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
 
@@ -957,6 +1121,24 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 		}
 
 		if (before_use_calculated_capacity == 1) {
+			/*
+			 * Here to make it more accurate if base on
+			 * the statistics of charging gathered before
+			 */
+			if (di->old_battery_status ==
+				POWER_SUPPLY_STATUS_DISCHARGING) {
+				int delta_cc, percent;
+				_get_delta_cc_and_percent(di, &delta_cc,
+							&percent);
+				if (delta_cc != 0 && percent != 0) {
+					di->percent += di->delta_coulomb *
+							percent / delta_cc;
+					goto out1;
+				} else
+					goto out3;
+			}
+
+out3:
 			di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
 				 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
 
@@ -980,8 +1162,9 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			di->percent = di->percent > 99 ? 99 : di->percent;
 		}
 
-		if (di->battery_status == POWER_SUPPLY_STATUS_FULL)
+		if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
 			di->percent = 100;
+		}
 	}
 out1:
 	pr_debug("di->percent %d ...\n", di->percent);
@@ -1237,6 +1420,11 @@ static int ripley_battery_probe(struct platform_device *pdev)
 		goto workqueue_failed;
 	}
 
+	int i;
+	for (i = 0; i < CC_RECORD_VOLT_NUMBERS; i++) {
+		charging_cc_record[i] = CC_RECORD_INVALID_VAL;
+		discharging_cc_record[i] = CC_RECORD_INVALID_VAL;
+	}
 	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ * 10);
 
 	di->dev = &pdev->dev;

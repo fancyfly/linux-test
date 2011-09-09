@@ -140,12 +140,24 @@
 #define USBCHARGER 0x20
 #define DEDICATEDCHARGER 0x40
 
-#define EOC_CURRENT_UA	50000
-#define ADC_MAX_CHANNEL	8
+#define EOC_CURRENT_UA		100000
+#define LOW_VOLT_THRESHOLD	3300000
+#define HIGH_VOLT_THRESHOLD	4200000
+#define ADC_MAX_CHANNEL		8
 
 static int suspend_flag;
 static int charging_flag;
 static int power_change_flag;
+
+static int last_batt_complete_id = -1;
+bool can_calculate_capacity = false;
+
+static int before_use_calculated_capacity = 1;
+
+enum batt_complete_id {
+	BATT_FULL = 1,
+	BATT_EMPTY,
+};
 
 /*
 usb_type = 0x4; USB host;
@@ -185,7 +197,7 @@ static enum ccres {
 	CCRES_INVALID,
 };
 
-static u32 ccres_mc [] =
+static u32 ccres_mc[] =
 {
 	[CCRES_100_mC_PER_LSB] = 100,
 	[CCRES_200_mC_PER_LSB] = 200,
@@ -199,6 +211,18 @@ static enum integtime {
 	INTEGTIME_16S,
 	INTEGTIME_32S,
 };
+
+static int dump_register(int reg)
+{
+	int ret;
+	int val;
+
+	ret = pmic_read_reg(reg, &val, PMIC_ALL_BITS);
+	if (ret == 0) {
+		printk("reg %d:  %x\n", reg, val);
+	} else
+		printk("reg read error\n");
+}
 
 static int set_coulomb_counter_cres(enum ccres ccres)
 {
@@ -390,7 +414,7 @@ static int ripley_calibrate_coulomb_counter(void)
 	unsigned int value;
 
 	/* set scaler */
-	CHECK_ERROR(pmic_write_reg(REG_ACC1, 0x1, BITFMASK(ACC1_ONEC)));
+	CHECK_ERROR(pmic_write_reg(REG_ACC1, 0x19e, BITFMASK(ACC1_ONEC)));
 
 	CHECK_ERROR(pmic_write_reg
 		    (REG_ACC0, ACC_CALIBRATION, ACC_CONTROL_BIT_MASK));
@@ -404,6 +428,8 @@ static int ripley_calibrate_coulomb_counter(void)
 	coulomb_counter_calibration = (int)((s16) ((u16) value));
 	pr_debug("coulomb_counter_calibration = %d\n",
 		 coulomb_counter_calibration);
+	CHECK_ERROR(pmic_write_reg
+		    (REG_ACC0, 0x7, ACC_CONTROL_BIT_MASK));
 
 	return 0;
 
@@ -416,13 +442,28 @@ static int ripley_get_charger_coulomb(int *coulomb)
 	int calibration;
 	unsigned int time_diff_msec;
 
-	ret = pmic_read_reg(REG_ACC0, &value, BITFMASK(ACC_CCOUT));
+	ret = pmic_read_reg(MC34708_REG_ACC0, &value, PMIC_ALL_BITS);
 	if (ret != 0)
 		return -1;
+#define CCFAULT	0x80
+	if (value & CCFAULT) {
+		pr_warning("CCFAULT: CCOUT contents no longer valid!\n");
+		return -1;
+	}
 	value = BITFEXT(value, ACC_CCOUT);
 	pr_debug("counter value = %x\n", value);
-	*coulomb = ((s16) ((u16) value)) * ACC_COULOMB_PER_LSB;
 
+	/* 2's complement */
+	if (value & 0x8000) {
+		value = ~value;
+		value += 1;
+		value &= 0x7fff; 
+		value *= -1;
+	}
+	pr_debug("cc %d\n", value);
+	*coulomb = value; // TODO
+
+#if 0
 	if (abs(*coulomb) >= ACC_COULOMB_PER_LSB) {
 		/* calibrate */
 		time_diff_msec = jiffies_to_msecs(jiffies);
@@ -435,6 +476,7 @@ static int ripley_get_charger_coulomb(int *coulomb)
 		    / (ACC_ONEC_VALUE * ACC_CALIBRATION_DURATION_MSECS);
 		*coulomb -= calibration;
 	}
+#endif
 
 	return 0;
 }
@@ -446,6 +488,7 @@ struct ripley_dev_info {
 	int voltage_uV;
 	unsigned short current_raw;
 	int current_uA;
+	int old_battery_status;
 	int battery_status;
 	int full_counter;
 	int chargeTimeSeconds;
@@ -453,6 +496,12 @@ struct ripley_dev_info {
 	int aux_charger_online;
 	int charger_voltage_uV;
 	int accum_current_uAh;
+	int percent;
+	int real_capacity;
+	int full_coulomb;
+	int empty_coulomb;
+	int now_coulomb;
+	int delta_coulomb;
 
 	int currChargePoint;
 
@@ -675,8 +724,10 @@ static int check_eoc(struct ripley_dev_info *di)
 	battcur *= battcur_res;
 	pr_debug("batt cur value = %d\n", battcur/1000);
 
-
-	if (battcur <= EOC_CURRENT_UA)
+	ret = ripley_get_batt_voltage(&(di->voltage_raw));
+	if (ret == 0)
+		di->voltage_uV = di->voltage_raw * BAT_VOLTAGE_UNIT_UV;
+	if (battcur <= EOC_CURRENT_UA && di->voltage_uV >= HIGH_VOLT_THRESHOLD)
 		di->full_counter++;
 
 	if (di->full_counter > 2)
@@ -739,13 +790,11 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 		}
 
 		if (restartCharging) {
-			ripley_start_coulomb_counter();
 			enable_charger(1);
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 10);
 		} else if (stopCharging) {
-			ripley_stop_coulomb_counter();
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 10);
@@ -828,21 +877,129 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 	}
 #endif
 	retval = ripley_get_charger_coulomb(&coulomb);
-	if (retval == 0)
-		di->accum_current_uAh = COULOMB_TO_UAH(coulomb);
+	if (retval == 0) {
+		di->delta_coulomb = coulomb - di->now_coulomb; /*TODO:check*/
+		di->now_coulomb = coulomb;
+//		di->accum_current_uAh = coulomb * 1000000 / 3600;
+	}
+	pr_debug("vol %d, cur %d, cc %d, delta cc %d\n", di->voltage_uV,
+							di->current_uA,
+							di->now_coulomb,
+							di->delta_coulomb);
 	return retval;
 }
 
+static void ripley_battery_update_capacity(struct ripley_dev_info *di)
+{
+	if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN) {
+		di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
+			 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
+
+		if (di->percent < 0)
+			di->percent = 0;
+		else if (di->percent > 99)
+			di->percent = 99;
+
+	} else if (di->battery_status == POWER_SUPPLY_STATUS_DISCHARGING) {
+		if (di->voltage_uV <= LOW_VOLT_THRESHOLD) {/* discharging cmplt */
+			if (last_batt_complete_id > 0 &&
+				last_batt_complete_id != BATT_EMPTY) {
+				can_calculate_capacity = true;
+				before_use_calculated_capacity = 0;
+			} else
+				can_calculate_capacity = false;
+
+			di->empty_coulomb = di->now_coulomb;
+			last_batt_complete_id = BATT_EMPTY;	
+		}
+
+		if (before_use_calculated_capacity == 1) {
+			di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
+				 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
+
+			if (di->percent < 0)
+				di->percent = 0;
+			else if (di->percent > 99)
+				di->percent = 99;
+
+			/* re-consider the case */
+			if (di->voltage_uV <= LOW_VOLT_THRESHOLD) /* discharging cmplt */
+				di->percent = 0; /* TODO */
+
+			goto out1;
+		}
+
+		if (can_calculate_capacity) {
+			/* recal capacity and get the real total capacity */
+			di->real_capacity = di->full_coulomb - di->empty_coulomb;
+			di->percent = 0;/*TODO ??*/
+		} else {
+			di->percent -= di->delta_coulomb * 100 / di->real_capacity;
+			di->percent = di->percent < 0 ? 0 : di->percent;
+		}
+
+		/* re-consider the case */
+		if (di->voltage_uV <= LOW_VOLT_THRESHOLD) /* discharging cmplt */
+			di->percent = 0; /* TODO */
+	} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING || 
+		   di->battery_status == POWER_SUPPLY_STATUS_FULL) {
+
+		if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
+			if (last_batt_complete_id > 0 &&
+				last_batt_complete_id != BATT_FULL) {
+				can_calculate_capacity = true;
+				before_use_calculated_capacity = 0;
+			} else
+				can_calculate_capacity = false;
+
+			di->full_coulomb = di->now_coulomb;
+			last_batt_complete_id = BATT_FULL;	
+		}
+
+		if (before_use_calculated_capacity == 1) {
+			di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
+				 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
+
+			if (di->percent < 0)
+				di->percent = 0;
+			else if (di->percent > 99)
+				di->percent = 99;
+
+			if (di->battery_status == POWER_SUPPLY_STATUS_FULL)
+				di->percent = 100;
+
+			goto out1;
+		}
+
+		if (can_calculate_capacity) {
+			/* recal capacity and get the real total capacity */
+			di->real_capacity = di->full_coulomb - di->empty_coulomb;
+			di->percent = 100;
+		} else {
+			di->percent += di->delta_coulomb * 100 / di->real_capacity;
+			di->percent = di->percent > 99 ? 99 : di->percent;
+		}
+
+		if (di->battery_status == POWER_SUPPLY_STATUS_FULL)
+			di->percent = 100;
+	}
+out1:
+	pr_debug("di->percent %d ...\n", di->percent);
+	return;
+}
 static void ripley_battery_update_status(struct ripley_dev_info *di)
 {
 	unsigned int point = 0;
 	struct mc34708_charger_config *config = di->chargeConfig;
 	int old_battery_status = di->battery_status;
+	di->old_battery_status = di->battery_status;
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN)
 		di->full_counter = 0;
 
 	ripley_battery_read_status(di);
+
+	ripley_battery_update_capacity(di);
 
 	if (di->usb_charger_online || di->aux_charger_online) {
 		if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN ||
@@ -988,7 +1145,7 @@ static int ripley_battery_get_property(struct power_supply *psy,
 		val->intval = di->current_uA;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		val->intval = di->accum_current_uAh;
+		val->intval = di->accum_current_uAh; /*TODO*/
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
 		val->intval = 4200000;
@@ -1000,7 +1157,7 @@ static int ripley_battery_get_property(struct power_supply *psy,
 		val->intval = 1;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		val->intval = 100;	/*TODO*/
+		val->intval = di->percent;	/*TODO*/
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = 30;	/*TODO*/
@@ -1133,9 +1290,9 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	bat_event_callback.param = (void *)di;
 	pmic_event_subscribe(MC34708_EVENT_CHRCMPL, bat_event_callback);
 
-	set_coulomb_counter_cres(CCRES_200_mC_PER_LSB);
-	set_coulomb_counter_integtime(INTEGTIME_8S);
-	ripley_stop_coulomb_counter();
+//	set_coulomb_counter_cres(CCRES_200_mC_PER_LSB);
+//	set_coulomb_counter_integtime(INTEGTIME_8S);
+//	ripley_stop_coulomb_counter();
 	ripley_calibrate_coulomb_counter();
 
 	goto success;

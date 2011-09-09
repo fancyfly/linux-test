@@ -137,6 +137,7 @@ static void ha2605_work(struct work_struct *work)
 		return;
 	}
 
+	key_val = key_value[1];
 	if (key_val == KEY_INVALID_CODE){
 		input_report_key(input, *old_keycode, 0);
 		input_sync(input);

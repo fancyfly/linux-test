@@ -65,11 +65,11 @@ static void imx_3stack_shutdown(struct snd_pcm_substream *substream)
 	struct snd_soc_dai *codec_dai = machine->codec_dai;
 	struct imx_3stack_priv *priv = &card_priv;
 	int ret = 0;
-	unsigned int pll2_out;
+	unsigned int pll_out;
 
-	pll2_out = 2822400*8;
+	pll_out = 2822400*8;
 	/* set the codec FLL */
-	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_MCLK1, priv->sysclk, pll2_out);
+	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL1, WM8994_FLL_SRC_MCLK1, priv->sysclk, pll_out);
 	if (ret < 0)
 		return;
 }

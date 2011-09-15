@@ -30,6 +30,9 @@
 #include <asm/delay.h>
 #include <asm/mach/map.h>
 #include <mach/hardware.h>
+#include <linux/pmic_external.h>
+#include <linux/mfd/mc34708/mc34708.h>
+#include <linux/mfd/mc34708/core.h>
 
 #define MXC_SRPG_EMPGC0_SRPGCR	(IO_ADDRESS(GPC_BASE_ADDR) + 0x2C0)
 #define MXC_SRPG_EMPGC1_SRPGCR	(IO_ADDRESS(GPC_BASE_ADDR) + 0x2D0)
@@ -135,6 +138,8 @@ static int mx5_suspend_prepare(void)
 #define MX53_SUSPEND_CPU_WP 400000000
 	struct cpufreq_freqs freqs;
 	u32 suspend_wp = 0;
+	unsigned int value = 0;	
+	unsigned int register_mask = 0;
 	org_freq = clk_get_rate(cpu_clk);
 	/* workaround for mx53 to suspend on 400MHZ wp */
 	if (cpu_is_mx53())
@@ -145,6 +150,22 @@ static int mx5_suspend_prepare(void)
 	if (suspend_wp == cpu_wp_nr)
 		suspend_wp = 0;
 	pr_info("suspend wp cpu=%d\n", cpu_wp_tbl[suspend_wp].cpu_rate);
+#if 1
+	/*SW5 USER OFF*/
+	value = 0x800000;
+	register_mask = 0x800000;
+	pmic_write_reg(REG_MC34708_SW_3_4_5_OP, value, register_mask);
+	/*decease voltage when standby*/
+	value = 0x0;
+	register_mask = 0x7c00;
+	pmic_write_reg(REG_MC34708_SW_5, value, register_mask);
+#endif
+	/*VDAC disable*/
+	value = 0x0;//0xc0000;
+	register_mask =0x10;//0xc0010;
+//	pmic_write_reg(REG_MC34708_MODE_0, value, register_mask);
+
+        
 	freqs.old = org_freq / 1000;
 	freqs.new = cpu_wp_tbl[suspend_wp].cpu_rate / 1000;
 	freqs.cpu = 0;
@@ -156,7 +177,6 @@ static int mx5_suspend_prepare(void)
 		cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 	}
-#endif
 	return 0;
 }
 
@@ -188,6 +208,20 @@ static void mx5_suspend_finish(void)
  */
 static void mx5_suspend_end(void)
 {
+	
+	unsigned int value;
+	unsigned int register_mask = 0;
+	/*User off mode exit*/
+#if 1
+	value = 0;
+	register_mask = 0x800000;
+	pmic_write_reg(REG_MC34708_SW_3_4_5_OP, value, register_mask);
+#endif	
+	/**VDAC enable**/
+	value = 0x10;
+	register_mask = 0x10;
+//	pmic_write_reg(REG_MC34708_MODE_0, value, register_mask);
+#endif
 }
 
 static int mx5_pm_valid(suspend_state_t state)

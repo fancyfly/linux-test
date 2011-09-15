@@ -51,7 +51,7 @@
 
 #define SW1A_MODE_MASK		(0xf << 0)
 #define SW2_MODE_MASK		(0xf << 14)
-#define SW1A_MODE_VALUE		(0xd << 0)
+#define SW1A_MODE_VALUE		(0xc << 0)
 #define SW2_MODE_VALUE		(0xc << 14)
 
 #define REG_SW_1_2_MASK	(SW1A_MODE_MASK | SW2_MODE_MASK)
@@ -77,6 +77,11 @@
 
 #define REG_SWBST_MODE_MASK	(SWBST_MODE_MASK)
 #define REG_SWBST_MODE_VALUE	(SWBST_MODE_VALUE)
+
+#define MODE0_VUSB2STBY_MASK	(0x1 << 19)
+#define MODE0_VUSB2STBY_VALUE	(0x1 << 19)
+#define REG_REGULATOR_MODE0_MASK	(MODE0_VUSB2STBY_MASK)
+#define REG_REGULATOR_MODE0_VALUE	(MODE0_VUSB2STBY_VALUE)
 
 #define SWHOLD_MASK		(0x1 << 12)
 
@@ -266,7 +271,7 @@ static int mc34708_regulator_init(struct mc34708 *mc34708)
 
 	pmic_read_reg(REG_MC34708_IDENTIFICATION, &value, 0xffffff);
 	pr_info("PMIC MC34708 ID:0x%x\n", value);
-
+#if 1
 	/* setting switch operating mode for SW1/2 regulators */
 	pmic_read_reg(REG_MC34708_SW_1_2_OP, &value, 0xffffff);
 	value &= ~REG_SW_1_2_MASK;
@@ -284,7 +289,13 @@ static int mc34708_regulator_init(struct mc34708 *mc34708)
 	value &= ~REG_SWBST_MODE_MASK;
 	value |= REG_SWBST_MODE_VALUE;
 	pmic_write_reg(REG_MC34708_SWBST, value, 0xffffff);
-
+	
+	/* setting VUSB2STBY for standby mode */
+	pmic_read_reg(REG_MC34708_MODE_0, &value, 0xffffff);
+	value &= ~REG_REGULATOR_MODE0_MASK;
+	value |= REG_REGULATOR_MODE0_VALUE;
+	pmic_write_reg(REG_MC34708_MODE_0, value, 0xffffff);
+#endif
 	/* clear SWHOLD bit  to enable USB MUX */
 	pmic_read_reg(REG_MC34708_USB_CONTROL, &value, 0xffffff);
 	value &= ~SWHOLD_MASK;

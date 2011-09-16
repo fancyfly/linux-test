@@ -24,6 +24,7 @@
  *
  * $Id: dhd_linux.c,v 1.65.4.9.2.12.2.104.4.40 2011/02/03 19:55:18 Exp $
  */
+/* Copyright (C) 2011 Freescale Semiconductor,Inc. */
 
 #ifdef CONFIG_WIFI_CONTROL_FUNC
 #include <linux/platform_device.h>
@@ -2865,7 +2866,8 @@ dhd_os_sdtxunlock(dhd_pub_t *pub)
 #ifdef DHD_USE_STATIC_BUF
 void * dhd_os_prealloc(int section, unsigned long size)
 {
-#if defined(CUSTOMER_HW2) && defined(CONFIG_WIFI_CONTROL_FUNC)
+  //#if defined(CUSTOMER_HW2) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if 0
 	void *alloc_ptr = NULL;
 	if (wifi_control_data && wifi_control_data->mem_prealloc)
 	{

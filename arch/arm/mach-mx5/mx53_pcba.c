@@ -70,7 +70,7 @@
 #include <linux/input/lis3dh.h>
 #include <linux/l3g4200d.h>
 #include <linux/akm8975.h>
-
+#include <linux/wlan_plat.h>
 #include "crm_regs.h"
 #include "devices.h"
 #include "usb.h"
@@ -265,7 +265,7 @@
 #define OTGEN_WID		1
 
 extern int __init mx53_pcba_init_mc34708(void);
-
+extern void mxc_mmc_force_detect(int id);
 static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	/* GYRO DRDY */
 	MX53_PAD_EIM_OE__GPIO2_25,
@@ -1618,7 +1618,12 @@ static unsigned int sdhc_get_card_det_status(struct device *dev)
 
 	return ret;
 }
-
+bool bcm4329_power_bt_on = false;
+bool bcm4329_power_wifi_on = false;
+static unsigned int sdhc_get_sdio_det_status(struct device *dev)
+{
+	return bcm4329_power_wifi_on ? 0 : 1;
+}
 static struct mxc_mmc_platform_data mmc1_data = {
 	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30
 		| MMC_VDD_31_32,
@@ -1639,6 +1644,7 @@ static struct mxc_mmc_platform_data mmc2_data = {
 	.min_clk = 400000,
 	.max_clk = 50000000,
 	.card_inserted_state = 1,
+	.status = sdhc_get_sdio_det_status,
 	.clock_mmc = "esdhc_clk",
 	.power_mmc = NULL,
 };
@@ -1787,18 +1793,95 @@ static struct platform_device mxc_spdif_audio_device = {
 
 static int mx53_pcba_bt_power_change(int status)
 {
-	if (status) {
-		gpio_request(MX53_PCBA_BT_ENABLE, "bt-reset");
-		gpio_direction_output(MX53_PCBA_BT_ENABLE, 0);
-		/* pull down reset pin at least >5ms */
-		mdelay(6);
-		/* pull up after power supply BT */
-		gpio_set_value(MX53_PCBA_BT_ENABLE, 1);
-		gpio_free(MX53_PCBA_BT_ENABLE);
+	if (1 == status)
+	{
+		bcm4329_power_bt_on = true;
+		gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
+		gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, status);
+		gpio_free(MX53_PCBA_WLAN_VCC_EN);
 		msleep(100);
-		/* Bluetooth need some time to reset */
+		printk(KERN_INFO"mx53_pcba bt power on\r\n");
+		gpio_request(MX53_PCBA_BT_ENABLE, "bt-reset");
+		gpio_direction_output(MX53_PCBA_BT_ENABLE, status);
+		gpio_free(MX53_PCBA_BT_ENABLE);
+	}else if (0 == status)
+	{
+		bcm4329_power_bt_on = false;
+		gpio_request(MX53_PCBA_BT_ENABLE, "bt-reset");
+		gpio_direction_output(MX53_PCBA_BT_ENABLE, status);
+		gpio_free(MX53_PCBA_BT_ENABLE);
+		if (!bcm4329_power_wifi_on)
+		{
+			printk(KERN_INFO"mx53_pcba bt power off\r\n");
+			gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
+			gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, status);
+			gpio_free(MX53_PCBA_WLAN_VCC_EN);
+		}
 	}
 
+	return 0;
+}
+static int mx53_pcba_wifi_set_power(int val)
+{
+	if (1 == val)
+	{
+		bcm4329_power_wifi_on = true;
+		gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
+		gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, val);
+		gpio_free(MX53_PCBA_WLAN_VCC_EN);
+		msleep(100);
+		printk(KERN_INFO"mx53_pcba wifi power on\r\n");
+		gpio_request(MX53_PCBA_WLAN_ENABLE, "wl-enable");
+		gpio_direction_output(MX53_PCBA_WLAN_ENABLE, val);
+		gpio_free(MX53_PCBA_WLAN_ENABLE);
+	}else if (0 == val)
+	{
+		bcm4329_power_wifi_on = false;
+		gpio_request(MX53_PCBA_WLAN_ENABLE, "wl-enable");
+		gpio_direction_output(MX53_PCBA_WLAN_ENABLE, val);
+		gpio_free(MX53_PCBA_WLAN_ENABLE);
+		msleep(100);
+		if (!bcm4329_power_bt_on)
+		{
+			printk(KERN_INFO"mx53_pcba wifi power off\r\n");
+			gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
+			gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, val);
+			gpio_free(MX53_PCBA_WLAN_VCC_EN);
+		}
+	}
+	return 0;
+}
+static int mx53_pcba_wifi_reset(int val)
+{
+	mx53_pcba_wifi_set_power(1-val);
+	mdelay(6);
+	mx53_pcba_wifi_set_power(val);
+	return 0;
+}
+static int mx53_pcba_wifi_set_carddetect(int val)
+{
+        int wifi_bus_num = 1;
+        printk(KERN_INFO"mx53 pcba enter %s=%d\r\n", __FUNCTION__, val);
+        if (val != bcm4329_power_wifi_on)
+	{
+	    printk(KERN_INFO"pcba no need to detect and exit\r\n");
+	    return 0;
+        }
+        mxc_mmc_force_detect(wifi_bus_num);
+        mdelay(500);
+        return 0;
+}
+
+static void * mx53_pcba_wifi_mem_prealloc(int section, unsigned long size)
+{
+	return 0;
+}
+static int mx53_pcba_wifi_get_mac_addr(unsigned char *buf)
+{
+	return 0;
+}
+static void * mx53_pcba_wifi_get_country_code(char *ccode)
+{
 	return 0;
 }
 
@@ -1809,7 +1892,18 @@ static struct platform_device mxc_bt_rfkill = {
 static struct mxc_bt_rfkill_platform_data mxc_bt_rfkill_data = {
 	.power_change = mx53_pcba_bt_power_change,
 };
+static struct platform_device mxc_wifi_control = {
+        .name = "bcm4329_wlan",
+};
 
+static struct wifi_platform_data wifi_control_data = {
+        .set_power = mx53_pcba_wifi_set_power,
+        .set_reset =  mx53_pcba_wifi_reset,
+        .set_carddetect = mx53_pcba_wifi_set_carddetect,
+        .mem_prealloc ="",// &mx53_pcba_wifi_mem_prealloc,
+        .get_mac_addr = mx53_pcba_wifi_get_mac_addr,
+        .get_country_code = mx53_pcba_wifi_get_country_code,
+};
 static void mxc_register_powerkey(pwrkey_callback pk_cb)
 {
 	pmic_event_callback_t power_key_event;
@@ -1929,9 +2023,9 @@ static void __init mx53_pcba_io_init(void)
 	gpio_request(MX53_PCBA_WLAN_CLK_REQ, "wl-clkreq");
 	gpio_direction_input(MX53_PCBA_WLAN_CLK_REQ);
 	gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
-	gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, 1);
+	gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, 0);
 	gpio_request(MX53_PCBA_WLAN_ENABLE, "wl-enable");
-	gpio_direction_output(MX53_PCBA_WLAN_ENABLE, 1);
+	gpio_direction_output(MX53_PCBA_WLAN_ENABLE, 0);
 	gpio_request(MX53_PCBA_WLAN_WAKE_B, "wl-wake");
 	gpio_direction_output(MX53_PCBA_WLAN_WAKE_B, 0);
 	gpio_request(MX53_PCBA_WLAN_HOST_WAKE_B, "wl-host-wake");
@@ -2097,6 +2191,7 @@ static void __init mxc_board_init(void)
 	mxc_register_device(&mxc_v4l2_device, NULL);
 	mxc_register_device(&mxc_v4l2out_device, NULL);
 	mxc_register_device(&mxc_bt_rfkill, &mxc_bt_rfkill_data);
+	mxc_register_device(&mxc_wifi_control, &wifi_control_data);
 	pcba_add_device_buttons();
 	mxc_register_device(&mxc_powerkey_device, &pwrkey_data);
 	mxc_register_device(&leds_mc34708_device, &leds_mc34708_data);

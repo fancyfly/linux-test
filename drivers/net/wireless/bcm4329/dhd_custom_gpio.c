@@ -22,7 +22,7 @@
 *
 * $Id: dhd_custom_gpio.c,v 1.1.4.8.4.4 2011/01/20 20:23:09 Exp $
 */
-
+/* Copyright (C) 2011 Freescale Semiconductor,Inc. */
 
 #include <typedefs.h>
 #include <linuxver.h>
@@ -142,6 +142,9 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 		case WLAN_POWER_ON:
 			WL_TRACE(("%s: call customer specific GPIO to turn on WL_REG_ON\n",
 				__FUNCTION__));
+#ifdef CUSTOMER_HW2
+                        wifi_set_power(1, 100);
+#endif
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_on(1);
 			/* Lets customer power to get stable */

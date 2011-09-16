@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-# Fri Sep  2 13:15:01 2011
+# Fri Sep 16 12:49:13 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -934,6 +934,15 @@ CONFIG_FEC=y
 CONFIG_WLAN=y
 # CONFIG_USB_ZD1201 is not set
 # CONFIG_HOSTAP is not set
+CONFIG_BCM4329=m
+CONFIG_BCM4329_FIRST_SCAN=y
+CONFIG_BCM4329_FW_PATH="/system/etc/firmware/fw_bcm4329.bin"
+CONFIG_BCM4329_NVRAM_PATH="/system/etc/firmware/nvram.txt"
+CONFIG_BCM4329_WIFI_CONTROL_FUNC=y
+# CONFIG_BCM4329_DHD_USE_STATIC_BUF is not set
+# CONFIG_BCM4329_HW_OOB is not set
+# CONFIG_BCM4329_OOB_INTR_ONLY is not set
+# CONFIG_BCM4329_GET_CUSTOM_MAC_ENABLE is not set
 
 #
 # Enable WiMAX (Networking options) to see the WiMAX drivers

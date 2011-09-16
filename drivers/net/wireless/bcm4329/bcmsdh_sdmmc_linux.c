@@ -23,6 +23,7 @@
  *
  * $Id: bcmsdh_sdmmc_linux.c,v 1.1.2.5.6.17 2010/08/13 00:36:19 Exp $
  */
+/* Copyright (C) 2011 Freescale Semiconductor,Inc. */
 
 #include <typedefs.h>
 #include <bcmutils.h>
@@ -138,8 +139,8 @@ static const struct sdio_device_id bcmsdh_sdmmc_ids[] = {
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4325) },
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4329) },
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4319) },
-	{.class=0x00, .vendor=SDIO_VENDOR_ID_BROADCOM, .device=SDIO_DEVICE_ID_BROADCOM_4319},
-	{.class=0x02, .vendor=SDIO_VENDOR_ID_BROADCOM, .device=SDIO_DEVICE_ID_BROADCOM_4319},
+	{.class=0x00, .vendor=SDIO_VENDOR_ID_BROADCOM, .device=SDIO_DEVICE_ID_BROADCOM_4329},
+	{.class=0x02, .vendor=SDIO_VENDOR_ID_BROADCOM, .device=SDIO_DEVICE_ID_BROADCOM_4329},
 	{ /* end: all zeroes */				},
 };
 

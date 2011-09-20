@@ -2082,16 +2082,10 @@ static void __init mx53_pcba_io_init(void)
 	gpio_direction_input(MX53_PCBA_GYRO_INT);
 
 	/* TCXO power */
-	gpio_request(MX53_PCBA_TCXO_PWR_EN, "tcxo-pwr");
-	gpio_direction_output(MX53_PCBA_TCXO_PWR_EN, 0);
-
-	/* GPS onoff, tsync */
-	gpio_request(MX53_PCBA_GPS_ONOFF, "gps-onoff");
-	gpio_direction_output(MX53_PCBA_GPS_ONOFF, 0);
-	gpio_request(MX53_PCBA_GPS_TSYNC, "gps-tsync");
-	gpio_direction_output(MX53_PCBA_GPS_TSYNC, 0);
-	gpio_request(MX53_PCBA_GPS_RESET, "gps-rst");
-	gpio_direction_output(MX53_PCBA_GPS_RESET, 0);
+	/* GPS control the clock, this power will gating by GPS, keep
+	 * this pin on to provide GPS clock */
+	/* gpio_request(MX53_PCBA_TCXO_PWR_EN, "tcxo-pwr"); */
+	/* gpio_direction_output(MX53_PCBA_TCXO_PWR_EN, 1); */
 
 	/* MODEM wakeup and power */
 	gpio_request(MX53_PCBA_MODEM_WAKEUP_IN, "modem-wakeup-in");

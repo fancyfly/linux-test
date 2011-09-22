@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2011 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -41,7 +41,7 @@ static __inline void _ipu_ch_param_set_size(uint32_t * params,
 		params[8] = 2;	/* SAT = use 32-bit access */
 		break;
 	case IPU_PIX_FMT_RGB565:
-		params[7] |= 2L | (4UL << (81 - 64)) | (7L << (89 - 64));	/* BPP & PFS */
+		params[7] |= 2L | (4UL << (81 - 64)) | (15L << (89 - 64));	/* BPP & PFS */
 		params[8] = 2 |	/* SAT = 32-bit access */
 		    (0UL << (99 - 96)) |	/* Red bit offset */
 		    (5UL << (104 - 96)) |	/* Green bit offset     */

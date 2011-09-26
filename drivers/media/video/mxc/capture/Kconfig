@@ -97,6 +97,12 @@ config MXC_TVIN_ADV7180
 
 endchoice
 
+config MXC_CAMERA_MT9P111
+	tristate "Aptina mt9p111 camera support"
+	depends on !VIDEO_MXC_EMMA_CAMERA
+	---help---
+	  If you plan to use the mt9p111 Camera with your MXC system, say Y here.
+
 config MXC_IPU_PRP_VF_SDC
 	tristate "Pre-Processor VF SDC library"
 	depends on VIDEO_MXC_IPU_CAMERA && FB_MXC_SYNC_PANEL

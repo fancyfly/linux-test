@@ -41,6 +41,8 @@
 
 static int video_nr = -1, local_buf_num;
 static cam_data *g_cam;
+#define MXC_SENSOR_NUM 2
+static int sensor_index = 0;
 
 /*! This data is used for the output to the display. */
 #define MXC_V4L2_CAPTURE_NUM_OUTPUTS	3
@@ -603,6 +605,103 @@ static int start_preview(cam_data *cam)
 	return err;
 }
 
+static void init_para_for_new_sensor(cam_data *cam)
+{
+	ipu_csi_signal_cfg_t csi_param;
+	struct v4l2_format cam_fmt;
+	struct v4l2_ifparm ifparm;
+
+	/*This is from mxc_v4l2_master_detach before multiple cam is introduced*/
+	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi, true, true);
+	vidioc_int_s_power(cam->sensor, 1);
+	vidioc_int_dev_init(cam->sensor);
+	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi, false, false);
+	cam_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	vidioc_int_g_fmt_cap(cam->sensor, &cam_fmt);
+
+	/*The below is from mxc_v4l_open function before multiple cam is introduced*/
+	vidioc_int_g_ifparm(cam->sensor, &ifparm);
+	csi_param.sens_clksrc = 0;
+	csi_param.clk_mode = 0;
+	csi_param.data_pol = 0;
+	csi_param.ext_vsync = 0;
+	csi_param.pack_tight = 0;
+	csi_param.force_eof = 0;
+	csi_param.data_en_pol = 0;
+	csi_param.mclk = ifparm.u.bt656.clock_curr;
+	csi_param.pixclk_pol = ifparm.u.bt656.latch_clk_inv;
+
+	/* Once we handle multiple inputs this will need to change. */
+	csi_param.csi = 0;
+
+	if (ifparm.u.bt656.mode
+			== V4L2_IF_TYPE_BT656_MODE_NOBT_8BIT)
+		csi_param.data_width = IPU_CSI_DATA_WIDTH_8;
+	else if (ifparm.u.bt656.mode
+			== V4L2_IF_TYPE_BT656_MODE_NOBT_10BIT)
+		csi_param.data_width = IPU_CSI_DATA_WIDTH_10;
+	else
+		csi_param.data_width = IPU_CSI_DATA_WIDTH_8;
+
+
+	csi_param.Vsync_pol = ifparm.u.bt656.nobt_vs_inv;
+	csi_param.Hsync_pol = ifparm.u.bt656.nobt_hs_inv;
+
+	csi_param.csi = cam->csi;
+
+	cam_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	vidioc_int_g_fmt_cap(cam->sensor, &cam_fmt);
+
+	/* Reset the sizes.  Needed to prevent carryover of last
+	 * operation.*/
+	cam->crop_bounds.top = cam->crop_bounds.left = 0;
+	cam->crop_bounds.width = cam_fmt.fmt.pix.width;
+	cam->crop_bounds.height = cam_fmt.fmt.pix.height;
+
+	/* This also is the max crop size for this device. */
+	cam->crop_defrect.top = cam->crop_defrect.left = 0;
+	cam->crop_defrect.width = cam_fmt.fmt.pix.width;
+	cam->crop_defrect.height = cam_fmt.fmt.pix.height;
+
+	/* At this point, this is also the current image size. */
+	cam->crop_current.top = cam->crop_current.left = 0;
+	cam->crop_current.width = cam_fmt.fmt.pix.width;
+	cam->crop_current.height = cam_fmt.fmt.pix.height;
+
+	pr_debug("End of %s: v2f pix widthxheight %d x %d\n",
+		__func__,
+		cam->v2f.fmt.pix.width, cam->v2f.fmt.pix.height);
+	pr_debug("End of %s: crop_bounds widthxheight %d x %d\n",
+		__func__,
+		cam->crop_bounds.width, cam->crop_bounds.height);
+	pr_debug("End of %s: crop_defrect widthxheight %d x %d\n",
+		__func__,
+		cam->crop_defrect.width, cam->crop_defrect.height);
+	pr_debug("End of %s: crop_current widthxheight %d x %d\n",
+		__func__,
+		cam->crop_current.width, cam->crop_current.height);
+
+	csi_param.data_fmt = cam_fmt.fmt.pix.pixelformat;
+	pr_debug("On Open: Input to ipu size is %d x %d\n",
+			cam_fmt.fmt.pix.width, cam_fmt.fmt.pix.height);
+	ipu_csi_set_window_size(cam->crop_current.width,
+				cam->crop_current.width,
+				cam->csi);
+	ipu_csi_set_window_pos(cam->crop_current.left,
+				cam->crop_current.top,
+				cam->csi);
+	ipu_csi_init_interface(cam->crop_bounds.width,
+				cam->crop_bounds.height,
+				cam_fmt.fmt.pix.pixelformat,
+				csi_param);
+
+	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi,
+			       true, true);
+	vidioc_int_init(cam->sensor);
+	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi,
+			       false, false);
+	}
+
 /*!
  * shut down the viewfinder job
  *
@@ -971,7 +1070,7 @@ static int mxc_v4l2_g_ctrl(cam_data *cam, struct v4l2_control *c)
  */
 static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 {
-	int ret = 0;
+	int i, ret = 0;
 	int tmp_rotation = IPU_ROTATE_NONE;
 
 	pr_debug("In MVC:mxc_v4l2_s_ctrl\n");
@@ -1176,6 +1275,16 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 #ifdef CONFIG_MXC_IPU_V1
 		ipu_csi_flash_strobe(true);
 #endif
+		break;
+	case V4L2_CID_MXC_SWITCH_CAM:
+		/* power down other cameraes before enable new one */
+		for (i=0;i < sensor_index;i++) {
+			if (i != c->value) {
+				vidioc_int_s_power(cam->all_sensors[i], 0);
+			}
+		}
+		cam->sensor = cam->all_sensors[c->value];
+		init_para_for_new_sensor(cam);
 		break;
 	default:
 		pr_debug("   default case\n");
@@ -1610,6 +1719,7 @@ static int mxc_v4l_open(struct file *file)
 
 		ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi,
 				       false, false);
+
 }
 
 	file->private_data = dev;
@@ -1813,7 +1923,6 @@ static long mxc_v4l_do_ioctl(struct file *file,
 		cap->bus_info[0] = '\0';
 		break;
 	}
-
 	/*!
 	 * V4l2 VIDIOC_G_FMT ioctl
 	 */
@@ -2745,24 +2854,36 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 {
 	cam_data *cam = slave->u.slave->master->priv;
 	struct v4l2_format cam_fmt;
+	int i;
 
 	pr_debug("In MVC: mxc_v4l2_master_attach\n");
 	pr_debug("   slave.name = %s\n", slave->name);
 	pr_debug("   master.name = %s\n", slave->u.slave->master->name);
 
 	cam->sensor = slave;
+	if (sensor_index < MXC_SENSOR_NUM) {
+		cam->all_sensors[sensor_index] = slave;
+		sensor_index++;
+	} else {
+		pr_err("ERROR: v4l2 capture: slave number exceeds the maximum.\n");
+		return -1;
+	}
 	if (slave == NULL) {
 		pr_err("ERROR: v4l2 capture: slave parameter not valid.\n");
 		return -1;
 	}
-
+	for(i=0;i<sensor_index;i++)
+	{
+		if (i !=sensor_index -1) {
+			vidioc_int_s_power(cam->all_sensors[i], 0);
+		}
+	}
 	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi, true, true);
 	vidioc_int_s_power(cam->sensor, 1);
 	vidioc_int_dev_init(slave);
 	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi, false, false);
 	cam_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	vidioc_int_g_fmt_cap(cam->sensor, &cam_fmt);
-
 	/* Used to detect TV in (type 1) vs. camera (type 0)*/
 	cam->device_type = cam_fmt.fmt.pix.priv;
 

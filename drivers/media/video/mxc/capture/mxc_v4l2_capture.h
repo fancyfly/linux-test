@@ -195,7 +195,9 @@ typedef struct _cam_data {
 	/* camera sensor interface */
 	struct camera_sensor *cam_sensor; 	/* old version */
 	struct v4l2_int_device *sensor;
+	struct v4l2_int_device *all_sensors[2];
 } cam_data;
+
 
 #if defined(CONFIG_MXC_IPU_V1) || defined(CONFIG_VIDEO_MXC_EMMA_CAMERA) \
 			       || defined(CONFIG_VIDEO_MXC_CSI_CAMERA_MODULE) \

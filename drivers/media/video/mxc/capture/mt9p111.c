@@ -1017,8 +1017,6 @@ static int mt9p111_init_mode(enum mt9p111_frame_rate frame_rate,
 		return -1;
 	}
 
-	printk("########### here 2\n");
-
 	pModeSetting = mt9p111_mode_info_data[frame_rate][mode].init_data_ptr;
 	iModeSettingArySize =
 		mt9p111_mode_info_data[frame_rate][mode].init_data_size;

@@ -415,7 +415,7 @@ static int ripley_calibrate_coulomb_counter(void)
 
 }
 
-static int ripley_get_charger_coulomb(int *coulomb)
+static int ripley_get_charger_coulomb(int *coulomb, int *ccfault)
 {
 	int ret;
 	unsigned int value;
@@ -423,10 +423,16 @@ static int ripley_get_charger_coulomb(int *coulomb)
 	ret = pmic_read_reg(MC34708_REG_ACC0, &value, PMIC_ALL_BITS);
 	if (ret != 0)
 		return -1;
+
+	*ccfault = 0;
 #define CCFAULT	0x80
 	if (value & CCFAULT) {
-		pr_warning("CCFAULT: CCOUT contents no longer valid!\n");
-		return -1;
+		pr_warning("CCFAULT: may enlarge coulomb counter resolution\n");
+		*ccfault = 1;
+		pmic_write_reg(MC34708_REG_ACC0, value, PMIC_ALL_BITS);
+		ret = pmic_read_reg(MC34708_REG_ACC0, &value, PMIC_ALL_BITS);
+		if (ret != 0)
+			return -1;
 	}
 	value = BITFEXT(value, ACC_CCOUT);
 	pr_debug("counter value = %x\n", value);
@@ -772,7 +778,8 @@ static int ripley_usb_charger_get_property(struct power_supply *psy,
 static int ripley_battery_read_status(struct ripley_dev_info *di)
 {
 	int retval;
-	int coulomb;
+	int coulomb, ccfault;
+	static int old_delta_coulomb;
 #if 0
 	retval = ripley_get_batt_voltage(&(di->voltage_raw));
 	if (retval == 0)
@@ -804,11 +811,17 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 			    (di->current_raw & 0x1FF) * BAT_CURRENT_UNIT_UA;
 	}
 #endif
-	retval = ripley_get_charger_coulomb(&coulomb);
+	retval = ripley_get_charger_coulomb(&coulomb, &ccfault);
 	if (retval == 0) {
-		di->delta_coulomb = coulomb - di->now_coulomb; /*TODO:check*/
-		di->now_coulomb = coulomb;
-//		di->accum_current_uAh = coulomb * 1000000 / 3600;
+		if (ccfault == 0) {
+			di->delta_coulomb = coulomb - di->now_coulomb; /*TODO:check*/
+			di->now_coulomb = coulomb;
+			old_delta_coulomb = di->delta_coulomb;
+	//		di->accum_current_uAh = coulomb * 1000000 / 3600;
+		} else {
+			di->delta_coulomb = old_delta_coulomb; /* use latest */
+			di->now_coulomb = coulomb;
+		}
 	}
 	pr_debug("vol %d, cur %d, cc %d, delta cc %d\n", di->voltage_uV,
 							di->current_uA,

@@ -697,4 +697,17 @@ config TOUCHSCREEN_GOODIX
 	 To compile this driver as a module, choose M here: the
 	 module will be called goodix_touch.ko.
 
+config GOODIX_GT80X_IAR
+        tristate "Goodix update module for GT80X"
+        default n
+        depends on I2C && (TOUCHSCREEN_GOODIX = y)
+        help
+         It is a android kernel module to support Gooidx's touchscreen whose
+         name is guitar on mx5x platform updating in system.
+         Say Y here to enable the driver for the touchscreen on the
+         pcba board.
+         If unsure, say N.
+         To compile this driver as a module, choose M here: the
+         module will be called gt80x_iap.ko.
+
 endif

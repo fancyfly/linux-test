@@ -56,3 +56,4 @@ obj-$(CONFIG_TOUCHSCREEN_P1003)		+= p1003_v33-ts.o
 obj-$(CONFIG_TOUCHSCREEN_DA9052)        += da9052_tsi.o da9052_tsi_filter.o da9052_tsi_calibrate.o
 obj-$(CONFIG_TOUCHSCREEN_MAX11801)	+= max11801_ts.o
 obj-$(CONFIG_TOUCHSCREEN_GOODIX)        += goodix_touch.o
+obj-$(CONFIG_GOODIX_GT80X_IAR)          += gt80x-iap.o

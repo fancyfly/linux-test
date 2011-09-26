@@ -32,6 +32,8 @@
 #define SCREEN_MAX_WIDTH	272
 
 #define GT80X_ADD            0xaa
+#define MX53_PCBA_TOUCH_RST		(6*32 + 3)	/* GPIO7_3 */
+
 
 #define GOODIX_MULTI_TOUCH
 #ifndef GOODIX_MULTI_TOUCH

@@ -44,7 +44,11 @@
 #define WM8994_CODEC_MASTER	1
 
 struct imx_3stack_priv {
-	int sysclk;
+	int sysclk;         /*mclk from the outside*/
+	int codec_sysclk;
+	int dai_hifi;
+	int dai_voice;
+	int dai_bt;
 	struct platform_device *pdev;
 	struct wm8994 *wm8994;
 };
@@ -52,12 +56,12 @@ static struct imx_3stack_priv card_priv;
 static struct snd_soc_jack jack;
 static struct snd_soc_card snd_soc_card_imx_3stack;
 
-static int imx_3stack_startup(struct snd_pcm_substream *substream)
+static int imx_3stack_hifi_startup(struct snd_pcm_substream *substream)
 {
 	return 0;
 }
 
-static void imx_3stack_shutdown(struct snd_pcm_substream *substream)
+static void imx_3stack_hifi_shutdown(struct snd_pcm_substream *substream)
 {
 
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -66,12 +70,39 @@ static void imx_3stack_shutdown(struct snd_pcm_substream *substream)
 	struct imx_3stack_priv *priv = &card_priv;
 	int ret = 0;
 	unsigned int pll_out;
+	pr_debug("imx_3stack_hifi_shutdown direction=%d\n", substream->stream);
 
+	priv->dai_hifi = 0;
 	pll_out = 2822400*8;
 	/* set the codec FLL */
 	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL1, WM8994_FLL_SRC_MCLK1, priv->sysclk, pll_out);
 	if (ret < 0)
 		return;
+}
+
+static int imx_3stack_voice_startup(struct snd_pcm_substream *substream)
+{
+	return 0;
+}
+
+static void imx_3stack_voice_shutdown(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai_link *machine = rtd->dai;
+	struct snd_soc_dai *codec_dai = machine->codec_dai;
+	struct imx_3stack_priv *priv = &card_priv;
+	priv->dai_voice = 0;
+}
+
+static int imx_3stack_bt_startup(struct snd_pcm_substream *substream)
+{
+	return 0;
+}
+
+static void imx_3stack_bt_shutdown(struct snd_pcm_substream *substream)
+{
+	struct imx_3stack_priv *priv = &card_priv;
+	priv->dai_bt = 0;
 }
 
 static void imx_3stack_init_dam(int ssi_port, int dai_port)
@@ -139,6 +170,11 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 	u32 dai_format;
 	/* only need to do this once as capture and playback are sync */
 
+	if (priv->dai_hifi)
+		return 0;
+	priv->dai_hifi = 1;
+
+	pr_debug("imx_3stack_hifi_hw_params direction =%d\n",substream->stream);
 /*
 	if (params_rate(params) == 8000 || params_rate(params) == 11025)
 		pll_out = params_rate(params) * 512;
@@ -157,6 +193,8 @@ static int imx_3stack_hifi_hw_params(struct snd_pcm_substream *substream,
 				   SND_SOC_CLOCK_IN);
 	if (ret < 0)
 		return ret;
+
+	priv->codec_sysclk = pll_out;
 
 #if WM8994_CODEC_MASTER
 	dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
@@ -223,10 +261,13 @@ static int imx_3stack_voice_hw_params(struct snd_pcm_substream *substream,
 
 	/* only need to do this once as capture and playback are sync */
 
-	pll_out = params_rate(params) * 256;
+	if (priv->dai_voice)
+		return 0;
+	priv->dai_voice = 1;
 
+	pll_out = params_rate(params) * 256;
 	/* set the codec system clock */
-	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_MCLK1, priv->sysclk, pll_out);
+	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL2, WM8994_FLL_SRC_BCLK, 2048000, pll_out);
 	if (ret < 0)
 		return ret;
         	
@@ -249,26 +290,26 @@ static int imx_3stack_bt_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai_link *machine = rtd->dai;
 	struct snd_soc_dai *codec_dai = machine->codec_dai;
+	struct imx_3stack_priv *priv = &card_priv;
 	int ret = 0;
 
 	/* only need to do this once as capture and playback are sync */
 
-	/* set codec DAI configuration */
-	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_A |
-			SND_SOC_DAIFMT_IB_NF | SND_SOC_DAIFMT_CBM_CFM );
-	if (ret < 0)
-		return ret;
-
+	if (priv->dai_bt)
+		return 0;
+	priv->dai_bt = 1;
 	return 0;
 }
 
 static struct snd_soc_ops imx_3stack_hifi_ops = {
-	.startup = imx_3stack_startup,
-	.shutdown = imx_3stack_shutdown,
+	.startup = imx_3stack_hifi_startup,
+	.shutdown = imx_3stack_hifi_shutdown,
 	.hw_params = imx_3stack_hifi_hw_params,
 };
 
 static struct snd_soc_ops imx_3stack_voice_ops = {
+	.startup = imx_3stack_voice_startup,
+	.shutdown = imx_3stack_voice_shutdown,
 	.hw_params = imx_3stack_voice_hw_params,
 };
 

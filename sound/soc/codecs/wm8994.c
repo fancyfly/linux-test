@@ -924,10 +924,9 @@ static int clk_sys_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		return configure_clock(codec);
+		return 0;
 
 	case SND_SOC_DAPM_POST_PMD:
-		configure_clock(codec);
 		break;
 	}
 
@@ -1949,7 +1948,15 @@ static int wm8994_set_fll(struct snd_soc_dai *dai, int id, int src,
 			    WM8994_FLL1_N_MASK,
 				    fll.n << WM8994_FLL1_N_SHIFT);
 
-	snd_soc_update_bits(codec, WM8994_FLL1_CONTROL_5 + reg_offset,
+	if (src == WM8994_FLL_SRC_BCLK )
+		snd_soc_update_bits(codec, WM8994_FLL1_CONTROL_5 + reg_offset,
+				WM8994_FLL1_BYP_MASK |
+			    WM8994_FLL1_REFCLK_DIV_MASK |
+			    WM8994_FLL1_REFCLK_SRC_MASK,
+			    (fll.clk_ref_div << WM8994_FLL1_REFCLK_DIV_SHIFT) |
+			    (src - 1) | WM8994_FLL1_BYP_MASK );
+	else
+		snd_soc_update_bits(codec, WM8994_FLL1_CONTROL_5 + reg_offset,
 			    WM8994_FLL1_REFCLK_DIV_MASK |
 			    WM8994_FLL1_REFCLK_SRC_MASK,
 			    (fll.clk_ref_div << WM8994_FLL1_REFCLK_DIV_SHIFT) |

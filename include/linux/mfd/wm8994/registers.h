@@ -2328,6 +2328,9 @@
 /*
  * R548 (0x224) - FLL1 Control (5)
  */
+#define WM8994_FLL1_BYP_MASK                    0x8000  /* FLL1_BYP */
+#define WM8994_FLL1_BYP_SHIFT                       15  /* */
+#define WM8994_FLL1_BYP_WIDTH                        1  /* */
 #define WM8994_FLL1_FRC_NCO_VAL_MASK            0x1F80  /* FLL1_FRC_NCO_VAL - [12:7] */
 #define WM8994_FLL1_FRC_NCO_VAL_SHIFT                7  /* FLL1_FRC_NCO_VAL - [12:7] */
 #define WM8994_FLL1_FRC_NCO_VAL_WIDTH                6  /* FLL1_FRC_NCO_VAL - [12:7] */
@@ -2391,6 +2394,9 @@
 /*
  * R580 (0x244) - FLL2 Control (5)
  */
+#define WM8994_FLL2_BYP_MASK                    0x8000  /* FLL1_BYP */
+#define WM8994_FLL2_BYP_SHIFT                       15  /* */
+#define WM8994_FLL2_BYP_WIDTH                        1  /* */
 #define WM8994_FLL2_FRC_NCO_VAL_MASK            0x1F80  /* FLL2_FRC_NCO_VAL - [12:7] */
 #define WM8994_FLL2_FRC_NCO_VAL_SHIFT                7  /* FLL2_FRC_NCO_VAL - [12:7] */
 #define WM8994_FLL2_FRC_NCO_VAL_WIDTH                6  /* FLL2_FRC_NCO_VAL - [12:7] */

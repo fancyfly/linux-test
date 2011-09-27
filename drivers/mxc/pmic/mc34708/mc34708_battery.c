@@ -780,6 +780,14 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 	int retval;
 	int coulomb, ccfault;
 	static int old_delta_coulomb;
+	static unsigned long last;
+
+	/* Do not read info within 1/2 second */
+	if (last && time_before(jiffies, last + HZ / 2))
+		return 0;
+
+	last = jiffies;
+
 #if 0
 	retval = ripley_get_batt_voltage(&(di->voltage_raw));
 	if (retval == 0)

@@ -100,7 +100,7 @@ static int goodix_ts_set(int cmd)
 	return 1;
 }
 
-#if 1
+
 static struct proc_dir_entry *goodix_proc_entry;
 static const char * node_name = "driver/gt80x-update";
 #define MAX_LENGTH 100+1
@@ -332,5 +332,5 @@ module_exit(exit_proc);
 MODULE_AUTHOR("Eltonny");
 MODULE_DESCRIPTION("A linux/Android kernel Module for GT80X updating.");
 MODULE_LICENSE("GPL v2");
-#endif
+
 

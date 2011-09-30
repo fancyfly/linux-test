@@ -1936,6 +1936,13 @@ static int mxc_pwrkey_getstatus(int id)
 	return 1;
 }
 
+void huawei_mu509_poweron(void)
+{
+	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);
+	mdelay(330);
+	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,1);
+}
+
 static struct power_key_platform_data pwrkey_data = {
 	.key_value = KEY_F4,
 	.register_pwrkey = mxc_register_powerkey,
@@ -2094,7 +2101,6 @@ static void __init mx53_pcba_io_init(void)
 	gpio_direction_input(MX53_PCBA_MODEM_WAKEUP_OUT);
 	gpio_request(MX53_PCBA_MODEM_PWR_ON, "modem-pwr");
 	gpio_direction_output(MX53_PCBA_MODEM_PWR_ON, 0);
-
 	/* AU LDO enable */
 	gpio_request(MX53_PCBA_AU_LDO_EN, "au-leo-en");
 	gpio_direction_output(MX53_PCBA_AU_LDO_EN, 1);
@@ -2102,7 +2108,6 @@ static void __init mx53_pcba_io_init(void)
 	/* audio codec REQ */
 	gpio_request(MX53_PCBA_AUD_REQ, "aud-req");
 	gpio_direction_input(MX53_PCBA_AUD_REQ);
-
 }
 
 /*!
@@ -2189,6 +2194,7 @@ static void __init mxc_board_init(void)
 	pcba_add_device_buttons();
 	mxc_register_device(&mxc_powerkey_device, &pwrkey_data);
 	mxc_register_device(&leds_mc34708_device, &leds_mc34708_data);
+	huawei_mu509_poweron();
 }
 
 static void __init mx53_pcba_timer_init(void)

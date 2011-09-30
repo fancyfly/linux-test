@@ -53,6 +53,8 @@
 #define MXC_PMIC_REG_NUM_SHIFT		0x19
 #define MXC_PMIC_WRITE_BIT_SHIFT		31
 
+#include <mach/gpio.h>
+
 void mc34708_power_off(void);
 
 void *mc34708_alloc_data(struct device *dev)
@@ -112,6 +114,12 @@ void mc34708_get_revision(pmic_version_t *ver)
 void mc34708_power_off(void)
 {
 	unsigned int value;
+
+	if (!machine_is_mx53_pcba()) {
+		gpio_set_value(30,0);
+		mdelay(600);
+		gpio_set_value(30,1);
+	}
 
 	pmic_read_reg(REG_POWER_CTL0, &value, 0xffffff);
 

@@ -123,7 +123,7 @@ void mc34708_power_off(void)
 
 	pmic_read_reg(REG_POWER_CTL0, &value, 0xffffff);
 
-	value |= 0x000008;
+	value |= 0x00000C;
 
 	pmic_write_reg(REG_POWER_CTL0, value, 0xffffff);
 }

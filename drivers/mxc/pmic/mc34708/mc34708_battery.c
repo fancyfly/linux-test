@@ -23,7 +23,6 @@
 #include <linux/power_supply.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
-#include <asm/mach-types.h>
 #include <linux/mfd/mc34708/mc34708_battery.h>
 #include <linux/mfd/mc34708/mc34708_adc.h>
 #include <linux/pmic_status.h>
@@ -272,10 +271,21 @@ static int get_columb_counter_battcur_res_ua_lsb()
 
 static int enable_charger(int enable)
 {
+	pr_info("%s %d\n", __func__, enable);
 	charging_flag = enable ? 1 : 0;
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 				   BITFVAL(CHREN, enable ? 1 : 0),
 				   BITFMASK(CHREN)));
+	return 0;
+}
+
+static int enable_1p5(int enable)
+{
+	/* enable or disable 1P5 large current */
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
+				   BITFVAL(ILIM1P5, enable ? 1 : 0),
+				   BITFMASK(ILIM1P5)));
+
 	return 0;
 }
 
@@ -565,9 +575,8 @@ static int init_charger(struct mc34708_charger_config *config)
 	/* disable manual switch */
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
 				   BITFVAL(MSW, 0), BITFMASK(MSW)));
-	/* enable 1P5 large current */
-	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
-				   BITFVAL(ILIM1P5, 1), BITFMASK(ILIM1P5)));
+	 /* enable 1P5 large current */
+	enable_1p5(true);
 
 	/* enable ISO */
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
@@ -597,26 +606,34 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 					     chargeConfig->chargingPoints
 					     [point].microVolt));
 		switch (usb_type) {
+		/*
+		 * NOTE: When set the ILIM_1P5 bit to 1, the USBCHR[1:0]
+		 * and AUXILIM[1:0] settings are ignored.
+		 *
+		 * enable_1p5(true) called in init_charger()
+		 */
 		case USBHOST:
-			/* set current limit to 500mA */
+			/* disable 1P5 large current */
+			enable_1p5(false);
+			/*
+			 * set current limit to 500mA
+			 * Table 7.2-2, Buck input current limit settings
+			 */
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
+						   BITFVAL(AUXILIM, 6),
+						   BITFMASK(AUXILIM)));
 			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
-						   BITFVAL(MUSBCHRG, 1),
+						   BITFVAL(MUSBCHRG, 2),
 						   BITFMASK(MUSBCHRG)));
 			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(250000));
 			break;
 		case USBCHARGER:
-			/* set current limit to 950mA */
-			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
-						   BITFVAL(MUSBCHRG, 3),
-						   BITFMASK(MUSBCHRG)));
-			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(350000));
-			break;
 		case DEDICATEDCHARGER:
 			/* set current limit to 950mA */
 			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
 						   BITFVAL(MUSBCHRG, 3),
 						   BITFMASK(MUSBCHRG)));
-			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(350000));
+			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1550000));
 			break;
 		default:
 			val |=
@@ -631,9 +648,16 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 		CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 					   val, mask));
 
+		if (usb_type != USBHOST)
+			enable_charger(1);
+		else
+			enable_charger(0);
+
 		di->currChargePoint = point;
+
 		return 0;
 	}
+
 	return -EINVAL;
 }
 
@@ -708,6 +732,7 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			if ((reg_usb_type & USBHOST) != 0) {
 				usb_type = USBHOST;
 				pr_info("USB host attached!!!\n");
+				restartCharging = 0;
 			}
 			if ((reg_usb_type & USBCHARGER) != 0) {
 				usb_type = USBCHARGER;
@@ -724,17 +749,22 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 		}
 
 		if (restartCharging) {
+			pr_info("restartCharging\n");
 			enable_charger(1);
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 10);
+	power_change_flag = 1;
 		} else if (stopCharging) {
+			pr_info("stopCharging\n");
+			enable_charger(0);
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 10);
+	power_change_flag = 1;
 		}
 	}
-	power_change_flag = 1;
+//	power_change_flag = 1;
 
 	return ret;
 }
@@ -831,7 +861,7 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 			di->now_coulomb = coulomb;
 		}
 	}
-	pr_debug("vol %d, cur %d, cc %d, delta cc %d\n", di->voltage_uV,
+	pr_info("vol %d, cur %d, cc %d, delta cc %d\n", di->voltage_uV,
 							di->current_uA,
 							di->now_coulomb,
 							di->delta_coulomb);
@@ -1110,7 +1140,7 @@ out3:
 		}
 	}
 out1:
-	pr_debug("di->percent %d ...\n", di->percent);
+	pr_info("di->percent %d ...\n", di->percent);
 	return;
 }
 static void ripley_battery_update_status(struct ripley_dev_info *di)
@@ -1133,7 +1163,6 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 			point = 0;
 			init_charger(config);
 			set_charging_point(di, point);
-			enable_charger(1);
 			di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 			check_eoc(di);
@@ -1336,6 +1365,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, di);
 
+	di->dev = &pdev->dev;
 	di->aux_charger.name = "ac";
 	di->aux_charger.type = POWER_SUPPLY_TYPE_MAINS;
 	di->aux_charger.properties = ripley_aux_charger_props;
@@ -1373,7 +1403,6 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	}
 	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ * 10);
 
-	di->dev = &pdev->dev;
 	di->chargeConfig = &ripley_charge_config;
 	di->bat.name = "battery";
 	di->bat.type = POWER_SUPPLY_TYPE_BATTERY;
@@ -1391,6 +1420,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	}
 
 	init_battery_profile(di->chargeConfig);
+	enable_charger(false);
 
 	bat_event_callback.func = usb_over_voltage_event_callback;
 	bat_event_callback.param = (void *)di;

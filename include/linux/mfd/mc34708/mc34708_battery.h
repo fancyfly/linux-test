@@ -87,6 +87,8 @@ struct mc34708_charger_config {
 
 	u32 toppingOffMicroAmp;
 
+	u32 maxChargingHour;
+
 	struct mc34708_charger_setting_point *chargingPoints;
 	u32 pointsNumber;
 

@@ -32,8 +32,6 @@
 
 #include "../core/pmic.h"
 
-#define MX53_PCBA_PMIC_ICTEST		(4*32 + 2) 	/* GPIO5_2 */
-
 #define ADCSEL_WID		4
 #define ADCRESULT_WID		10
 #define ADCRESULT_MASK(x)	(((1U << ADCRESULT_WID) - 1) << (x))
@@ -47,6 +45,12 @@
 
 #define ADSTOP_LSH 4
 #define ADSTOP_WID 3
+
+#define THERMxxxS_LSH	11
+#define THERMxxxS_WID	4
+
+#define THFBEN_LSH	21
+#define THFBEN_WID	1
 
 #define TSEN	(1 << 12)
 #define TSSTART	(1 << 13)
@@ -111,6 +115,32 @@ static int mc34708_pmic_adc_resume(struct platform_device *pdev)
 	return 0;
 };
 
+static void _save_and_change_thfb(int *old_value, int thfb_en)
+{
+	unsigned int value;
+
+	pmic_read_reg(MC34708_REG_CHARGER_DEBOUNCE, &value, BITFMASK(THFBEN));
+	value = BITFEXT(value, THFBEN);
+	if (old_value != NULL)
+		*old_value = value;
+
+	pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
+			BITFVAL(THFBEN, thfb_en), BITFMASK(THFBEN));
+}
+
+static void _save_and_change_therm_mask(int *old_mask, int mask)
+{
+	unsigned int value;
+
+	pmic_read_reg(MC34708_REG_INT_MASK1, &value, BITFMASK(THERMxxxS));
+	value = BITFEXT(value, THERMxxxS);
+	if (old_mask != NULL)
+		*old_mask = value;
+
+	pmic_write_reg(MC34708_REG_INT_MASK1,
+			BITFVAL(THERMxxxS, mask), BITFMASK(THERMxxxS));
+}
+
 static void callback_tspendet(void *unused)
 {
 	pr_debug("*** TSI IT mc34708 PMIC_ADC_GET_TOUCH_SAMPLE ***\n");
@@ -152,7 +182,7 @@ int mc34708_pmic_adc_init(void)
 
 	/* enable adc */
 	pmic_write_reg(MC34708_REG_ADC0, 0x170000, PMIC_ALL_BITS);
-	pmic_write_reg(MC34708_REG_ADC1, 0xFFF000, PMIC_ALL_BITS);
+	pmic_write_reg(MC34708_REG_ADC1, 0xFFF555, PMIC_ALL_BITS);
 	pmic_write_reg(MC34708_REG_ADC2, 0x000000, PMIC_ALL_BITS);
 	pmic_write_reg(MC34708_REG_ADC3, 0xF28500, PMIC_ALL_BITS);
 
@@ -175,19 +205,17 @@ PMIC_STATUS mc34708_pmic_adc_convert(int *channel, unsigned short *result,
 	PMIC_STATUS ret;
 	unsigned int register_id = MC34708_REG_ADC2, adc_lsh;
 	unsigned int register_val = 0, register_mask = 0;
+	unsigned int saved_thfb, saved_therm;
 	int i;
 
 	if (num > 8 || num < 1)
 		return -EINVAL;
 	if (suspend_flag == 1)
 		return -EBUSY;
-	down(&convert_mutex);
 
-	/* WORKAROUND for: Thermal shutdown triggers when the ADCEN bit set */
-	gpio_set_value(MX53_PCBA_PMIC_ICTEST, 1);
-	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x200000, PMIC_ALL_BITS);
-	pmic_write_reg(MC34708_REG_RTC_TIME, 0x000401, PMIC_ALL_BITS);
-	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x0, PMIC_ALL_BITS);
+	down(&convert_mutex);
+	_save_and_change_thfb(&saved_thfb, 0);
+	_save_and_change_therm_mask(&saved_therm, 0xF);
 
 	INIT_COMPLETION(adcdone_it);
 	for (i = 0; i < num; i++) {
@@ -247,7 +275,8 @@ PMIC_STATUS mc34708_pmic_adc_convert(int *channel, unsigned short *result,
 		    (MC34708_REG_ADC0, BITFVAL(ADEN, 0),
 		     BITFMASK(ADEN));
 error1:
-	gpio_set_value(MX53_PCBA_PMIC_ICTEST, 0);
+	_save_and_change_therm_mask(NULL, saved_therm);
+	_save_and_change_thfb(NULL, saved_thfb);
 	up(&convert_mutex);
 
 	return ret;
@@ -548,10 +577,13 @@ static int mc34708_pmic_adc_module_probe(struct platform_device *pdev)
 
 	pmic_adc_ready = 1;
 	register_adc_apis(&pmic_adc_api);
-	pr_debug("PMIC ADC successfully probed\n");
 
-	gpio_request(MX53_PCBA_PMIC_ICTEST, "PMIC_ICTEST");
-	gpio_direction_output(MX53_PCBA_PMIC_ICTEST, 0);
+	/* Errata#009: Thermal shutdown triggers when ADCEN bit set */
+	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x100000, PMIC_ALL_BITS);
+	pmic_write_reg(MC34708_REG_POWER_CTL1, 0x80007F, PMIC_ALL_BITS);
+	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x0, PMIC_ALL_BITS);
+
+	pr_debug("PMIC ADC successfully probed\n");
 
 	return 0;
 

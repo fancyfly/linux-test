@@ -121,6 +121,14 @@ void mc34708_power_off(void)
 		gpio_set_value(30,1);
 	}
 
+	pmic_read_reg(28, &value, 0xffffff);
+	value |= 0x20 | 0x80000;
+	pmic_write_reg(28, value, 0xffffff);
+
+	pmic_read_reg(29, &value, 0xffffff);
+	value |= 0x20 | 0x800 | 0x20000 | 0x800000;
+	pmic_write_reg(29, value, 0xffffff);
+
 	pmic_read_reg(REG_POWER_CTL0, &value, 0xffffff);
 
 	value |= 0x00000C;

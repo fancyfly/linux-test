@@ -88,6 +88,7 @@ typedef struct {
 	 * Flag indicates if the channel is in use
 	 */
 	int dma_txchnl_inuse;
+        struct tasklet_struct dma_tx_tasklet;
 } dma_info;
 
 /*!
@@ -171,7 +172,44 @@ static void mxcuart_dma_tx(uart_mxc_port *umxc)
 	}
 	spin_unlock_irqrestore(&umxc->port.lock, flags);
 }
+static void dma_tx_do_tasklet(unsigned long arg)
+{
+  uart_mxc_port *umxc = (uart_mxc_port *) arg;
+  struct circ_buf *xmit = &umxc->port.state->xmit;
+  mxc_dma_requestbuf_t writechnl_request;
+  int tx_num;
+  unsigned long flags;
 
+ spin_lock_irqsave(&umxc->port.lock, flags);
+ tx_num = uart_circ_chars_pending(xmit);
+ if (tx_num > 0) {
+   if (xmit->tail > xmit->head) {
+     memcpy(umxc->tx_buf, xmit->buf + xmit->tail,
+	            UART_XMIT_SIZE - xmit->tail);
+     memcpy(umxc->tx_buf + (UART_XMIT_SIZE - xmit->tail),
+	            xmit->buf, xmit->head);
+     } else {
+     memcpy(umxc->tx_buf, xmit->buf + xmit->tail, tx_num);
+     }
+   umxc->tx_handle = dma_map_single(umxc->port.dev, umxc->tx_buf,
+				     TXDMA_BUFF_SIZE,
+				     DMA_TO_DEVICE);
+
+ writechnl_request.dst_addr = umxc->port.mapbase + MXC_UARTUTXD;
+ writechnl_request.src_addr = umxc->tx_handle;
+ writechnl_request.num_of_bytes = tx_num;
+ 
+ if ((mxc_dma_config(dma_list[umxc->port.line].wr_channel,
+		          &writechnl_request, 1,
+		          MXC_DMA_MODE_WRITE)) == 0) {
+   mxc_dma_enable(dma_list[umxc->port.line].wr_channel);
+   }
+ } else {
+   /* No more data available in the xmit queue, clear the flag */
+     dma_list[umxc->port.line].dma_txchnl_inuse = 0;
+  }
+ spin_unlock_irqrestore(&umxc->port.lock, flags);
+}
 /*!
  * DMA Write callback is called by the SDMA controller after it has sent out all
  * the data from the user buffer. This function updates the xmit buffer pointers.
@@ -185,7 +223,10 @@ static void mxcuart_dma_writecallback(void *arg, int error, unsigned int count)
 	uart_mxc_port *umxc = arg;
 	struct circ_buf *xmit = &umxc->port.state->xmit;
 	int tx_num;
-
+	if( dma_list[umxc->port.line].dma_txchnl_inuse==0)
+	{  
+	    printk(KERN_DEBUG"TXDMA %d byte inuse 0",count);
+	} 
 	if (error != MXC_DMA_TRANSFER_ERROR) {
 		tx_num = count;
 		umxc->port.icount.tx += tx_num;
@@ -197,7 +238,8 @@ static void mxcuart_dma_writecallback(void *arg, int error, unsigned int count)
 
 	tx_num = uart_circ_chars_pending(xmit);
 	if (tx_num > 0)
-		mxcuart_dma_tx(umxc);
+	  //mxcuart_dma_tx(umxc);
+	  tasklet_schedule(&dma_list[umxc->port.line].dma_tx_tasklet);
 	else
 		dma_list[umxc->port.line].dma_txchnl_inuse = 0;
 
@@ -258,6 +300,8 @@ static void mxcuart_start_tx(struct uart_port *port)
 			      MXC_DMA_MODE_WRITE)) == 0) {
 				mxc_dma_enable(dma_list[umxc->port.line].
 					       wr_channel);
+			}else{
+			  printk(KERN_ERR "UART: DMA_EBUSY");
 			}
 			cr1 |= MXC_UARTUCR1_TXDMAEN;
 		}
@@ -995,6 +1039,7 @@ static int mxcuart_initdma(dma_info *d_info, uart_mxc_port *umxc)
 	/* Start the read channel */
 	mxc_dma_enable(d_info->rd_channel);
 	kfree(readchnl_reqelem);
+	tasklet_init(&d_info->dma_tx_tasklet, dma_tx_do_tasklet,(unsigned long)umxc);
 	d_info->dma_txchnl_inuse = 0;
 	return ret;
       cleanup:

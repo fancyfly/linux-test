@@ -1501,14 +1501,14 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	.irq = gpio_to_irq(MX53_PCBA_HDMI_INT),
 	.platform_data = &sii902x_hdmi_data,
 	},
-	/*{
+	{
 	.type = "mt9v114",
 	.addr = 0x3d,
 	.platform_data = (void *)&camera_data2,
-	 },*/
+	 },
 	{
 	.type = "mt9p111",
-	.addr = 0x3d,
+	.addr = 0x3c,
 	.platform_data = (void *)&camera_data1,
 	 },
 	{

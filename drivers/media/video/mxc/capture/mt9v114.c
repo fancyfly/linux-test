@@ -1634,6 +1634,9 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 		if (gpo_regulator)
 			regulator_disable(gpo_regulator);
 		gpio_sensor_inactive(mt9v114_data.csi);
+		/* Make sure power down*/
+		if (camera_plat->pwdn)
+			camera_plat->pwdn(1);
 	}
 
 	sensor->on = on;

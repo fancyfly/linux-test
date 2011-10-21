@@ -568,7 +568,7 @@ static struct reg_value mt9v114_setting_30fps_CIF_352_288[] = {
 	{0x332E, 0x0000, 0, 1}, 	// OUTPUT_FORMAT_CONFIGURATION
 	{0x3330, 0x0000, 0, 1}, 	// OUTPUT_FORMAT_TEST
 	{0x3C00, 0x1002, 0, 1}, 	// TX_CONTROL
-	{0x8400, 0x02  , 0, 0},// SEQ_CMD
+	{0x8400, 0x02  , 50, 0},// SEQ_CMD
 
 
 	{0x098E, 0x8400, 0, 1},

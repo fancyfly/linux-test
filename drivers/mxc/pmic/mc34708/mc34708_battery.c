@@ -29,6 +29,9 @@
 #include <linux/pmic_external.h>
 #include <linux/mfd/mc34708/mc34708.h>
 
+#define CHRCMPLM_LSH	10
+#define CHRCMPLM_WID	1
+
 #define CHRCV_LSH 6
 #define CHRCV_WID 6
 
@@ -143,9 +146,14 @@
 #define USBCHARGER 0x20
 #define DEDICATEDCHARGER 0x40
 
-#define EOC_CURRENT_UA		100000
-#define LOW_VOLT_THRESHOLD	3400000
-#define HIGH_VOLT_THRESHOLD	4100000
+#define EOC_CURRENT_UA			100000
+#define EOC_VOLTAGE_UV			4100000
+#define EOC_CCOUT			5
+#define LOW_VOLT_THRESHOLD		3400000
+#define HIGH_VOLT_THRESHOLD		4200000
+#define RECHARGING_VOLT_THRESHOLD	4100000
+					/* larger than h/w recharging
+					 * threshold 95.4% of the CHRCV */
 
 #define ADC_MAX_CHANNEL		8
 
@@ -183,7 +191,7 @@ usb_type = 0x40; Dedicated charger;
 static int usb_type;
 static struct mc34708_charger_setting_point ripley_charger_setting_point[] = {
 	{
-	 .microVolt = 4200000,
+	 .microVolt = HIGH_VOLT_THRESHOLD,
 	 .microAmp = 1550000,
 	 },
 };
@@ -200,7 +208,7 @@ static struct mc34708_charger_config ripley_charge_config = {
 	.vauxThresholdWeak = 4800000,
 	.vauxThresholdHigh = 5000000,
 	.lowBattThreshold = 3000000,
-	.toppingOffMicroAmp = 50000,	/* 50mA */
+	.toppingOffMicroAmp = 400000,	/* 400 mA */
 	.maxChargingHour = 6,
 	.chargingPoints = ripley_charger_setting_point,
 	.pointsNumber = 1,
@@ -457,7 +465,8 @@ static int ripley_get_batt_volt_curr_raw(unsigned short *volt,
 static int ripley_get_batt_volt_curr(int *volt, int *curr)
 {
 	int retval;
-	unsigned short voltage_raw, current_raw;
+	unsigned short voltage_raw;
+	signed short current_raw;
 
 #if 0
 	retval = ripley_get_batt_voltage(&voltage_raw);
@@ -548,7 +557,7 @@ static int ripley_get_charger_coulomb(int *coulomb, int *ccfault)
 	if (value & 0x8000) {
 		value = ~value;
 		value += 1;
-		value &= 0x7fff; 
+		value &= 0x7fff;
 		value *= -1;
 	}
 	pr_debug("cc %d\n", value);
@@ -638,7 +647,7 @@ static int init_battery_profile(struct mc34708_charger_config *config)
 				   BITFMASK(CHRITERM)));
 	/* enable charger current termination */
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
-				   BITFVAL(CHRITERMEN, 0),
+				   BITFVAL(CHRITERMEN, 1),
 				   BITFMASK(CHRITERMEN)));
 
 	/* enable EOC buck */
@@ -691,7 +700,7 @@ static int init_charger(struct mc34708_charger_config *config)
 
 	/* enable ISO */
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
-				   BITFVAL(BATTISOEN, 1), BITFMASK(BATTISOEN)));
+				   BITFVAL(BATTISOEN, 0), BITFMASK(BATTISOEN)));
 
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_SOURCE,
 				   BITFVAL(AUXWEAKEN, 1), BITFMASK(AUXWEAKEN)));
@@ -775,12 +784,10 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 	return -EINVAL;
 }
 
-static int check_eoc(struct ripley_dev_info *di)
+static int get_battcur(int *batt_curr)
 {
 	int ret;
 	int battcur_res, battcur;
-	int voltage_uV;
-	unsigned short voltage_raw;
 
 	battcur_res = get_columb_counter_battcur_res_ua_lsb();
 	pr_debug("battcur_res = %x\n", battcur_res);
@@ -791,16 +798,47 @@ static int check_eoc(struct ripley_dev_info *di)
 	if (ret != 0)
 		return -1;
 	battcur = BITFEXT(battcur, BATTCURRENT);
-	pr_debug("batt cur reg value = %x\n", battcur);
+	pr_info("batt cur reg value = %x\n", battcur);
+
+	/* 2's complement */
+	if (battcur & 0x800) {
+		battcur = ~battcur;
+		battcur += 1;
+		battcur &= 0x7ff;
+		battcur *= -1;
+	}
 
 	battcur *= battcur_res;
-	pr_info("batt cur value = %d\n", battcur/1000);
+	pr_info("batt cur value = %d\n", battcur / 1000);
+
+	*batt_curr = battcur;
+
+	return 0;
+}
+
+static int check_eoc(struct ripley_dev_info *di)
+{
+	int ret;
+	int voltage_uV;
+	int battcur;
+	unsigned short voltage_raw;
+
+	ret = get_battcur(&battcur);
+	if (ret) {
+		pr_err("can not get battcur.\n");
+		return -1;
+	}
 
 	ret = ripley_get_batt_voltage(&voltage_raw);
 	if (ret == 0)
 		voltage_uV = voltage_raw * BAT_VOLTAGE_UNIT_UV;
-	if (battcur <= EOC_CURRENT_UA && voltage_uV >= HIGH_VOLT_THRESHOLD)
+
+	if (voltage_uV >= EOC_VOLTAGE_UV &&
+	/*	battcur <= EOC_CURRENT_UA &&	*/
+		di->delta_coulomb < EOC_CCOUT)
 		di->full_counter++;
+	else
+		di->full_counter = 0;
 
 	if (di->full_counter > 2)
 		di->battery_status = POWER_SUPPLY_STATUS_FULL;
@@ -899,14 +937,14 @@ static void _calculate_internal_resistor(struct ripley_dev_info *di)
 	else
 		pr_warning("%s: incorrect internal resistor calc.\n", __func__);
 
-	pr_debug("ORG: internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
+	pr_info("ORG: internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 #ifdef DEFAULT_INTER_RESISTOR_mOhm
 	if (abs(di->internal_resistor_mOhm - DEFAULT_INTER_RESISTOR_mOhm) >
 		(DEFAULT_INTER_RESISTOR_mOhm / 2))
 		di->internal_resistor_mOhm = DEFAULT_INTER_RESISTOR_mOhm;
 #endif
 
-	pr_debug("internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
+	pr_info("internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 
 }
 
@@ -1072,7 +1110,7 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 		di->now_coulomb = 0;
 		reset_cc_flag = false;
 	}
-	pr_debug("vol %d, cur %d, cc %d, delta cc %d accum_coulomb %d,"
+	pr_info("vol %d, cur %d, cc %d, delta cc %d accum_coulomb %d,"
 		"accum_current_uAh %d\n", di->voltage_uV,
 					di->current_uA,
 					di->now_coulomb,
@@ -1252,10 +1290,11 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 	}
 out1:
 	if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
+		pr_info("POWER_SUPPLY_STATUS_FULL\n");
 		di->percent = 100;
 
 		pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
-				BITFVAL(BATTISOEN, 0),
+				BITFVAL(BATTISOEN, 1),
 				BITFMASK(BATTISOEN));
 		/* set as DISCHARGING WITH CHARGER */
 		di->battery_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
@@ -1290,11 +1329,14 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 			init_charger(config);
 			set_charging_point(di, point);
 			di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
+			if (usb_type == USBHOST)
+				di->battery_status = POWER_SUPPLY_STATUS_DISCHARGING;
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 			check_eoc(di);
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_NOT_CHARGING) {
-			if (di->voltage_uV < 3800000) {
-				pr_debug("Battery < 3.8v, Re-Charging.\n");
+			if (di->voltage_uV < RECHARGING_VOLT_THRESHOLD) {
+				pr_info("Battery volt < %d uV, Re-Charging.\n",
+					RECHARGING_VOLT_THRESHOLD);
 				point = 0;
 				init_charger(config);
 				set_charging_point(di, point);
@@ -1325,7 +1367,7 @@ static void ripley_battery_work(struct work_struct *work)
 	struct ripley_dev_info *di = container_of(work,
 						  struct ripley_dev_info,
 						  monitor_work.work);
-	const int interval = HZ * 15;
+	const int interval = HZ * 8;
 
 	dev_dbg(di->dev, "%s\n", __func__);
 
@@ -1496,6 +1538,10 @@ static int ripley_battery_get_property(struct power_supply *psy,
 			ripley_battery_update_status(di);
 		}
 		val->intval = di->battery_status;
+		/* Do not reveal re-charging status to end users */
+		if (di->battery_status == POWER_SUPPLY_STATUS_NOT_CHARGING ||
+			second_charging_flag) /* CHARGING again*/
+			val->intval = POWER_SUPPLY_STATUS_FULL;
 		return 0;
 	default:
 		break;
@@ -1517,10 +1563,10 @@ static int ripley_battery_get_property(struct power_supply *psy,
 		val->intval = convert_to_uAh(di->accum_coulomb);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
-		val->intval = 4200000;
+		val->intval = HIGH_VOLT_THRESHOLD;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
-		val->intval = 3400000;
+		val->intval = LOW_VOLT_THRESHOLD;
 		break;
         case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = 1;
@@ -1675,7 +1721,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 #endif
 
 //	set_coulomb_counter_cres(CCRES_200_mC_PER_LSB);
-//	set_coulomb_counter_integtime(INTEGTIME_8S);
+//	set_coulomb_counter_integtime(INTEGTIME_32S);
 	ripley_calibrate_coulomb_counter();
 	ccres_mC = get_coulomb_counter_cres_mC();
 	printk("ccres_mC %d\n", ccres_mC);

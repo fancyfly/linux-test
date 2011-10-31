@@ -170,12 +170,14 @@ bool can_calculate_capacity = false;
 
 static int before_use_calculated_capacity = 1;
 
-static LIST_HEAD(head);
 struct last_batt_rec {
-	struct list_head list;
 	int voltage_uV;
 	int current_uA;
 };
+
+#define NUM_BATT_RECORD		4
+struct last_batt_rec last_batt_rec[NUM_BATT_RECORD];
+static int batt_rec_index;
 
 static unsigned int ccres_mC;
 enum batt_complete_id {
@@ -592,7 +594,6 @@ struct ripley_dev_info {
 	int internal_resistor_mOhm;
 	int internal_voltage_uV;
 
-
 	int currChargePoint;
 
 	struct power_supply bat;
@@ -602,7 +603,6 @@ struct ripley_dev_info {
 	struct workqueue_struct *monitor_wqueue;
 	struct delayed_work monitor_work;
 	struct delayed_work ovp_mon_work;
-	struct delayed_work charger_mon_work;
 	struct delayed_work calc_resistor_mon_work;
 	struct mc34708_charger_config *chargeConfig;
 };
@@ -867,55 +867,90 @@ static void _save_and_change_chrcc(int *old_chrcc, int chrcc)
 			BITFMASK(CHRCC));
 }
 
-static void _record_last_batt_info(struct ripley_dev_info *di)
+static void _record_last_batt_info(struct ripley_dev_info *di, bool force_read)
 {
-	struct last_batt_rec *rec, *n;
-	int i, ret;
 	int voltage_uV, current_uA;
+	int ret;
 
-	rec = kzalloc(sizeof(*rec), GFP_KERNEL);
-	if (!rec)
-		return -ENOMEM;
+	if (force_read) {
+		ret = ripley_get_batt_volt_curr(&voltage_uV, &current_uA);
+		if (ret) {
+			pr_err("%s: ripley_get_batt_volt_curr() failed.\n",
+				__func__);
+			return;
+		}
 
-	ret = ripley_get_batt_volt_curr(&voltage_uV, &current_uA);
-	if (ret) {
-		pr_err("%s: ripley_get_batt_volt_curr() failed.\n");
+		last_batt_rec[batt_rec_index].voltage_uV = voltage_uV;
+		last_batt_rec[batt_rec_index].current_uA = current_uA;
+	} else {
+		last_batt_rec[batt_rec_index].voltage_uV = di->voltage_uV;
+		last_batt_rec[batt_rec_index].current_uA = di->current_uA;
 	}
 
-	rec->voltage_uV = voltage_uV;
-	rec->current_uA = current_uA;
-	list_add(&rec->list, &head);
+	batt_rec_index++;
+	if (batt_rec_index >= NUM_BATT_RECORD)
+		batt_rec_index = 0;
+}
 
-	i = 0;
-	list_for_each_entry_safe(rec, n, &head, list) {
-		if (i > 2) {
-			list_del(&rec->list);
-			kfree(rec);
-		}
-		i++;
+static int _is_valid_to_calc_internal_resistor(struct ripley_dev_info *di,
+						bool power_supply_changed_flag)
+{
+	int curr_index, compared_index;
+
+	if (batt_rec_index == 0)
+		curr_index = NUM_BATT_RECORD - 1;
+	else
+		curr_index = batt_rec_index - 1;
+
+	if (curr_index == 0)
+		compared_index = NUM_BATT_RECORD - 1;
+	else
+		compared_index = curr_index - 1;
+
+	if (power_supply_changed_flag) {
+		if ((last_batt_rec[curr_index].current_uA > 0 &&
+			last_batt_rec[compared_index].current_uA < 0) ||
+			(last_batt_rec[curr_index].current_uA < 0 &&
+			last_batt_rec[compared_index].current_uA > 0))
+			return true;
+
+		return false;
+	} else {
+		if ((last_batt_rec[curr_index].current_uA > 0 &&
+			last_batt_rec[compared_index].current_uA > 0) &&
+			abs(last_batt_rec[curr_index].current_uA -
+			   last_batt_rec[compared_index].current_uA) > 100000)
+			return true;
+
+		return false;
 	}
 }
 
 /* this is only used to calculate when battery is during learning phase */
 static void _calculate_internal_resistor(struct ripley_dev_info *di)
 {
-	struct last_batt_rec *rec, *n;
+	int curr_index, compared_index;
+
 	int voltage0_uV, voltage1_uV;
 	int current0_uA, current1_uA;
 	int internal_resistor_mOhm;
 	int i;
 
-	i = 0;
-	list_for_each_entry_safe(rec, n, &head, list) {
-		if (i == 0) {
-			voltage0_uV = rec->voltage_uV;
-			current0_uA = rec->current_uA;
-		} else if (i == 1) {
-			voltage1_uV = rec->voltage_uV;
-			current1_uA = rec->current_uA;
-		}
-		i++;
-	}
+	if (batt_rec_index == 0)
+		curr_index = NUM_BATT_RECORD - 1;
+	else
+		curr_index = batt_rec_index - 1;
+
+	if (curr_index == 0)
+		compared_index = NUM_BATT_RECORD - 1;
+	else
+		compared_index = curr_index - 1;
+
+	voltage0_uV = last_batt_rec[compared_index].voltage_uV;
+	current0_uA = last_batt_rec[compared_index].current_uA;
+
+	voltage1_uV = last_batt_rec[curr_index].voltage_uV;
+	current1_uA = last_batt_rec[curr_index].current_uA;
 
 	pr_debug("voltage0_uV %d, current0_uA %d\n", voltage0_uV, current0_uA);
 	pr_debug("voltage1_uV %d, current1_uA %d\n", voltage1_uV, current1_uA);
@@ -929,7 +964,7 @@ static void _calculate_internal_resistor(struct ripley_dev_info *di)
 			di->internal_resistor_mOhm = internal_resistor_mOhm;
 
 	} else if (current0_uA < 0 && current1_uA < 0) {
-		;//di->internal_resistor_mOhm = -1;
+		;
 	} else if ((current0_uA > 0 && current1_uA < 0) ||
 		(current0_uA < 0 && current1_uA > 0))
 		di->internal_resistor_mOhm = abs(voltage0_uV - voltage1_uV) *
@@ -937,14 +972,14 @@ static void _calculate_internal_resistor(struct ripley_dev_info *di)
 	else
 		pr_warning("%s: incorrect internal resistor calc.\n", __func__);
 
-	pr_info("ORG: internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
+	pr_debug("ORG: internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 #ifdef DEFAULT_INTER_RESISTOR_mOhm
 	if (abs(di->internal_resistor_mOhm - DEFAULT_INTER_RESISTOR_mOhm) >
 		(DEFAULT_INTER_RESISTOR_mOhm / 2))
 		di->internal_resistor_mOhm = DEFAULT_INTER_RESISTOR_mOhm;
 #endif
 
-	pr_info("internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
+	pr_debug("internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 
 }
 
@@ -970,7 +1005,7 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			stopCharging = 1;
 
 		if (auxOnline != di->aux_charger_online) {
-			msleep(500);
+			msleep(50);
 			di->aux_charger_online = auxOnline;
 			dev_info(di->aux_charger.dev,
 				 "aux charger status: %s\n",
@@ -979,7 +1014,7 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 		}
 		if (usbOnline != di->usb_charger_online) {
 			/* need some delay to know the usb type */
-			msleep(800);
+			msleep(80);
 			ret = pmic_read_reg(MC34708_REG_USB_DEVICE_TYPE,
 					    &reg_usb_type, PMIC_ALL_BITS);
 			usb_type = 0;
@@ -1004,35 +1039,30 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 
 		if (restartCharging) {
 			pr_info("restartCharging\n");
-			_record_last_batt_info(di);
 			enable_charger(1);
-			power_supply_changed_flag = 1;
-//			msleep(400);
-			_record_last_batt_info(di);
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->calc_resistor_mon_work, HZ / 10);
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 10);
-	power_change_flag = 1;
+
+			power_supply_changed_flag = 1;
+			power_change_flag = 1;
 		} else if (stopCharging) {
 			pr_info("stopCharging\n");
-			_record_last_batt_info(di);
-			msleep(500);
 			enable_charger(0);
-			power_supply_changed_flag = 1;
-			_record_last_batt_info(di);
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->calc_resistor_mon_work, HZ / 10);
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 10);
-	power_change_flag = 1;
+
+			power_supply_changed_flag = 1;
+			power_change_flag = 1;
 		}
 	}
-//	power_change_flag = 1;
 
 	return ret;
 }
@@ -1163,6 +1193,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 					 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
 				pr_debug("di->internal_voltage_uV %d, percent %d\n", di->internal_voltage_uV,
 									di->percent);
+				pr_debug("di->internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 			} else {
 				if (di->old_percent >= 0)
 					di->percent = di->old_percent;
@@ -1243,6 +1274,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 					 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
 				pr_debug("di->internal_voltage_uV %d, percent %d\n", di->internal_voltage_uV,
 									di->percent);
+				pr_debug("di->internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 			} else {
 				if (di->old_percent >= 0)
 					di->percent = di->old_percent;
@@ -1372,6 +1404,7 @@ static void ripley_battery_work(struct work_struct *work)
 	dev_dbg(di->dev, "%s\n", __func__);
 
 	ripley_battery_update_status(di);
+	_record_last_batt_info(di, false);
 	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, interval);
 }
 
@@ -1397,18 +1430,6 @@ static void battery_ovp_work(struct work_struct *work)
 	}
 }
 
-/*
- * event callback is in irq context, while we need to process text
- * to capture volt/curr when Charger is connected/disconnected.
- */
-static void charger_work(struct work_struct *work)
-{
-	struct ripley_dev_info *di = container_of(work,
-						  struct ripley_dev_info,
-						  charger_mon_work.work);
-	ripley_charger_update_status(di);
-}
-
 static void calc_resistor_work(struct work_struct *work)
 {
 	struct ripley_dev_info *di = container_of(work,
@@ -1418,9 +1439,14 @@ static void calc_resistor_work(struct work_struct *work)
 	static bool flag_captured_once;
 
 	if (power_supply_changed_flag) {
-		/* read volt & curr again */
-//		mdelay(2000);
-//		_record_last_batt_info(di);
+		/* wait until we can calc */
+		if (!_is_valid_to_calc_internal_resistor(di,
+				power_supply_changed_flag)) {
+			queue_delayed_work(di->monitor_wqueue,
+				   &di->calc_resistor_mon_work, HZ);
+			pr_warning("not valid to calc internal resistor.\n");
+			return;
+		}
 		_calculate_internal_resistor(di);
 
 		power_supply_changed_flag = 0;
@@ -1435,30 +1461,33 @@ static void calc_resistor_work(struct work_struct *work)
 			flag_changed = 0;
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->calc_resistor_mon_work,
-					   HZ * 1 * 60);
+					   HZ * 30 * 60);
 		} else {
 			if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 				if (flag_captured_once) {
-					_record_last_batt_info(di);
+					_record_last_batt_info(di, true);
 					int old_chrcc;
 					_save_and_change_chrcc(&old_chrcc, 350000);
 					msleep(2000);
-					_record_last_batt_info(di);
+					_record_last_batt_info(di, true);
 					_save_and_change_chrcc(NULL, old_chrcc);
-					_calculate_internal_resistor(di);
+
+					if (_is_valid_to_calc_internal_resistor(di, 0)) {
+						_calculate_internal_resistor(di);
+					}
 
 					flag_captured_once = 0;
 					queue_delayed_work(di->monitor_wqueue,
-							   &di->calc_resistor_mon_work, HZ * 1 * 60);
+							   &di->calc_resistor_mon_work, HZ * 30 * 60);
 				} else {
 					flag_captured_once = 1;
 					queue_delayed_work(di->monitor_wqueue,
-							   &di->calc_resistor_mon_work, HZ * 1 * 60);
+							   &di->calc_resistor_mon_work, HZ * 5 * 60);
 				}
 			} else /* Not calc inter resistor when discharge */
 				queue_delayed_work(di->monitor_wqueue,
 						   &di->calc_resistor_mon_work,
-						   HZ * 1 * 60);
+						   HZ * 30 * 60);
 		}
 	}
 }
@@ -1466,43 +1495,37 @@ static void calc_resistor_work(struct work_struct *work)
 static void usb_charger_online_event_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
-	//ripley_charger_update_status(di);
-	queue_delayed_work(di->monitor_wqueue, &di->charger_mon_work, 0);
+	ripley_charger_update_status(di);
 }
 
 static void aux_charger_online_event_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
-//	ripley_charger_update_status(di);
-	queue_delayed_work(di->monitor_wqueue, &di->charger_mon_work, 0);
+	ripley_charger_update_status(di);
 }
 
 static void usb_over_voltage_event_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
-//	ripley_charger_update_status(di);
-	queue_delayed_work(di->monitor_wqueue, &di->charger_mon_work, 0);
+	ripley_charger_update_status(di);
 }
 
 static void aux_over_voltage_event_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
-//	ripley_charger_update_status(di);
-	queue_delayed_work(di->monitor_wqueue, &di->charger_mon_work, 0);
+	ripley_charger_update_status(di);
 }
 
 static void battery_over_voltage_event_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
-//	ripley_charger_update_status(di);
-	queue_delayed_work(di->monitor_wqueue, &di->charger_mon_work, 0);
+	ripley_charger_update_status(di);
 }
 
 static void battery_over_temp_event_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
-//	ripley_charger_update_status(di);
-	queue_delayed_work(di->monitor_wqueue, &di->charger_mon_work, 0);
+	ripley_charger_update_status(di);
 }
 
 static void battery_low_event_callback(void *para)
@@ -1510,8 +1533,7 @@ static void battery_low_event_callback(void *para)
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
 
 	pr_info("\n\n low battery event\n");
-//	ripley_charger_update_status(di);
-	queue_delayed_work(di->monitor_wqueue, &di->charger_mon_work, 0);
+	ripley_charger_update_status(di);
 }
 
 #if 1
@@ -1648,7 +1670,6 @@ static int ripley_battery_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&di->monitor_work, ripley_battery_work);
 	INIT_DELAYED_WORK(&di->ovp_mon_work, battery_ovp_work);
-	INIT_DELAYED_WORK(&di->charger_mon_work, charger_work);
 	INIT_DELAYED_WORK(&di->calc_resistor_mon_work, calc_resistor_work);
 	di->monitor_wqueue =
 	    create_singlethread_workqueue(dev_name(&pdev->dev));
@@ -1748,6 +1769,11 @@ success:
 static int ripley_battery_suspend(struct platform_device *pdev,
 				  pm_message_t state)
 {
+	struct ripley_dev_info *di = platform_get_drvdata(pdev);
+
+	cancel_delayed_work_sync(&di->calc_resistor_mon_work);
+	cancel_delayed_work_sync(&di->monitor_work);
+
 	suspend_flag = 1;
 	CHECK_ERROR(pmic_write_reg
 		    (MC34708_REG_INT_STATUS0, BITFVAL(BATTOVP, 0),
@@ -1761,10 +1787,17 @@ static int ripley_battery_suspend(struct platform_device *pdev,
 
 static int ripley_battery_resume(struct platform_device *pdev)
 {
+	struct ripley_dev_info *di = platform_get_drvdata(pdev);
+
 	suspend_flag = 0;
 	CHECK_ERROR(pmic_write_reg
 		    (MC34708_REG_INT_MASK0, BITFVAL(BATTOVP, 0),
 		     BITFMASK(BATTOVP)));
+
+	queue_delayed_work(di->monitor_wqueue,
+			   &di->calc_resistor_mon_work, HZ / 10);
+	queue_delayed_work(di->monitor_wqueue,
+			   &di->monitor_work, HZ / 10);
 
 	return 0;
 };

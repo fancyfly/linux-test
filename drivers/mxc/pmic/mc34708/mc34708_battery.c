@@ -185,6 +185,9 @@ enum batt_complete_id {
 	BATT_EMPTY,
 };
 
+static int batt_ivolt_rec[NUM_BATT_RECORD];
+static int batt_ivolt_index;
+
 /*
 usb_type = 0x4; USB host;
 usb_type = 0x20; USB charger;
@@ -798,7 +801,7 @@ static int get_battcur(int *batt_curr)
 	if (ret != 0)
 		return -1;
 	battcur = BITFEXT(battcur, BATTCURRENT);
-	pr_info("batt cur reg value = %x\n", battcur);
+	pr_debug("batt cur reg value = %x\n", battcur);
 
 	/* 2's complement */
 	if (battcur & 0x800) {
@@ -850,7 +853,6 @@ static int check_eoc(struct ripley_dev_info *di)
 
 static void _save_and_change_chrcc(int *old_chrcc, int chrcc)
 {
-	int ret;
 	unsigned int value;
 
 	pmic_read_reg(MC34708_REG_BATTERY_PROFILE, &value, BITFMASK(CHRCC));
@@ -867,7 +869,7 @@ static void _save_and_change_chrcc(int *old_chrcc, int chrcc)
 			BITFMASK(CHRCC));
 }
 
-static void _record_last_batt_info(struct ripley_dev_info *di, bool force_read)
+static int _record_last_batt_info(struct ripley_dev_info *di, bool force_read)
 {
 	int voltage_uV, current_uA;
 	int ret;
@@ -877,7 +879,7 @@ static void _record_last_batt_info(struct ripley_dev_info *di, bool force_read)
 		if (ret) {
 			pr_err("%s: ripley_get_batt_volt_curr() failed.\n",
 				__func__);
-			return;
+			return ret;
 		}
 
 		last_batt_rec[batt_rec_index].voltage_uV = voltage_uV;
@@ -890,6 +892,8 @@ static void _record_last_batt_info(struct ripley_dev_info *di, bool force_read)
 	batt_rec_index++;
 	if (batt_rec_index >= NUM_BATT_RECORD)
 		batt_rec_index = 0;
+
+	return 0;
 }
 
 static int _is_valid_to_calc_internal_resistor(struct ripley_dev_info *di,
@@ -933,8 +937,7 @@ static void _calculate_internal_resistor(struct ripley_dev_info *di)
 
 	int voltage0_uV, voltage1_uV;
 	int current0_uA, current1_uA;
-	int internal_resistor_mOhm;
-	int i;
+	int internal_resistor_mOhm = 0;
 
 	if (batt_rec_index == 0)
 		curr_index = NUM_BATT_RECORD - 1;
@@ -972,15 +975,43 @@ static void _calculate_internal_resistor(struct ripley_dev_info *di)
 	else
 		pr_warning("%s: incorrect internal resistor calc.\n", __func__);
 
-	pr_debug("ORG: internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
+	pr_info("ORG: internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 #ifdef DEFAULT_INTER_RESISTOR_mOhm
 	if (abs(di->internal_resistor_mOhm - DEFAULT_INTER_RESISTOR_mOhm) >
 		(DEFAULT_INTER_RESISTOR_mOhm / 2))
 		di->internal_resistor_mOhm = DEFAULT_INTER_RESISTOR_mOhm;
 #endif
 
-	pr_debug("internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
+	pr_info("internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 
+}
+
+static void _record_batt_ivolt(struct ripley_dev_info *di)
+{
+	batt_ivolt_rec[batt_ivolt_index] = di->internal_voltage_uV;
+
+	batt_ivolt_index++;
+	if (batt_ivolt_index >= NUM_BATT_RECORD)
+		batt_ivolt_index = 0;
+}
+
+static void _recalc_batt_ivolt(struct ripley_dev_info *di)
+{
+	int accum_ivolt = 0, nr = 0, diff;
+	int i;
+
+	for (i = 0; i < NUM_BATT_RECORD; i++) {
+		/* within 5% */
+		diff = abs(batt_ivolt_rec[i] - di->internal_voltage_uV);
+		if (batt_ivolt_rec[i] && (diff == 0 ||
+			(di->internal_voltage_uV / diff >= 20))) {
+			accum_ivolt += batt_ivolt_rec[i];
+			nr++;
+		}
+	}
+
+	if (nr)
+		di->internal_voltage_uV = accum_ivolt / nr;
 }
 
 static int ripley_charger_update_status(struct ripley_dev_info *di)
@@ -1119,7 +1150,7 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 	retval = ripley_get_batt_volt_curr(&(di->voltage_uV),
 					&(di->current_uA));
 	if (retval)
-		pr_err("%s: ripley_get_batt_volt_curr() failed.\n");
+		dev_err(di->dev, "ripley_get_batt_volt_curr() failed.\n");
 
 	retval = ripley_get_charger_coulomb(&coulomb, &ccfault);
 	if (retval == 0) {
@@ -1189,6 +1220,8 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			else if (di->current_uA < 0) {
 				di->internal_voltage_uV = di->voltage_uV +
 					abs(di->current_uA) * di->internal_resistor_mOhm / 1000;
+				_record_batt_ivolt(di);
+				_recalc_batt_ivolt(di);
 				di->percent = (di->internal_voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
 					 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
 				pr_debug("di->internal_voltage_uV %d, percent %d\n", di->internal_voltage_uV,
@@ -1270,6 +1303,8 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			else if (di->current_uA > 0) {
 				di->internal_voltage_uV = di->voltage_uV -
 					di->current_uA * di->internal_resistor_mOhm / 1000;
+				_record_batt_ivolt(di);
+				_recalc_batt_ivolt(di);
 				di->percent = (di->internal_voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
 					 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
 				pr_debug("di->internal_voltage_uV %d, percent %d\n", di->internal_voltage_uV,
@@ -1295,10 +1330,6 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			else if (di->percent > 99)
 				di->percent = 99;
 
-			if (di->battery_status == POWER_SUPPLY_STATUS_FULL)
-				di->percent = 100;
-
-			di->old_percent = di->percent;
 			can_adjust_percent = true;
 
 			goto out1;
@@ -1335,6 +1366,12 @@ out1:
 
 	if (second_charging_flag)
 		di->percent = 100;
+
+	if (di->old_percent != di->percent) {
+		if (di->battery_status != POWER_SUPPLY_STATUS_UNKNOWN)
+			power_supply_changed(&di->bat);
+		di->old_percent = di->percent;
+	}
 
 	pr_info("di->percent %d ...\n", di->percent);
 	return;
@@ -1435,16 +1472,24 @@ static void calc_resistor_work(struct work_struct *work)
 	struct ripley_dev_info *di = container_of(work,
 						  struct ripley_dev_info,
 						  calc_resistor_mon_work.work);
+	int old_chrcc;
 	static bool flag_changed;
 	static bool flag_captured_once;
+	static int retry;
 
 	if (power_supply_changed_flag) {
 		/* wait until we can calc */
 		if (!_is_valid_to_calc_internal_resistor(di,
 				power_supply_changed_flag)) {
 			queue_delayed_work(di->monitor_wqueue,
-				   &di->calc_resistor_mon_work, HZ);
+				   &di->calc_resistor_mon_work, HZ * 2);
 			pr_warning("not valid to calc internal resistor.\n");
+			retry++;
+			if (retry > 5) {
+				retry = 0;
+				power_supply_changed_flag = 0;
+			}
+
 			return;
 		}
 		_calculate_internal_resistor(di);
@@ -1466,7 +1511,6 @@ static void calc_resistor_work(struct work_struct *work)
 			if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 				if (flag_captured_once) {
 					_record_last_batt_info(di, true);
-					int old_chrcc;
 					_save_and_change_chrcc(&old_chrcc, 350000);
 					msleep(2000);
 					_record_last_batt_info(di, true);
@@ -1635,7 +1679,6 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	int retval = 0;
 	struct ripley_dev_info *di;
 	pmic_event_callback_t bat_event_callback;
-	int i;
 
 	di = kzalloc(sizeof(*di), GFP_KERNEL);
 	if (!di) {
@@ -1667,20 +1710,6 @@ static int ripley_battery_probe(struct platform_device *pdev)
 		dev_err(di->dev, "failed to register charger\n");
 		goto charger_failed;
 	}
-
-	INIT_DELAYED_WORK(&di->monitor_work, ripley_battery_work);
-	INIT_DELAYED_WORK(&di->ovp_mon_work, battery_ovp_work);
-	INIT_DELAYED_WORK(&di->calc_resistor_mon_work, calc_resistor_work);
-	di->monitor_wqueue =
-	    create_singlethread_workqueue(dev_name(&pdev->dev));
-	if (!di->monitor_wqueue) {
-		retval = -ESRCH;
-		goto workqueue_failed;
-	}
-
-	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ * 10);
-	queue_delayed_work(di->monitor_wqueue, &di->calc_resistor_mon_work,
-				HZ * 20);
 
 	di->chargeConfig = &ripley_charge_config;
 	di->bat.name = "battery";
@@ -1749,6 +1778,20 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	if (ccres_mC < 0)
 		dev_err(di->dev, "can not get correct cc resolution.\n");
 
+	INIT_DELAYED_WORK(&di->monitor_work, ripley_battery_work);
+	INIT_DELAYED_WORK(&di->ovp_mon_work, battery_ovp_work);
+	INIT_DELAYED_WORK(&di->calc_resistor_mon_work, calc_resistor_work);
+	di->monitor_wqueue =
+	    create_singlethread_workqueue(dev_name(&pdev->dev));
+	if (!di->monitor_wqueue) {
+		retval = -ESRCH;
+		goto workqueue_failed;
+	}
+
+	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ * 10);
+	queue_delayed_work(di->monitor_wqueue, &di->calc_resistor_mon_work,
+				HZ * 10);
+
 	goto success;
 
 workqueue_failed:
@@ -1762,8 +1805,6 @@ di_alloc_failed:
 success:
 	dev_dbg(di->dev, "%s battery probed!\n", __func__);
 	return retval;
-
-	return 0;
 }
 
 static int ripley_battery_suspend(struct platform_device *pdev,

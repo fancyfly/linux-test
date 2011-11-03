@@ -1277,14 +1277,16 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 #endif
 		break;
 	case V4L2_CID_MXC_SWITCH_CAM:
-		/* power down other cameraes before enable new one */
-		for (i=0;i < sensor_index;i++) {
-			if (i != c->value) {
-				vidioc_int_s_power(cam->all_sensors[i], 0);
+		if( cam->sensor != cam->all_sensors[c->value]) {
+			/* power down other cameraes before enable new one */
+			for (i=0;i < sensor_index;i++) {
+				if (i != c->value) {
+					vidioc_int_s_power(cam->all_sensors[i], 0);
+				}
 			}
+			cam->sensor = cam->all_sensors[c->value];
+			init_para_for_new_sensor(cam);
 		}
-		cam->sensor = cam->all_sensors[c->value];
-		init_para_for_new_sensor(cam);
 		break;
 	default:
 		pr_debug("   default case\n");
@@ -2914,6 +2916,9 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 	pr_debug("End of %s: crop_current widthxheight %d x %d\n",
 		 __func__,
 		 cam->crop_current.width, cam->crop_current.height);
+
+	vidioc_int_s_power(cam->sensor, 0);
+	cam->sensor = cam->all_sensors[0];
 
 	return 0;
 }

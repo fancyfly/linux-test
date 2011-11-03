@@ -158,7 +158,7 @@
 
 #define ADC_MAX_CHANNEL		8
 
-#define DEFAULT_INTER_RESISTOR_mOhm	150
+#define DEFAULT_INTER_RESISTOR_mOhm	250
 
 static int suspend_flag;
 static int power_supply_changed_flag;
@@ -189,6 +189,10 @@ enum batt_complete_id {
 
 static int batt_ivolt_rec[NUM_BATT_RECORD];
 static int batt_ivolt_index;
+
+#define NUM_IRESISTOR_RECORD	4
+static int batt_iresistor_rec[NUM_BATT_RECORD];
+static int batt_iresistor_index;
 
 /*
 usb_type = 0x4; USB host;
@@ -932,6 +936,37 @@ static int _is_valid_to_calc_internal_resistor(struct ripley_dev_info *di,
 	}
 }
 
+static void __record_batt_iresistor(struct ripley_dev_info *di)
+{
+	batt_iresistor_rec[batt_iresistor_index] = di->internal_resistor_mOhm;
+
+	batt_iresistor_index++;
+	if (batt_iresistor_index >= NUM_IRESISTOR_RECORD)
+		batt_iresistor_index = 0;
+}
+
+static void __recalc_batt_iresistor(struct ripley_dev_info *di)
+{
+	int accum_iresistor = 0, nr = 0, diff;
+	int i;
+
+	for (i = 0; i < NUM_IRESISTOR_RECORD; i++) {
+		/* within 50% */
+		//pr_info("batt_iresistor_rec[%d]: %d\n", i, batt_iresistor_rec[i]);
+		diff = abs(batt_iresistor_rec[i] - di->internal_resistor_mOhm);
+		if (batt_iresistor_rec[i] && (diff == 0 ||
+			(di->internal_resistor_mOhm / diff >= 2))) {
+			accum_iresistor += batt_iresistor_rec[i];
+			nr++;
+		} else
+			batt_iresistor_rec[i] = 0;
+	}
+
+	if (nr)
+		di->internal_resistor_mOhm = accum_iresistor / nr;
+}
+
+
 /* this is only used to calculate when battery is during learning phase */
 static void _calculate_internal_resistor(struct ripley_dev_info *di)
 {
@@ -980,9 +1015,11 @@ static void _calculate_internal_resistor(struct ripley_dev_info *di)
 	pr_info("ORG: internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 #ifdef DEFAULT_INTER_RESISTOR_mOhm
 	if (abs(di->internal_resistor_mOhm - DEFAULT_INTER_RESISTOR_mOhm) >
-		(DEFAULT_INTER_RESISTOR_mOhm / 2))
+		(DEFAULT_INTER_RESISTOR_mOhm * 4 / 5))
 		di->internal_resistor_mOhm = DEFAULT_INTER_RESISTOR_mOhm;
 #endif
+	__record_batt_iresistor(di);
+	__recalc_batt_iresistor(di);
 
 	pr_info("internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 
@@ -1219,12 +1256,12 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 		di->now_coulomb = 0;
 		reset_cc_flag = false;
 	}
-	pr_info("readout: vol %d uV, cur %d uA, cc %d\n", di->voltage_uV,
+	pr_info("[readout]: vol %d uV, cur %d uA, cc %d\n", di->voltage_uV,
 							di->current_uA,
 							di->now_coulomb);
-	pr_info("calc-ed: delta cc %d ( %d mC ), accum_coulomb %d, "
-		"accum_current_uAh %d\n",
-					di->delta_coulomb,
+	pr_info("[calc-ed]: delta cc %d ( %d mC );"
+		"accum_coulomb %d ( accum_uAh %d )\n", di->delta_coulomb,
+					di->delta_coulomb * ccres_mC,
 					di->accum_coulomb,
 					convert_to_uAh(di->accum_coulomb));
 	return retval;
@@ -1541,10 +1578,10 @@ static void calc_resistor_work(struct work_struct *work)
 		if (!_is_valid_to_calc_internal_resistor(di,
 				power_supply_changed_flag)) {
 			queue_delayed_work(di->monitor_wqueue,
-				   &di->calc_resistor_mon_work, HZ * 2);
+				   &di->calc_resistor_mon_work, HZ * 1);
 			pr_warning("not valid to calc internal resistor.\n");
 			retry++;
-			if (retry > 5) {
+			if (retry > 10) {
 				retry = 0;
 				power_supply_changed_flag = 0;
 			}
@@ -1569,9 +1606,8 @@ static void calc_resistor_work(struct work_struct *work)
 		} else {
 			if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 				if (flag_captured_once) {
-					_record_last_batt_info(di, true);
 					_save_and_change_chrcc(&old_chrcc, 350000);
-					msleep(2000);
+					msleep(4000);
 					_record_last_batt_info(di, true);
 					_save_and_change_chrcc(NULL, old_chrcc);
 
@@ -1585,7 +1621,7 @@ static void calc_resistor_work(struct work_struct *work)
 				} else {
 					flag_captured_once = 1;
 					queue_delayed_work(di->monitor_wqueue,
-							   &di->calc_resistor_mon_work, HZ * 5 * 60);
+							   &di->calc_resistor_mon_work, HZ * 1 * 60);
 				}
 			} else /* Not calc inter resistor when discharge */
 				queue_delayed_work(di->monitor_wqueue,

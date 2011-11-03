@@ -1715,6 +1715,7 @@ static int mxc_v4l_open(struct file *file)
 					cam_fmt.fmt.pix.pixelformat,
 					csi_param);
 
+		vidioc_int_s_power(cam->sensor, 1);
 		ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi,
 				       true, true);
 		vidioc_int_init(cam->sensor);
@@ -1785,6 +1786,7 @@ static int mxc_v4l_close(struct file *file)
 		/* capture off */
 		wake_up_interruptible(&cam->enc_queue);
 		mxc_free_frames(cam);
+		vidioc_int_s_power(cam->sensor, 0);
 		cam->enc_counter++;
 	}
 
@@ -2862,6 +2864,10 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 	pr_debug("   slave.name = %s\n", slave->name);
 	pr_debug("   master.name = %s\n", slave->u.slave->master->name);
 
+	if (slave == NULL) {
+		pr_err("ERROR: v4l2 capture: slave parameter not valid.\n");
+		return -1;
+	}
 	cam->sensor = slave;
 	if (sensor_index < MXC_SENSOR_NUM) {
 		cam->all_sensors[sensor_index] = slave;
@@ -2870,15 +2876,9 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 		pr_err("ERROR: v4l2 capture: slave number exceeds the maximum.\n");
 		return -1;
 	}
-	if (slave == NULL) {
-		pr_err("ERROR: v4l2 capture: slave parameter not valid.\n");
-		return -1;
-	}
-	for(i=0;i<sensor_index;i++)
+	for( i = 0;i < sensor_index -1; i++)
 	{
-		if (i !=sensor_index -1) {
 			vidioc_int_s_power(cam->all_sensors[i], 0);
-		}
 	}
 	ipu_csi_enable_mclk_if(CSI_MCLK_I2C, cam->csi, true, true);
 	vidioc_int_s_power(cam->sensor, 1);

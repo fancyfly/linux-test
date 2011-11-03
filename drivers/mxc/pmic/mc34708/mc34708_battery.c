@@ -1311,7 +1311,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			di->empty_coulomb = di->accum_coulomb;
 			pr_info("DISCHR CMPL: di->empty_coulomb %d\n",
 					di->empty_coulomb);
-			last_batt_complete_id = BATT_EMPTY;	
+			last_batt_complete_id = BATT_EMPTY;
 
 			/* Reset CCOUT to avoid underflow */
 			reset_cc_flag = true;
@@ -1369,6 +1369,36 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 
 	} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING || 
 		   di->battery_status == POWER_SUPPLY_STATUS_FULL) {
+		/* special case: charging from low battery(< 3.4) to "> 3.4v" */
+		if (di->internal_resistor_mOhm <= 0)
+			compared_batt_volt = di->voltage_uV;
+		else {
+			compared_batt_volt = di->internal_voltage_uV =
+				di->voltage_uV + abs(di->current_uA) *
+				di->internal_resistor_mOhm / 1000;
+		}
+		if ((compared_batt_volt <= (LOW_VOLT_THRESHOLD +
+						VOLT_THRESHOLD_DELTA)) &&
+			(compared_batt_volt >= (LOW_VOLT_THRESHOLD -
+						VOLT_THRESHOLD_DELTA))) {
+			pr_notice("Chargin from low battery < %d uV\n",
+					LOW_VOLT_THRESHOLD);
+			if (last_batt_complete_id > 0 &&
+				last_batt_complete_id != BATT_EMPTY) {
+				can_calculate_capacity = true;
+				before_use_calculated_capacity = 0;
+			} else
+				can_calculate_capacity = false;
+
+			di->empty_coulomb = di->accum_coulomb;
+			pr_info("LOWBATT CMPL: di->empty_coulomb %d\n",
+					di->empty_coulomb);
+			last_batt_complete_id = BATT_EMPTY;
+
+			/* Reset CCOUT to avoid underflow */
+			reset_cc_flag = true;
+		}
+		/* special case ends */
 
 		lowbatt_counter = 0;
 

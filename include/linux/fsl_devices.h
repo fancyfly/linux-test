@@ -392,6 +392,8 @@ struct mxc_camera_platform_data {
 	u32 mclk;
 	u32 csi;
 	void (*pwdn)(int pwdn);
+	void (*suspend)(void);
+	void (*resume)(void);
 };
 
 struct goodix_i2c_platform_data {

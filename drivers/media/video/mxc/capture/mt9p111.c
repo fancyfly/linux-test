@@ -909,6 +909,8 @@ static struct mxc_camera_platform_data *camera_plat;
 static int mt9p111_probe(struct i2c_client *adapter,
 				const struct i2c_device_id *device_id);
 static int mt9p111_remove(struct i2c_client *client);
+static int mt9p111_suspend(struct i2c_client *client, pm_message_t mesg);
+static int mt9p111_resume(struct i2c_client *client);
 
 static s32 mt9p111_read_reg(u16 reg, u16 *val, bool double_bytes);
 static s32 mt9p111_write_reg(u16 reg, u16 val, bool double_bytes);
@@ -927,6 +929,8 @@ static struct i2c_driver mt9p111_i2c_driver = {
 		  },
 	.probe  = mt9p111_probe,
 	.remove = mt9p111_remove,
+	.suspend = mt9p111_suspend,
+	.resume= mt9p111_resume,
 	.id_table = mt9p111_id,
 };
 
@@ -1709,6 +1713,20 @@ static int mt9p111_remove(struct i2c_client *client)
 	return 0;
 }
 
+static int mt9p111_suspend(struct i2c_client *client, pm_message_t state)
+{
+
+	struct mxc_camera_platform_data *plat_data = client->dev.platform_data;
+	if (plat_data->suspend)
+		plat_data->suspend();
+}
+
+static int mt9p111_resume(struct i2c_client *client)
+{
+	struct mxc_camera_platform_data *plat_data = client->dev.platform_data;
+	if (plat_data->resume)
+		plat_data->resume();
+}
 /*!
  * mt9p111 init function
  * Called by insmod mt9p111_camera.ko.

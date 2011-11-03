@@ -1302,6 +1302,32 @@ static struct imxi2c_platform_data mxci2c_data = {
        .bitrate = 100000,
 };
 
+void camera1_suspend(void )
+{
+		gpio_set_value(MX53_PCBA_CAM1_PWR_DOWN, 1);
+		gpio_direction_input(MX53_PCBA_CAMERA_RESET);
+		gpio_set_value(MX53_PCBA_CAM1_PDN_VCM, 1);
+}
+
+void camera1_resume(void )
+{
+		gpio_direction_output(MX53_PCBA_CAMERA_RESET, 1);
+		gpio_set_value(MX53_PCBA_CAM1_PWR_DOWN, 0);
+		gpio_set_value(MX53_PCBA_CAM1_PDN_VCM, 0);
+}
+
+void camera2_suspend(void )
+{
+		gpio_set_value(MX53_PCBA_CAM2_PWR_DOWN, 1);
+		gpio_direction_input(MX53_PCBA_CAM2_PWR_DOWN);
+}
+
+void camera2_resume(void )
+{
+		gpio_direction_output(MX53_PCBA_CAMERA_RESET, 1);
+		gpio_set_value(MX53_PCBA_CAM2_PWR_DOWN, 0);
+}
+
 void camera1_powerdown(int down)
 {
 	if (down)
@@ -1324,6 +1350,8 @@ static struct mxc_camera_platform_data camera_data1 = {
 	.mclk = 24000000,
 	.csi = 0,
 	.pwdn = camera1_powerdown,
+	.suspend = camera1_suspend,
+	.resume = camera1_resume,
 };
 
 static struct mxc_camera_platform_data camera_data2 = {
@@ -1332,6 +1360,8 @@ static struct mxc_camera_platform_data camera_data2 = {
 	.mclk = 24000000,
 	.csi = 0,
 	.pwdn = camera2_powerdown,
+	.suspend = camera2_suspend,
+	.resume = camera2_resume,
 };
 
 static struct wm8994_pdata wm8958_pdata = {

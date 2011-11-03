@@ -1366,7 +1366,8 @@ static struct mxc_camera_platform_data *camera_plat;
 static int mt9v114_probe(struct i2c_client *adapter,
 				const struct i2c_device_id *device_id);
 static int mt9v114_remove(struct i2c_client *client);
-
+static int mt9v114_suspend(struct i2c_client *client, pm_message_t mesg);
+static int mt9v114_resume(struct i2c_client *client);
 static s32 mt9v114_read_reg(u16 reg, u16 *val, bool double_bytes);
 static s32 mt9v114_write_reg(u16 reg, u16 val, bool double_bytes);
 
@@ -1384,6 +1385,8 @@ static struct i2c_driver mt9v114_i2c_driver = {
 		  },
 	.probe  = mt9v114_probe,
 	.remove = mt9v114_remove,
+	.suspend = mt9v114_suspend,
+	.resume = mt9v114_resume,
 	.id_table = mt9v114_id,
 };
 
@@ -2259,6 +2262,20 @@ static int mt9v114_remove(struct i2c_client *client)
 	return 0;
 }
 
+static int mt9v114_suspend(struct i2c_client *client, pm_message_t state)
+{
+
+	struct mxc_camera_platform_data *plat_data = client->dev.platform_data;
+	if (plat_data->suspend)
+		plat_data->suspend();
+}
+
+static int mt9v114_resume(struct i2c_client *client)
+{
+	struct mxc_camera_platform_data *plat_data = client->dev.platform_data;
+	if (plat_data->resume)
+		plat_data->resume();
+}
 /*!
  * mt9v114 init function
  * Called by insmod mt9v114_camera.ko.

@@ -151,6 +151,7 @@
 #define EOC_CCOUT			5
 #define LOW_VOLT_THRESHOLD		3400000
 #define HIGH_VOLT_THRESHOLD		4200000
+#define VOLT_THRESHOLD_DELTA		((HIGH_VOLT_THRESHOLD-LOW_VOLT_THRESHOLD)*3/100)
 #define RECHARGING_VOLT_THRESHOLD	4100000
 					/* larger than h/w recharging
 					 * threshold 95.4% of the CHRCV */
@@ -1218,10 +1219,11 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 		di->now_coulomb = 0;
 		reset_cc_flag = false;
 	}
-	pr_info("vol %d, cur %d, cc %d, delta cc %d, accum_coulomb %d, "
-		"accum_current_uAh %d\n", di->voltage_uV,
-					di->current_uA,
-					di->now_coulomb,
+	pr_info("readout: vol %d uV, cur %d uA, cc %d\n", di->voltage_uV,
+							di->current_uA,
+							di->now_coulomb);
+	pr_info("calc-ed: delta cc %d ( %d mC ), accum_coulomb %d, "
+		"accum_current_uAh %d\n",
 					di->delta_coulomb,
 					di->accum_coulomb,
 					convert_to_uAh(di->accum_coulomb));
@@ -1231,6 +1233,8 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 {
 	static bool can_adjust_percent = false;
+	static int lowbatt_counter;
+	int compared_batt_volt;
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN) {
 		di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
@@ -1242,7 +1246,23 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			di->percent = 99;
 
 	} else if (di->battery_status == POWER_SUPPLY_STATUS_DISCHARGING) {
-		if (di->voltage_uV <= LOW_VOLT_THRESHOLD) {/* discharging cmplt */
+		/* determine discharging complete */
+		if (di->internal_resistor_mOhm <= 0)
+			compared_batt_volt = di->voltage_uV;
+		else {
+			compared_batt_volt = di->internal_voltage_uV =
+				di->voltage_uV + abs(di->current_uA) *
+				di->internal_resistor_mOhm / 1000;
+		}
+
+		/* trick: trigger before LOW_VOLT_THRESHOLD reached */
+		if (compared_batt_volt <= (LOW_VOLT_THRESHOLD +
+						VOLT_THRESHOLD_DELTA))
+			lowbatt_counter++;
+		else
+			lowbatt_counter = 0;
+
+		if (lowbatt_counter > 1) {/* discharging cmplt */
 			pr_warning("Battery Low < %d uV\n", LOW_VOLT_THRESHOLD);
 			if (last_batt_complete_id > 0 &&
 				last_batt_complete_id != BATT_EMPTY) {
@@ -1289,10 +1309,6 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			else if (di->percent > 99)
 				di->percent = 99;
 
-			/* re-consider the case */
-			if (di->voltage_uV <= LOW_VOLT_THRESHOLD) /* discharging cmplt */
-				di->percent = 0; /* TODO */
-
 			can_adjust_percent = true;
 
 			goto out1;
@@ -1314,11 +1330,10 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 		di->percent += di->delta_coulomb * 100 / di->real_capacity;
 		di->percent = di->percent < 0 ? 0 : di->percent;
 
-		/* re-consider the case */
-		if (di->voltage_uV <= LOW_VOLT_THRESHOLD) /* discharging cmplt */
-			di->percent = 0;
 	} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING || 
 		   di->battery_status == POWER_SUPPLY_STATUS_FULL) {
+
+		lowbatt_counter = 0;
 
 		if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
 			if (last_batt_complete_id > 0 &&
@@ -1388,6 +1403,10 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 
 	}
 out1:
+	/* re-consider special cases here */
+	if (lowbatt_counter > 1) /* discharging cmplt */
+		di->percent = 0;
+
 	if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
 		pr_info("POWER_SUPPLY_STATUS_FULL\n");
 		di->percent = 100;

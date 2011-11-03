@@ -157,6 +157,7 @@
 					 * threshold 95.4% of the CHRCV */
 
 #define ADC_MAX_CHANNEL		8
+#define ADC_MAX_RETRY		10
 
 #define DEFAULT_INTER_RESISTOR_mOhm	250
 
@@ -203,7 +204,7 @@ static int usb_type;
 static struct mc34708_charger_setting_point ripley_charger_setting_point[] = {
 	{
 	 .microVolt = HIGH_VOLT_THRESHOLD,
-	 .microAmp = 550000,//1550000,
+	 .microAmp = 1550000,
 	 },
 };
 
@@ -303,7 +304,7 @@ static int set_coulomb_counter_integtime(enum integtime integtime)
 }
 
 /* uA */
-static int get_columb_counter_battcur_res_ua_lsb()
+static int get_columb_counter_battcur_res_ua_lsb(void)
 {
 	int ret;
 	unsigned int ccres;
@@ -473,11 +474,15 @@ static int ripley_get_batt_volt_curr_raw(unsigned short *volt,
 
 	return 0;
 }
+
 static int ripley_get_batt_volt_curr(int *volt, int *curr)
 {
 	int retval;
 	unsigned short voltage_raw;
 	signed short current_raw;
+	int volt_tmp, curr_tmp[2], diff;
+	int read_ok = true;
+	int i, j;
 
 #if 0
 	retval = ripley_get_batt_voltage(&voltage_raw);
@@ -496,17 +501,44 @@ static int ripley_get_batt_volt_curr(int *volt, int *curr)
 	}
 #else
 	/* AMPD suggests to sample volt/curr alternately */
-	retval = ripley_get_batt_volt_curr_raw(&voltage_raw, &current_raw);
-	if (retval == 0) {
-		*volt = voltage_raw * BAT_VOLTAGE_UNIT_UV;
+	for (i = 0; i < ADC_MAX_RETRY; i++) {
+		for (j = 0; j < 2; j++) {
+			retval = ripley_get_batt_volt_curr_raw(&voltage_raw, &current_raw);
+			if (retval == 0) {
+				volt_tmp = voltage_raw * BAT_VOLTAGE_UNIT_UV;
 
-		if (current_raw & 0x200)
-			*curr =
-			    (0x1FF - (current_raw & 0x1FF)) *
-			    BAT_CURRENT_UNIT_UA * (-1);
-		else
-			*curr =
-			    (current_raw & 0x1FF) * BAT_CURRENT_UNIT_UA;
+				if (current_raw & 0x200)
+					curr_tmp[j] =
+					    (0x1FF - (current_raw & 0x1FF)) *
+					    BAT_CURRENT_UNIT_UA * (-1);
+				else
+					curr_tmp[j] =
+					    (current_raw & 0x1FF) * BAT_CURRENT_UNIT_UA;
+
+				read_ok = true;
+			} else {
+				read_ok = false;
+				break;
+			}
+		}
+
+		if (read_ok) {
+			if ((curr_tmp[0] > 0 && curr_tmp[1] < 0) ||
+				(curr_tmp[0] < 0 && curr_tmp[1] > 0))
+				continue;
+
+			diff = abs(curr_tmp[0]- curr_tmp[1]);
+			if (diff == 0 || abs(curr_tmp[1]) / diff > 10) {
+				*curr = curr_tmp[1];
+				*volt = volt_tmp;
+				break;
+			}
+		}
+	}
+
+	if (i >= ADC_MAX_RETRY) {
+		pr_err("unable to read battery volt & curr.\n");
+		retval = PMIC_ERROR;
 	}
 #endif
 
@@ -514,7 +546,6 @@ static int ripley_get_batt_volt_curr(int *volt, int *curr)
 }
 
 static int coulomb_counter_calibration;
-static unsigned int coulomb_counter_start_time_msecs;
 
 static int ripley_calibrate_coulomb_counter(void)
 {
@@ -1259,7 +1290,7 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 	pr_info("[readout]: vol %d uV, cur %d uA, cc %d\n", di->voltage_uV,
 							di->current_uA,
 							di->now_coulomb);
-	pr_info("[calc-ed]: delta cc %d ( %d mC );"
+	pr_info("[calc-ed]: delta cc %d ( %d mC );  "
 		"accum_coulomb %d ( accum_uAh %d )\n", di->delta_coulomb,
 					di->delta_coulomb * ccres_mC,
 					di->accum_coulomb,
@@ -1391,7 +1422,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 				can_calculate_capacity = false;
 
 			di->empty_coulomb = di->accum_coulomb;
-			pr_info("LOWBATT CMPL: di->empty_coulomb %d\n",
+			pr_info("LOWBAT CMPL(Charging): di->empty_coulomb %d\n",
 					di->empty_coulomb);
 			last_batt_complete_id = BATT_EMPTY;
 
@@ -1719,8 +1750,8 @@ static int ripley_battery_get_property(struct power_supply *psy,
 				       enum power_supply_property psp,
 				       union power_supply_propval *val)
 {
-	struct ripley_dev_info *di = to_ripley_dev_info(psy);
 	static unsigned long last;
+	struct ripley_dev_info *di = to_ripley_dev_info(psy);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -1891,8 +1922,8 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	pmic_event_subscribe(MC34708_EVENT_CHRCMPL, bat_event_callback);
 #endif
 
-//	set_coulomb_counter_cres(CCRES_200_mC_PER_LSB);
-//	set_coulomb_counter_integtime(INTEGTIME_32S);
+	set_coulomb_counter_cres(CCRES_1000_mC_PER_LSB);
+	set_coulomb_counter_integtime(INTEGTIME_32S);
 	ripley_calibrate_coulomb_counter();
 	ccres_mC = get_coulomb_counter_cres_mC();
 	printk("ccres_mC %d\n", ccres_mC);

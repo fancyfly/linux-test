@@ -1052,7 +1052,6 @@ static void pcba_suspend_enter()
 	gpio_direction_output(MX53_PCBA_MODEM_PWR_ON, 0);/*MODEM_PWR_ON*/
 
 	gpio_direction_output(MX53_PCBA_GPS_ONOFF, 0); /*GPS_ON_OFF*/
-	gpio_direction_output(MX53_PCBA_AU_LDO_EN, 0);/*AU_LDO_EN*/
 	gpio_direction_output(MX53_PCBA_TCXO_PWR_EN, 0);/*TCXO_PWR_EN*/
 
 	ret = gpio_request(MX53_PCBA_CKIH_EN, "CKIN_EN");
@@ -1708,6 +1707,18 @@ static int mxc_wm8958_init(void)
 	return 0;
 }
 
+static int mxc_wm8958_gpio_suspend(void)
+{
+	gpio_direction_output(MX53_PCBA_AU_LDO_EN, 0);
+	return 0;
+}
+
+static int mxc_wm8958_gpio_resume(void)
+{
+	gpio_direction_output(MX53_PCBA_AU_LDO_EN, 1);
+	return 0;
+}
+
 static struct mxc_audio_platform_data wm8958_data = {
 	.ssi_num = 1,
 	.src_port = 2,
@@ -1718,6 +1729,8 @@ static struct mxc_audio_platform_data wm8958_data = {
 	.init       = mxc_wm8958_init,
 	.ext_ram_rx = 1,
 	.ext_ram_tx = 1,
+	.gpio_suspend = mxc_wm8958_gpio_suspend,
+	.gpio_resume = mxc_wm8958_gpio_resume,
 };
 
 static struct platform_device mxc_wm8958_device = {

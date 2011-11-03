@@ -645,6 +645,23 @@ sysfs_err:
 	return ret;
 }
 
+static int __devinit imx_3stack_wm8994_suspend(struct platform_device *pdev)
+{
+	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
+	if(plat->gpio_suspend)
+		plat->gpio_suspend();
+	return 0;
+}
+
+static int __devinit imx_3stack_wm8994_resume(struct platform_device *pdev)
+{
+	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
+	if(plat->gpio_resume)
+		plat->gpio_resume();
+	return 0;
+}
+
+
 static int __devexit imx_3stack_wm8994_remove(struct platform_device *pdev)
 {
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
@@ -666,6 +683,8 @@ static struct platform_driver imx_3stack_wm8994_driver = {
 		   .name = "imx-3stack-wm8994",
 		   .owner = THIS_MODULE,
 		   },
+	.suspend = imx_3stack_wm8994_suspend,
+	.resume = imx_3stack_wm8994_resume,
 };
 
 static struct platform_device *imx_3stack_snd_device;

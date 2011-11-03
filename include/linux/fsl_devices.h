@@ -258,6 +258,8 @@ struct mxc_audio_platform_data {
 	int (*clock_enable) (int enable);
 	int (*finit) (void);	/* board specific finit */
 	void *priv;		/* used by board specific functions */
+	int (*gpio_suspend)(void);
+	int (*gpio_resume)(void);
 };
 
 struct mxc_spdif_platform_data {

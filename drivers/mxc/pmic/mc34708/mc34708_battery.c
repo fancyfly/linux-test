@@ -631,6 +631,7 @@ struct ripley_dev_info {
 	int first_get_percent;
 	int now_coulomb;
 	int delta_coulomb;
+	int old_internal_resistor_mOhm;
 	int internal_resistor_mOhm;
 	int internal_voltage_uV;
 
@@ -830,7 +831,7 @@ static int get_battcur(int *batt_curr)
 	int battcur_res, battcur;
 
 	battcur_res = get_columb_counter_battcur_res_ua_lsb();
-	pr_debug("battcur_res = %x\n", battcur_res);
+	pr_debug("battcur_res = %d\n", battcur_res);
 	if (battcur_res < 0)
 		return -1;
 
@@ -960,7 +961,7 @@ static int _is_valid_to_calc_internal_resistor(struct ripley_dev_info *di,
 		if ((last_batt_rec[curr_index].current_uA > 0 &&
 			last_batt_rec[compared_index].current_uA > 0) &&
 			abs(last_batt_rec[curr_index].current_uA -
-			   last_batt_rec[compared_index].current_uA) > 100000)
+			   last_batt_rec[compared_index].current_uA) > 50000)
 			return true;
 
 		return false;
@@ -979,22 +980,34 @@ static void __record_batt_iresistor(struct ripley_dev_info *di)
 static void __recalc_batt_iresistor(struct ripley_dev_info *di)
 {
 	int accum_iresistor = 0, nr = 0, diff;
+	int compared_internal_resistor;
 	int i;
+
+	if (di->old_internal_resistor_mOhm <= 0)
+		compared_internal_resistor = di->internal_resistor_mOhm;
+	else
+		compared_internal_resistor = di->old_internal_resistor_mOhm;
+
+	pr_debug("old_internal_resistor_mOhm %d\n",
+			di->old_internal_resistor_mOhm);
 
 	for (i = 0; i < NUM_IRESISTOR_RECORD; i++) {
 		/* within 50% */
-		//pr_info("batt_iresistor_rec[%d]: %d\n", i, batt_iresistor_rec[i]);
+		pr_debug("batt_iresistor_rec[%d]: %d\n", i, batt_iresistor_rec[i]);
 		diff = abs(batt_iresistor_rec[i] - di->internal_resistor_mOhm);
 		if (batt_iresistor_rec[i] && (diff == 0 ||
-			(di->internal_resistor_mOhm / diff >= 2))) {
+			(compared_internal_resistor / diff >= 2))) {
 			accum_iresistor += batt_iresistor_rec[i];
 			nr++;
 		} else
 			batt_iresistor_rec[i] = 0;
 	}
 
-	if (nr)
+	if (nr) {
 		di->internal_resistor_mOhm = accum_iresistor / nr;
+		di->old_internal_resistor_mOhm = di->internal_resistor_mOhm;
+	} else
+		di->internal_resistor_mOhm = compared_internal_resistor;
 }
 
 
@@ -1046,9 +1059,14 @@ static void _calculate_internal_resistor(struct ripley_dev_info *di)
 	pr_info("ORG: internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
 #ifdef DEFAULT_INTER_RESISTOR_mOhm
 	if (abs(di->internal_resistor_mOhm - DEFAULT_INTER_RESISTOR_mOhm) >
-		(DEFAULT_INTER_RESISTOR_mOhm * 4 / 5))
-		di->internal_resistor_mOhm = DEFAULT_INTER_RESISTOR_mOhm;
+		(DEFAULT_INTER_RESISTOR_mOhm * 4 / 5)) {
+		if (di->old_internal_resistor_mOhm <= 0)
+			di->internal_resistor_mOhm = DEFAULT_INTER_RESISTOR_mOhm;
+		else
+			di->internal_resistor_mOhm = di->old_internal_resistor_mOhm;
+	}
 #endif
+
 	__record_batt_iresistor(di);
 	__recalc_batt_iresistor(di);
 
@@ -1664,7 +1682,7 @@ static void calc_resistor_work(struct work_struct *work)
 			flag_changed = 0;
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->calc_resistor_mon_work,
-					   HZ * 30 * 60);
+					   HZ * 10 * 60);
 		} else {
 			if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 				if (flag_captured_once) {
@@ -1679,7 +1697,7 @@ static void calc_resistor_work(struct work_struct *work)
 
 					flag_captured_once = 0;
 					queue_delayed_work(di->monitor_wqueue,
-							   &di->calc_resistor_mon_work, HZ * 30 * 60);
+							   &di->calc_resistor_mon_work, HZ * 10 * 60);
 				} else {
 					flag_captured_once = 1;
 					queue_delayed_work(di->monitor_wqueue,
@@ -1875,6 +1893,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	di->battery_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	di->accum_coulomb = 0;
 	di->internal_resistor_mOhm = -1;
+	di->old_internal_resistor_mOhm = -1;
 #ifdef DEFAULT_INTER_RESISTOR_mOhm
 	di->internal_resistor_mOhm = DEFAULT_INTER_RESISTOR_mOhm;
 #endif

@@ -1159,7 +1159,7 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 		}
 		if (usbOnline != di->usb_charger_online) {
 			/* need some delay to know the usb type */
-			msleep(80);
+			msleep(700);
 			ret = pmic_read_reg(MC34708_REG_USB_DEVICE_TYPE,
 					    &reg_usb_type, PMIC_ALL_BITS);
 			usb_type = 0;
@@ -1167,15 +1167,16 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 				usb_type = USBHOST;
 				pr_info("USB host attached!!!\n");
 				restartCharging = 0;
-			}
-			if ((reg_usb_type & USBCHARGER) != 0) {
+			} else if ((reg_usb_type & USBCHARGER) != 0) {
 				usb_type = USBCHARGER;
 				pr_info("USB charger attached!!!\n");
-			}
-			if ((reg_usb_type & DEDICATEDCHARGER) != 0) {
+			} else if ((reg_usb_type & DEDICATEDCHARGER) != 0) {
 				usb_type = DEDICATEDCHARGER;
 				pr_info("Dedicated charger attached!!!\n");
+			} else {
+				restartCharging = 0;
 			}
+
 			di->usb_charger_online = usbOnline;
 			dev_info(di->usb_charger.dev, "usb cable status: %s\n",
 				 usbOnline ? "online" : "offline");

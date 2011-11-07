@@ -17,7 +17,6 @@
 #include <linux/clk.h>
 #include <linux/platform_device.h>
 #include <linux/fsl_devices.h>
-#include <linux/wakelock.h>
 #include <asm/delay.h>
 #include <mach/arc_otg.h>
 #include <asm/mach-types.h>
@@ -39,7 +38,6 @@ static void fsl_usb_recover_hcd(struct platform_device *pdev)
 /*
  * USB Host1 HS port
  */
-static struct wake_lock usbmodem_wake_lock;
 static int gpio_usbh1_active(void)
 {
 	/* Set USBH1_STP to GPIO and toggle it */
@@ -130,8 +128,6 @@ static void h1_wakeup_handler(struct fsl_usb2_platform_data *pdata)
 	_wake_up_enable(pdata, false);
 	_phy_lowpower_suspend(pdata, false);
 	fsl_usb_recover_hcd(&mxc_usbh1_device);
-	wake_lock_timeout(&usbmodem_wake_lock, 20*HZ);
-	printk(KERN_INFO "Here get wake lock for 20s\n");
 }
 
 static void usbh1_wakeup_event_clear(void)
@@ -252,6 +248,5 @@ void __init mx5_usbh1_init(void)
 	mxc_register_device(&mxc_usbh1_device, &usbh1_config);
 	usbh1_config.wakeup_pdata = &usbh1_wakeup_config;
 	mxc_register_device(&mxc_usbh1_wakeup_device, &usbh1_wakeup_config);
-	wake_lock_init(&usbmodem_wake_lock, WAKE_LOCK_SUSPEND, "usb_modem");
 }
 

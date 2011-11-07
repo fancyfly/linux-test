@@ -1,8 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-=======
-# Thu Nov  3 11:21:24 2011
+# Mon Nov  7 14:22:18 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1850,8 +1849,7 @@ CONFIG_USB=y
 # CONFIG_USB_DEVICEFS is not set
 # CONFIG_USB_DEVICE_CLASS is not set
 # CONFIG_USB_DYNAMIC_MINORS is not set
-CONFIG_USB_SUSPEND=y
-# CONFIG_USB_OTG is not set
+# CONFIG_USB_SUSPEND is not set
 # CONFIG_USB_OTG_WHITELIST is not set
 # CONFIG_USB_OTG_BLACKLIST_HUB is not set
 # CONFIG_USB_MON is not set
@@ -2165,7 +2163,18 @@ CONFIG_STAGING=y
 # CONFIG_TI_ST is not set
 # CONFIG_ST_BT is not set
 # CONFIG_ADIS16255 is not set
-# CONFIG_ATH6K_LEGACY is not set
+CONFIG_ATH6K_LEGACY=m
+CONFIG_AR600x_SD31_XXX=y
+# CONFIG_AR600x_WB31_XXX is not set
+# CONFIG_AR600x_SD32_XXX is not set
+# CONFIG_AR600x_CUSTOM_XXX is not set
+# CONFIG_ATH6KL_ENABLE_COEXISTENCE is not set
+# CONFIG_ATH6KL_HCI_BRIDGE is not set
+# CONFIG_ATH6KL_CFG80211 is not set
+# CONFIG_ATH6KL_HTC_RAW_INTERFACE is not set
+# CONFIG_ATH6KL_VIRTUAL_SCATTER_GATHER is not set
+# CONFIG_ATH6KL_SKIP_ABI_VERSION_CHECK is not set
+# CONFIG_ATH6KL_DEBUG is not set
 
 #
 # Android

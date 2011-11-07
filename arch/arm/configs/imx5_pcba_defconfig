@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-# Fri Sep 30 11:56:59 2011
+# Mon Nov  7 09:57:32 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1567,7 +1567,7 @@ CONFIG_MXC_CAMERA_APTINA114=y
 # CONFIG_MXC_CAMERA_OV5640 is not set
 # CONFIG_MXC_CAMERA_OV5642 is not set
 # CONFIG_MXC_TVIN_ADV7180 is not set
-# CONFIG_MXC_CAMERA_MT9P111 is not set
+CONFIG_MXC_CAMERA_MT9P111=y
 CONFIG_MXC_IPU_PRP_VF_SDC=y
 CONFIG_MXC_IPU_PRP_ENC=y
 CONFIG_MXC_IPU_CSI_ENC=y

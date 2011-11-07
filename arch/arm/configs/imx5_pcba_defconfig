@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-
+=======
 # Thu Nov  3 11:21:24 2011
 #
 CONFIG_ARM=y

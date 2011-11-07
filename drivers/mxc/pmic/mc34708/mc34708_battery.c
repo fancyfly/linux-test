@@ -875,7 +875,8 @@ static int check_eoc(struct ripley_dev_info *di)
 		voltage_uV = voltage_raw * BAT_VOLTAGE_UNIT_UV;
 
 	if (voltage_uV >= EOC_VOLTAGE_UV &&
-		battcur <= EOC_CURRENT_UA &&
+	/*	battcur <= EOC_CURRENT_UA &&	*/
+		di->current_uA <= EOC_CURRENT_UA &&
 		di->delta_coulomb < EOC_CCOUT)
 		di->full_counter++;
 	else

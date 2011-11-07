@@ -897,18 +897,6 @@ static iomux_v3_cfg_t suspend_enter_pads[] = {
 };
 static unsigned int suspend_gpio_out2in[] = {
 
-//	MX53_PCBA_TOUCH_RST,
-	MX53_PCBA_GPS_RESET,
-	MX53_PCBA_HDMI_RESET_B,
-	MX53_PCBA_GPS_TSYNC,
-	MX53_PCBA_WLAN_WAKE_B,
-	MX53_PCBA_BT_WAKE,
-	MX53_PCBA_WLAN_ENABLE,
-	MX53_PCBA_CAM2_RESET,
-	MX53_PCBA_BT_ENABLE,
-	MX53_PCBA_CAMERA_RESET,
-	MX53_PCBA_LCD_CABC_EN3,//
-	MX53_PCBA_LCD_SEL,//
 	MX53_PCBA_HDMI_CEC_AP,//
 
 
@@ -1019,7 +1007,6 @@ static unsigned int suspend_alt_req[] = {
 static iomux_v3_cfg_t suspend_exit_pads[ARRAY_SIZE(suspend_enter_pads)];
 static void pcba_suspend_enter()
 {
-#if 1
 	iomux_v3_cfg_t *p = suspend_enter_pads;
 	int i, ret;
 
@@ -1034,75 +1021,22 @@ static void pcba_suspend_enter()
 			ARRAY_SIZE(suspend_enter_pads));
 
 	/*Config some output pins to lowlevel*/
-	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 0);/*LCD_PWR_EN*/
-	gpio_direction_output(MX53_PCBA_USB_OTG_PWR_EN, 0);/*OTG_PWR_EN*/
 	gpio_direction_output(MX53_PCBA_SD_PWR_EN, 0);/*SD_PWR_EN*/
 	gpio_direction_output(MX53_PCBA_HDMI_PWR_EN, 0);/*HDMI_PWR_EN*/
-	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
-	if(!ret){
-		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 0);
-		gpio_free(MX53_PCBA_LCD_BL_PWM);
-	}
-	gpio_direction_output(MX53_PCBA_CAM2_PWR_DOWN, 0);/*CAM2_POWER_DOWN*/
-	gpio_direction_output(MX53_PCBA_CAM1_PDN_VCM, 0);/*CAM1_PWDN_VCM*/
-	gpio_direction_output(MX53_PCBA_CAM1_PWR_DOWN,0);/*CAM1_POWER_DOWN*/
-	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 0); /*BL_PWR_EN*/
-	gpio_direction_output(MX53_PCBA_KEY_FLASH_LED3, 0); /*KEY_FLASH_LED3*/
-	gpio_direction_output(MX53_PCBA_MODEM_WAKEUP_IN, 0);/*MODEM_WAKEUP_IN*/
-	gpio_direction_output(MX53_PCBA_MODEM_PWR_ON, 0);/*MODEM_PWR_ON*/
 
-	gpio_direction_output(MX53_PCBA_GPS_ONOFF, 0); /*GPS_ON_OFF*/
-	gpio_direction_output(MX53_PCBA_TCXO_PWR_EN, 0);/*TCXO_PWR_EN*/
-
-	ret = gpio_request(MX53_PCBA_CKIH_EN, "CKIN_EN");
-	if(!ret){
-		gpio_direction_output(MX53_PCBA_CKIH_EN, 0);/*CKIN_EN*/
-		gpio_free(MX53_PCBA_CKIH_EN);
-	}
-	ret = gpio_request(MX53_PCBA_PMIC_ICTEST, "PMIC_ICTEST");/*PMIC_ICTEST*/
-	if (!ret){
-		gpio_direction_output(MX53_PCBA_PMIC_ICTEST, 0);
-		gpio_free(MX53_PCBA_PMIC_ICTEST);
-	}
-	gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, 0);/*WLAN_VCC_EN*/
-	/*Config some output pin to input pin*/
-	for (i = 0; i < ARRAY_SIZE(suspend_gpio_out2in); i++) {
-		gpio_direction_input(suspend_gpio_out2in[i]);
-	}
-#endif
-#if 0	
-	/*Config some ALT pins to input pin*/
-	for (i = 0; i < ARRAY_SIZE(suspend_alt_req); i++) {
-		gpio_request(suspend_alt_req[i],"GPIO");
-		gpio_direction_input(suspend_alt_req[i]);
-		gpio_free(suspend_alt_req[i]);
-	}
-#endif
-       
 
 
 }
 
 static void pcba_suspend_exit()
 {
-#if 1
 	int i,ret;
 	mxc_iomux_v3_setup_multiple_pads(suspend_exit_pads,
 			ARRAY_SIZE(suspend_exit_pads));
 	/*Config some know pins to output high level after suspend*/
 	gpio_direction_output(MX53_PCBA_HDMI_PWR_EN, 1);/*HDMI_PWR_EN*/
 	gpio_direction_output(MX53_PCBA_SD_PWR_EN, 1);/*SD_PWR_EN*/
-	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1);/*BL_PWR_EN*/
-	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 1);/*LCD_PWR_EN*/
 
-	/*Restore the output pin*/
-	for (i = 0; i < ARRAY_SIZE(suspend_gpio_out2in); i++) {
-		if (suspend_gpio_out2in[i] == MX53_PCBA_TOUCH_RST)
-			gpio_direction_output(suspend_gpio_out2in[i], 1);
-		else
-			gpio_direction_output(suspend_gpio_out2in[i], 0);
-	}
-#endif
 }
 
 static struct mxc_pm_platform_data pcba_pm_data = {

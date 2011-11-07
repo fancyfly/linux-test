@@ -47,6 +47,7 @@
 #include <linux/mxcfb.h>
 #include <linux/uaccess.h>
 #include <linux/fsl_devices.h>
+#include <linux/gpio.h>
 #include <asm/mach-types.h>
 
 /*
@@ -1475,13 +1476,24 @@ static irqreturn_t mxcfb_alpha_irq_handler(int irq, void *dev_id)
 }
 
 /*
+ * Macros defined for LCD power control
+ */
+#define MX53_PCBA_LCD_PWR_EN		(2*32 + 22)	/* GPIO3_22 */
+#define MX53_PCBA_LCD_BL_PWM		(0*32 + 1)	/* GPIO1_1*/
+#define MX53_PCBA_BL_PWR_EN		(3*32 + 7)	/* GPIO4_7 */
+/* Out to In during suspend state */
+#define MX53_PCBA_LCD_CABC_EN3		(6*32 + 7)	/* GPIO7_7 */
+#define MX53_PCBA_LCD_SEL		(6*32 + 8)	/* GPIO7_8 */
+
+
+/*
  * Suspends the framebuffer and blanks the screen. Power management support
  */
 static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct fb_info *fbi = platform_get_drvdata(pdev);
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
-	int saved_blank;
+	int ret, saved_blank;
 
 	acquire_console_sem();
 	fb_set_suspend(fbi, 1);
@@ -1489,6 +1501,22 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 	mxcfb_blank(FB_BLANK_POWERDOWN, fbi);
 	mxc_fbi->next_blank = saved_blank;
 	mxc_fbi->fb_suspended = true;
+	/*
+	 * Turn off
+	 */
+	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 0);/*LCD_PWR_EN*/
+	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
+	if(!ret){
+		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 0);
+		gpio_free(MX53_PCBA_LCD_BL_PWM);
+	}
+    gpio_direction_output(MX53_PCBA_BL_PWR_EN, 0); /*BL_PWR_EN*/
+	ret = gpio_request(MX53_PCBA_LCD_CABC_EN3, "lcd_cabc_en3");
+	if (! ret) {
+		gpio_direction_input(MX53_PCBA_LCD_CABC_EN3);
+		gpio_free(MX53_PCBA_LCD_CABC_EN3);
+	}
+	gpio_direction_input(MX53_PCBA_LCD_SEL);
 	release_console_sem();
 
 	return 0;
@@ -1501,11 +1529,28 @@ static int mxcfb_resume(struct platform_device *pdev)
 {
 	struct fb_info *fbi = platform_get_drvdata(pdev);
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
+	int ret;
 
 	acquire_console_sem();
 	mxc_fbi->fb_suspended = false;
 	mxcfb_blank(mxc_fbi->next_blank, fbi);
 	fb_set_suspend(fbi, 0);
+	/*
+	 * Turn on
+	 */
+	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 1);/*LCD_PWR_EN*/
+	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
+	if(!ret){
+		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 0);
+		gpio_free(MX53_PCBA_LCD_BL_PWM);
+	}
+    gpio_direction_output(MX53_PCBA_BL_PWR_EN, 0); /*BL_PWR_EN*/
+	ret = gpio_request(MX53_PCBA_LCD_CABC_EN3, "lcd_cabc_en3");
+	if (! ret) {
+		gpio_direction_output(MX53_PCBA_LCD_CABC_EN3, 1);
+		gpio_free(MX53_PCBA_LCD_CABC_EN3);
+	}
+	gpio_direction_output(MX53_PCBA_LCD_SEL, 1);
 	release_console_sem();
 
 	return 0;

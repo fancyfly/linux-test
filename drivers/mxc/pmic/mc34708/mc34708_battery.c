@@ -146,12 +146,12 @@
 #define USBCHARGER 0x20
 #define DEDICATEDCHARGER 0x40
 
-#define EOC_CURRENT_UA			50000
+#define EOC_CURRENT_UA			200000
 #define EOC_VOLTAGE_UV			4100000
 #define EOC_CCOUT			5
 #define LOW_VOLT_THRESHOLD		3400000
 #define HIGH_VOLT_THRESHOLD		4200000
-#define VOLT_THRESHOLD_DELTA		((HIGH_VOLT_THRESHOLD-LOW_VOLT_THRESHOLD)*3/100)
+#define VOLT_THRESHOLD_DELTA		((HIGH_VOLT_THRESHOLD-LOW_VOLT_THRESHOLD)*2/100)
 #define RECHARGING_VOLT_THRESHOLD	4100000
 					/* larger than h/w recharging
 					 * threshold 95.4% of the CHRCV */
@@ -159,7 +159,9 @@
 #define ADC_MAX_CHANNEL		8
 #define ADC_MAX_RETRY		10
 
-#define DEFAULT_INTER_RESISTOR_mOhm	250
+#define DEFAULT_INTER_RESISTOR_mOhm	200
+
+#define	BATTERY_UPDATE_INTERVAL		8	/* seconds */
 
 static int suspend_flag;
 static int power_supply_changed_flag;
@@ -876,8 +878,8 @@ static int check_eoc(struct ripley_dev_info *di)
 
 	if (voltage_uV >= EOC_VOLTAGE_UV &&
 	/*	battcur <= EOC_CURRENT_UA &&	*/
-		di->current_uA <= EOC_CURRENT_UA &&
-		di->delta_coulomb < EOC_CCOUT)
+	/*	di->delta_coulomb < EOC_CCOUT) && */
+		di->current_uA <= EOC_CURRENT_UA)
 		di->full_counter++;
 	else
 		di->full_counter = 0;
@@ -1425,7 +1427,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			compared_batt_volt = di->voltage_uV;
 		else {
 			compared_batt_volt = di->internal_voltage_uV =
-				di->voltage_uV + abs(di->current_uA) *
+				di->voltage_uV - abs(di->current_uA) *
 				di->internal_resistor_mOhm / 1000;
 		}
 		if ((compared_batt_volt <= (LOW_VOLT_THRESHOLD +
@@ -1521,9 +1523,13 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 
 	}
 out1:
-	/* re-consider special cases here */
-	if (lowbatt_counter > 1) /* discharging cmplt */
+	/* re-consider special case here, delay 1 minute before change to 0% */
+	if (lowbatt_counter > (60 / BATTERY_UPDATE_INTERVAL))
 		di->percent = 0;
+	else if (lowbatt_counter > 1) {
+		if (di->percent == 0)
+			di->percent = 1;
+	}
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
 		pr_info("POWER_SUPPLY_STATUS_FULL\n");
@@ -1613,7 +1619,7 @@ static void ripley_battery_work(struct work_struct *work)
 	struct ripley_dev_info *di = container_of(work,
 						  struct ripley_dev_info,
 						  monitor_work.work);
-	const int interval = HZ * 8;
+	const int interval = HZ * BATTERY_UPDATE_INTERVAL;
 
 	dev_dbg(di->dev, "%s\n", __func__);
 

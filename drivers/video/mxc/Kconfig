@@ -46,6 +46,10 @@ config FB_MXC_SII902X
 	depends on FB_MXC_SYNC_PANEL
 	tristate "Si Image SII9022 DVI/HDMI Interface Chip"
 
+config FB_MXC_SII9232
+	depends on FB_MXC_SYNC_PANEL
+	tristate "Si Image SII9232 MHL Interface Chip"
+
 config FB_MXC_CH7026
 	depends on FB_MXC_SYNC_PANEL
 	tristate "Chrontel CH7026 VGA Interface Chip"

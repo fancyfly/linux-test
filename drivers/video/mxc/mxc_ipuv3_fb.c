@@ -1505,18 +1505,12 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 	 * Turn off
 	 */
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 0);/*LCD_PWR_EN*/
-	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
-	if(!ret){
-		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 0);
-		gpio_free(MX53_PCBA_LCD_BL_PWM);
-	}
     gpio_direction_output(MX53_PCBA_BL_PWR_EN, 0); /*BL_PWR_EN*/
 	ret = gpio_request(MX53_PCBA_LCD_CABC_EN3, "lcd_cabc_en3");
 	if (! ret) {
 		gpio_direction_input(MX53_PCBA_LCD_CABC_EN3);
 		gpio_free(MX53_PCBA_LCD_CABC_EN3);
 	}
-	gpio_direction_input(MX53_PCBA_LCD_SEL);
 	release_console_sem();
 
 	return 0;
@@ -1539,12 +1533,7 @@ static int mxcfb_resume(struct platform_device *pdev)
 	 * Turn on
 	 */
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 1);/*LCD_PWR_EN*/
-	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
-	if(!ret){
-		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 0);
-		gpio_free(MX53_PCBA_LCD_BL_PWM);
-	}
-    gpio_direction_output(MX53_PCBA_BL_PWR_EN, 0); /*BL_PWR_EN*/
+    gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1); /*BL_PWR_EN*/
 	ret = gpio_request(MX53_PCBA_LCD_CABC_EN3, "lcd_cabc_en3");
 	if (! ret) {
 		gpio_direction_output(MX53_PCBA_LCD_CABC_EN3, 1);

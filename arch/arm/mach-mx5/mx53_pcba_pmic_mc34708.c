@@ -19,6 +19,7 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
+#include <linux/i2c.h>
 #include <linux/spi/spi.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
@@ -335,7 +336,14 @@ static struct spi_board_info __initdata mc34708_spi_device = {
 	.platform_data = &mc34708_plat,
 };
 
+static struct i2c_board_info __initdata mc34708_i2c_device = {
+        I2C_BOARD_INFO(MC34708_I2C_DEVICE_NAME, MC34708_I2C_ADDR),
+        .irq = gpio_to_irq(MX53_PCBA_MC34708_IRQ),
+        .platform_data = &mc34708_plat,
+};
+
 int __init mx53_pcba_init_mc34708(void)
 {
-	return spi_register_board_info(&mc34708_spi_device, 1);
+	// return spi_register_board_info(&mc34708_spi_device, 1);
+	return i2c_register_board_info(0, &mc34708_i2c_device, 1);
 }

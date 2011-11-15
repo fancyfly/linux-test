@@ -113,7 +113,7 @@ static uint8_t SetSCLHigh(void)
         /* do nothing - just wait */
 	mdelay(1);
 	timeout++;
-	if( timeout == 1000 )   // about 1s is enough
+	if( timeout == 10 )   // about 1s is enough
 	{
 		printk("\n ************IIC SCL low timeout...\n");
 		return IIC_SCL_TIMEOUT;

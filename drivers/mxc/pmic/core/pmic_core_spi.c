@@ -190,6 +190,61 @@ static void pmic_pdev_unregister(void)
 	platform_device_unregister(&pwm2_ldm);
 }
 
+static ssize_t pmic_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	int i, value;
+	int offset = REG_TEST4 / 4 * 4;
+
+	for (i = 0; i < offset; i++) {
+		pmic_read(i, &value);
+		pr_info("reg%02d: %06x\t\t", i, value);
+	}
+	pr_info("\n");
+
+	return 0;
+}
+
+static ssize_t pmic_store(struct device *dev,
+			     struct device_attribute *attr, const char *buf,
+			     size_t count)
+{
+	int reg, value, ret;
+	char *p;
+
+	reg = simple_strtoul(buf, NULL, 10);
+
+	p = NULL;
+	p = memchr(buf, ' ', count);
+
+	if (p == NULL) {
+		pmic_read(reg, &value);
+		pr_debug("reg%02d: %06x\n", reg, value);
+		return count;
+	}
+
+	p += 1;
+
+	value = simple_strtoul(p, NULL, 16);
+
+	ret = pmic_write(reg, value);
+	if (ret == 0)
+		pr_debug("write reg%02d: %06x\n", reg, value);
+	else
+		pr_debug("register update failed\n");
+
+	return count;
+}
+
+static struct device_attribute pmic_dev_attr = {
+	.attr = {
+		 .name = "pmic_ctl",
+		 .mode = S_IRUSR | S_IWUSR,
+		 },
+	.show = pmic_show,
+	.store = pmic_store,
+};
+
 /*!
  * This function puts the SPI slave device in low-power mode/state.
  *
@@ -311,6 +366,10 @@ static int __devinit pmic_probe(struct spi_device *spi)
 	}
 
 	power_ldm.dev.platform_data = spi->dev.platform_data;
+
+	ret = device_create_file(&spi->dev, &pmic_dev_attr);
+	if (ret)
+		dev_err(&spi->dev, "create device file failed!\n");
 
 	pmic_pdev_register();
 

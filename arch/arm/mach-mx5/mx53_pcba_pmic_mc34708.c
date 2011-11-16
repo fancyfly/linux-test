@@ -344,6 +344,5 @@ static struct i2c_board_info __initdata mc34708_i2c_device = {
 
 int __init mx53_pcba_init_mc34708(void)
 {
-	// return spi_register_board_info(&mc34708_spi_device, 1);
-	return i2c_register_board_info(0, &mc34708_i2c_device, 1);
+	return spi_register_board_info(&mc34708_spi_device, 1);
 }

@@ -1566,11 +1566,11 @@ static void __init mxc_board_init(void)
 		mxc_register_device(&mxc_asrc_device, &mxc_asrc_data);
 	}
 
-	i2c_register_board_info(1, mxc_i2c1_board_info,
+	i2c_register_board_info(0, mxc_i2c1_board_info,
 				ARRAY_SIZE(mxc_i2c1_board_info));
-	i2c_register_board_info(2, mxc_i2c2_board_info,
+	i2c_register_board_info(1, mxc_i2c2_board_info,
 				ARRAY_SIZE(mxc_i2c2_board_info));
-	i2c_register_board_info(3, mxc_i2c3_board_info,
+	i2c_register_board_info(2, mxc_i2c3_board_info,
 				ARRAY_SIZE(mxc_i2c3_board_info));
 
 	wm8958_data.ext_ram_clk = clk_get(NULL, "emi_fast_clk");

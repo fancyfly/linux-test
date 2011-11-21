@@ -945,16 +945,8 @@ static void __init pcba_add_device_buttons(void) {}
 static void mx53_gpio_usbotg_driver_vbus(bool on)
 {
 	if (on) {
-		pmic_write_reg(REG_USB_CTL, BITFVAL(OTGEN, 1),
-				BITFMASK(OTGEN));
-		pmic_write_reg(REG_MODE_0, BITFVAL(VUSBSEL, 1),
-				BITFMASK(VUSBSEL));
 		gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 1);
 	} else {
-		pmic_write_reg(REG_USB_CTL, BITFVAL(OTGEN, 0),
-				BITFMASK(OTGEN));
-		pmic_write_reg(REG_MODE_0, BITFVAL(VUSBSEL, 0),
-				BITFMASK(VUSBSEL));
 		gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
 	}
 }

@@ -160,7 +160,7 @@ static int __devinit i2c_gpio_probe(struct platform_device *pdev)
 		 pdata->sda_pin, pdata->scl_pin,
 		 pdata->scl_is_output_only
 		 ? ", no clock stretching" : "");
-
+	printk ("i2c-gpio init \n");
 	return 0;
 
 err_add_bus:

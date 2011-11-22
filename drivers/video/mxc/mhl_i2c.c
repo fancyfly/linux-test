@@ -34,50 +34,38 @@
 //------------------------------------------------------------------------------
 bool GET_SDA(void)	{
 	int rdVal;
-	gpio_request(MX53_PCBA_MHL_SW_I2C_SDA, "mhl-sw-i2c-sda");
-	rdVal = gpio_direction_input(MX53_PCBA_MHL_SW_I2C_SDA);
-	gpio_free(MX53_PCBA_MHL_SW_I2C_SDA);
+	rdVal = gpio_get_value(MX53_PCBA_MHL_SW_I2C_SDA);
 	return rdVal;
 }
 
 bool GET_SCL(void)	{
 	int rdVal;
-	gpio_request(MX53_PCBA_MHL_SW_I2C_SCL, "mhl-sw-i2c-scl");
-	rdVal = gpio_direction_input(MX53_PCBA_MHL_SW_I2C_SCL);
-	gpio_free(MX53_PCBA_MHL_SW_I2C_SCL);
+	rdVal = gpio_get_value(MX53_PCBA_MHL_SW_I2C_SCL);
 	return rdVal;
 }
 
 void SET_SDA(void)	{
-	int rdVal;
-	gpio_request(MX53_PCBA_MHL_SW_I2C_SDA, "mhl-sw-i2c-sda");
-	rdVal = gpio_direction_output(MX53_PCBA_MHL_SW_I2C_SDA, 1);
+	gpio_direction_input(MX53_PCBA_MHL_SW_I2C_SDA);
+	gpio_get_value(MX53_PCBA_MHL_SW_I2C_SDA);
 	udelay(I2C_DELAY_VALUE);
-	gpio_free(MX53_PCBA_MHL_SW_I2C_SDA);
 }
 
 void SET_SCL(void)	{
-	int rdVal;
-	gpio_request(MX53_PCBA_MHL_SW_I2C_SCL, "mhl-sw-i2c-scl");
-	rdVal = gpio_direction_output(MX53_PCBA_MHL_SW_I2C_SCL, 1);
+	gpio_direction_input(MX53_PCBA_MHL_SW_I2C_SCL);
+	gpio_get_value(MX53_PCBA_MHL_SW_I2C_SCL);
 	udelay(I2C_DELAY_VALUE);
-	gpio_free(MX53_PCBA_MHL_SW_I2C_SCL);
 }
 
 void CLEAR_SDA(void)	{
-	int rdVal;
-	gpio_request(MX53_PCBA_MHL_SW_I2C_SDA, "mhl-sw-i2c-sda");
-	rdVal = gpio_direction_output(MX53_PCBA_MHL_SW_I2C_SDA, 0);
+	gpio_direction_output(MX53_PCBA_MHL_SW_I2C_SDA, 0);
+	gpio_set_value(MX53_PCBA_MHL_SW_I2C_SDA, 0);
 	udelay(I2C_DELAY_VALUE);
-	gpio_free(MX53_PCBA_MHL_SW_I2C_SDA);
 }
 
 void CLEAR_SCL(void)	{
-	int rdVal;
-	gpio_request(MX53_PCBA_MHL_SW_I2C_SCL, "mhl-sw-i2c-scl");
-	rdVal = gpio_direction_output(MX53_PCBA_MHL_SW_I2C_SCL, 0);
+	gpio_direction_output(MX53_PCBA_MHL_SW_I2C_SCL, 0);
+	gpio_set_value(MX53_PCBA_MHL_SW_I2C_SCL, 0);
 	udelay(I2C_DELAY_VALUE);
-	gpio_free(MX53_PCBA_MHL_SW_I2C_SCL);
 }
 
 //------------------------------------------------------------------------------
@@ -113,8 +101,9 @@ static uint8_t SetSCLHigh(void)
         /* do nothing - just wait */
 	mdelay(1);
 	timeout++;
-	if( timeout == 10 )   // about 1s is enough
+	if( timeout == 1000 )   // about 1s is enough
 	{
+		if ((timeout == 100) || (timeout == 300) || (timeout == 600) || (timeout == 900)) 
 		printk("\n ************IIC SCL low timeout...\n");
 		return IIC_SCL_TIMEOUT;
 	}

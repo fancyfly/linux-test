@@ -51,7 +51,7 @@
 
 #include <mach/gpio.h>
 
-#define	MHL_TIMER_BASE_DIVISOR			10		// 1ms MHL timer base divisor
+#define	MHL_TIMER_BASE_DIVISOR			10	// 1ms MHL timer base divisor
 
 //sbit pinMHLTxVbus_CTRL = P0^4;	// VDD 5V to MHL VBUS switch control
 
@@ -344,11 +344,6 @@ struct i2c_client *siiEDID = NULL;
 struct i2c_client *siiSegEDID = NULL;
 struct i2c_client *siiHDCP = NULL;
 
-struct platform_data {
-	void (*reset) (void);
-};
-static struct platform_data *Sii92326_plat_data;
-
 //------------------------------------------------------------------------------
 // Array of timer values
 //------------------------------------------------------------------------------
@@ -377,9 +372,9 @@ static bool_t match_id(const struct i2c_device_id *id, const struct i2c_client *
 bool_t Sii92326_mhl_reset(void)
 {
 	gpio_direction_output(MX53_PCBA_MHL_RST_N, 1);	
-	msleep(10);	
+	msleep(5);	
 	gpio_direction_output(MX53_PCBA_MHL_RST_N, 0);	
-	msleep(10);	
+	msleep(5);	
 	gpio_direction_output(MX53_PCBA_MHL_RST_N, 1);	
 	return true;
 }
@@ -598,13 +593,13 @@ static struct i2c_device_id mhl_Sii92326_idtable[] = {
 
 static void sii9232_poweron()
 {	
-	gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 1);
-	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 1);}
+	gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 0);
+	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 0);}
 
 static void sii9232_poweroff()
 {	
-	gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 0);
-	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 0);
+	gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 1);
+	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 1);
 }
 
 static void sii9232_setup(struct fb_info *fbi)

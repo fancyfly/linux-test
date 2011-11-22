@@ -122,7 +122,7 @@
 #define MX53_PCBA_MHL_1V3_ON		(2*32 + 21)	/* GPIO2_7 */
 #define MX53_PCBA_MHL_WAKE		(1*32 + 26)	/* GPIO2_26 */
 #define MX53_PCBA_MHL_INT		(4*32 + 0)	/* GPIO5_0 */
-#define MX53_PCBA_MHL_3V3_ON	(6*32 + 1)	/* GPIO7_1 */
+#define MX53_PCBA_MHL_3V3_ON		(6*32 + 1)	/* GPIO7_1 */
 #define MX53_PCBA_MHL_SW_I2C_SCL	(5 * 32 + 8)	/* GPIO6_8 */
 #define MX53_PCBA_MHL_SW_I2C_SDA	(5 * 32 + 10)	/* GPIO6_10 */
 
@@ -181,7 +181,7 @@
 #define MX53_PCBA_TOUCH_RST		(6*32 + 3)	/* GPIO7_3 */
 
 // Misc Related
-#define MX53_PCBA_POWER_ON_1V8_PE	(4 * 32 + 29)	/* GPIO5_29, */
+#define MX53_PCBA_POWER_ON_1V8_PE	(4 * 32 + 29)	/* GPIO5_29, Control the global 1v8 power network on board */
 #define MX53_PCBA_WDT_OUTPUT		(0*32 + 9)	/* GPIO1_9, i.MX53 send out to PMIC */
 #define MX53_PCBA_BTCFG10		(1*32 + 27)	/* GPIO2_27, if output set high, pre-charge to approach several mA current, PMIC */
 
@@ -458,7 +458,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	/* Following are the new added mux pins for rev.C */
 	/* WDT_OUTPUT */
 	MX53_PAD_GPIO_9__GPIO1_9,
-	/* POWER ON 1V8 PERI */
+	/* POWER_ON_1V8_PERI */
 	MX53_PAD_CSI0_DAT11__GPIO5_29,
 	/* CAM1 PWDN VCM */
 	MX53_PAD_CSI0_DAT10__GPIO5_28,
@@ -1324,7 +1324,7 @@ static void __init mx53_pcba_io_init(void)
 					ARRAY_SIZE(mx53_pcba_pads));
 	/* Misc */
 	gpio_request(MX53_PCBA_POWER_ON_1V8_PE, "1v8-enable");
-	gpio_direction_output(MX53_PCBA_POWER_ON_1V8_PE, 1);
+	gpio_direction_output(MX53_PCBA_POWER_ON_1V8_PE, 0);
 	
 	/* SD1 CD */
 	gpio_request(MX53_PCBA_SD1_CD, "sd1-cd");
@@ -1347,20 +1347,27 @@ static void __init mx53_pcba_io_init(void)
 
 	/* Sii9232 MHL controller, no power-up sequence requirements from  */
 	gpio_request(MX53_PCBA_MHL_3V3_ON, "mhl-3v3-pwr-on");
-	gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 1);
+	gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 0);
 	gpio_request(MX53_PCBA_MHL_1V3_ON, "mhl-1v3-pwr-on");
-	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 1);
+	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 0);
+
 	msleep(10);
 	gpio_request(MX53_PCBA_MHL_RST_N, "mhl-reset");
 	gpio_direction_output(MX53_PCBA_MHL_RST_N, 1);
-	msleep(10);
+	msleep(5);
 	gpio_direction_output(MX53_PCBA_MHL_RST_N, 0);
-	msleep(10);
+	msleep(5);
 	gpio_direction_output(MX53_PCBA_MHL_RST_N, 1);
 	gpio_request(MX53_PCBA_MHL_INT, "mhl-intr");
 	gpio_direction_input(MX53_PCBA_MHL_INT);
 	gpio_request(MX53_PCBA_MHL_WAKE, "mhl-wakeup");
 	gpio_direction_output(MX53_PCBA_MHL_WAKE, 1);
+
+	gpio_request(MX53_PCBA_MHL_SW_I2C_SCL, "mhl-sw-i2c-scl");
+	gpio_direction_output(MX53_PCBA_MHL_SW_I2C_SCL, 1);	// Because this GPIO pin is set to be open-drain mode in IOMUX config
+	gpio_request(MX53_PCBA_MHL_SW_I2C_SDA, "mhl-sw-i2c-sda");
+	gpio_direction_output(MX53_PCBA_MHL_SW_I2C_SDA, 1);	// Because this GPIO pin is set to be open-drain mode in IOMUX config
+
 
 	/* LCD power enable */
 	gpio_request(MX53_PCBA_LCD_PWR_EN, "lcd-pwr-en");
@@ -1566,11 +1573,11 @@ static void __init mxc_board_init(void)
 		mxc_register_device(&mxc_asrc_device, &mxc_asrc_data);
 	}
 
-	i2c_register_board_info(1, mxc_i2c1_board_info,
+	i2c_register_board_info(0, mxc_i2c1_board_info,
 				ARRAY_SIZE(mxc_i2c1_board_info));
-	i2c_register_board_info(2, mxc_i2c2_board_info,
+	i2c_register_board_info(1, mxc_i2c2_board_info,
 				ARRAY_SIZE(mxc_i2c2_board_info));
-	i2c_register_board_info(3, mxc_i2c3_board_info,
+	i2c_register_board_info(2, mxc_i2c3_board_info,
 				ARRAY_SIZE(mxc_i2c3_board_info));
 
 	wm8958_data.ext_ram_clk = clk_get(NULL, "emi_fast_clk");

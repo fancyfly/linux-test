@@ -67,6 +67,7 @@
 #include <mach/mxc_iim.h>
 #include <mach/mxc_rfkill.h>
 #include <mach/check_fuse.h>
+#include <linux/i2c-gpio.h>
 
 #include "crm_regs.h"
 #include "devices.h"
@@ -133,6 +134,8 @@
 #define MX53_SMD_HDMI_RESET_B		(4*32 + 0)	/* GPIO_5_0 */
 #define MX53_SMD_MODEM_RESET_B		(4*32 + 2)	/* GPIO_5_2 */
 #define MX53_SMD_KEY_INT			(4*32 + 4)	/* GPIO_5_4 */
+#define MX53_SMD_I2C1_SDA		(4*32 + 26)	/* GPIO5_26 */
+#define MX53_SMD_I2C1_SCL		(4*32 + 27)	/* GPIO5_27 */
 
 #define MX53_SMD_CAP_TCH_FUN0		(5*32 + 6)	/* GPIO_6_6 */
 #define MX53_SMD_CSI0_RST			(5*32 + 9)	/* GPIO_6_9 */
@@ -254,9 +257,13 @@ static iomux_v3_cfg_t mx53_smd_pads[] = {
 	MX53_PAD_CSI0_DAT5__AUDMUX_AUD3_TXD,
 	MX53_PAD_CSI0_DAT6__AUDMUX_AUD3_TXFS,
 	MX53_PAD_CSI0_DAT7__AUDMUX_AUD3_RXD,
+#if 0
 	/* I2C1 */
 	MX53_PAD_CSI0_DAT8__I2C1_SDA,
 	MX53_PAD_CSI0_DAT9__I2C1_SCL,
+#endif
+	MX53_PAD_CSI0_DAT8__GPIO5_26,
+	MX53_PAD_CSI0_DAT9__GPIO5_27,
 	/* UART1 */
 	MX53_PAD_CSI0_DAT10__UART1_TXD_MUX,
 	MX53_PAD_CSI0_DAT11__UART1_RXD_MUX,
@@ -675,6 +682,23 @@ static struct mxc_lcd_platform_data sii902x_hdmi_data = {
 
 static struct imxi2c_platform_data mxci2c_data = {
        .bitrate = 100000,
+};
+
+static struct i2c_gpio_platform_data i2c_gpio_data  = {
+	.sda_pin = MX53_SMD_I2C1_SDA,
+	.sda_is_open_drain = 1,
+	.scl_is_output_only =1,
+	.scl_pin = MX53_SMD_I2C1_SCL,
+	.scl_is_open_drain = 1,
+	.udelay = 5,
+};
+
+struct platform_device mxc_gpio_i2c_devices = {
+	.name = "i2c-gpio",
+	.id = 0,
+	.dev = {
+		.platform_data = &i2c_gpio_data,
+	},
 };
 
 static struct mxc_camera_platform_data camera_data = {
@@ -1328,9 +1352,15 @@ static void __init mxc_board_init(void)
 	mxc_register_device(&mxc_dma_device, NULL);
 	mxc_register_device(&mxc_wdt_device, NULL);
 	mxc_register_device(&mxcspi1_device, &mxcspi1_data);
+	
+	platform_device_register(&mxc_gpio_i2c_devices);
+#if 0
 	mxc_register_device(&mxci2c_devices[0], &mxci2c_data);
+#endif
 	mxc_register_device(&mxci2c_devices[1], &mxci2c_data);
 	mxc_register_device(&mxci2c_devices[2], &mxci2c_data);
+
+
 	mx53_smd_init_da9052();
 
 	mxc_register_device(&mxc_rtc_device, NULL);
@@ -1380,6 +1410,7 @@ static void __init mxc_board_init(void)
 	}
 
 	spi_device_init();
+
 
 	i2c_register_board_info(0, mxc_i2c0_board_info,
 				ARRAY_SIZE(mxc_i2c0_board_info));

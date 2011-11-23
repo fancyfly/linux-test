@@ -829,7 +829,7 @@ static unsigned int suspend_gpio_out2in[] = {
 	 * Keep it for future possible modification.
 	 */
 };
-
+/*
 static unsigned int suspend_alt_req[] = {
 	MX53_PCBA_UART1_TXD,
 	MX53_PCBA_UART1_RXD,
@@ -931,7 +931,7 @@ static unsigned int suspend_alt_req[] = {
 
 
 };
-
+*/
 static iomux_v3_cfg_t suspend_exit_pads[ARRAY_SIZE(suspend_enter_pads)];
 static void pcba_suspend_enter()
 {

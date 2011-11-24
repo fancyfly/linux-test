@@ -1204,20 +1204,20 @@ static struct mxc_camera_platform_data camera_data2 = {
 };
 
 static struct wm8994_pdata wm8958_pdata = {
-	.gpio_defaults =
-	{
-		[0] = WM8994_GP_FN_MICBIAS1_DET,
-		[1] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
-		[2] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
-		[3] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
-		[4] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
-		[5] = WM8994_GPN_PD |WM8994_GPN_DB|WM8994_GP_FN_FLL1_OUT,
-		[7] = WM8994_GPN_DB,
-		[8] = WM8994_GPN_DIR|WM8994_GPN_DB,
-		[9] = WM8994_GPN_DB,
-		[10]= WM8994_GPN_DB,
-	},
-	.micdet_irq = gpio_to_irq(MX53_PCBA_AUD_REQ),
+     .gpio_defaults =
+     {
+         [0] = WM8994_GPN_PD |WM8994_GPN_DB|WM8994_GP_FN_FLL1_OUT,
+         [1] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
+         [2] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
+         [3] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
+         [4] = WM8994_GPN_DIR|WM8994_GPN_DB|WM8994_GP_FN_GPIO,
+         [5] = WM8994_GP_FN_MICBIAS1_DET,
+         [7] = WM8994_GPN_DB,
+         [8] = WM8994_GPN_DIR|WM8994_GPN_DB,
+         [9] = WM8994_GPN_DB,
+         [10]= WM8994_GPN_DB,
+     },
+     .micdet_irq = gpio_to_irq(MX53_PCBA_AUD_REQ),
 };
 
 

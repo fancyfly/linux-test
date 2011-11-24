@@ -580,7 +580,7 @@ static int mc34708_pmic_adc_module_probe(struct platform_device *pdev)
 
 	/* Errata#009: Thermal shutdown triggers when ADCEN bit set */
 	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x100000, PMIC_ALL_BITS);
-	pmic_write_reg(MC34708_REG_POWER_CTL1, 0x80007F, PMIC_ALL_BITS);
+	pmic_write_reg(MC34708_REG_POWER_CTL1, 0x800000, PMIC_ALL_BITS);
 	pmic_write_reg(MC34708_REG_IDENTIFICATION, 0x0, PMIC_ALL_BITS);
 
 	pr_debug("PMIC ADC successfully probed\n");

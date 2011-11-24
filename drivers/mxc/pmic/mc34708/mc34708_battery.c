@@ -113,7 +113,7 @@
 #define ACC_START_COUNTER 0x07
 #define ACC_STOP_COUNTER 0x2
 #define ACC_CONTROL_BIT_MASK 0x1f
-#define ACC_ONEC_VALUE 273
+#define ACC_ONEC_VALUE 1500
 #define ACC_COULOMB_PER_LSB 1
 #define ACC_CALIBRATION_DURATION_MSECS 20
 #define ACC_CCFAULT	0x80
@@ -146,12 +146,12 @@
 #define USBCHARGER 0x20
 #define DEDICATEDCHARGER 0x40
 
-#define EOC_CURRENT_UA			50000
+#define EOC_CURRENT_UA			200000
 #define EOC_VOLTAGE_UV			4100000
 #define EOC_CCOUT			5
 #define LOW_VOLT_THRESHOLD		3400000
 #define HIGH_VOLT_THRESHOLD		4200000
-#define VOLT_THRESHOLD_DELTA		((HIGH_VOLT_THRESHOLD-LOW_VOLT_THRESHOLD)*3/100)
+#define VOLT_THRESHOLD_DELTA		((HIGH_VOLT_THRESHOLD-LOW_VOLT_THRESHOLD)*2/100)
 #define RECHARGING_VOLT_THRESHOLD	4100000
 					/* larger than h/w recharging
 					 * threshold 95.4% of the CHRCV */
@@ -159,7 +159,9 @@
 #define ADC_MAX_CHANNEL		8
 #define ADC_MAX_RETRY		10
 
-#define DEFAULT_INTER_RESISTOR_mOhm	250
+#define DEFAULT_INTER_RESISTOR_mOhm	200
+
+#define	BATTERY_UPDATE_INTERVAL		32	/* seconds */
 
 static int suspend_flag;
 static int power_supply_changed_flag;
@@ -553,7 +555,7 @@ static int ripley_calibrate_coulomb_counter(void)
 	unsigned int value;
 
 	/* set scaler */
-	CHECK_ERROR(pmic_write_reg(REG_ACC1, 0x19e, BITFMASK(ACC1_ONEC)));
+	CHECK_ERROR(pmic_write_reg(REG_ACC1, ACC_ONEC_VALUE, BITFMASK(ACC1_ONEC)));
 
 	CHECK_ERROR(pmic_write_reg
 		    (REG_ACC0, ACC_CALIBRATION, ACC_CONTROL_BIT_MASK));
@@ -850,7 +852,7 @@ static int get_battcur(int *batt_curr)
 	}
 
 	battcur *= battcur_res;
-	pr_info("batt cur value = %d\n", battcur / 1000);
+	pr_info("batt cur value (calc-ed from BATTCURRENT) = %d uA\n", battcur);
 
 	*batt_curr = battcur;
 
@@ -876,8 +878,8 @@ static int check_eoc(struct ripley_dev_info *di)
 
 	if (voltage_uV >= EOC_VOLTAGE_UV &&
 	/*	battcur <= EOC_CURRENT_UA &&	*/
-		di->current_uA <= EOC_CURRENT_UA &&
-		di->delta_coulomb < EOC_CCOUT)
+	/*	di->delta_coulomb < EOC_CCOUT) && */
+		di->current_uA <= EOC_CURRENT_UA)
 		di->full_counter++;
 	else
 		di->full_counter = 0;
@@ -1425,7 +1427,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			compared_batt_volt = di->voltage_uV;
 		else {
 			compared_batt_volt = di->internal_voltage_uV =
-				di->voltage_uV + abs(di->current_uA) *
+				di->voltage_uV - abs(di->current_uA) *
 				di->internal_resistor_mOhm / 1000;
 		}
 		if ((compared_batt_volt <= (LOW_VOLT_THRESHOLD +
@@ -1521,9 +1523,15 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 
 	}
 out1:
-	/* re-consider special cases here */
-	if (lowbatt_counter > 1) /* discharging cmplt */
+	/* re-consider special case here, delay 1 minute before change to 0% */
+#define	COMPARE_TIMES ((60 / BATTERY_UPDATE_INTERVAL) > 4 ?	\
+				(60 / BATTERY_UPDATE_INTERVAL): 4)
+	if (lowbatt_counter > COMPARE_TIMES)
 		di->percent = 0;
+	else if (lowbatt_counter > 1) {
+		if (di->percent == 0)
+			di->percent = 1;
+	}
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
 		pr_info("POWER_SUPPLY_STATUS_FULL\n");
@@ -1613,7 +1621,7 @@ static void ripley_battery_work(struct work_struct *work)
 	struct ripley_dev_info *di = container_of(work,
 						  struct ripley_dev_info,
 						  monitor_work.work);
-	const int interval = HZ * 8;
+	const int interval = HZ * BATTERY_UPDATE_INTERVAL;
 
 	dev_dbg(di->dev, "%s\n", __func__);
 
@@ -1943,7 +1951,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	pmic_event_subscribe(MC34708_EVENT_CHRCMPL, bat_event_callback);
 #endif
 
-	set_coulomb_counter_cres(CCRES_1000_mC_PER_LSB);
+	set_coulomb_counter_cres(CCRES_500_mC_PER_LSB);
 	set_coulomb_counter_integtime(INTEGTIME_32S);
 	ripley_calibrate_coulomb_counter();
 	ccres_mC = get_coulomb_counter_cres_mC();

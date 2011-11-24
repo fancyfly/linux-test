@@ -52,8 +52,8 @@
 
 #define SW1A_MODE_MASK		(0xf << 0)
 #define SW2_MODE_MASK		(0xf << 14)
-#define SW1A_MODE_VALUE		(0xc << 0)
-#define SW2_MODE_VALUE		(0xc << 14)
+#define SW1A_MODE_VALUE		(0xd << 0)
+#define SW2_MODE_VALUE		(0xd << 14)
 
 #define REG_SW_1_2_MASK	(SW1A_MODE_MASK | SW2_MODE_MASK)
 #define REG_SW_1_2_VALUE	(SW1A_MODE_VALUE | SW2_MODE_VALUE)
@@ -64,9 +64,9 @@
 #define SW5_MODE_MASK		(0xf << 18)
 
 #define SW3_MODE_VALUE		(0x0 << 0)
-#define SW4A_MODE_VALUE		(0xc << 6)
-#define SW4B_MODE_VALUE		(0xc << 12)
-#define SW5_MODE_VALUE		(0xc << 18)
+#define SW4A_MODE_VALUE		(0xd << 6)
+#define SW4B_MODE_VALUE		(0xd << 12)
+#define SW5_MODE_VALUE		(0xd << 18)
 
 #define REG_SW_3_4_5_MASK	(SW3_MODE_MASK | SW4A_MODE_MASK\
 				| SW4B_MODE_MASK | SW5_MODE_MASK)
@@ -74,15 +74,17 @@
 					| SW4B_MODE_VALUE | SW5_MODE_VALUE)
 
 #define SWBST_MODE_MASK		(0x3 << 5)
-#define SWBST_MODE_VALUE	(0x0 << 5)
+#define SWBST_MODE_VALUE	(0x2 << 5)
 
 #define REG_SWBST_MODE_MASK	(SWBST_MODE_MASK)
 #define REG_SWBST_MODE_VALUE	(SWBST_MODE_VALUE)
 
 #define MODE0_VUSB2STBY_MASK	(0x1 << 19)
 #define MODE0_VUSB2STBY_VALUE	(0x1 << 19)
-#define REG_REGULATOR_MODE0_MASK	(MODE0_VUSB2STBY_MASK)
-#define REG_REGULATOR_MODE0_VALUE	(MODE0_VUSB2STBY_VALUE)
+#define MODE0_VUSBSEL_MASK	(0x1 << 2)
+#define MODE0_VUSBSEL_VALUE	(0x1 << 2)
+#define REG_REGULATOR_MODE0_MASK	(MODE0_VUSB2STBY_MASK | MODE0_VUSBSEL_MASK)
+#define REG_REGULATOR_MODE0_VALUE	(MODE0_VUSB2STBY_VALUE | MODE0_VUSBSEL_VALUE)
 
 #define SWHOLD_MASK		(0x1 << 12)
 
@@ -205,6 +207,7 @@ static struct regulator_init_data swbst_init = {
 		.name = "SWBST",
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.boot_on = 1,
+		.always_on = 1,
 	}
 };
 

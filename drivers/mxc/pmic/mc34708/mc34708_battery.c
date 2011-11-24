@@ -167,7 +167,6 @@ static int suspend_flag;
 static int power_supply_changed_flag;
 static int power_change_flag;
 static int second_charging_flag;
-static int reset_cc_flag;
 static int capacity_changed_flag;
 
 static int last_batt_complete_id = -1;
@@ -367,6 +366,8 @@ static int reset_cc(void)
 	ret = pmic_write_reg(MC34708_REG_ACC0, value, PMIC_ALL_BITS);
 	if (ret)
 		return -1;
+
+	msleep(10);
 
 	return 0;
 }
@@ -590,6 +591,11 @@ static int ripley_get_charger_coulomb(int *coulomb, int *ccfault)
 		pr_warning("CCFAULT: may enlarge coulomb counter resolution\n");
 		*ccfault = 1;
 		pmic_write_reg(MC34708_REG_ACC0, value, PMIC_ALL_BITS);
+		ret = reset_cc();
+		if (ret) {
+			pr_err("reset_cc error!\n");
+			return -1;
+		}
 		ret = pmic_read_reg(MC34708_REG_ACC0, &value, PMIC_ALL_BITS);
 		if (ret != 0)
 			return -1;
@@ -1304,11 +1310,6 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 		di->accum_coulomb += di->delta_coulomb;
 	}
 
-	if (reset_cc_flag) {
-		reset_cc();
-		di->now_coulomb = 0;
-		reset_cc_flag = false;
-	}
 	pr_info("[readout]: vol %d uV, cur %d uA, cc %d\n", di->voltage_uV,
 							di->current_uA,
 							di->now_coulomb);
@@ -1365,9 +1366,6 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_info("DISCHR CMPL: di->empty_coulomb %d\n",
 					di->empty_coulomb);
 			last_batt_complete_id = BATT_EMPTY;
-
-			/* Reset CCOUT to avoid underflow */
-			reset_cc_flag = true;
 		}
 
 		if (before_use_calculated_capacity == 1) {
@@ -1447,9 +1445,6 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_info("LOWBAT CMPL(Charging): di->empty_coulomb %d\n",
 					di->empty_coulomb);
 			last_batt_complete_id = BATT_EMPTY;
-
-			/* Reset CCOUT to avoid underflow */
-			reset_cc_flag = true;
 		}
 		/* special case ends */
 
@@ -1467,9 +1462,6 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_info("CHR CMPL: di->full_coulomb %d\n",
 					di->full_coulomb);
 			last_batt_complete_id = BATT_FULL;	
-
-			/* Reset CCOUT to avoid overflow */
-			reset_cc_flag = true;
 		}
 
 		if (before_use_calculated_capacity == 1) {

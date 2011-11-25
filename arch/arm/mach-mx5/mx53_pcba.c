@@ -1879,6 +1879,8 @@ static void __init mx53_pcba_io_init(void)
 	gpio_direction_output(MX53_PCBA_CAM1_PWR_DOWN, 0);
 	gpio_request(MX53_PCBA_CAM2_PWR_DOWN, "cam2-pwdn");
 	gpio_direction_output(MX53_PCBA_CAM2_PWR_DOWN, 0);
+	gpio_request(MX53_PCBA_CAM1_PWDN_VCM, "cam1-pwdn-vcm");
+	gpio_direction_output(MX53_PCBA_CAM1_PWDN_VCM, 1);
 
 	/* Camera sensor id pin */
 	gpio_request(MX53_PCBA_CAM1_ID0, "cam1-id0");
@@ -1915,15 +1917,15 @@ static void __init mx53_pcba_io_init(void)
 
 	/* make sure the TCXO_PWR_EN is set as high all the time by h/w connection */
 
-    /* GPS onoff, tsync */
-	gpio_request(MX53_PCBA_GPS_1V8_ON, "gps-1v8-on");
-	gpio_direction_output(MX53_PCBA_GPS_1V8_ON, 1);
-    gpio_request(MX53_PCBA_GPS_ONOFF, "gps-onoff");
-    gpio_direction_output(MX53_PCBA_GPS_ONOFF, 0);
-    gpio_request(MX53_PCBA_GPS_TSYNC, "gps-tsync");
-    gpio_direction_output(MX53_PCBA_GPS_TSYNC, 0);
-    gpio_request(MX53_PCBA_GPS_RESET, "gps-rst");
-    gpio_direction_output(MX53_PCBA_GPS_RESET, 0);
+    /* GPS onoff, tsync, modified according to CSR request 11/25/2011 */
+	// gpio_request(MX53_PCBA_GPS_1V8_ON, "gps-1v8-on");
+	// gpio_direction_output(MX53_PCBA_GPS_1V8_ON, 1);
+    // gpio_request(MX53_PCBA_GPS_ONOFF, "gps-onoff");
+    // gpio_direction_output(MX53_PCBA_GPS_ONOFF, 0);
+    // gpio_request(MX53_PCBA_GPS_TSYNC, "gps-tsync");
+    // gpio_direction_output(MX53_PCBA_GPS_TSYNC, 0);
+    // gpio_request(MX53_PCBA_GPS_RESET, "gps-rst");
+    // gpio_direction_output(MX53_PCBA_GPS_RESET, 0);
 		
 	/* MODEM wakeup and power */
 	gpio_request(MX53_PCBA_MODEM_WAKEUP_IN, "modem-wakeup-in");

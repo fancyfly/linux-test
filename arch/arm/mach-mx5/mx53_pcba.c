@@ -1969,6 +1969,11 @@ static void __init mx53_pcba_io_init(void)
 	/* audio codec REQ */
 	gpio_request(MX53_PCBA_AUD_REQ, "aud-req");
 	gpio_direction_input(MX53_PCBA_AUD_REQ);
+
+	/* charging */
+	gpio_request(MX53_PCBA_BTCFG10, "extra-charging");
+	gpio_direction_output(MX53_PCBA_BTCFG10, 1);
+	gpio_export(MX53_PCBA_BTCFG10, true);
 }
 
 /*!

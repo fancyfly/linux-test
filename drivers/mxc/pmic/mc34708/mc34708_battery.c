@@ -28,6 +28,10 @@
 #include <linux/pmic_status.h>
 #include <linux/pmic_external.h>
 #include <linux/mfd/mc34708/mc34708.h>
+#include <linux/gpio.h>
+
+/* GPIO2_27, if output set high, pre-charge to approach several mA current */
+#define MX53_PCBA_BTCFG10       (1*32 + 27)
 
 #define CHRCMPLM_LSH	10
 #define CHRCMPLM_WID	1
@@ -1608,6 +1612,24 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 	}
 }
 
+static void _update_extra_charging_circut_setting(struct ripley_dev_info *di)
+{
+	int compared_batt_volt;
+
+	if (di->internal_resistor_mOhm <= 0)
+		compared_batt_volt = di->voltage_uV;
+	else {
+		compared_batt_volt = di->internal_voltage_uV =
+			di->voltage_uV + abs(di->current_uA) *
+			di->internal_resistor_mOhm / 1000;
+	}
+	if (compared_batt_volt <= (LOW_VOLT_THRESHOLD + VOLT_THRESHOLD_DELTA) &&
+		di->battery_status == POWER_SUPPLY_STATUS_CHARGING)
+		gpio_direction_output(MX53_PCBA_BTCFG10, 1);
+	else
+		gpio_direction_output(MX53_PCBA_BTCFG10, 0);
+}
+
 static void ripley_battery_work(struct work_struct *work)
 {
 	struct ripley_dev_info *di = container_of(work,
@@ -1618,6 +1640,7 @@ static void ripley_battery_work(struct work_struct *work)
 	dev_dbg(di->dev, "%s\n", __func__);
 
 	ripley_battery_update_status(di);
+	_update_extra_charging_circut_setting(di);
 	_record_last_batt_info(di, false);
 	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, interval);
 }

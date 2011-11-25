@@ -190,6 +190,21 @@
 #define OTGEN_LSH		9
 #define OTGEN_WID		1
 
+#define ManualSW_LSH		1
+#define ManualSW_WID		1
+#define SWHOLD_LSH			12
+#define SWHOLD_WID			1
+#define DPSWITCHING_LSH     17
+#define DPSWITCHING_WID     3
+#define DMSWITCHING_LSH     20
+#define DMSWITCHING_WID     3
+#define CHREN_LSH			3
+#define CHREN_WID           1
+#define USBtiming_LSH       16
+#define USBtiming_WID       4
+#define REG_USB_TIMING      37
+#define REG_BATTERY_PROFILE 51
+
 extern int __init mx53_pcba_init_mc34708(void);
 extern void mxc_mmc_force_detect(int id);
 static iomux_v3_cfg_t mx53_pcba_pads[] = {
@@ -1386,10 +1401,22 @@ static void __init pcba_add_device_buttons(void) {}
 
 static void mx53_gpio_usbotg_driver_vbus(bool on)
 {
+	pmic_write_reg(REG_USB_TIMING, BITFVAL(USBtiming, 0x0), BITFMASK(USBtiming));
 	if (on) {
-		gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 1);
+			pmic_write_reg(REG_BATTERY_PROFILE, BITFVAL(CHREN, 0), BITFMASK(CHREN));
+			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 0) \
+				| BITFVAL( DPSWITCHING, 2) | BITFVAL(DMSWITCHING, 2),BITFMASK(ManualSW)\
+				| BITFMASK(SWHOLD)| BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));
+			gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 1);
+			msleep(800);
+			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 0) \
+				| BITFVAL( DPSWITCHING, 1) | BITFVAL(DMSWITCHING, 1),BITFMASK(ManualSW)\
+				| BITFMASK(SWHOLD) | BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));
 	} else {
-		gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
+			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 1) \
+				| BITFVAL( DPSWITCHING, 1) | BITFVAL(DMSWITCHING, 1),BITFMASK(ManualSW) \
+				| BITFMASK(SWHOLD) | BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));
+			gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
 	}
 }
 

@@ -1223,10 +1223,10 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
-					   &di->calc_resistor_mon_work, HZ / 10);
+					   &di->calc_resistor_mon_work, HZ / 4);
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
-					   &di->monitor_work, HZ / 10);
+					   &di->monitor_work, HZ / 4);
 		} else if (stopCharging) {
 			pr_info("stopCharging\n");
 			enable_charger(0);
@@ -1236,10 +1236,10 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
-					   &di->calc_resistor_mon_work, HZ / 10);
+					   &di->calc_resistor_mon_work, HZ / 4);
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
-					   &di->monitor_work, HZ / 10);
+					   &di->monitor_work, HZ / 4);
 		}
 	}
 

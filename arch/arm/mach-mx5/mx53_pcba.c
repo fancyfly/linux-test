@@ -1275,7 +1275,7 @@ static struct goodix_i2c_platform_data goodix_data = {
 };
 
 static u16 pcba_touchkey_martix[] = {
-	 KEY_SEARCH, KEY_BACK, KEY_HOME, KEY_MENU,
+	KEY_MENU, KEY_HOME,KEY_BACK, KEY_SEARCH,
 };
 
 static struct ha2605_platform_data ha2605_keyboard_platdata = {
@@ -1331,12 +1331,13 @@ static struct i2c_board_info mxc_i2c3_board_info[] __initdata = {
 	I2C_BOARD_INFO("akm8975", 0x0E),
 	.flags = I2C_CLIENT_WAKE,
 	.platform_data = &akm_platform_data_8975,
-	.irq = gpio_to_irq(MX53_PCBA_COMPASS_INT),/*GYRO_INT*/
+	.irq = gpio_to_irq(MX53_PCBA_COMPASS_INT),/* E-Compass INT */
 	},
 	{
 	.type = "l3g4200d_gyr",
 	.addr = 0x68,
 	.platform_data = &l3g4200d_gyr_data,
+	.irq = gpio_to_irq(MX53_PCBA_GYRO_INT), /* GYRO_INT */
 	},
 	{
 	.type = "wm8958",
@@ -1890,8 +1891,8 @@ static void __init mx53_pcba_io_init(void)
 	/* Camera 2 reset */
 	gpio_request(MX53_PCBA_CAM2_RESET, "cam2-reset");
 	gpio_direction_output(MX53_PCBA_CAM2_RESET, 0);
-	/* Camera1 power down vcm */
-	gpio_request(MX53_PCBA_CAM1_PWR_DOWN, "cam1-pwdn-vcm");
+	/* Camera1 power down */
+	gpio_request(MX53_PCBA_CAM1_PWR_DOWN, "cam1-pwdn");
 	gpio_direction_output(MX53_PCBA_CAM1_PWR_DOWN, 0);
 	/* Camera reset */
 	msleep(3);

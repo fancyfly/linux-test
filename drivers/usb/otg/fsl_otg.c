@@ -457,6 +457,34 @@ static void b_session_irq_enable(bool enable)
 	fsl_otg_clk_gate(false);
 }
 
+/**
+ * The otg cares USB_ID interrupt
+ * The device cares B Session Valid
+ */
+static void  otg_id_irq_enable(bool enable)
+{
+	u32 osc;
+	fsl_otg_clk_gate(true);
+	if (le32_to_cpu(usb_dr_regs->portsc) & PORTSC_PHY_LOW_POWER_SPD) {
+		pr_debug("%s: the usb is in low power mode, vbus should not changed \n", __func__);
+		fsl_otg_clk_gate(false);
+		return;
+	}
+
+	osc = le32_to_cpu(usb_dr_regs->otgsc);
+	pr_debug("%s:otgsc=0x%x", __func__, osc);
+	/* The other interrupts' status should not be cleared */
+	osc &= ~(OTGSC_INTSTS_B_SESSION_VALID | OTGSC_INTSTS_A_VBUS_VALID
+		| OTGSC_INTSTS_A_SESSION_VALID | OTGSC_INTSTS_B_SESSION_VALID);
+	osc |=  OTGSC_INTSTS_USB_ID;
+	if (enable)
+		osc |= OTGSC_INTR_USB_ID_EN;
+	else
+		osc &= ~OTGSC_INTR_USB_ID_EN;
+	usb_dr_regs->otgsc = cpu_to_le32(osc);
+	fsl_otg_clk_gate(false);
+}
+
 /* Reset controller, not reset the bus */
 void otg_reset_controller(void)
 {
@@ -699,7 +727,9 @@ static void fsl_otg_event(struct work_struct *work)
 		fsl_otg_start_gadget(fsm, 1);
 	} else {			/* switch to host */
 		fsl_otg_start_gadget(fsm, 0);
+		otg_id_irq_enable(false);
 		otg_drv_vbus(fsm, 1);
+		otg_id_irq_enable(true);
 		b_session_irq_enable(false);
 		fsl_otg_start_host(fsm, 1);
 	}

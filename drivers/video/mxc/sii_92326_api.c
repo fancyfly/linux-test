@@ -507,7 +507,7 @@ static spinlock_t sii92326_lock = SPIN_LOCK_UNLOCKED;
 
 static void work_queue(struct work_struct *work)
 {		
-	enable_irq(MX53_PCBA_MHL_INT);
+	enable_irq(gpio_to_irq(MX53_PCBA_MHL_INT));
 	
 	Int_count += 15;
 	if (Int_count > 30)
@@ -682,14 +682,14 @@ static int __init mhl_Sii92326_init(void)
 
 	SiiMhlTxInitialize( interruptDriven = true, pollIntervalMs = MONITORING_PERIOD);
 	
-	ret = request_irq(MX53_PCBA_MHL_INT, Sii92326_mhl_interrupt, IRQ_TYPE_LEVEL_LOW,
+	ret = request_irq(gpio_to_irq(MX53_PCBA_MHL_INT), Sii92326_mhl_interrupt, IRQ_TYPE_LEVEL_LOW,
 				  "SII9232_det", mhl_Sii92326_page0);
 	if (ret){
 		printk(KERN_INFO "%s:%d:Sii92326 interrupt failed\n", __func__,__LINE__);	
-		free_irq(MX53_PCBA_MHL_INT, "SII9232_det");
+		free_irq(gpio_to_irq(MX53_PCBA_MHL_INT), "SII9232_det");
 	}
 	else{
-		enable_irq_wake(MX53_PCBA_MHL_INT);	
+		enable_irq_wake(gpio_to_irq(MX53_PCBA_MHL_INT));	
 		//printk(KERN_INFO "%s:%d:Sii92326 interrupt successed\n", __func__,__LINE__);	
 	}
 
@@ -708,7 +708,7 @@ static void __exit mhl_Sii92326_exit(void)
 	 * 2. Power off MHL
 	 * 3. Release MHL pins
 	 */
-	free_irq(MX53_PCBA_MHL_INT, NULL);	
+	free_irq(gpio_to_irq(MX53_PCBA_MHL_INT), NULL);	
 	fb_unregister_client(&nb);
 	sii9232_poweroff();	/* Release HDMI pins */	
 	return 0;

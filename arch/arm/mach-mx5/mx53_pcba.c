@@ -992,6 +992,15 @@ static struct fb_videomode video_modes[] = {
 	 FB_SYNC_CLK_LAT_FALL,
 	 FB_VMODE_NONINTERLACED,
 	 0,},
+	{
+		NULL, 60, 1280, 720, 13468, 
+		220, 110, 
+		20, 5, 
+		40, 5,
+		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		FB_VMODE_NONINTERLACED, 
+		0,
+	},
 };
 
 static struct platform_pwm_backlight_data mxc_pwm_backlight_data = {
@@ -1106,7 +1115,7 @@ static struct mxc_fb_platform_data fb_data[] = {
 	},
 	{
 	 .interface_pix_fmt = IPU_PIX_FMT_RGB24,
-	 .mode_str = "1024x768M-16@60",
+	 .mode_str = "1280x720M-24@60",
 	 .mode = video_modes,
 	 .num_modes = ARRAY_SIZE(video_modes),
 	 },
@@ -1570,6 +1579,11 @@ static struct android_usb_product usb_products[] = {
 		.product_id	= 0x0c10,
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
 		.functions	= usb_functions_rndis,
+	},
+	{
+		.product_id	= 0x0c02,
+		.num_functions	= ARRAY_SIZE(usb_functions_ums_adb),
+		.functions	= usb_functions_ums_adb,
 	},
 };
 

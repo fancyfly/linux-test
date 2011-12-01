@@ -635,8 +635,9 @@ static void sii9232_setup(struct fb_info *fbi)
 		printk("FSL ---- [MHL] Failed to find out the matched video mode %d.\n", mhlTxConfig.videomodeIndex);
 		mhlTxConfig.videomodeIndex = 4;	// Hard coded in 1280x720p60
 	}
+	#if 0
 	siMhlTx_VideoSel(mhlTxConfig.videomodeIndex);
-	
+	#endif
 	if (fbi->fbops->fb_ioctl) 
 	{		
 		old_fs = get_fs();
@@ -667,8 +668,9 @@ static void sii9232_setup(struct fb_info *fbi)
 	} else {
 		mhlTxConfig.Colorimetry = COLORIMETRY_709;
 	}
-
+	#if 0
 	siMhlTx_AudioSel( AFS_44K1 );
+	#endif
 }
 
 static int sii9232_fb_event(struct notifier_block *nb, unsigned long val, void *v)

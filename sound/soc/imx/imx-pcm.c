@@ -619,7 +619,7 @@ imx_pcm_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma)
 		__func__, UseIram, ext_ram, (unsigned int)runtime->dma_addr,
 		runtime->dma_area, runtime->dma_bytes);
 
-	if (ext_ram || !UseIram) {
+	if (MX53_IRAM_BASE_ADDR != (MX53_IRAM_BASE_ADDR & substream->dma_buffer.addr)) {
 		update_ext_ram(cpu_dai, substream->stream, 1);
 		ret =
 		    dma_mmap_writecombine(substream->pcm->card->
@@ -645,8 +645,22 @@ struct snd_pcm_ops imx_pcm_ops = {
 	.pointer = imx_pcm_pointer,
 	.mmap = imx_pcm_mmap,
 };
+static int namecmp(const char *str1, const char *str2)
+{
+	const unsigned char *s1 = (const unsigned char *)str1;
+	const unsigned char *s2 = (const unsigned char *)str2;
+	int delta = 0;
 
-static int imx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
+	while (*s1 || *s2) {
+		delta = *s2 - *s1;
+		if (delta)
+			return delta;
+		s1++;
+		s2++;
+	}
+	return 0;
+}
+static int imx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, struct snd_soc_dai *dai, int stream)
 {
 	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
 	struct snd_dma_buffer *buf = &substream->dma_buffer;
@@ -664,6 +678,11 @@ static int imx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 	buf->private_data = NULL;
 
 	if (ext_ram || !UseIram) {
+		update_ext_ram(cpu_dai, substream->stream, 1);
+		buf->area =
+		    dma_alloc_writecombine(pcm->card->dev, size,
+					   &buf->addr, GFP_KERNEL);
+	}else if(namecmp(dai->name,"WM8994 AIF1")){
 		update_ext_ram(cpu_dai, substream->stream, 1);
 		buf->area =
 		    dma_alloc_writecombine(pcm->card->dev, size,
@@ -757,14 +776,14 @@ static int imx_pcm_new(struct snd_card *card,
 		card->dev->coherent_dma_mask = 0xffffffff;
 
 	if (dai->playback.channels_min) {
-		ret = imx_pcm_preallocate_dma_buffer(pcm,
+		ret = imx_pcm_preallocate_dma_buffer(pcm, dai,
 						     SNDRV_PCM_STREAM_PLAYBACK);
 		if (ret)
 			goto out;
 	}
 
 	if (dai->capture.channels_min) {
-		ret = imx_pcm_preallocate_dma_buffer(pcm,
+		ret = imx_pcm_preallocate_dma_buffer(pcm, dai,
 						     SNDRV_PCM_STREAM_CAPTURE);
 		if (ret)
 			goto out;

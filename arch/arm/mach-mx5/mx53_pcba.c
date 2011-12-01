@@ -1426,6 +1426,9 @@ static void mx53_gpio_usbotg_driver_vbus(bool on)
 			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 1) \
 				| BITFVAL( DPSWITCHING, 1) | BITFVAL(DMSWITCHING, 1),BITFMASK(ManualSW) \
 				| BITFMASK(SWHOLD) | BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));
+=======
+	} else {
+			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 1), BITFMASK(ManualSW));
 			gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
 	}*/
 }
@@ -1525,7 +1528,7 @@ static struct mxc_audio_platform_data wm8958_data = {
 	.amp_enable = mxc_wm8958_amp_enable,
 	.init       = mxc_wm8958_init,
 	.ext_ram_rx = 1,
-	.ext_ram_tx = 1,
+	.ext_ram_tx = 0,
 	.gpio_suspend = mxc_wm8958_gpio_suspend,
 	.gpio_resume = mxc_wm8958_gpio_resume,
 };

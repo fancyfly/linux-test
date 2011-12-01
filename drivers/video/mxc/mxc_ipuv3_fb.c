@@ -468,6 +468,9 @@ static int mxcfb_set_par(struct fb_info *fbi)
 		dev_dbg(fbi->device, "pixclock = %ul Hz\n",
 			(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
 
+		printk("FSL ---- ipu di unit: %d, pixclock = %ul Hz\n", mxc_fbi->ipu_di, 
+			(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
+
 		if (ipu_init_sync_panel(mxc_fbi->ipu_di,
 					(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
 					fbi->var.xres, fbi->var.yres,
@@ -481,12 +484,16 @@ static int mxcfb_set_par(struct fb_info *fbi)
 					0, sig_cfg) != 0) {
 			dev_err(fbi->device,
 				"mxcfb: Error initializing panel.\n");
+			printk("mxcfb: Error initializing panel.\n");
+			
 			return -EINVAL;
 		}
 
 		fbi->mode =
 		    (struct fb_videomode *)fb_match_mode(&fbi->var,
 							 &fbi->modelist);
+		printk("FSL ---- xres: %d, yres: %d, left_margin: %d, right_margin: %d.\n", 
+			fbi->mode->xres, fbi->mode->yres, fbi->mode->left_margin, fbi->mode->right_margin);
 
 		ipu_disp_set_window_pos(mxc_fbi->ipu_ch, 0, 0);
 	}

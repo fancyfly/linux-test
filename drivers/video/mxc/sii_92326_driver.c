@@ -20,7 +20,10 @@
 #include <linux/err.h>
 #include <linux/i2c.h>
 #include <linux/kernel.h>
+#include <linux/fb.h>
 #include <mach/gpio.h>
+#include <drm/drm_edid.h>
+#include <linux/console.h>
 
 #include "sii_92326_driver.h"
 #include "sii_92326_api.h"
@@ -33,6 +36,7 @@ extern void 	I2C_WriteByte(uint8_t SlaveAddr, uint8_t RegAddr, uint8_t Data);
 extern uint8_t I2C_ReadBlock(uint8_t SlaveAddr, uint8_t RegAddr, uint8_t NBytes, uint8_t * Data);
 extern uint8_t I2C_WriteBlock(uint8_t SlaveAddr, uint8_t RegAddr, uint8_t NBytes, uint8_t * Data);
 extern uint8_t I2C_ReadSegmentBlockEDID(uint8_t SlaveAddr, uint8_t Segment, uint8_t Offset, uint8_t *Buffer, uint8_t Length);
+extern int mxc_edid_9232_read(uint8_t * edid, struct mxc_edid_cfg * cfg, struct fb_info * fbi);
 
 ///////////////////////////////////////////////////////////////////////////////
 // GPIO for chip reset.
@@ -359,9 +363,6 @@ static void SiiMhlTxTmdsEnable(void);
 ///////////////////////////////////////////////////////////////////////////////
 
 uint8_t g_CommData [EDID_BLOCK_SIZE];
-
-#define ReadBlockEDID(a,b,c)            		I2C_ReadBlock(EDID_ROM_ADDR, a, b, c)
-#define ReadSegmentBlockEDID(a,b,c,d)   	I2C_ReadSegmentBlockEDID(EDID_ROM_ADDR, a, b, d, c)
 
 //------------------------------------------------------------------------------
 // Function Name: GetDDC_Access()
@@ -771,6 +772,27 @@ void ParseBlock_0_TimingDescripors (uint8_t *Data)
 }
 #endif
 
+void printEdidInfo (uint8_t *pEdid)
+{
+	uint8_t i, j, k;
+
+	TX_DEBUG_PRINT(("\n"));
+	TX_DEBUG_PRINT(("FSL ----- EDID DATA :\n"));
+
+	for (j = 0, i = 0; j < 128; j++)
+	{
+		k = pEdid[j];
+		TX_DEBUG_PRINT(("%2.2X ", (int) k));
+		i++;
+
+		if (i == 0x10)
+		{
+			TX_DEBUG_PRINT(("\n"));
+			i = 0;
+		}
+	}
+}
+
 //------------------------------------------------------------------------------
 // Function Name: ParseEDID()
 // Function Description: Extract sink properties from its EDID file and save them in
@@ -1068,6 +1090,8 @@ uint8_t Parse861Extensions (uint8_t NumOfExtensions)
             	  TX_DEBUG_PRINT (("EDID -> DDC Block1 read failed\n"));
             	  return EDID_DDC_BUS_READ_FAILURE;
             }
+			else
+				memcpy((uint8_t *) (mhlTxConfig.edid + EDID_BLOCK_SIZE), g_CommData, EDID_BLOCK_SIZE);
         }
         else
         {
@@ -1076,6 +1100,8 @@ uint8_t Parse861Extensions (uint8_t NumOfExtensions)
                 TX_DEBUG_PRINT (("EDID -> DDC Extension Block read failed\n"));
                 return EDID_DDC_BUS_READ_FAILURE;
             }
+			else
+				memcpy((uint8_t *) (mhlTxConfig.edid + Block * EDID_BLOCK_SIZE), g_CommData, EDID_BLOCK_SIZE);
         }
 
         TX_DEBUG_PRINT(("\n"));
@@ -1139,24 +1165,27 @@ uint8_t DoEdidRead (void)
 		// Request access to DDC bus from the receiver
 		if (GetDDC_Access(&SysCtrlReg))
 		{
+			memset(&mhlTxConfig.edid[0], 0x00, (EDID_BLOCK_SIZE * 4));
 			ReadBlockEDID(EDID_BLOCK_0_OFFSET, 1, g_CommData);		//throw out this read for last plug out may be during DDC I2C processing .
 			if (ReadBlockEDID(EDID_BLOCK_0_OFFSET, EDID_BLOCK_SIZE, g_CommData))	// read first 128 bytes of EDID ROM
 			{  // edid read error
 				TX_DEBUG_PRINT (("EDID -> DDC Block0 read failed\n"));
 				return EDID_DDC_BUS_READ_FAILURE;
 			}
-			
 			Result = ParseEDID(g_CommData, &NumOfExtensions);
 			if (Result == EDID_OK)
 			{
+				memcpy(&mhlTxConfig.edid[0], g_CommData, EDID_BLOCK_SIZE);
 				TX_DEBUG_PRINT (("EDID -> Block0 Parse OK\n"));
 				Result = Parse861Extensions(NumOfExtensions);		// Parse 861 Extensions (short and long descriptors);
 				
 				if (Result == EDID_DDC_BUS_READ_FAILURE)
 					return EDID_DDC_BUS_READ_FAILURE;
 				
-				if (Result != EDID_OK)
+				if (Result != EDID_OK) {
 					TX_DEBUG_PRINT(("EDID -> Extension Parse FAILED\n"));
+					memset(&mhlTxConfig.edid[EDID_BLOCK_SIZE], 0x00, (EDID_BLOCK_SIZE * 3));
+				}
 			}
 			else if (Result == EDID_NO_861_EXTENSIONS)
 				TX_DEBUG_PRINT (("EDID -> No 861 Extensions\n"));
@@ -1199,7 +1228,7 @@ uint8_t DoEdidRead (void)
 		TX_DEBUG_PRINT(("EDID -> mhlTxEdid.CEC_C_D = 0x%x\n", (int)mhlTxEdid.CEC_C_D));
 
 		mhlTxEdid.edidDataValid = true;
-		
+
 		return Result;
 	}
 }
@@ -3028,7 +3057,7 @@ void OnDownstreamRxPoweredDown (void)
 	TX_DEBUG_PRINT (("[MHL]: DSRX -> Powered Down\n"));
 	mhlTxConfig.dsRxPoweredUp = false;
 	SiiMhlTxDrvTmdsControl( false );
-    	ReadModifyWriteTPI(TPI_SYSTEM_CONTROL_DATA_REG, OUTPUT_MODE_MASK,OUTPUT_MODE_DVI);	// Set to DVI output mode to reset HDCP
+  ReadModifyWriteTPI(TPI_SYSTEM_CONTROL_DATA_REG, OUTPUT_MODE_MASK,OUTPUT_MODE_DVI);	// Set to DVI output mode to reset HDCP
 }
 
 //------------------------------------------------------------------------------
@@ -3037,7 +3066,18 @@ void OnDownstreamRxPoweredDown (void)
 //------------------------------------------------------------------------------
 void OnDownstreamRxPoweredUp (void)
 {
+
 	TX_DEBUG_PRINT (("[MHL]: DSRX -> Powered Up\n"));
+	if (mhlTxConfig.need_mode_change) {
+
+		mhlTxConfig.fbi->var.activate |= FB_ACTIVATE_FORCE;
+		acquire_console_sem();
+		mhlTxConfig.fbi->flags |= FBINFO_MISC_USEREVENT;
+		fb_set_var(mhlTxConfig.fbi, &mhlTxConfig.fbi->var);
+		mhlTxConfig.fbi->flags &= ~FBINFO_MISC_USEREVENT;
+		release_console_sem();
+		mhlTxConfig.need_mode_change = false;
+	}
 	mhlTxConfig.dsRxPoweredUp = true;
 
 	HotPlugService();
@@ -3072,6 +3112,8 @@ static	bool_t	mscCmdInProgress = 0;	// false when it is okay to send a new comma
 //------------------------------------------------------------------------------
 uint8_t OnHdmiCableConnected (void)
 {
+	int ret, i;
+	
 	TX_DEBUG_PRINT (("[MHL]: HDMI Cable Connected\n"));
 	
 	mhlTxConfig.hdmiCableConnected = true;
@@ -3095,7 +3137,39 @@ uint8_t OnHdmiCableConnected (void)
 	
 	TX_DEBUG_PRINT (("[MHL]: ****Reading EDID end... mscCmdInProgress1 = %d\n", (int)mscCmdInProgress));
 #endif
+	/*
+	 * Update framebuffer driver
+	 */
+	if (mhlTxEdid.edidDataValid == true) {
+		ret = mxc_edid_9232_read(&mhlTxConfig.edid[0], &mhlTxConfig.edid_cfg, mhlTxConfig.fbi);
+		if (ret >= 0)
+		{
+			if (mhlTxConfig.fbi->monspecs.modedb_len > 0) {
 
+				const struct fb_videomode *mode;
+				struct fb_videomode m;
+				fb_destroy_modelist(&mhlTxConfig.fbi->modelist);
+
+				for (i = 0; i < mhlTxConfig.fbi->monspecs.modedb_len; i++) {
+					/*FIXME now we do not support interlaced mode */
+					if (!(mhlTxConfig.fbi->monspecs.modedb[i].vmode & FB_VMODE_INTERLACED))
+						fb_add_videomode(&mhlTxConfig.fbi->monspecs.modedb[i],
+								&mhlTxConfig.fbi->modelist);
+				}
+				printk("Done 6.\n");
+
+				fb_var_to_videomode(&m, &mhlTxConfig.fbi->var);
+				mode = fb_find_nearest_mode(&m,
+						&mhlTxConfig.fbi->modelist);
+				printk("Done 7.\n");
+				fb_videomode_to_var(&mhlTxConfig.fbi->var, mode);
+				printk("Done 8.\n");
+			}
+		}
+		else
+			printk("!!!!FSL -- Failed to read edid.\n");
+	}
+	
 #ifdef READKSV
 	ReadModifyWriteTPI(0xBB, 0x08, 0x08);
 #endif
@@ -3110,7 +3184,7 @@ uint8_t OnHdmiCableConnected (void)
 		TX_DEBUG_PRINT (("[MHL]: DVI Sink Detected\n"));
 		ReadModifyWriteTPI(TPI_SYSTEM_CONTROL_DATA_REG, OUTPUT_MODE_MASK, OUTPUT_MODE_DVI);
 	}
-
+    mhlTxConfig.need_mode_change = true;
 	OnDownstreamRxPoweredUp();		// RX power not determinable? Force to on for now.
 
 	return true;
@@ -4448,6 +4522,7 @@ static void MhlCbusIsr( void )
 	// MSC_MSG (RCP/RAP)
 	if((cbusInt & BIT3))
 	{
+
     	    	uint8_t mscMsg[2];
 	    	TX_DEBUG_PRINT(("[MHL]: MSC_MSG Received\n"));
 		//
@@ -4477,6 +4552,7 @@ static void MhlCbusIsr( void )
 
     	if (BIT7 & cbusInt)
     	{
+
 #define CBUS_LINK_STATUS_2 0x38
 	    	TX_DEBUG_PRINT(("[MHL]: Clearing CBUS_link_hard_err_count\n"));
         	// reset the CBUS_link_hard_err_count field
@@ -4493,6 +4569,7 @@ static void MhlCbusIsr( void )
 	cbusInt = ReadByteCBUS(0x1E);
 	if( cbusInt )
 	{
+
 		//
 		// Clear all interrupts that were raised even if we did not process
 		//
@@ -4785,8 +4862,9 @@ void SiiMhlTxDeviceIsr( void )
 			}
 		}
 
-		if( POWER_STATE_D0_MHL != fwPowerState )		// Check if chip enter D3 mode in DeglitchRsenLow() function 
+		if( POWER_STATE_D0_MHL != fwPowerState ) {		// Check if chip enter D3 mode in DeglitchRsenLow() function 
 			return;
+		}
 		
 #ifdef APPLY_PLL_RECOVERY
 		//
@@ -5592,7 +5670,6 @@ static void MhlTxDriveStates( void )
 	}
 #endif
 */
-
     // Discover timeout check	//xding
     if ((POWER_STATE_D0_MHL != fwPowerState) && HalTimerElapsed( ELAPSED_TIMER1 ) )
     {

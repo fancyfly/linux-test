@@ -71,8 +71,8 @@ void CLEAR_SCL(void)	{
 //------------------------------------------------------------------------------
 // Local constants (function parameters)
 //------------------------------------------------------------------------------
-#define READ   1
-#define WRITE  0
+#define READ_MHL_SW_I2C   1
+#define WRITE_MHL_SW_I2C  0
 
 #define LAST_BYTE      1
 #define NOT_LAST_BYTE  0
@@ -223,9 +223,9 @@ uint8_t I2C_ReadByte ( uint8_t SlaveAddr, uint8_t RegAddr )
 {
 	 uint8_t Data = 0;
 
-        I2CSendAddr(SlaveAddr,WRITE);
+        I2CSendAddr(SlaveAddr,WRITE_MHL_SW_I2C);
         I2CSendByte(RegAddr);
-        I2CSendAddr (SlaveAddr,READ);
+        I2CSendAddr (SlaveAddr,READ_MHL_SW_I2C);
 	 I2CGetByte(LAST_BYTE, &Data);
         I2CSendStop();
         return Data;
@@ -234,7 +234,7 @@ uint8_t I2C_ReadByte ( uint8_t SlaveAddr, uint8_t RegAddr )
 //-------------------------------------------------------------------
 void I2C_WriteByte ( uint8_t SlaveAddr, uint8_t RegAddr, uint8_t Data )
 {
-        I2CSendAddr(SlaveAddr,WRITE);
+        I2CSendAddr(SlaveAddr,WRITE_MHL_SW_I2C);
         I2CSendByte(RegAddr);
         I2CSendByte(Data);
         I2CSendStop();
@@ -248,7 +248,7 @@ uint8_t I2C_ReadBlock( uint8_t SlaveAddr, uint8_t RegAddr, uint8_t NBytes, uint8
 {
 	uint8_t i, bState;
 
-       bState = I2CSendAddr(SlaveAddr,WRITE);
+       bState = I2CSendAddr(SlaveAddr,WRITE_MHL_SW_I2C);
        if(bState){
        	I2CSendStop();
         	return IIC_NOACK;
@@ -260,7 +260,7 @@ uint8_t I2C_ReadBlock( uint8_t SlaveAddr, uint8_t RegAddr, uint8_t NBytes, uint8
      		return IIC_NOACK;
 	}
 
-	bState = I2CSendAddr (SlaveAddr,READ);
+	bState = I2CSendAddr (SlaveAddr,READ_MHL_SW_I2C);
        if(bState){
 		I2CSendStop();
       		return IIC_NOACK;
@@ -286,7 +286,7 @@ uint8_t I2C_WriteBlock( uint8_t SlaveAddr, uint8_t RegAddr, uint8_t NBytes, uint
 {
 	uint8_t i, bState;
 
-	bState = I2CSendAddr (SlaveAddr,WRITE);
+	bState = I2CSendAddr (SlaveAddr,WRITE_MHL_SW_I2C);
  	if( bState ){
 		I2CSendStop();
 		return IIC_NOACK;
@@ -315,7 +315,7 @@ uint8_t I2C_ReadSegmentBlockEDID(uint8_t SlaveAddr, uint8_t Segment, uint8_t Off
 {
 	uint8_t i, bState;
 
-	bState = I2CSendAddr(EDID_SEG_ADDR, WRITE);
+	bState = I2CSendAddr(EDID_SEG_ADDR, WRITE_MHL_SW_I2C);
        if(bState){
        	I2CSendStop();
         	return IIC_NOACK;
@@ -327,7 +327,7 @@ uint8_t I2C_ReadSegmentBlockEDID(uint8_t SlaveAddr, uint8_t Segment, uint8_t Off
         	return IIC_NOACK;
      	}
 	
-       bState = I2CSendAddr(SlaveAddr,WRITE);
+       bState = I2CSendAddr(SlaveAddr,WRITE_MHL_SW_I2C);
        if(bState){
        	I2CSendStop();
         	return IIC_NOACK;
@@ -339,7 +339,7 @@ uint8_t I2C_ReadSegmentBlockEDID(uint8_t SlaveAddr, uint8_t Segment, uint8_t Off
      		return IIC_NOACK;
 	}
 
-	bState = I2CSendAddr (SlaveAddr,READ);
+	bState = I2CSendAddr (SlaveAddr,READ_MHL_SW_I2C);
        if(bState){
 		I2CSendStop();
       		return IIC_NOACK;

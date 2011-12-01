@@ -993,7 +993,7 @@ static struct fb_videomode video_modes[] = {
 	 FB_VMODE_NONINTERLACED,
 	 0,},
 	{
-		NULL, 60, 1280, 720, 13468, 
+		"DISP3 BG - DI1", 60, 1280, 720, 13468, 
 		220, 110, 
 		20, 5, 
 		40, 5,
@@ -1412,7 +1412,7 @@ static void __init pcba_add_device_buttons(void) {}
 static void mx53_gpio_usbotg_driver_vbus(bool on)
 {
 	pmic_write_reg(REG_USB_TIMING, BITFVAL(USBtiming, 0x0), BITFMASK(USBtiming));
-	if (on) {
+	// if (on) {
 			pmic_write_reg(REG_BATTERY_PROFILE, BITFVAL(CHREN, 0), BITFMASK(CHREN));
 			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 0) \
 				| BITFVAL( DPSWITCHING, 2) | BITFVAL(DMSWITCHING, 2),BITFMASK(ManualSW)\
@@ -1422,12 +1422,12 @@ static void mx53_gpio_usbotg_driver_vbus(bool on)
 			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 0) \
 				| BITFVAL( DPSWITCHING, 1) | BITFVAL(DMSWITCHING, 1),BITFMASK(ManualSW)\
 				| BITFMASK(SWHOLD) | BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));
-	} else {
+	/*} else {
 			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 1) \
 				| BITFVAL( DPSWITCHING, 1) | BITFVAL(DMSWITCHING, 1),BITFMASK(ManualSW) \
 				| BITFMASK(SWHOLD) | BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));
 			gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
-	}
+	}*/
 }
 
 static int sdhc_write_protect(struct device *dev)

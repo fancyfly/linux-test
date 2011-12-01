@@ -38,7 +38,7 @@
 #include <linux/fb.h>
 #include <linux/mxcfb.h>
 #include <linux/ipu.h>
-
+#include <drm/drm_edid.h>
 #include <linux/bug.h>
 #include <linux/err.h>
 #include <linux/i2c.h>
@@ -58,8 +58,17 @@
 #define	APP_DEMO_RCP_SEND_KEY_CODE 0x41
 
 extern mhlTx_AVSetting  mhlTxAv;
+extern mhlTx_config_t	mhlTxConfig;
+extern uint8_t g_CommData [EDID_BLOCK_SIZE];
+extern int mxc_edid_parse_ext_blk(unsigned char *edid,
+		struct mxc_edid_cfg *cfg,
+		struct fb_monspecs *specs);
+extern void printEdidInfo (uint8_t *pEdid);
+extern const struct fb_videomode cea_modes[64];
 
 bool_t	vbusPowerState = true;		// false: 0 = vbus output on; true: 1 = vbus output off;
+static void sii9232_poweron();
+static void sii9232_poweroff();
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -545,12 +554,12 @@ static void SiI92326_mhl_loop(void)
 		// Look for any events that might have occurred.
 		//
 		SiiMhlTxGetEvents( &event, &eventParameter );
-
+#if 0
 		if( MHL_TX_EVENT_NONE != event )
 		{
 			AppRcpDemo( event, eventParameter);
 		}
-
+#endif
 		mdelay(50);
     	}
 }
@@ -580,33 +589,54 @@ void  StopEventThread(void)
 
 }
 
-
-static struct i2c_device_id mhl_Sii92326_idtable[] = {
-	{"mhl_Sii92326_page0", 0},
-	{"mhl_Sii92326_page1", 0},
-	{"mhl_Sii92326_page2", 0},
-	{"mhl_Sii92326_cbus", 0},
-	{"siiEDID", 0},
-	{"siiSegEDID", 0},
-	{"siiHDCP", 0},
-};
-
 static void sii9232_poweron()
 {	
 	gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 0);
-	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 0);}
+	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 0);
+}
 
 static void sii9232_poweroff()
 {	
 	gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 1);
 	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 1);
 }
-
+#if 0
+static void sii9232_setup(struct fb_info *fbi)
+{
+	return;
+}
+#endif
 static void sii9232_setup(struct fb_info *fbi)
 {
 	mm_segment_t old_fs;
 	unsigned int fmt;
-
+    mhlTxConfig.edid_cfg.hdmi_cap = 1;
+	
+	#if 0
+	if (fbi != NULL) {
+		printk("FSL ---- Callback from framebuffer driver w/ the following parameters.\n");
+		printk("pixelclk: %d, xres: %d, yres: %d, left_margin: %d, right_margin: %d.\n", 
+			fbi->mode->pixclock, fbi->mode->xres, fbi->mode->yres, fbi->mode->left_margin, fbi->mode->right_margin);
+		/*
+		printk("Data extracted from fbi->var : fb_var_screeninfo:\n");
+		printk("pixclk: %d, xres: %d, yres: %d, vmode: %d, hsync_len: %d, vsync_len: %d, \
+			left_margin: %d, right_margin: %d.\n", \
+			fbi->var.pixclock, fbi->var.xres, fbi->var.yres, fbi->var.vmode, fbi->var.hsync_len, fbi->var.vsync_len, \
+			fbi->var.left_margin, fbi->var.right_margin);
+		*/
+	}
+	#endif
+	
+	mhlTxConfig.videomodeIndex = mxc_edid_var_to_vic(&fbi->var);
+	/*
+	 * choiceVideoMode is video mode defined as macros in sii_92326_driver.h
+	 */
+	if (mhlTxConfig.videomodeIndex == 0) {
+		printk("FSL ---- [MHL] Failed to find out the matched video mode %d.\n", mhlTxConfig.videomodeIndex);
+		mhlTxConfig.videomodeIndex = 4;	// Hard coded in 1280x720p60
+	}
+	siMhlTx_VideoSel(mhlTxConfig.videomodeIndex);
+	
 	if (fbi->fbops->fb_ioctl) 
 	{		
 		old_fs = get_fs();
@@ -615,11 +645,11 @@ static void sii9232_setup(struct fb_info *fbi)
 		set_fs(old_fs);		
 		if (fmt == IPU_PIX_FMT_VYU444) {			
 			mhlTxAv.ColorSpace = YCBCR444;			
-			printk("input color space YUV\n");		
+			printk("[MHL] input color space YUV\n");		
 		} 
 		else {
 			mhlTxAv.ColorSpace = RGB;
-			printk("input color space RGB\n");
+			printk("[MHL] input color space RGB\n");
 		}	
 
 	}
@@ -627,17 +657,42 @@ static void sii9232_setup(struct fb_info *fbi)
 		mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_16x9;
 	else
 		mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_4x3;
+		
+	if ((mhlTxConfig.videomodeIndex == 6) || (mhlTxConfig.videomodeIndex == 7) ||
+		(mhlTxConfig.videomodeIndex == 21) || (mhlTxConfig.videomodeIndex == 22) ||
+		(mhlTxConfig.videomodeIndex == 2) || (mhlTxConfig.videomodeIndex == 3) ||
+		(mhlTxConfig.videomodeIndex == 17) || (mhlTxConfig.videomodeIndex == 18)) {
+		mhlTxConfig.Colorimetry = COLORIMETRY_601;
+		mhlTxConfig.AspectRatio = VMD_ASPECT_RATIO_4x3;
+	} else {
+		mhlTxConfig.Colorimetry = COLORIMETRY_709;
+	}
+
+	siMhlTx_AudioSel( AFS_44K1 );
 }
 
 static int sii9232_fb_event(struct notifier_block *nb, unsigned long val, void *v)
 {	
 	struct fb_event *event = v;	
-	struct fb_info *fbi = event->info;	
+	struct fb_info *fbi = event->info;
+	
+	if (strcmp(event->info->fix.id, mhlTxConfig.fb_id))
+		return 0;
+		
 	switch (val) {	
-		case FB_EVENT_MODE_CHANGE:		
-			sii9232_setup(fbi);		
+		case FB_EVENT_FB_REGISTERED:
+			if (mhlTxConfig.fbi != NULL) {
+				break;
+			}
+			printk("FSL ---- FB REGISTERED!!!\n");
+			mhlTxConfig.fbi = fbi;		
+			break;			
+		case FB_EVENT_MODE_CHANGE:
+			printk("FSL ----- FB_EVENT_MODE_CHANGE event.\n");
+			sii9232_setup(fbi);
 			break;	
-		case FB_EVENT_BLANK:		
+		case FB_EVENT_BLANK:
+			printk("FSL ----- FB_EVENT_BLANK event.\n");
 			if (*((int *)event->data) == FB_BLANK_UNBLANK)			
 				sii9232_poweron();		
 			else			
@@ -651,9 +706,110 @@ static struct notifier_block nb = {
 	.notifier_call = sii9232_fb_event,
 };
 
+static int mxc_edid_9232_readblk(unsigned char *edid)
+{
+	int extblkNum = 0;
+
+	if (edid[1] == 0x00) {
+		printk("Failed to read in edid block 0.\n");
+		printEdidInfo(edid);
+		return -ENOENT;
+	}
+	printEdidInfo(edid);
+	extblkNum = edid[0x7E];
+	if (extblkNum) {
+		printk("FSL ---- ext seg number : %d.\n", extblkNum);
+		ReadBlockEDID(EDID_BLOCK_1_OFFSET, EDID_BLOCK_SIZE, (edid + EDID_BLOCK_SIZE));
+		printEdidInfo(edid + EDID_LENGTH);
+	}
+	return extblkNum;
+}
+
+static int mxc_edid_9232_readsegblk(unsigned char *edid, int seg_num)
+{
+  uint8_t Segment = 0;
+  uint8_t Block = 0;
+  uint8_t Offset = 0;
+  unsigned char * tempBufPtr;
+  
+  tempBufPtr = edid;
+  do
+  {
+	Block++;
+	Offset = 0;
+	if ((Block % 2) > 0)
+	{
+		Offset = EDID_BLOCK_SIZE;
+	}
+	Segment = (uint8_t) (Block / 2);
+    if (Block == 1)
+    {
+      if (ReadBlockEDID(EDID_BLOCK_1_OFFSET, EDID_BLOCK_SIZE, g_CommData))    // read first 128 bytes of EDID ROM
+      {
+        TX_DEBUG_PRINT (("EDID -> DDC Block1 read failed\n"));
+		printEdidInfo(g_CommData);
+        return EDID_DDC_BUS_READ_FAILURE;
+      }
+    }
+    else
+    {
+      if (ReadSegmentBlockEDID(Segment, Offset, EDID_BLOCK_SIZE, tempBufPtr))     // read next 128 bytes of EDID ROM
+      {
+        TX_DEBUG_PRINT (("EDID -> DDC Extension Block read failed\n"));
+        return EDID_DDC_BUS_READ_FAILURE;
+      }
+    }
+
+    if ((seg_num > 1) && (Block == 1))
+    {
+      continue;
+    }
+    tempBufPtr = tempBufPtr + EDID_BLOCK_SIZE;
+  } while (Block < seg_num);
+
+	return 0;
+}
+
+int mxc_edid_9232_read(uint8_t * edid, struct mxc_edid_cfg * cfg, struct fb_info * fbi)
+{
+	int ret = 0, extblknum;
+
+	if (edid[1] == 0x00)
+		return -ENOENT;
+	
+	extblknum = edid[0x7E];
+	if (extblknum == 0)
+		return extblknum;
+
+	printEdidInfo(edid);
+	printEdidInfo(edid + EDID_LENGTH);
+	printEdidInfo(edid + EDID_LENGTH * 2);
+	printEdidInfo(edid + EDID_LENGTH * 3);
+	printk("FSL ---- process extblknum is %d.\n", extblknum);
+	/* edid first block parsing */
+	fb_edid_to_monspecs(edid, &fbi->monspecs);
+    printk("Done 2\n");
+	if (extblknum) {
+		int i;
+
+		/* need read segment block? */
+		printk("FSL ---- extblknum is %d.\n", extblknum);
+		for (i = 1; i <= extblknum; i++) {
+			/* edid ext block parsing */
+			ret = mxc_edid_parse_ext_blk(edid + i * 128,
+					cfg, &fbi->monspecs);
+			if (ret < 0)
+				printk("FSL ---- Failed to parse EDID ext blk #%d.\n", i);
+		}
+	}
+
+	return 0;
+}
+
 static int __init mhl_Sii92326_init(void)
 {
 	int ret = 0;
+	struct fb_info edid_fbi;
 	// Announce on RS232c port.
 	//
 	printk("\n============================================\n");
@@ -668,15 +824,30 @@ static int __init mhl_Sii92326_init(void)
 	
 	if(false == Sii92326_mhl_reset())
 		return -EIO;
+	strcpy(mhlTxConfig.fb_id, "DISP3 BG - DI1");
+	
+	/* edid reading */
+	memset(&mhlTxConfig.edid[0], 0, (EDID_LENGTH * 4));
+	memset(&mhlTxConfig.edid_cfg, 0, sizeof(struct mxc_edid_cfg));
+	
+	ret = mxc_edid_9232_read(&mhlTxConfig.edid[0], &mhlTxConfig.edid_cfg, &edid_fbi);
+	if (ret >= 0) {
+		#if 0
+		memcpy(&mhlTxConfig.fbi.monspecs.modedb, &cea_modes[4], sizeof(struct fb_videomode));
+		mhlTxConfig.fbi.monspecs.modedb_len = 1;
+		#endif
+		
+		mxcfb_register_mode(1, edid_fbi.monspecs.modedb, edid_fbi.monspecs.modedb_len, MXC_DISP_DDC_DEV);
+	}
 	
 	HalTimerInit ( );
 	HalTimerSet (TIMER_POLLING, MONITORING_PERIOD);
-
+#if 0
 	init_timer(&g_mhl_1ms_timer);
 	g_mhl_1ms_timer.function = TimerTickHandler;
 	g_mhl_1ms_timer.expires = jiffies + 10*HZ;
 	add_timer(&g_mhl_1ms_timer);
-
+#endif
 	sii92326work = kmalloc(sizeof(*sii92326work), GFP_ATOMIC);
 	INIT_WORK(sii92326work, work_queue); 
 
@@ -711,7 +882,7 @@ static void __exit mhl_Sii92326_exit(void)
 	free_irq(gpio_to_irq(MX53_PCBA_MHL_INT), NULL);	
 	fb_unregister_client(&nb);
 	sii9232_poweroff();	/* Release HDMI pins */	
-	return 0;
+	return;
 }
 
 module_init(mhl_Sii92326_init);

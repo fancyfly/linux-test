@@ -13,6 +13,8 @@
  * PURPOSE.  See the
  * GNU General Public License for more details.
 */
+#include <linux/fb.h>
+#include <mach/mxc_edid.h>
 
 #include "sii_92326_api.h"
 
@@ -22,6 +24,7 @@
 //====================================================
 // External Analog USB switch control signal(CI2CA) polarity select
 //====================================================
+#define		SII_EDID_LEN			512
 #define 	CI2CA_LOW_MHL			(DISABLE)	// CI2CA Bus is pull down as h/w design
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -163,9 +166,16 @@ typedef struct
 	//  uint8_t 	mscData[ 16 ]; 		// What we got back as message data
 
 // for 92326 only! 
+	bool_t		need_mode_change;
 	bool_t 		hdmiCableConnected;
 	bool_t		dsRxPoweredUp;
-	
+	struct fb_info * fbi;	struct mxc_edid_cfg edid_cfg;
+	u8 videomodeIndex;
+	u8 edid[SII_EDID_LEN];
+  	uint8_t AspectRatio;			// 4x3 or 16x9
+   	uint8_t Colorimetry;			// 0 = 601; 1 = 709
+   	uint8_t fb_id[12];
+
 } mhlTx_config_t;
 
 // bits for mhlHpdRSENflags:
@@ -206,6 +216,11 @@ typedef struct
 
 } cbus_req_t;
 
+extern uint8_t I2C_ReadBlock( uint8_t SlaveAddr, uint8_t RegAddr, uint8_t NBytes, uint8_t * Data );
+extern uint8_t I2C_ReadSegmentBlockEDID(uint8_t SlaveAddr, uint8_t Segment, uint8_t Offset, uint8_t *Buffer, uint8_t Length);
+
+#define ReadBlockEDID(a,b,c)            		I2C_ReadBlock(EDID_ROM_ADDR, a, b, c)
+#define ReadSegmentBlockEDID(a,b,c,d)   	I2C_ReadSegmentBlockEDID(EDID_ROM_ADDR, a, b, d, c)
 
 //
 // Functions that driver exposes to the upper layer.
@@ -1010,10 +1025,6 @@ typedef struct
      						 	//[2]_SD Justify Data is justified: 0 = Left; 1 = Right
      						 	//[1]_SD Direction Byte shifted first: 0 = MSB; 1 = LSB
      						 	//[0]_WS to SD First Bit Shift: 0 = Yes; 1 = No
-
-	/*
-	 * Following elements are associated with framebuffer interaction.
-	 */
 
 }mhlTx_AVSetting;
 

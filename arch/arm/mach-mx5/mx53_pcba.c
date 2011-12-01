@@ -1523,7 +1523,7 @@ static struct mxc_audio_platform_data wm8958_data = {
 	.amp_enable = mxc_wm8958_amp_enable,
 	.init       = mxc_wm8958_init,
 	.ext_ram_rx = 1,
-	.ext_ram_tx = 1,
+	.ext_ram_tx = 0,
 	.gpio_suspend = mxc_wm8958_gpio_suspend,
 	.gpio_resume = mxc_wm8958_gpio_resume,
 };

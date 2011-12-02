@@ -154,6 +154,7 @@
 #define EOC_VOLTAGE_UV			4100000
 #define EOC_CCOUT			5
 #define LOW_VOLT_THRESHOLD		3400000
+#define EXTRA_LOW_VOLT_THRESHOLD	2800000
 #define HIGH_VOLT_THRESHOLD		4200000
 #define VOLT_THRESHOLD_DELTA		((HIGH_VOLT_THRESHOLD-LOW_VOLT_THRESHOLD)*2/100)
 #define RECHARGING_VOLT_THRESHOLD	4100000
@@ -1624,6 +1625,7 @@ static void _update_extra_charging_circut_setting(struct ripley_dev_info *di)
 			di->internal_resistor_mOhm / 1000;
 	}
 	if (compared_batt_volt <= (LOW_VOLT_THRESHOLD + VOLT_THRESHOLD_DELTA) &&
+		compared_batt_volt >= EXTRA_LOW_VOLT_THRESHOLD &&
 		di->battery_status == POWER_SUPPLY_STATUS_CHARGING)
 		gpio_direction_output(MX53_PCBA_BTCFG10, 1);
 	else

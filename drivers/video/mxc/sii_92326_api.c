@@ -368,7 +368,7 @@ uint16_t g_timerElapsedGranularity1;
 
 static struct timer_list  g_mhl_1ms_timer;
 
-uint16_t Int_count=0;
+uint16_t Int_count = 0;
 
 static bool_t match_id(const struct i2c_device_id *id, const struct i2c_client *client)
 {
@@ -511,82 +511,46 @@ void HalTimerWait ( uint16_t ms )
 
 //------------------------------------------------------------------------------
 
-struct work_struct	*sii92326work;
+static struct delayed_work sii92326work;
 static spinlock_t sii92326_lock = SPIN_LOCK_UNLOCKED;
 
-static void work_queue(struct work_struct *work)
-{		
-	enable_irq(gpio_to_irq(MX53_PCBA_MHL_INT));
+static void work_queue(struct work_struct * work)
+{
+	uint8_t	event;
+	uint8_t	eventParameter;
 	
-	Int_count += 15;
-	if (Int_count > 30)
-		Int_count = 30;
-}
+	printk("%s EventThread starting up\n", MHL_DRIVER_NAME);
 
+	SiiMhlTxGetEvents(&event, &eventParameter);
+	#if 0
+	if( MHL_TX_EVENT_NONE != event )
+	{
+		AppRcpDemo( event, eventParameter);
+	}
+	#endif
+	enable_irq(gpio_to_irq(MX53_PCBA_MHL_INT));
+}
+static int intrCnt = 0;
 static irqreturn_t Sii92326_mhl_interrupt(int irq, void *dev_id)
 {
 	unsigned long lock_flags = 0;	 
 	disable_irq_nosync(irq);
+	#if 0
+	intrCnt++;
+	if (intrCnt < 200) {
+	#endif
 	spin_lock_irqsave(&sii92326_lock, lock_flags);	
 	//printk("The sii92326 interrupt handeler is working..\n");  
 	//printk("The most of sii92326 interrupt work will be done by following tasklet..\n");  
 
-	schedule_work(sii92326work);
+	schedule_delayed_work(&sii92326work, msecs_to_jiffies(20));
 
 	//printk("The sii92326 interrupt's top_half has been done and bottom_half will be processed..\n");  
 	spin_unlock_irqrestore(&sii92326_lock, lock_flags);
+	#if 0
+	}
+	#endif
 	return IRQ_HANDLED;
-}
-
-static void SiI92326_mhl_loop(void)
-{
-	uint8_t	event;
-	uint8_t	eventParameter;
-
-	printk("%s EventThread starting up\n", MHL_DRIVER_NAME);
-
-       while (true)
-    	{
-		/*
-			Event loop
-		*/
-		//
-		// Look for any events that might have occurred.
-		//
-		SiiMhlTxGetEvents( &event, &eventParameter );
-#if 0
-		if( MHL_TX_EVENT_NONE != event )
-		{
-			AppRcpDemo( event, eventParameter);
-		}
-#endif
-		mdelay(50);
-    	}
-}
-
-
-/*****************************************************************************/
-/**
- * @brief Start driver's event monitoring thread.
- *
- *****************************************************************************/
-void StartEventThread(void)
-{
-	gDriverContext.pTaskStruct = kthread_run(SiI92326_mhl_loop,
-											 &gDriverContext,
-											 MHL_DRIVER_NAME);
-}
-
-
-/*****************************************************************************/
-/**
- * @brief Stop driver's event monitoring thread.
- *
- *****************************************************************************/
-void  StopEventThread(void)
-{
-	kthread_stop(gDriverContext.pTaskStruct);
-
 }
 
 static void sii9232_poweron()
@@ -600,12 +564,7 @@ static void sii9232_poweroff()
 	gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 1);
 	gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 1);
 }
-#if 0
-static void sii9232_setup(struct fb_info *fbi)
-{
-	return;
-}
-#endif
+
 static void sii9232_setup(struct fb_info *fbi)
 {
 	mm_segment_t old_fs;
@@ -850,8 +809,6 @@ static int __init mhl_Sii92326_init(void)
 	g_mhl_1ms_timer.expires = jiffies + 10*HZ;
 	add_timer(&g_mhl_1ms_timer);
 #endif
-	sii92326work = kmalloc(sizeof(*sii92326work), GFP_ATOMIC);
-	INIT_WORK(sii92326work, work_queue); 
 
 	SiiMhlTxInitialize( interruptDriven = true, pollIntervalMs = MONITORING_PERIOD);
 	
@@ -864,12 +821,12 @@ static int __init mhl_Sii92326_init(void)
 	else{
 		enable_irq_wake(gpio_to_irq(MX53_PCBA_MHL_INT));	
 		//printk(KERN_INFO "%s:%d:Sii92326 interrupt successed\n", __func__,__LINE__);	
+		INIT_DELAYED_WORK(&sii92326work, work_queue); 
 	}
 
 	siMhlTx_VideoSel( HDMI_720P60 );	// assume video initialize to 720p60, here should be decided by AP
 	siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
 	
-	StartEventThread();		/* begin monitoring for events */
 	fb_register_client(&nb);
 	return ret;
 }

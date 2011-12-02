@@ -77,6 +77,7 @@ mhlTx_Edid     mhlTxEdid = {0};
 mhlTx_Hdcp    mhlTxHdcp = {0};
 #endif
 
+static 	uint8_t reg74;	// Status Indication
 
 //------------------------------------------------------------------------------
 // Function Name: ReadByteTPI()
@@ -4164,8 +4165,6 @@ static void	ProcessRgnd( void )
 ////////////////////////////////////////////////////////////////////
 static void Int4Isr( void )
 {
-	uint8_t reg74;
-
 	reg74 = sii_I2CReadByte(PAGE_0_0X72, (0x74));	// read status
 
 	// When I2C is inoperational (say in D3) and a previous interrupt brought us here, do nothing.
@@ -5532,11 +5531,7 @@ void SiiMhlTxGetEvents( uint8_t *event, uint8_t *eventParameter )
 	// If interrupts have not been routed to our ISR, manually call it here.
 	//
 	//if(false == mhlTxConfig.interruptDriven)
-	if(Int_count)
-	{	
-		Int_count --;
-		SiiMhlTxDeviceIsr();
-	}
+	SiiMhlTxDeviceIsr();
 
 	MhlTxDriveStates( );
 
@@ -5641,6 +5636,7 @@ void SiiMhlTxGetEvents( uint8_t *event, uint8_t *eventParameter )
 				break;
 		}
 	}
+	sii_I2CWriteByte(PAGE_0_0X72, (0x74), reg74);	// clear all interrupts
 }
 
 ///////////////////////////////////////////////////////////////////////////////

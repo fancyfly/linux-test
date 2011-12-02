@@ -1499,7 +1499,7 @@ void HDCP_CheckStatus (uint8_t InterruptStatusImage)
 #ifdef KSVFORWARD
 	uint8_t ksv;
 #endif
-
+	printk("FSL ---- HDCP_CheckStatus.\n");
 	if ((mhlTxHdcp.HDCP_TxSupports == true) && (mhlTxHdcp.HDCP_AksvValid == true))
 	{
 		if ((mhlTxHdcp.HDCP_LinkProtectionLevel == (EXTENDED_LINK_PROTECTION_NONE | LOCAL_LINK_PROTECTION_NONE)) && (mhlTxHdcp.HDCP_Started == false))
@@ -4165,6 +4165,7 @@ static void	ProcessRgnd( void )
 ////////////////////////////////////////////////////////////////////
 static void Int4Isr( void )
 {
+	printk("FSL ---- Int4Isr.\n");
 	reg74 = sii_I2CReadByte(PAGE_0_0X72, (0x74));	// read status
 
 	// When I2C is inoperational (say in D3) and a previous interrupt brought us here, do nothing.
@@ -4312,6 +4313,8 @@ void	Int1RsenIsr( void )
 {
 	uint8_t	reg71 = sii_I2CReadByte(PAGE_0_0X72, 0x71);
 	uint8_t	rsen  = sii_I2CReadByte(PAGE_0_0X72, 0x09) & BIT2;
+	printk("FSL ---- Int1RsenIsr.\n");
+
 	// Look at RSEN interrupt.
 	// If RSEN interrupt is lost, check if we should deglitch using the RSEN status only.
 	if( (reg71 & BIT5) ||
@@ -4491,6 +4494,7 @@ static void MhlCbusIsr( void )
 	uint8_t	i;
 	uint8_t	reg71 = sii_I2CReadByte(PAGE_0_0X72, 0x71);
 
+	printk("FSL ---- MhlCbusIsr.\n");
 	//
 	// Main CBUS interrupts on CBUS_INTR_STATUS
 	//
@@ -4711,6 +4715,7 @@ static void SiiMhlTxDrvRecovery( void )
         //
 	// Check PSTABLE interrupt...reset FIFO if so.
         //
+    printk("FSL ---- SiiMhlTxDrvRecovery.\n");
 	if((sii_I2CReadByte(PAGE_0_0X72, (0x72)) & BIT1))
 	{
 
@@ -5531,7 +5536,11 @@ void SiiMhlTxGetEvents( uint8_t *event, uint8_t *eventParameter )
 	// If interrupts have not been routed to our ISR, manually call it here.
 	//
 	//if(false == mhlTxConfig.interruptDriven)
-	SiiMhlTxDeviceIsr();
+	if (Int_count)
+	{	
+		Int_count --;
+		SiiMhlTxDeviceIsr();
+	}
 
 	MhlTxDriveStates( );
 
@@ -5636,7 +5645,6 @@ void SiiMhlTxGetEvents( uint8_t *event, uint8_t *eventParameter )
 				break;
 		}
 	}
-	sii_I2CWriteByte(PAGE_0_0X72, (0x74), reg74);	// clear all interrupts
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -475,6 +475,8 @@ void HalTimerSet (uint8_t index, uint16_t m_sec)
 //------------------------------------------------------------------------------
 uint8_t HalTimerExpired (uint8_t timer)
 {
+	printk("FSL ---- HalTimerExpired.\n");
+
     if (timer < TIMER_COUNT)
     {
         return(g_timerCounters[timer] == 0);
@@ -519,6 +521,10 @@ static void work_queue(struct work_struct * work)
 	uint8_t	event;
 	uint8_t	eventParameter;
 	
+	Int_count += 15;
+	if (Int_count > 30)
+		Int_count = 30;
+
 	printk("%s EventThread starting up\n", MHL_DRIVER_NAME);
 
 	SiiMhlTxGetEvents(&event, &eventParameter);
@@ -803,12 +809,12 @@ static int __init mhl_Sii92326_init(void)
 	
 	HalTimerInit ( );
 	HalTimerSet (TIMER_POLLING, MONITORING_PERIOD);
-#if 0
+
 	init_timer(&g_mhl_1ms_timer);
 	g_mhl_1ms_timer.function = TimerTickHandler;
 	g_mhl_1ms_timer.expires = jiffies + 10*HZ;
 	add_timer(&g_mhl_1ms_timer);
-#endif
+
 
 	SiiMhlTxInitialize( interruptDriven = true, pollIntervalMs = MONITORING_PERIOD);
 	

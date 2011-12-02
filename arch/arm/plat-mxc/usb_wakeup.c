@@ -21,6 +21,9 @@
 #include <linux/mutex.h>
 #include <linux/fsl_devices.h>
 #include <linux/suspend.h>
+#include <mach/arc_otg.h>
+#include <mach/hardware.h>
+
 
 struct wakeup_ctrl {
 	int wakeup_irq;
@@ -33,6 +36,20 @@ static struct wakeup_ctrl *g_ctrl;
 
 extern int usb_event_is_otg_wakeup(void);
 extern void usb_debounce_id_vbus(void);
+struct completion  otg_event;
+
+/*The fuction is called by mhl driver tell me the usb host cable plug in */
+
+
+/*The fuction is called by mhl driver tell me the mhl caled plug out */
+void mhl_disconnect( void )
+{
+	complete(&otg_event);
+
+	printk(KERN_DEBUG "FSL OTG:mhl_disconnect\n");
+
+}
+EXPORT_SYMBOL(mhl_disconnect);
 
 static void wakeup_clk_gate(struct fsl_usb2_wakeup_platform_data *pdata, bool on)
 {
@@ -92,13 +109,18 @@ static enum usb_wakeup_event is_wakeup(struct fsl_usb2_platform_data *pdata)
 		return WAKEUP_EVENT_INVALID;
 }
 
+static bool mhl_flag =false;
+static u32 flag1 ,flag2;
+
 static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 {
 	struct fsl_usb2_wakeup_platform_data *pdata = ctrl->pdata;
 	int already_waked = 0;
 	enum usb_wakeup_event wakeup_evt;
 	int i;
+	u32 temp;
 
+	mhl_flag=false;
 	wakeup_clk_gate(ctrl->pdata, true);
 
 	/* In order to get the real id/vbus value */
@@ -111,13 +133,43 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 			usb_pdata->irq_delay = 0;
 			wakeup_evt = is_wakeup(usb_pdata);
 			if (wakeup_evt != WAKEUP_EVENT_INVALID) {
-				if (usb_pdata->usb_clock_for_pm)
-					usb_pdata->usb_clock_for_pm(true);
-				usb_pdata->lowpower = 0;
-				already_waked = 1;
-				if (usb_pdata->wakeup_handler) {
-					usb_pdata->wakeup_handler(usb_pdata);
+		
+				if( (wakeup_evt == WAKEUP_EVENT_ID)) {
+					flag1=UOG_OTGSC&(1<<8);
+					msleep(500);
+					flag2=UOG_OTGSC&(1<<8);
+					if((flag1 ==0)&&(flag2 ==(1<<8)))
+						mhl_flag=true;
+					else
+						mhl_flag=false;
+					if(mhl_flag == true) {	
+						if(usb_pdata->platform_driver_vbus)
+							usb_pdata->platform_driver_vbus(1);		
+						/*we will wait for mhl driver until mhl driver tell me what cale plug in */	
+						printk(KERN_DEBUG "(wait_for_completion_interruptible ++)\n");
+						wait_for_completion_interruptible(&otg_event);
+						printk(KERN_DEBUG "(wait_for_completion_interruptible --)\n");
+						usb_pdata->platform_driver_vbus(0);	
+						temp = UOG_OTGSC;
+						temp |=(0x7f<<16);
+						UOG_OTGSC = temp;									
+						
+					}
+				}				
+				if(mhl_flag == false) {
+					if (usb_pdata->usb_clock_for_pm)
+						usb_pdata->usb_clock_for_pm(true);
+					usb_pdata->lowpower = 0;
+					already_waked = 1;
+					if (usb_pdata->wakeup_handler) {
+						usb_pdata->wakeup_handler(usb_pdata);
+					}
 				}
+				if(mhl_flag== true) {
+					wakeup_clk_gate(ctrl->pdata, false);
+					return;
+				}
+					
 			}
 		}
 	}
@@ -167,6 +219,7 @@ static int wakeup_dev_probe(struct platform_device *pdev)
 
 	ctrl->pdata = pdata;
 	init_completion(&ctrl->event);
+	init_completion(&otg_event);
 	ctrl->wakeup_irq = platform_get_irq(pdev, 0);
 	status = request_irq(ctrl->wakeup_irq, usb_wakeup_handler, IRQF_SHARED, "usb_wakeup", (void *)ctrl);
 	if (status)

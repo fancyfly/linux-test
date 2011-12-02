@@ -43,6 +43,12 @@
 #include <asm/mach-types.h>
 
 #include "pmic.h"
+#include <mach/gpio.h>
+
+#define HUAWEI_3G_MODULE_MU509_POWER_OFF
+#ifdef	HUAWEI_3G_MODULE_MU509_POWER_OFF
+#define MX53_PCBA_MODEM_PWR_ON		(0*32 + 30)
+#endif
 
 /*
  * Defines
@@ -130,6 +136,11 @@ void mc34708_power_off(void)
 	pmic_read_reg(29, &value, 0xffffff);
 	value |= 0x20 | 0x800 | 0x20000 | 0x800000;
 	pmic_write_reg(29, value, 0xffffff);
+#endif
+#ifdef	HUAWEI_3G_MODULE_MU509_POWER_OFF
+	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);
+	mdelay(600);
+	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,1);
 #endif
 	pmic_read_reg(REG_POWER_CTL0, &value, 0xffffff);
 

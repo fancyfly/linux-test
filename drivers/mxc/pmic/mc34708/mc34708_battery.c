@@ -150,8 +150,8 @@
 #define USBCHARGER 0x20
 #define DEDICATEDCHARGER 0x40
 
-#define EOC_CURRENT_UA			200000
-#define EOC_VOLTAGE_UV			4100000
+#define EOC_CURRENT_UA			150000
+#define EOC_VOLTAGE_UV			4150000
 #define EOC_CCOUT			5
 #define LOW_VOLT_THRESHOLD		3400000
 #define EXTRA_LOW_VOLT_THRESHOLD	2800000
@@ -650,6 +650,8 @@ struct ripley_dev_info {
 
 	int currChargePoint;
 
+	bool ready_to_judge_eoc;
+
 	struct power_supply bat;
 	struct power_supply usb_charger;
 	struct power_supply aux_charger;
@@ -658,6 +660,7 @@ struct ripley_dev_info {
 	struct delayed_work monitor_work;
 	struct delayed_work ovp_mon_work;
 	struct delayed_work calc_resistor_mon_work;
+	struct delayed_work eoc_judge_mon_work;
 	struct mc34708_charger_config *chargeConfig;
 };
 
@@ -875,7 +878,11 @@ static int check_eoc(struct ripley_dev_info *di)
 	int ret;
 	int voltage_uV;
 	int battcur;
+	int compared_batt_volt;
 	unsigned short voltage_raw;
+
+	if (di->ready_to_judge_eoc == false)
+		return -1;
 
 	ret = get_battcur(&battcur);
 	if (ret) {
@@ -883,19 +890,23 @@ static int check_eoc(struct ripley_dev_info *di)
 		return -1;
 	}
 
-	ret = ripley_get_batt_voltage(&voltage_raw);
-	if (ret == 0)
-		voltage_uV = voltage_raw * BAT_VOLTAGE_UNIT_UV;
+	if (di->internal_resistor_mOhm <= 0)
+		compared_batt_volt = di->voltage_uV;
+	else {
+		compared_batt_volt = di->internal_voltage_uV =
+			di->voltage_uV - abs(di->current_uA) *
+			di->internal_resistor_mOhm / 1000;
+	}
 
-	if (voltage_uV >= EOC_VOLTAGE_UV &&
-	/*	battcur <= EOC_CURRENT_UA &&	*/
+	if (compared_batt_volt >= EOC_VOLTAGE_UV &&
+	/*	di->current_uA <= EOC_CURRENT_UA &&	*/
 	/*	di->delta_coulomb < EOC_CCOUT) && */
-		di->current_uA <= EOC_CURRENT_UA)
+		battcur <= EOC_CURRENT_UA)
 		di->full_counter++;
 	else
 		di->full_counter = 0;
 
-	if (di->full_counter > 2)
+	if (di->full_counter > 4)
 		di->battery_status = POWER_SUPPLY_STATUS_FULL;
 	else
 		di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
@@ -1228,6 +1239,12 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 4);
+
+			/* determine EOC only after INTEGTIME (max 32s) */
+			di->ready_to_judge_eoc = false;
+			cancel_delayed_work(&di->eoc_judge_mon_work);
+			queue_delayed_work(di->monitor_wqueue,
+					   &di->eoc_judge_mon_work, HZ * 32);
 		} else if (stopCharging) {
 			pr_info("stopCharging\n");
 			enable_charger(0);
@@ -1241,6 +1258,12 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 4);
+
+			cancel_delayed_work(&di->eoc_judge_mon_work);
+			queue_delayed_work(di->monitor_wqueue,
+					   &di->eoc_judge_mon_work, HZ);
+			di->ready_to_judge_eoc = false;
+			di->full_counter = 0;
 		}
 	}
 
@@ -1621,7 +1644,7 @@ static void _update_extra_charging_circut_setting(struct ripley_dev_info *di)
 		compared_batt_volt = di->voltage_uV;
 	else {
 		compared_batt_volt = di->internal_voltage_uV =
-			di->voltage_uV + abs(di->current_uA) *
+			di->voltage_uV - abs(di->current_uA) *
 			di->internal_resistor_mOhm / 1000;
 	}
 	if (compared_batt_volt <= (LOW_VOLT_THRESHOLD + VOLT_THRESHOLD_DELTA) &&
@@ -1735,6 +1758,18 @@ static void calc_resistor_work(struct work_struct *work)
 						   HZ * 30 * 60);
 		}
 	}
+}
+
+static void eoc_judge_work(struct work_struct *work)
+{
+	struct ripley_dev_info *di = container_of(work,
+						  struct ripley_dev_info,
+						  eoc_judge_mon_work.work);
+
+	if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING)
+		di->ready_to_judge_eoc = true;
+	else
+		di->ready_to_judge_eoc = false;
 }
 
 static void usb_charger_online_event_callback(void *para)
@@ -1979,6 +2014,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&di->monitor_work, ripley_battery_work);
 	INIT_DELAYED_WORK(&di->ovp_mon_work, battery_ovp_work);
 	INIT_DELAYED_WORK(&di->calc_resistor_mon_work, calc_resistor_work);
+	INIT_DELAYED_WORK(&di->eoc_judge_mon_work, eoc_judge_work);
 	di->monitor_wqueue =
 	    create_singlethread_workqueue(dev_name(&pdev->dev));
 	if (!di->monitor_wqueue) {

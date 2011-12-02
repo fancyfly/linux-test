@@ -1412,7 +1412,7 @@ static void __init pcba_add_device_buttons(void) {}
 static void mx53_gpio_usbotg_driver_vbus(bool on)
 {
 	pmic_write_reg(REG_USB_TIMING, BITFVAL(USBtiming, 0x0), BITFMASK(USBtiming));
-	// if (on) {
+	if (on) {
 			pmic_write_reg(REG_BATTERY_PROFILE, BITFVAL(CHREN, 0), BITFMASK(CHREN));
 			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 0) \
 				| BITFVAL( DPSWITCHING, 2) | BITFVAL(DMSWITCHING, 2),BITFMASK(ManualSW)\
@@ -1422,15 +1422,10 @@ static void mx53_gpio_usbotg_driver_vbus(bool on)
 			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 0) \
 				| BITFVAL( DPSWITCHING, 1) | BITFVAL(DMSWITCHING, 1),BITFMASK(ManualSW)\
 				| BITFMASK(SWHOLD) | BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));
-	/*} else {
-			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 1) \
-				| BITFVAL( DPSWITCHING, 1) | BITFVAL(DMSWITCHING, 1),BITFMASK(ManualSW) \
-				| BITFMASK(SWHOLD) | BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));
-=======
 	} else {
 			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 1), BITFMASK(ManualSW));
 			gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
-	}*/
+	}
 }
 
 static int sdhc_write_protect(struct device *dev)
@@ -1574,7 +1569,7 @@ static struct android_usb_product usb_products[] = {
 		.functions	= usb_functions_ums,
 	},
 	{
-		.product_id	= 0x0c01,
+		.product_id	= 0x0c02,
 		.num_functions	= ARRAY_SIZE(usb_functions_ums_adb),
 		.functions	= usb_functions_ums_adb,
 	},

@@ -163,6 +163,7 @@
 
 #define ADC_MAX_CHANNEL		8
 #define ADC_MAX_RETRY		10
+#define MAX_INTEGTIME		32	/* seconds */
 
 #define DEFAULT_INTER_RESISTOR_mOhm	200
 
@@ -373,64 +374,6 @@ static int reset_cc(void)
 		return -1;
 
 	msleep(10);
-
-	return 0;
-}
-
-static int ripley_get_batt_voltage(unsigned short *voltage)
-{
-	int channel[ADC_MAX_CHANNEL];
-	unsigned short result[ADC_MAX_CHANNEL];
-	unsigned short max, min;
-	int i;
-
-	for (i = 0; i < ADC_MAX_CHANNEL; i++)
-		channel[i] = BATTERY_VOLTAGE;
-
-	CHECK_ERROR(mc34708_pmic_adc_convert(channel, result,
-						ADC_MAX_CHANNEL));
-
-	*voltage = 0;
-	min = max = result[0];
-	for (i = 0; i < ADC_MAX_CHANNEL; i++) {
-		if (min > result[i])
-			min = result[i];
-		if (max < result[i])
-			max = result[i];
-		*voltage += result[i];
-	}
-	/* abandon max/min, then get average */
-	*voltage -= (max + min);
-	*voltage /= (ADC_MAX_CHANNEL - 2);
-
-	return 0;
-}
-
-static int ripley_get_batt_current(unsigned short *curr)
-{
-	int channel[ADC_MAX_CHANNEL];
-	unsigned short result[ADC_MAX_CHANNEL];
-	unsigned short max, min;
-	int i;
-
-	for (i = 0; i < ADC_MAX_CHANNEL; i++)
-		channel[i] = BATTERY_CURRENT;
-
-	CHECK_ERROR(mc34708_pmic_adc_convert(channel, result,
-						ADC_MAX_CHANNEL));
-
-	*curr = 0;
-	min = max = result[0];
-	for (i = 0; i < ADC_MAX_CHANNEL; i++) {
-		if (min > result[i])
-			min = result[i];
-		if (max < result[i])
-			max = result[i];
-		*curr += result[i];
-	}
-	/* abandon max/min, then get average */
-	*curr -= (max + min);
-	*curr /= (ADC_MAX_CHANNEL - 2);
 
 	return 0;
 }
@@ -896,10 +839,8 @@ static int get_real_batt_voltage(struct ripley_dev_info *di)
 static int check_eoc(struct ripley_dev_info *di)
 {
 	int ret;
-	int voltage_uV;
 	int battcur;
 	int compared_batt_volt;
-	unsigned short voltage_raw;
 
 	if (di->ready_to_judge_eoc == false)
 		return -1;
@@ -911,6 +852,7 @@ static int check_eoc(struct ripley_dev_info *di)
 	}
 
 	compared_batt_volt = get_real_batt_voltage(di);
+	pr_debug("EOC compared_batt_volt %d\n", compared_batt_volt);
 	if (compared_batt_volt >= EOC_VOLTAGE_UV &&
 	/*	di->current_uA <= EOC_CURRENT_UA &&	*/
 	/*	di->delta_coulomb < EOC_CCOUT) && */
@@ -945,25 +887,20 @@ static void _save_and_change_chrcc(int *old_chrcc, int chrcc)
 			BITFMASK(CHRCC));
 }
 
-static int _record_last_batt_info(struct ripley_dev_info *di, bool force_read)
+static int _record_last_batt_info(struct ripley_dev_info *di)
 {
 	int voltage_uV, current_uA;
 	int ret;
 
-	if (force_read) {
-		ret = ripley_get_batt_volt_curr(&voltage_uV, &current_uA);
-		if (ret) {
-			pr_err("%s: ripley_get_batt_volt_curr() failed.\n",
-				__func__);
-			return ret;
-		}
-
-		last_batt_rec[batt_rec_index].voltage_uV = voltage_uV;
-		last_batt_rec[batt_rec_index].current_uA = current_uA;
-	} else {
-		last_batt_rec[batt_rec_index].voltage_uV = di->voltage_uV;
-		last_batt_rec[batt_rec_index].current_uA = di->current_uA;
+	ret = ripley_get_batt_volt_curr(&voltage_uV, &current_uA);
+	if (ret) {
+		pr_err("%s: ripley_get_batt_volt_curr() failed.\n",
+			__func__);
+		return ret;
 	}
+
+	last_batt_rec[batt_rec_index].voltage_uV = voltage_uV;
+	last_batt_rec[batt_rec_index].current_uA = current_uA;
 
 	batt_rec_index++;
 	if (batt_rec_index >= NUM_BATT_RECORD)
@@ -999,7 +936,7 @@ static int _is_valid_to_calc_internal_resistor(struct ripley_dev_info *di,
 		if ((last_batt_rec[curr_index].current_uA > 0 &&
 			last_batt_rec[compared_index].current_uA > 0) &&
 			abs(last_batt_rec[curr_index].current_uA -
-			   last_batt_rec[compared_index].current_uA) > 50000)
+			   last_batt_rec[compared_index].current_uA) > 30000)
 			return true;
 
 		return false;
@@ -1161,7 +1098,7 @@ static void _adjust_batt_capacity(struct ripley_dev_info *di)
 			di->old_percent >= 0)
 			counter++;
 
-		if (counter > 2) {
+		if (counter > 3) {
 			di->percent = di->old_percent - 1;
 			counter = 0;
 		} else
@@ -1176,7 +1113,7 @@ static void _adjust_batt_capacity(struct ripley_dev_info *di)
 			di->old_percent >= 0)
 			counter++;
 
-		if (counter > 2) {
+		if (counter > 3) {
 			di->percent = di->old_percent + 1;
 			counter = 0;
 		} else
@@ -1248,7 +1185,8 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
-					   &di->calc_resistor_mon_work, HZ / 4);
+					   &di->calc_resistor_mon_work,
+					   HZ * MAX_INTEGTIME);
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 4);
@@ -1257,7 +1195,8 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			di->ready_to_judge_eoc = false;
 			cancel_delayed_work(&di->eoc_judge_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
-					   &di->eoc_judge_mon_work, HZ * 32);
+					   &di->eoc_judge_mon_work,
+					   HZ * MAX_INTEGTIME);
 		} else if (stopCharging) {
 			pr_info("stopCharging\n");
 			enable_charger(0);
@@ -1267,7 +1206,8 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
-					   &di->calc_resistor_mon_work, HZ / 4);
+					   &di->calc_resistor_mon_work,
+					   HZ * MAX_INTEGTIME);
 			cancel_delayed_work(&di->monitor_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 4);
@@ -1661,7 +1601,6 @@ static void ripley_battery_work(struct work_struct *work)
 
 	ripley_battery_update_status(di);
 	_update_extra_charging_circut_setting(di);
-	_record_last_batt_info(di, false);
 	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, interval);
 }
 
@@ -1698,14 +1637,16 @@ static void calc_resistor_work(struct work_struct *work)
 	static int retry;
 
 	if (power_supply_changed_flag) {
+		_record_last_batt_info(di);
 		/* wait until we can calc */
 		if (!_is_valid_to_calc_internal_resistor(di,
 				power_supply_changed_flag)) {
 			queue_delayed_work(di->monitor_wqueue,
-				   &di->calc_resistor_mon_work, HZ * 1);
-			pr_warning("not valid to calc internal resistor.\n");
+				   &di->calc_resistor_mon_work,
+				   HZ * MAX_INTEGTIME);
+			pr_warning("waiting to calc internal resistor.\n");
 			retry++;
-			if (retry > 10) {
+			if (retry > 5) {
 				retry = 0;
 				power_supply_changed_flag = 0;
 			}
@@ -1731,8 +1672,8 @@ static void calc_resistor_work(struct work_struct *work)
 			if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 				if (flag_captured_once) {
 					_save_and_change_chrcc(&old_chrcc, 350000);
-					msleep(4000);
-					_record_last_batt_info(di, true);
+					msleep(MAX_INTEGTIME * 1000);
+					_record_last_batt_info(di);
 					_save_and_change_chrcc(NULL, old_chrcc);
 
 					if (_is_valid_to_calc_internal_resistor(di, 0)) {

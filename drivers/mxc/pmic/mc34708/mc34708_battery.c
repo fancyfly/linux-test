@@ -873,6 +873,26 @@ static int get_battcur(int *batt_curr)
 	return 0;
 }
 
+static int get_real_batt_voltage(struct ripley_dev_info *di)
+{
+	int real_batt_volt;
+
+	if (di->internal_resistor_mOhm <= 0)
+		real_batt_volt = di->voltage_uV;
+	else {
+		if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING)
+			real_batt_volt = di->internal_voltage_uV =
+				di->voltage_uV - abs(di->current_uA) *
+				di->internal_resistor_mOhm / 1000;
+		else
+			real_batt_volt = di->internal_voltage_uV =
+				di->voltage_uV + abs(di->current_uA) *
+				di->internal_resistor_mOhm / 1000;
+	}
+
+	return real_batt_volt;
+}
+
 static int check_eoc(struct ripley_dev_info *di)
 {
 	int ret;
@@ -890,14 +910,7 @@ static int check_eoc(struct ripley_dev_info *di)
 		return -1;
 	}
 
-	if (di->internal_resistor_mOhm <= 0)
-		compared_batt_volt = di->voltage_uV;
-	else {
-		compared_batt_volt = di->internal_voltage_uV =
-			di->voltage_uV - abs(di->current_uA) *
-			di->internal_resistor_mOhm / 1000;
-	}
-
+	compared_batt_volt = get_real_batt_voltage(di);
 	if (compared_batt_volt >= EOC_VOLTAGE_UV &&
 	/*	di->current_uA <= EOC_CURRENT_UA &&	*/
 	/*	di->delta_coulomb < EOC_CCOUT) && */
@@ -1366,13 +1379,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 
 	} else if (di->battery_status == POWER_SUPPLY_STATUS_DISCHARGING) {
 		/* determine discharging complete */
-		if (di->internal_resistor_mOhm <= 0)
-			compared_batt_volt = di->voltage_uV;
-		else {
-			compared_batt_volt = di->internal_voltage_uV =
-				di->voltage_uV + abs(di->current_uA) *
-				di->internal_resistor_mOhm / 1000;
-		}
+		compared_batt_volt = get_real_batt_voltage(di);
 
 		/* trick: trigger before LOW_VOLT_THRESHOLD reached */
 		if (compared_batt_volt <= (LOW_VOLT_THRESHOLD +
@@ -1399,14 +1406,14 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 		if (before_use_calculated_capacity == 1) {
 			if (di->internal_resistor_mOhm <= 0)
 				di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
-					 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
+					 (EOC_VOLTAGE_UV - LOW_VOLT_THRESHOLD);
 			else if (di->current_uA < 0) {
 				di->internal_voltage_uV = di->voltage_uV +
 					abs(di->current_uA) * di->internal_resistor_mOhm / 1000;
 				_record_batt_ivolt(di);
 				_recalc_batt_ivolt(di);
 				di->percent = (di->internal_voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
-					 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
+					 (EOC_VOLTAGE_UV - LOW_VOLT_THRESHOLD);
 				pr_info("di->internal_voltage_uV %d, percent %d\n", di->internal_voltage_uV,
 									di->percent);
 				pr_info("di->internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
@@ -1435,8 +1442,6 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			/* recal capacity and get the real total capacity */
 			di->real_capacity =
 				di->full_coulomb - di->empty_coulomb;
-			di->empty_coulomb = 0;
-			di->accum_coulomb = 0;
 			can_calculate_capacity = false;
 			pr_debug("DISCHR can_cal real_capacity %d\n",
 						di->real_capacity);
@@ -1449,18 +1454,12 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 	} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING || 
 		   di->battery_status == POWER_SUPPLY_STATUS_FULL) {
 		/* special case: charging from low battery(< 3.4) to "> 3.4v" */
-		if (di->internal_resistor_mOhm <= 0)
-			compared_batt_volt = di->voltage_uV;
-		else {
-			compared_batt_volt = di->internal_voltage_uV =
-				di->voltage_uV - abs(di->current_uA) *
-				di->internal_resistor_mOhm / 1000;
-		}
+		compared_batt_volt = get_real_batt_voltage(di);
 		if ((compared_batt_volt <= (LOW_VOLT_THRESHOLD +
 						VOLT_THRESHOLD_DELTA)) &&
 			(compared_batt_volt >= (LOW_VOLT_THRESHOLD -
 						VOLT_THRESHOLD_DELTA))) {
-			pr_notice("Chargin from low battery < %d uV\n",
+			pr_notice("Charging from low battery < %d uV\n",
 					LOW_VOLT_THRESHOLD);
 			if (last_batt_complete_id > 0 &&
 				last_batt_complete_id != BATT_EMPTY) {
@@ -1495,14 +1494,14 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 		if (before_use_calculated_capacity == 1) {
 			if (di->internal_resistor_mOhm <= 0)
 				di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
-					 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
+					 (EOC_VOLTAGE_UV - LOW_VOLT_THRESHOLD);
 			else if (di->current_uA > 0) {
 				di->internal_voltage_uV = di->voltage_uV -
 					di->current_uA * di->internal_resistor_mOhm / 1000;
 				_record_batt_ivolt(di);
 				_recalc_batt_ivolt(di);
 				di->percent = (di->internal_voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
-					 (HIGH_VOLT_THRESHOLD - LOW_VOLT_THRESHOLD);
+					 (EOC_VOLTAGE_UV - LOW_VOLT_THRESHOLD);
 				pr_info("di->internal_voltage_uV %d, percent %d\n", di->internal_voltage_uV,
 									di->percent);
 				pr_info("di->internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
@@ -1582,6 +1581,7 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 {
 	unsigned int point = 0;
 	struct mc34708_charger_config *config = di->chargeConfig;
+	int compared_batt_volt;
 	int old_battery_status = di->battery_status;
 	di->old_battery_status = di->battery_status;
 
@@ -1604,7 +1604,8 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 			check_eoc(di);
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_NOT_CHARGING) {
-			if (di->voltage_uV < RECHARGING_VOLT_THRESHOLD) {
+			compared_batt_volt = get_real_batt_voltage(di);
+			if (compared_batt_volt < RECHARGING_VOLT_THRESHOLD) {
 				pr_info("Battery volt < %d uV, Re-Charging.\n",
 					RECHARGING_VOLT_THRESHOLD);
 				point = 0;
@@ -1640,13 +1641,7 @@ static void _update_extra_charging_circut_setting(struct ripley_dev_info *di)
 {
 	int compared_batt_volt;
 
-	if (di->internal_resistor_mOhm <= 0)
-		compared_batt_volt = di->voltage_uV;
-	else {
-		compared_batt_volt = di->internal_voltage_uV =
-			di->voltage_uV - abs(di->current_uA) *
-			di->internal_resistor_mOhm / 1000;
-	}
+	compared_batt_volt = get_real_batt_voltage(di);
 	if (compared_batt_volt <= (LOW_VOLT_THRESHOLD + VOLT_THRESHOLD_DELTA) &&
 		compared_batt_volt >= EXTRA_LOW_VOLT_THRESHOLD &&
 		di->battery_status == POWER_SUPPLY_STATUS_CHARGING)

@@ -1089,6 +1089,10 @@ static void _adjust_batt_capacity(struct ripley_dev_info *di)
 
 	old_battery_status = di->battery_status;
 
+	/* when use CCOUT, we use delta coulomb to calc percent */
+	if (before_use_calculated_capacity == 0)
+		return;
+
 	if (di->battery_status == POWER_SUPPLY_STATUS_DISCHARGING) {
 		if (di->percent > di->old_percent) {
 			di->percent = di->old_percent;
@@ -1098,7 +1102,7 @@ static void _adjust_batt_capacity(struct ripley_dev_info *di)
 			di->old_percent >= 0)
 			counter++;
 
-		if (counter > 3) {
+		if (counter > 2) {
 			di->percent = di->old_percent - 1;
 			counter = 0;
 		} else
@@ -1113,7 +1117,7 @@ static void _adjust_batt_capacity(struct ripley_dev_info *di)
 			di->old_percent >= 0)
 			counter++;
 
-		if (counter > 3) {
+		if (counter > 2) {
 			di->percent = di->old_percent + 1;
 			counter = 0;
 		} else
@@ -1386,10 +1390,10 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_debug("DISCHR can_cal real_capacity %d\n",
 						di->real_capacity);
 		}
-		pr_debug("di->real_capacity %d\n", di->real_capacity);
-
 		di->percent += di->delta_coulomb * 100 / di->real_capacity;
-		di->percent = di->percent < 0 ? 0 : di->percent;
+		_adjust_batt_capacity(di);
+		pr_info("di->real_capacity %d, di->percent %d\n",
+			di->real_capacity, di->percent);
 
 	} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING || 
 		   di->battery_status == POWER_SUPPLY_STATUS_FULL) {
@@ -1475,21 +1479,30 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_debug("CHR can_cal real_capacity %d\n",
 						di->real_capacity);
 		}
-		pr_debug("CHR di->real_capacity %d\n", di->real_capacity);
-
 		di->percent += di->delta_coulomb * 100 / di->real_capacity;
-		di->percent = di->percent > 99 ? 99 : di->percent;
-
+		_adjust_batt_capacity(di);
+		pr_info("CHR di->real_capacity %d, di->percent %d\n",
+			di->real_capacity, di->percent);
+		if (di->percent >= 100) {
+			di->battery_status = POWER_SUPPLY_STATUS_FULL;
+			di->percent = 100;
+			di->full_coulomb = di->accum_coulomb;
+			di->real_capacity = di->full_coulomb -di->empty_coulomb;
+			pr_info("CHR CMPL(CCOUT): di->full_coulomb %d, di->real_capacity %d\n",
+					di->full_coulomb, di->real_capacity);
+		}
 	}
 out1:
 	/* re-consider special case here, delay 1 minute before change to 0% */
 #define	COMPARE_TIMES ((60 / BATTERY_UPDATE_INTERVAL) > 4 ?	\
 				(60 / BATTERY_UPDATE_INTERVAL): 4)
-	if (lowbatt_counter > COMPARE_TIMES)
-		di->percent = 0;
-	else if (lowbatt_counter > 1) {
-		if (di->percent == 0)
-			di->percent = 1;
+	if (before_use_calculated_capacity == 1) {
+		if (lowbatt_counter > COMPARE_TIMES)
+			di->percent = 0;
+		else if (lowbatt_counter > 1) {
+			if (di->percent == 0)
+				di->percent = 1;
+		}
 	}
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
@@ -1513,7 +1526,8 @@ out1:
 		di->old_percent = di->percent;
 	}
 
-	pr_info("di->percent %d ...\n", di->percent);
+	pr_info("di->percent %d ...\n", di->percent < 0 ? 0 :
+				(di->percent > 100 ? 100 : di->percent));
 	return;
 }
 
@@ -1806,7 +1820,8 @@ static int ripley_battery_get_property(struct power_supply *psy,
 		val->intval = 1;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		val->intval = di->percent;
+		val->intval = di->percent < 0 ? 0 :
+				(di->percent > 100 ? 100 : di->percent);
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = 30;	/*TODO*/

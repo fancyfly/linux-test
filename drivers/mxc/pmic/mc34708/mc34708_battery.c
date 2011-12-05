@@ -172,6 +172,7 @@
 static int suspend_flag;
 static int power_supply_changed_flag;
 static int power_change_flag;
+static int need_adjust_percent_0;
 static int second_charging_flag;
 static int capacity_changed_flag;
 
@@ -1186,6 +1187,7 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 
 			power_supply_changed_flag = 1;
 			power_change_flag = 1;
+			need_adjust_percent_0 = false;
 
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
@@ -1207,6 +1209,7 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 
 			power_supply_changed_flag = 1;
 			power_change_flag = 1;
+			need_adjust_percent_0 = true;
 
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
@@ -1310,6 +1313,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 {
 	static bool can_adjust_percent = false;
 	static int lowbatt_counter;
+	static int adjust_percent_0_counter;
 	int compared_batt_volt;
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN) {
@@ -1480,7 +1484,6 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 						di->real_capacity);
 		}
 		di->percent = (di->accum_coulomb - di->empty_coulomb) * 100 / di->real_capacity;
-		_adjust_batt_capacity(di);
 		pr_info("CHR di->real_capacity %d, di->percent %d\n",
 			di->real_capacity, di->percent);
 		if (di->percent >= 100) {
@@ -1491,19 +1494,24 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_info("CHR CMPL(CCOUT): di->full_coulomb %d, di->real_capacity %d\n",
 					di->full_coulomb, di->real_capacity);
 		}
+		_adjust_batt_capacity(di);
 	}
 out1:
-	/* re-consider special case here, delay 1 minute before change to 0% */
-#define	COMPARE_TIMES ((60 / BATTERY_UPDATE_INTERVAL) > 4 ?	\
-				(60 / BATTERY_UPDATE_INTERVAL): 4)
-	if (before_use_calculated_capacity == 1) {
-		if (lowbatt_counter > COMPARE_TIMES)
+/* re-consider special case here, delay ~1.5 minute before change to 0% */
+#define	COMPARE_TIMES ((90 / BATTERY_UPDATE_INTERVAL) > 4 ?	\
+				(90 / BATTERY_UPDATE_INTERVAL): 4)
+	if (di->battery_status == POWER_SUPPLY_STATUS_DISCHARGING &&
+	    di->percent == 0 &&
+	    need_adjust_percent_0) {
+		if (adjust_percent_0_counter++ > COMPARE_TIMES) {
 			di->percent = 0;
-		else if (lowbatt_counter > 1) {
-			if (di->percent == 0)
-				di->percent = 1;
-		}
-	}
+
+			need_adjust_percent_0 = false;
+			adjust_percent_0_counter = 0;
+		} else
+			di->percent = 1;
+	} else
+		adjust_percent_0_counter = 0;
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
 		pr_info("POWER_SUPPLY_STATUS_FULL\n");
@@ -1567,6 +1575,7 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 				set_charging_point(di, point);
 				di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
 				second_charging_flag = true;
+				di->full_counter = 0;
 			}
 		}
 

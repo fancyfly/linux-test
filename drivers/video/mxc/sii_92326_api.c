@@ -516,25 +516,13 @@ void HalTimerWait ( uint16_t ms )
 static struct delayed_work sii92326work;
 static spinlock_t sii92326_lock = SPIN_LOCK_UNLOCKED;
 
-static void work_queue(struct work_struct * work)
-{
-	uint8_t	event;
-	uint8_t	eventParameter;
+static void work_queue(struct work_struct *work)
+{		
+	enable_irq(gpio_to_irq(MX53_PCBA_MHL_INT));
 	
 	Int_count += 15;
 	if (Int_count > 30)
 		Int_count = 30;
-
-	printk("%s EventThread starting up\n", MHL_DRIVER_NAME);
-
-	SiiMhlTxGetEvents(&event, &eventParameter);
-	#if 0
-	if( MHL_TX_EVENT_NONE != event )
-	{
-		AppRcpDemo( event, eventParameter);
-	}
-	#endif
-	enable_irq(gpio_to_irq(MX53_PCBA_MHL_INT));
 }
 static int intrCnt = 0;
 static irqreturn_t Sii92326_mhl_interrupt(int irq, void *dev_id)
@@ -557,6 +545,45 @@ static irqreturn_t Sii92326_mhl_interrupt(int irq, void *dev_id)
 	}
 	#endif
 	return IRQ_HANDLED;
+}
+
+static void SiI92326_mhl_loop(void)
+{
+	uint8_t	event;
+	uint8_t	eventParameter;
+
+	printk("%s EventThread starting up\n", MHL_DRIVER_NAME);
+
+       while (true)
+    	{
+		/*
+			Event loop
+		*/
+		//
+		// Look for any events that might have occurred.
+		//
+		SiiMhlTxGetEvents( &event, &eventParameter );
+
+		if( MHL_TX_EVENT_NONE != event )
+		{
+			AppRcpDemo( event, eventParameter);
+		}
+
+		msleep(50);
+    	}
+}
+
+
+/*****************************************************************************/
+/**
+ * @brief Start driver's event monitoring thread.
+ *
+ *****************************************************************************/
+void StartEventThread(void)
+{
+	gDriverContext.pTaskStruct = kthread_run(SiI92326_mhl_loop,
+											 &gDriverContext,
+											 MHL_DRIVER_NAME);
 }
 
 static void sii9232_poweron()
@@ -833,6 +860,7 @@ static int __init mhl_Sii92326_init(void)
 	siMhlTx_VideoSel( HDMI_720P60 );	// assume video initialize to 720p60, here should be decided by AP
 	siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
 	
+	StartEventThread();		/* begin monitoring for events */
 	fb_register_client(&nb);
 	return ret;
 }

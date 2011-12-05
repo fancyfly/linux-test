@@ -37,8 +37,8 @@ static struct wakeup_ctrl *g_ctrl;
 extern int usb_event_is_otg_wakeup(void);
 extern void usb_debounce_id_vbus(void);
 struct completion  otg_event;
-
-/*The fuction is called by mhl driver tell me the usb host cable plug in */
+static bool mhl_flag =false;
+#define CHECK_MHL_TIME (msecs_to_jiffies(600)) /* 600 ms */
 
 
 /*The fuction is called by mhl driver tell me the mhl caled plug out */
@@ -109,8 +109,29 @@ static enum usb_wakeup_event is_wakeup(struct fsl_usb2_platform_data *pdata)
 		return WAKEUP_EVENT_INVALID;
 }
 
-static bool mhl_flag =false;
-static u32 flag1 ,flag2;
+/*we check mhl cable is plug in first is ID is 0 after 500ms id will change to 1 */
+static bool is_mhl_plugin(void )
+{
+	static u32 flag1 ,flag2;
+	unsigned long timeout;
+	bool mhl_ret = false;
+	flag1 = UOG_OTGSC&(1<<8);
+	timeout = jiffies + CHECK_MHL_TIME;
+	while (1) {
+		if (time_after(jiffies, timeout)) {
+			break;
+		}
+		msleep(10);
+	}
+	flag2 = UOG_OTGSC&(1<<8);
+	if((flag1 == 0) && (flag2 == (1<<8)))
+		mhl_ret=true;
+	else
+		mhl_ret=false;
+	printk(KERN_DEBUG "(is_mhl_plugin flag1:%d flag2%d mhl_flag%d)\n",flag1,flag2,mhl_flag);
+	return mhl_ret;
+}
+
 
 static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 {
@@ -135,25 +156,19 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 			if (wakeup_evt != WAKEUP_EVENT_INVALID) {
 		
 				if( (wakeup_evt == WAKEUP_EVENT_ID)) {
-					flag1=UOG_OTGSC&(1<<8);
-					msleep(500);
-					flag2=UOG_OTGSC&(1<<8);
-					if((flag1 ==0)&&(flag2 ==(1<<8)))
-						mhl_flag=true;
-					else
-						mhl_flag=false;
+
+					mhl_flag =  is_mhl_plugin();				
 					if(mhl_flag == true) {	
 						if(usb_pdata->platform_driver_vbus)
 							usb_pdata->platform_driver_vbus(1);		
-						/*we will wait for mhl driver until mhl driver tell me what cale plug in */	
+						/*we will wait for mhl driver until mhl driver tell me what cale plug in */
 						printk(KERN_DEBUG "(wait_for_completion_interruptible ++)\n");
 						wait_for_completion_interruptible(&otg_event);
 						printk(KERN_DEBUG "(wait_for_completion_interruptible --)\n");
 						usb_pdata->platform_driver_vbus(0);	
 						temp = UOG_OTGSC;
 						temp |=(0x7f<<16);
-						UOG_OTGSC = temp;									
-						
+						UOG_OTGSC = temp;													
 					}
 				}				
 				if(mhl_flag == false) {
@@ -169,7 +184,6 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 					wakeup_clk_gate(ctrl->pdata, false);
 					return;
 				}
-					
 			}
 		}
 	}

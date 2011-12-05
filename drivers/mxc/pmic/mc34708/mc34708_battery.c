@@ -1390,7 +1390,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_debug("DISCHR can_cal real_capacity %d\n",
 						di->real_capacity);
 		}
-		di->percent += di->delta_coulomb * 100 / di->real_capacity;
+		di->percent = (di->accum_coulomb - di->empty_coulomb) * 100 / di->real_capacity;
 		_adjust_batt_capacity(di);
 		pr_info("di->real_capacity %d, di->percent %d\n",
 			di->real_capacity, di->percent);
@@ -1479,7 +1479,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_debug("CHR can_cal real_capacity %d\n",
 						di->real_capacity);
 		}
-		di->percent += di->delta_coulomb * 100 / di->real_capacity;
+		di->percent = (di->accum_coulomb - di->empty_coulomb) * 100 / di->real_capacity;
 		_adjust_batt_capacity(di);
 		pr_info("CHR di->real_capacity %d, di->percent %d\n",
 			di->real_capacity, di->percent);

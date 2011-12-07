@@ -4764,7 +4764,6 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK(NULL, "clko_clk", clko_clk),
 };
 
-
 static void clk_tree_init(void)
 
 {
@@ -4856,8 +4855,13 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	clk_set_parent(&asrc_clk[1], &pll3_sw_clk);
 	clk_set_rate(&asrc_clk[1], 7500000);
 
-	/* set the NAND to 11MHz. Too fast will cause dma timeout. */
+	/* set the GPMI clock to : 11MHz */
 	clk_set_rate(&enfc_clk, enfc_clk.round_rate(&enfc_clk, 11000000));
+
+#ifdef CONFIG_MTD_NAND_GPMI_NFC
+	/* set the DMA clock */
+	clk_set_rate(&usdhc3_clk, usdhc3_clk.round_rate(&usdhc3_clk, 11000000));
+#endif
 
 	mx6_cpu_op_init();
 	cpu_op_tbl = get_cpu_op(&cpu_op_nr);

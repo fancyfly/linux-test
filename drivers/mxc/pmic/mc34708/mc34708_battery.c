@@ -204,6 +204,19 @@ static int batt_iresistor_rec[NUM_BATT_RECORD];
 static int batt_iresistor_index;
 
 /*
+ * map table between temperature (0C-45C) and the voltage at BPTHERM
+ */
+struct temp_array {
+	int temp_C;
+	int BPTHERM_uV;
+};
+
+struct temp_array temp_array[] =
+{
+	{0, 1305000}, {1, 1305000},
+};
+
+/*
 usb_type = 0x4; USB host;
 usb_type = 0x20; USB charger;
 usb_type = 0x40; Dedicated charger;
@@ -375,6 +388,67 @@ static int reset_cc(void)
 		return -1;
 
 	msleep(10);
+
+	return 0;
+}
+
+static int ripley_get_batt_thermistor_raw(unsigned short *voltage)
+{
+	int channel[ADC_MAX_CHANNEL];
+	unsigned short result[ADC_MAX_CHANNEL];
+	unsigned short max, min;
+	int i;
+
+	for (i = 0; i < ADC_MAX_CHANNEL; i++)
+		channel[i] = BATTERY_THERMISTOR;
+
+	CHECK_ERROR(mc34708_pmic_adc_convert(channel, result,
+						ADC_MAX_CHANNEL));
+
+	*voltage = 0;
+	min = max = result[0];
+	for (i = 0; i < ADC_MAX_CHANNEL; i++) {
+		if (min > result[i])
+			min = result[i];
+		if (max < result[i])
+			max = result[i];
+		*voltage += result[i];
+	}
+	/* abandon max/min, then get average */
+	*voltage -= (max + min);
+	*voltage /= (ADC_MAX_CHANNEL - 2);
+
+	return 0;
+}
+
+static int ripley_get_batt_temperature(int *tempC)
+{
+	unsigned short voltage_raw;
+	int voltage_uV;
+	int min_delta;
+	int i, found, retval;
+
+	*tempC = 0;
+	retval = ripley_get_batt_thermistor_raw(&voltage_raw);
+	if (retval == 0)
+		voltage_uV = voltage_raw * BAT_VOLTAGE_UNIT_UV;
+	else
+		return retval;
+
+	min_delta = abs(temp_array[0].BPTHERM_uV -
+			temp_array[ARRAY_SIZE(temp_array) - 1].BPTHERM_uV);
+	found = -1;
+	for (i = 0; i < ARRAY_SIZE(temp_array); i++) {
+		if (min_delta > abs(voltage_uV - temp_array[i].BPTHERM_uV)) {
+			min_delta = abs(voltage_uV - temp_array[i].BPTHERM_uV);
+			found = i;
+		}
+	}
+
+	if (found == -1)
+		return -EINVAL;
+
+	*tempC = temp_array[found].temp_C;
 
 	return 0;
 }
@@ -1297,6 +1371,13 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 
 		di->accum_coulomb += di->delta_coulomb;
 	}
+
+#if 0
+	int tempC;
+	retval = ripley_get_batt_temperature(&tempC);
+	if (retval == 0)
+		printk("Battery temperature %d \n", tempC);
+#endif
 
 	pr_info("[readout]: vol %d uV, cur %d uA, cc %d\n", di->voltage_uV,
 							di->current_uA,

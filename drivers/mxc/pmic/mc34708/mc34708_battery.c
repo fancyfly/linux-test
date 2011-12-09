@@ -229,7 +229,7 @@ static struct mc34708_charger_config ripley_charge_config = {
 	.vauxThresholdHigh = 5000000,
 	.lowBattThreshold = 3000000,
 	.toppingOffMicroAmp = 400000,	/* 400 mA */
-	.maxChargingHour = 6,
+	.maxChargingHour = 8,
 	.chargingPoints = ripley_charger_setting_point,
 	.pointsNumber = 1,
 };
@@ -1775,6 +1775,13 @@ static void battery_low_event_callback(void *para)
 	ripley_charger_update_status(di);
 }
 
+static void battery_charge_timer_expire_callback(void *para)
+{
+	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
+
+	pr_info("\n\n charging timer expires.\n");
+}
+
 #if 1
 static void battery_charge_complete_event_callback(void *para)
 {
@@ -1957,6 +1964,9 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	bat_event_callback.param = (void *)di;
 	pmic_event_subscribe(MC34708_EVENT_LOWBATT, bat_event_callback);
 
+	bat_event_callback.func = battery_charge_timer_expire_callback;
+	bat_event_callback.param = (void *)di;
+	pmic_event_subscribe(MC34708_EVENT_CHRTIMEEXP, bat_event_callback);
 #if 0
 	bat_event_callback.func = battery_charge_complete_event_callback;
 	bat_event_callback.param = (void *)di;

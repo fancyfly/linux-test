@@ -215,6 +215,8 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 			break;
 		}
 		case 0x3: /*Vendor specific data*/
+		//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
+		#if 0
 		{
 			unsigned char IEEE_reg_iden[3];
 			unsigned char deep_color;
@@ -249,6 +251,8 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 			index += blklen;
 			break;
 		}
+		#endif
+		//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
 		case 0x1: /*Audio data block*/
 		case 0x4: /*Speaker allocation block*/
 		case 0x7: /*User extended block*/
@@ -394,8 +398,6 @@ int mxc_edid_var_to_vic(struct fb_var_screeninfo *var)
 
 	for (i = 0; i < ARRAY_SIZE(cea_modes); i++) {
 		fb_var_to_videomode(&m, var);
-		printk("\nFSL ---- \nfb-->videomode is: xres: %d, yres: %d, upper: %d, low: %d, hsync_len: %d, vsync_len: %d, sync: 0x%08X.\n",
-			m.xres, m.yres, m.upper_margin, m.lower_margin, m.hsync_len, m.vsync_len, m.sync);
 		if (fb_mode_is_equal(&m, &cea_modes[i]))
 			break;
 	}

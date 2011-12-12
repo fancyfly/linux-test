@@ -124,8 +124,10 @@ static int (*mxcfb_pre_setup[MXCFB_PORT_NUM])(struct fb_info *info);
 void mxcfb_register_presetup(int disp_port,
 	int (*pre_setup)(struct fb_info *info))
 {
-	if (pre_setup)
+	if (pre_setup) {
+		printk("FSL ---- Set up preset for DI#%d.\n", disp_port);
 		mxcfb_pre_setup[disp_port] = pre_setup;
+	}
 }
 EXPORT_SYMBOL(mxcfb_register_presetup);
 
@@ -428,10 +430,13 @@ static int mxcfb_set_par(struct fb_info *fbi)
 			mxc_fbi->alpha_mem_len = alpha_mem_len;
 		}
 	}
-
+	printk("FSL ---- Done 1 for DI#%d.\n", mxc_fbi->ipu_di);
 	if (mxc_fbi->next_blank != FB_BLANK_UNBLANK ||
-	    mxc_fbi->fb_suspended)
+	    mxc_fbi->fb_suspended) {
+	    printk("FSL ---- No setup IPU stream out for DI#%d.\n", mxc_fbi->ipu_di);
 		return retval;
+	}
+	printk("FSL ---- Done 2 for DI#%d.\n", mxc_fbi->ipu_di);
 
 	_setup_disp_channel1(fbi);
 
@@ -452,116 +457,45 @@ static int mxcfb_set_par(struct fb_info *fbi)
 			sig_cfg.odd_field_first = true;
 		if (mxc_fbi->ipu_int_clk)
 			sig_cfg.int_clk = true;
-		if (mxc_fbi->ipu_di == 1) {
-			out_pixel_fmt = IPU_PIX_FMT_RGB24;
-			sig_cfg.interlaced = false;
-			sig_cfg.odd_field_first = false;
-			fbi->mode =
-			    (struct fb_videomode *)fb_match_mode(&fbi->var,
-								 &fbi->modelist);
-			printk("FSL ---- ipu di unit: %d, pixclock = %ul Hz\n", mxc_fbi->ipu_di, 
-				(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
-			printk("FSL ---- xres: %d, yres: %d, upper_margin: %d, lower_margin: %d.\n", 
-				fbi->mode->xres, fbi->mode->yres, fbi->mode->upper_margin, fbi->mode->lower_margin);
 
-			// if (fbi->mode->sync & FB_SYNC_HOR_HIGH_ACT)
-				sig_cfg.Hsync_pol = true;
-			// if (fbi->mode->sync & FB_SYNC_VERT_HIGH_ACT)
-				sig_cfg.Vsync_pol = true;
-			if (!(fbi->mode->sync & FB_SYNC_CLK_LAT_FALL))
-				sig_cfg.clk_pol = true;
-			if (fbi->mode->sync & FB_SYNC_DATA_INVERT)
-				sig_cfg.data_pol = true;
-			if (!(fbi->mode->sync & FB_SYNC_OE_LOW_ACT))
-				sig_cfg.enable_pol = true;
-			if (fbi->mode->sync & FB_SYNC_CLK_IDLE_EN)
-				sig_cfg.clkidle_en = true;
+		if (fbi->var.sync & FB_SYNC_HOR_HIGH_ACT)
+			sig_cfg.Hsync_pol = true;
+		if (fbi->var.sync & FB_SYNC_VERT_HIGH_ACT)
+			sig_cfg.Vsync_pol = true;
+		if (!(fbi->var.sync & FB_SYNC_CLK_LAT_FALL))
+			sig_cfg.clk_pol = true;
+		if (fbi->var.sync & FB_SYNC_DATA_INVERT)
+			sig_cfg.data_pol = true;
+		if (!(fbi->var.sync & FB_SYNC_OE_LOW_ACT))
+			sig_cfg.enable_pol = true;
+		if (fbi->var.sync & FB_SYNC_CLK_IDLE_EN)
+			sig_cfg.clkidle_en = true;
 
-			dev_dbg(fbi->device, "pixclock = %ul Hz\n",
-				(u32) (PICOS2KHZ(fbi->mode->pixclock) * 1000UL));
+		dev_dbg(fbi->device, "pixclock = %ul Hz\n",
+			(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
 
+		printk("FSL ---- Current DI#%d, pixclock = %ul Hz, xres = %d, yres = %d, pixel_fmt = %d.\n",
+			mxc_fbi->ipu_di, (u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL), fbi->var.xres, fbi->var.yres, out_pixel_fmt);
 
-			if (ipu_init_sync_panel(mxc_fbi->ipu_di,
-						(PICOS2KHZ(fbi->mode->pixclock)) * 1000UL,
-						fbi->mode->xres, fbi->mode->yres,
-						out_pixel_fmt,
-						220,
-						40,
-						110,
-						20,
-						5,
-						5,
-						0, sig_cfg) != 0) {
-				dev_err(fbi->device,
-					"mxcfb: Error initializing panel.\n");
-				printk("mxcfb: Error initializing panel.\n");
-				
-				return -EINVAL;
-			}
-			
-			#if 0
-			if (ipu_init_sync_panel(mxc_fbi->ipu_di,
-						(PICOS2KHZ(fbi->mode->pixclock)) * 1000UL,
-						fbi->mode->xres, fbi->mode->yres,
-						out_pixel_fmt,
-						fbi->mode->left_margin,
-						fbi->mode->hsync_len,
-						fbi->mode->right_margin,
-						fbi->mode->upper_margin,
-						fbi->mode->vsync_len,
-						fbi->mode->lower_margin,
-						0, sig_cfg) != 0) {
-				dev_err(fbi->device,
-					"mxcfb: Error initializing panel.\n");
-				printk("mxcfb: Error initializing panel.\n");
-				
-				return -EINVAL;
-			}
-			#endif
-			
+		if (ipu_init_sync_panel(mxc_fbi->ipu_di,
+					(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
+					fbi->var.xres, fbi->var.yres,
+					out_pixel_fmt,
+					fbi->var.left_margin,
+					fbi->var.hsync_len,
+					fbi->var.right_margin,
+					fbi->var.upper_margin,
+					fbi->var.vsync_len,
+					fbi->var.lower_margin,
+					0, sig_cfg) != 0) {
+			dev_err(fbi->device,
+				"mxcfb: Error initializing panel.\n");
+			return -EINVAL;
 		}
-		else
-		{
-			if (fbi->var.sync & FB_SYNC_HOR_HIGH_ACT)
-				sig_cfg.Hsync_pol = true;
-			if (fbi->var.sync & FB_SYNC_VERT_HIGH_ACT)
-				sig_cfg.Vsync_pol = true;
-			if (!(fbi->var.sync & FB_SYNC_CLK_LAT_FALL))
-				sig_cfg.clk_pol = true;
-			if (fbi->var.sync & FB_SYNC_DATA_INVERT)
-				sig_cfg.data_pol = true;
-			if (!(fbi->var.sync & FB_SYNC_OE_LOW_ACT))
-				sig_cfg.enable_pol = true;
-			if (fbi->var.sync & FB_SYNC_CLK_IDLE_EN)
-				sig_cfg.clkidle_en = true;
 
-			dev_dbg(fbi->device, "pixclock = %ul Hz\n",
-				(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
-
-
-			if (ipu_init_sync_panel(mxc_fbi->ipu_di,
-						(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
-						fbi->var.xres, fbi->var.yres,
-						out_pixel_fmt,
-						fbi->var.left_margin,
-						fbi->var.hsync_len,
-						fbi->var.right_margin,
-						fbi->var.upper_margin,
-						fbi->var.vsync_len,
-						fbi->var.lower_margin,
-						0, sig_cfg) != 0) {
-				dev_err(fbi->device,
-					"mxcfb: Error initializing panel.\n");
-				printk("mxcfb: Error initializing panel.\n");
-				
-				return -EINVAL;
-			}
-			fbi->mode =
-			    (struct fb_videomode *)fb_match_mode(&fbi->var,
-								 &fbi->modelist);
-		}
-		
-
+		fbi->mode =
+		    (struct fb_videomode *)fb_match_mode(&fbi->var,
+							 &fbi->modelist);
 
 		ipu_disp_set_window_pos(mxc_fbi->ipu_ch, 0, 0);
 	}
@@ -986,7 +920,7 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 				}
 			} else
 				mxc_fbi->alpha_chan_en = false;
-
+			printk("FSL ---- MXCFB_SET_LOC_ALPHA for DI#%d.\n", mxc_fbi->ipu_ch);
 			acquire_console_sem();
 			mxcfb_set_par(fbi);
 			release_console_sem();
@@ -1317,6 +1251,7 @@ static int mxcfb_blank(int blank, struct fb_info *info)
 		ipu_uninit_channel(mxc_fbi->ipu_ch);
 		break;
 	case FB_BLANK_UNBLANK:
+		printk("FSL ---- FB_BLANK_UNBLANK for DI#%d.\n", mxc_fbi->ipu_ch);
 		mxcfb_set_par(info);
 		break;
 	}
@@ -1845,6 +1780,7 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 
 			dev_dbg(fbi->device, "Config display port %d\n",
 					mxcfbi->ipu_di);
+			printk("FSL ---- Config display port %d.\n", mxcfbi->ipu_di);
 
 			INIT_LIST_HEAD(&fbi->modelist);
 
@@ -1945,6 +1881,7 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 			if (!found) {
 				dev_err(fbi->device,
 					"Not found any valid video mode");
+				printk("Not found any valid video mode.\n");
 				ret = -EINVAL;
 				goto done;
 			}
@@ -1967,6 +1904,7 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 	fbi->var.activate |= FB_ACTIVATE_FORCE;
 	acquire_console_sem();
 	fbi->flags |= FBINFO_MISC_USEREVENT;
+	printk("FSL DI #%d ---- Now the RGB signal sent out.\n", mxcfbi->ipu_di);
 	ret = fb_set_var(fbi, &fbi->var);
 	fbi->flags &= ~FBINFO_MISC_USEREVENT;
 	release_console_sem();
@@ -2027,17 +1965,18 @@ static int mxcfb_probe(struct platform_device *pdev)
 	if (pdev->id == 0) {
 		ipu_disp_set_global_alpha(mxcfbi->ipu_ch, true, 0x80);
 		ipu_disp_set_color_key(mxcfbi->ipu_ch, false, 0);
-		strcpy(fbi->fix.id, "DISP3 BG");
-
+		strcpy(fbi->fix.id, "DISP3 BG - DI0");
+		printk("FSL ---- Probe setup DI#%d.\n", mxcfbi->ipu_di);
 		if (!g_dp_in_use)
 			mxcfbi->ipu_alp_ch_irq = IPU_IRQ_BG_ALPHA_SYNC_EOF;
 		g_dp_in_use = true;
 	} else if (pdev->id == 1) {
-		strcpy(fbi->fix.id, "DISP3 BG - DI1");
-
+		strcpy(fbi->fix.id, "DISP3 BG");
+		printk("FSL ---- Probe setup DI#%d.\n", mxcfbi->ipu_di);
 		if (!g_dp_in_use)
 			mxcfbi->ipu_alp_ch_irq = IPU_IRQ_BG_ALPHA_SYNC_EOF;
 		g_dp_in_use = true;
+		mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_UNBLANK;
 	} else if (pdev->id == 2) {	/* Overlay */
 		mxcfbi->ipu_ch_irq = IPU_IRQ_FG_SYNC_EOF;
 		mxcfbi->ipu_alp_ch_irq = IPU_IRQ_FG_ALPHA_SYNC_EOF;
@@ -2085,7 +2024,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 		goto err3;
 
 	platform_set_drvdata(pdev, fbi);
-
+	printk("FSL ---- Probe setup finish for DI #%d.\n", mxcfbi->ipu_di);
 	ret = device_create_file(fbi->dev, &dev_attr_fsl_disp_property);
 	if (ret)
 		dev_err(&pdev->dev, "Error %d on creating file\n", ret);
@@ -2162,7 +2101,6 @@ static int mxcfb_option_setup(struct fb_info *info, char *options)
 
 		if (!strncmp(opt, "RGB24", 5)) {
 			mxcfbi->ipu_di_pix_fmt = IPU_PIX_FMT_RGB24;
-			printk("FSL ---- di #%d: RGB24 format.\n", mxcfbi->ipu_di);
 			continue;
 		}
 		if (!strncmp(opt, "BGR24", 5)) {

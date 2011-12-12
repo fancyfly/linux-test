@@ -983,24 +983,22 @@ static struct mxc_pm_platform_data pcba_pm_data = {
 
 	/* LED*/
 static struct fb_videomode video_modes[] = {
-	{
 	 /* TODO:add fbmode here */
-	 "AT070TN93", 60, 800, 480, 30030,
-	 20, 210,
-	 10, 22,
-	 26, 13,
+	{"AT070TN93", 57, 800, 480, 37037, 
+	 40, 60, 
+	 10, 10, 
+	 20, 10,
 	 FB_SYNC_CLK_LAT_FALL,
 	 FB_VMODE_NONINTERLACED,
 	 0,},
 	{
-		"DISP3 BG - DI1", 60, 1280, 720, 13468, 
-		220, 110, 
-		20, 5, 
-		40, 5,
-		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		FB_VMODE_NONINTERLACED, 
-		0,
-	},
+	 NULL, 60, 1280, 720, 13468,
+	 220, 110,
+	 20, 5,
+	 40, 5,
+	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 FB_VMODE_NONINTERLACED,
+	 0,},
 };
 
 static struct platform_pwm_backlight_data mxc_pwm_backlight_data = {
@@ -1115,7 +1113,7 @@ static struct mxc_fb_platform_data fb_data[] = {
 	},
 	{
 	 .interface_pix_fmt = IPU_PIX_FMT_RGB24,
-	 .mode_str = "1280x720M-24@60",
+	 .mode_str = "1280x720M-16@60",
 	 .mode = video_modes,
 	 .num_modes = ARRAY_SIZE(video_modes),
 	 },
@@ -1617,7 +1615,7 @@ static struct mxc_asrc_platform_data mxc_asrc_data = {
 static struct mxc_spdif_platform_data mxc_spdif_data = {
 	.spdif_tx = 1,
 	.spdif_rx = 0,
-	.spdif_clk_44100 = 1,	/* Souce from CKIH1 for 44.1K */
+	.spdif_clk_44100 = 0,	/* Souce from CKIH1 for 44.1K */
 	/* Source from CCM spdif_clk (24M) for 48k and 32k
 	 * It's not accurate
 	 */

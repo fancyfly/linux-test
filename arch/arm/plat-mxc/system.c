@@ -76,7 +76,7 @@ void arch_reset(char mode, const char *cmd)
 			clk_enable(clk);
 		wcr_enable = (1 << 2);
 	}
-
+	mxc_iomux_v3_setup_pad(MX53_PAD_GPIO_9__WDOG1_WDOG_B);
 	/* Assert SRS signal */
 	__raw_writew(wcr_enable, wdog_base);
 

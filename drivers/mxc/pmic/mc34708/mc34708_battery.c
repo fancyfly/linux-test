@@ -172,6 +172,7 @@
 static int suspend_flag;
 static int power_supply_changed_flag;
 static int power_change_flag;
+static int need_adjust_percent_0;
 static int second_charging_flag;
 static int capacity_changed_flag;
 
@@ -203,6 +204,19 @@ static int batt_iresistor_rec[NUM_BATT_RECORD];
 static int batt_iresistor_index;
 
 /*
+ * map table between temperature (0C-45C) and the voltage at BPTHERM
+ */
+struct temp_array {
+	int temp_C;
+	int BPTHERM_uV;
+};
+
+struct temp_array temp_array[] =
+{
+	{0, 1305000}, {1, 1305000},
+};
+
+/*
 usb_type = 0x4; USB host;
 usb_type = 0x20; USB charger;
 usb_type = 0x40; Dedicated charger;
@@ -228,7 +242,7 @@ static struct mc34708_charger_config ripley_charge_config = {
 	.vauxThresholdHigh = 5000000,
 	.lowBattThreshold = 3000000,
 	.toppingOffMicroAmp = 400000,	/* 400 mA */
-	.maxChargingHour = 6,
+	.maxChargingHour = 8,
 	.chargingPoints = ripley_charger_setting_point,
 	.pointsNumber = 1,
 };
@@ -374,6 +388,67 @@ static int reset_cc(void)
 		return -1;
 
 	msleep(10);
+
+	return 0;
+}
+
+static int ripley_get_batt_thermistor_raw(unsigned short *voltage)
+{
+	int channel[ADC_MAX_CHANNEL];
+	unsigned short result[ADC_MAX_CHANNEL];
+	unsigned short max, min;
+	int i;
+
+	for (i = 0; i < ADC_MAX_CHANNEL; i++)
+		channel[i] = BATTERY_THERMISTOR;
+
+	CHECK_ERROR(mc34708_pmic_adc_convert(channel, result,
+						ADC_MAX_CHANNEL));
+
+	*voltage = 0;
+	min = max = result[0];
+	for (i = 0; i < ADC_MAX_CHANNEL; i++) {
+		if (min > result[i])
+			min = result[i];
+		if (max < result[i])
+			max = result[i];
+		*voltage += result[i];
+	}
+	/* abandon max/min, then get average */
+	*voltage -= (max + min);
+	*voltage /= (ADC_MAX_CHANNEL - 2);
+
+	return 0;
+}
+
+static int ripley_get_batt_temperature(int *tempC)
+{
+	unsigned short voltage_raw;
+	int voltage_uV;
+	int min_delta;
+	int i, found, retval;
+
+	*tempC = 0;
+	retval = ripley_get_batt_thermistor_raw(&voltage_raw);
+	if (retval == 0)
+		voltage_uV = voltage_raw * BAT_VOLTAGE_UNIT_UV;
+	else
+		return retval;
+
+	min_delta = abs(temp_array[0].BPTHERM_uV -
+			temp_array[ARRAY_SIZE(temp_array) - 1].BPTHERM_uV);
+	found = -1;
+	for (i = 0; i < ARRAY_SIZE(temp_array); i++) {
+		if (min_delta > abs(voltage_uV - temp_array[i].BPTHERM_uV)) {
+			min_delta = abs(voltage_uV - temp_array[i].BPTHERM_uV);
+			found = i;
+		}
+	}
+
+	if (found == -1)
+		return -EINVAL;
+
+	*tempC = temp_array[found].temp_C;
 
 	return 0;
 }
@@ -1186,6 +1261,7 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 
 			power_supply_changed_flag = 1;
 			power_change_flag = 1;
+			need_adjust_percent_0 = false;
 
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
@@ -1207,6 +1283,7 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 
 			power_supply_changed_flag = 1;
 			power_change_flag = 1;
+			need_adjust_percent_0 = true;
 
 			cancel_delayed_work(&di->calc_resistor_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
@@ -1295,6 +1372,13 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 		di->accum_coulomb += di->delta_coulomb;
 	}
 
+#if 0
+	int tempC;
+	retval = ripley_get_batt_temperature(&tempC);
+	if (retval == 0)
+		printk("Battery temperature %d \n", tempC);
+#endif
+
 	pr_info("[readout]: vol %d uV, cur %d uA, cc %d\n", di->voltage_uV,
 							di->current_uA,
 							di->now_coulomb);
@@ -1310,6 +1394,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 {
 	static bool can_adjust_percent = false;
 	static int lowbatt_counter;
+	static int adjust_percent_0_counter;
 	int compared_batt_volt;
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN) {
@@ -1480,7 +1565,6 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 						di->real_capacity);
 		}
 		di->percent = (di->accum_coulomb - di->empty_coulomb) * 100 / di->real_capacity;
-		_adjust_batt_capacity(di);
 		pr_info("CHR di->real_capacity %d, di->percent %d\n",
 			di->real_capacity, di->percent);
 		if (di->percent >= 100) {
@@ -1491,19 +1575,24 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_info("CHR CMPL(CCOUT): di->full_coulomb %d, di->real_capacity %d\n",
 					di->full_coulomb, di->real_capacity);
 		}
+		_adjust_batt_capacity(di);
 	}
 out1:
-	/* re-consider special case here, delay 1 minute before change to 0% */
-#define	COMPARE_TIMES ((60 / BATTERY_UPDATE_INTERVAL) > 4 ?	\
-				(60 / BATTERY_UPDATE_INTERVAL): 4)
-	if (before_use_calculated_capacity == 1) {
-		if (lowbatt_counter > COMPARE_TIMES)
+/* re-consider special case here, delay ~1.5 minute before change to 0% */
+#define	COMPARE_TIMES ((90 / BATTERY_UPDATE_INTERVAL) > 4 ?	\
+				(90 / BATTERY_UPDATE_INTERVAL): 4)
+	if (di->battery_status == POWER_SUPPLY_STATUS_DISCHARGING &&
+	    di->percent == 0 &&
+	    need_adjust_percent_0) {
+		if (adjust_percent_0_counter++ > COMPARE_TIMES) {
 			di->percent = 0;
-		else if (lowbatt_counter > 1) {
-			if (di->percent == 0)
-				di->percent = 1;
-		}
-	}
+
+			need_adjust_percent_0 = false;
+			adjust_percent_0_counter = 0;
+		} else
+			di->percent = 1;
+	} else
+		adjust_percent_0_counter = 0;
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_FULL) {
 		pr_info("POWER_SUPPLY_STATUS_FULL\n");
@@ -1567,6 +1656,7 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 				set_charging_point(di, point);
 				di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
 				second_charging_flag = true;
+				di->full_counter = 0;
 			}
 		}
 
@@ -1766,6 +1856,13 @@ static void battery_low_event_callback(void *para)
 	ripley_charger_update_status(di);
 }
 
+static void battery_charge_timer_expire_callback(void *para)
+{
+	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
+
+	pr_info("\n\n charging timer expires.\n");
+}
+
 #if 1
 static void battery_charge_complete_event_callback(void *para)
 {
@@ -1948,6 +2045,9 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	bat_event_callback.param = (void *)di;
 	pmic_event_subscribe(MC34708_EVENT_LOWBATT, bat_event_callback);
 
+	bat_event_callback.func = battery_charge_timer_expire_callback;
+	bat_event_callback.param = (void *)di;
+	pmic_event_subscribe(MC34708_EVENT_CHRTIMEEXP, bat_event_callback);
 #if 0
 	bat_event_callback.func = battery_charge_complete_event_callback;
 	bat_event_callback.param = (void *)di;

@@ -38,8 +38,8 @@ extern uint8_t I2C_ReadBlock(uint8_t SlaveAddr, uint8_t RegAddr, uint8_t NBytes,
 extern uint8_t I2C_WriteBlock(uint8_t SlaveAddr, uint8_t RegAddr, uint8_t NBytes, uint8_t * Data);
 extern uint8_t I2C_ReadSegmentBlockEDID(uint8_t SlaveAddr, uint8_t Segment, uint8_t Offset, uint8_t *Buffer, uint8_t Length);
 extern int mxc_edid_9232_read(uint8_t * edid, struct mxc_edid_cfg * cfg, struct fb_info * fbi);
-extern void mhl_disconnect( void );
-
+extern void mhl_usb_connect( void );
+extern int resetSiI9232();
 ///////////////////////////////////////////////////////////////////////////////
 // GPIO for chip reset.
 //
@@ -4204,6 +4204,7 @@ static void	ProcessRgnd( void )
 		TX_DEBUG_PRINT(("[MHL]: USB impedance. Set for USB Established.\n"));
 		
 		CLR_BIT(PAGE_0_0X72, 0x95, 5);
+		mhl_usb_connect();
 	}
 }
 
@@ -4335,7 +4336,6 @@ static void DeglitchRsenLow( void )
             		WriteByteCBUS(0x0D, dsHpdStatus);
             		SiiMhlTxNotifyDsHpdChange( 0 );
 			MhlTxDrvProcessDisconnection();
-			mhl_disconnect();
 		}
 	}
 	else
@@ -4408,6 +4408,7 @@ void	Int1RsenIsr( void )
 		}
 		// Clear MDI_RSEN interrupt
 		sii_I2CWriteByte(PAGE_0_0X72, 0x71, BIT5);
+		resetSiI9232();
 	}
 	else if( deglitchingRsenNow )
 	{

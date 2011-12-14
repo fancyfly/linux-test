@@ -69,6 +69,7 @@ extern const struct fb_videomode cea_modes[64];
 bool_t	vbusPowerState = true;		// false: 0 = vbus output on; true: 1 = vbus output off;
 static void sii9232_poweron();
 static void sii9232_poweroff();
+extern void mhl_disconnect( void );
 
 static ssize_t sii902x_show_name(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -111,7 +112,7 @@ static ssize_t sii902x_show_edid(struct device *dev,
 
 static DEVICE_ATTR(edid, S_IRUGO, sii902x_show_edid, NULL);
 
-static int resetSiI9232()
+int resetSiI9232()
 {
 	int ret = 0;
 	bool_t 	interruptDriven;
@@ -149,6 +150,7 @@ void	AppRcpDemo( uint8_t event, uint8_t eventParameter)
 		case	MHL_TX_EVENT_DISCONNECTION:
 			TX_API_PRINT(("[MHL]App: Got event = MHL_TX_EVENT_DISCONNECTION\n"));
 			resetSiI9232();
+			mhl_disconnect();
 			break;
 
 		case	MHL_TX_EVENT_CONNECTION:

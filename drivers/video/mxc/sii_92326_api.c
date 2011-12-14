@@ -579,21 +579,27 @@ static spinlock_t sii92326_lock = SPIN_LOCK_UNLOCKED;
 
 static void work_queue(struct work_struct *work)
 {		
-	enable_irq(gpio_to_irq(MX53_PCBA_MHL_INT));
 	
-	Int_count += 15;
-	if (Int_count > 30)
-		Int_count = 30;
+	uint8_t	event;
+	uint8_t	eventParameter;
+
+	Int_count++;
+	SiiMhlTxGetEvents( &event, &eventParameter );
+
+	if( MHL_TX_EVENT_NONE != event )
+	{
+		AppRcpDemo( event, eventParameter);
+	}
+	enable_irq(gpio_to_irq(MX53_PCBA_MHL_INT));
+
 }
 static int intrCnt = 0;
 static irqreturn_t Sii92326_mhl_interrupt(int irq, void *dev_id)
 {
 	unsigned long lock_flags = 0;	 
 	disable_irq_nosync(irq);
-	#if 0
-	intrCnt++;
-	if (intrCnt < 200) {
-	#endif
+	
+
 	spin_lock_irqsave(&sii92326_lock, lock_flags);	
 	//printk("The sii92326 interrupt handeler is working..\n");  
 	//printk("The most of sii92326 interrupt work will be done by following tasklet..\n");  
@@ -602,9 +608,7 @@ static irqreturn_t Sii92326_mhl_interrupt(int irq, void *dev_id)
 
 	//printk("The sii92326 interrupt's top_half has been done and bottom_half will be processed..\n");  
 	spin_unlock_irqrestore(&sii92326_lock, lock_flags);
-	#if 0
-	}
-	#endif
+
 	return IRQ_HANDLED;
 }
 
@@ -746,27 +750,28 @@ static int sii9232_fb_event(struct notifier_block *nb, unsigned long val, void *
 	struct fb_event *event = v;	
 	struct fb_info *fbi = event->info;
 	
-	if (strcmp(event->info->fix.id, mhlTxConfig.fb_id)) {
-		printk("FSL ---- Incoming para is %s, current inst is %s.\n", event->info->fix.id, mhlTxConfig.fb_id);
+	if (strcmp(event->info->fix.id, mhlTxConfig.fb_id))
 		return 0;
-	}
 		
 	switch (val) {	
 		case FB_EVENT_FB_REGISTERED:
 			if (mhlTxConfig.fbi != NULL) {
 				printk("FSL ---- Already register fbi in mhlTxConfig, ignore.\n");
+				break;
 			}
 			else {
-				printk("FSL ---- FB REGISTERED for %s.\n", mhlTxConfig.fb_id);
+				printk("FSL ---- Register fbi in mhlTxConfig.\n");
 				mhlTxConfig.fbi = fbi;
 			}
 			break;			
 		case FB_EVENT_MODE_CHANGE:
 			printk("FSL ----- FB_EVENT_MODE_CHANGE event.\n");
+			
 			#if 0
 			siMhlTx_VideoSel( HDMI_720P60, false );	// assume video initialize to 720p60, here should be decided by AP
 			siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
-			siMhlTx_VideoSet();
+			siMhlTx_VideoSet();   
+
 			sii9232_setup(fbi);
 			#endif
 			break;
@@ -917,27 +922,6 @@ static int __init mhl_Sii92326_init(void)
 	
 	strcpy(mhlTxConfig.fb_id, "DISP3 BG - DI1");
 
-	if(false == Sii92326_mhl_reset())
-		return -EIO;
-	strcpy(mhlTxConfig.fb_id, "DISP3 BG");
-	// strcpy(mhlTxConfig.fb_id, "DISP3 BG - DI1");
-	//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
-	#if 0
-	/* edid reading */
-	memset(&mhlTxConfig.edid[0], 0, (EDID_LENGTH * 4));
-	memset(&mhlTxConfig.edid_cfg, 0, sizeof(struct mxc_edid_cfg));
-	
-	ret = mxc_edid_9232_read(&mhlTxConfig.edid[0], &mhlTxConfig.edid_cfg, &edid_fbi);
-	if (ret >= 0) {
-		#if 0
-		memcpy(&mhlTxConfig.fbi.monspecs.modedb, &cea_modes[4], sizeof(struct fb_videomode));
-		mhlTxConfig.fbi.monspecs.modedb_len = 1;
-		#endif
-		
-		mxcfb_register_mode(1, edid_fbi.monspecs.modedb, edid_fbi.monspecs.modedb_len, MXC_DISP_DDC_DEV);
-	}
-	#endif
-	//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
 	HalTimerInit ( );
 	HalTimerSet (TIMER_POLLING, MONITORING_PERIOD);
 
@@ -974,8 +958,9 @@ static int __init mhl_Sii92326_init(void)
 	if (ret < 0)
 		printk("FSL ---- Cound not create sys node for edid\n");
 	dev_set_drvdata(&mhlTxConfig.pdev->dev, &mhlTxConfig);
-	
+	#if 0
 	StartEventThread();		/* begin monitoring for events */
+	#endif
 	fb_register_client(&nb);
 	return ret;
 }

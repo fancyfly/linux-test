@@ -215,8 +215,6 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 			break;
 		}
 		case 0x3: /*Vendor specific data*/
-		//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
-		#if 0
 		{
 			unsigned char IEEE_reg_iden[3];
 			unsigned char deep_color;
@@ -251,8 +249,6 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 			index += blklen;
 			break;
 		}
-		#endif
-		//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
 		case 0x1: /*Audio data block*/
 		case 0x4: /*Speaker allocation block*/
 		case 0x7: /*User extended block*/

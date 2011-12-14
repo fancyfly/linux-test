@@ -169,12 +169,14 @@ typedef struct
 	bool_t		need_mode_change;
 	bool_t 		hdmiCableConnected;
 	bool_t		dsRxPoweredUp;
-	struct fb_info * fbi;	struct mxc_edid_cfg edid_cfg;
+	struct fb_info * fbi;	
+	struct mxc_edid_cfg edid_cfg;
 	u8 videomodeIndex;
 	u8 edid[SII_EDID_LEN];
   	uint8_t AspectRatio;			// 4x3 or 16x9
    	uint8_t Colorimetry;			// 0 = 601; 1 = 709
    	uint8_t fb_id[12];
+	struct platform_device * pdev;
 
 } mhlTx_config_t;
 
@@ -1850,7 +1852,7 @@ enum AV_ConfigErrorCodes
 
 uint8_t ReadIndexedRegister(uint8_t PageNum, uint8_t RegOffset) ;
 void WriteIndexedRegister (uint8_t PageNum, uint8_t RegOffset, uint8_t RegValue);
-void siMhlTx_VideoSel (uint8_t vmode);
+void siMhlTx_VideoSel (uint8_t vmode, bool_t _1stTime);
 void siMhlTx_AudioSel (uint8_t Afs);
 uint8_t siMhlTx_VideoSet (void);
 

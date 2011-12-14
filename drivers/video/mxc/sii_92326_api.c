@@ -42,7 +42,7 @@
 #include <linux/bug.h>
 #include <linux/err.h>
 #include <linux/i2c.h>
-
+#include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
 
@@ -70,6 +70,67 @@ bool_t	vbusPowerState = true;		// false: 0 = vbus output on; true: 1 = vbus outp
 static void sii9232_poweron();
 static void sii9232_poweroff();
 
+static ssize_t sii902x_show_name(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	strcpy(buf, mhlTxConfig.fb_id);
+	sprintf(buf+strlen(buf), "\n");
+
+	return strlen(buf);
+}
+
+static DEVICE_ATTR(fb_name, S_IRUGO, sii902x_show_name, NULL);
+
+static ssize_t sii902x_show_state(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	if (mhlTxConfig.hdmiCableConnected == false)
+		strcpy(buf, "plugout\n");
+	else
+		strcpy(buf, "plugin\n");
+
+	return strlen(buf);
+}
+
+static DEVICE_ATTR(cable_state, S_IRUGO, sii902x_show_state, NULL);
+
+static ssize_t sii902x_show_edid(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int i, j, len = 0;
+
+	for (j = 0; j < SII_EDID_LEN/16; j++) {
+		for (i = 0; i < 16; i++)
+			len += sprintf(buf+len, "0x%02X ",
+					mhlTxConfig.edid[j*16 + i]);
+		len += sprintf(buf+len, "\n");
+	}
+
+	return len;
+}
+
+static DEVICE_ATTR(edid, S_IRUGO, sii902x_show_edid, NULL);
+
+static int resetSiI9232()
+{
+	int ret = 0;
+	bool_t 	interruptDriven;
+	uint8_t 	pollIntervalMs;
+
+	printk("FSL ---- SiI92326 is reset due to MHL cable unplug.\n");
+
+	if(false == Sii92326_mhl_reset())
+		return -EIO;
+
+	SiiMhlTxInitialize( interruptDriven = true, pollIntervalMs = MONITORING_PERIOD);
+
+	siMhlTx_VideoSel( HDMI_720P60, true);	// assume video initialize to 720p60, here should be decided by AP
+	siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
+	
+	return ret;
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // AppRcpDemo
@@ -87,6 +148,7 @@ void	AppRcpDemo( uint8_t event, uint8_t eventParameter)
 	{
 		case	MHL_TX_EVENT_DISCONNECTION:
 			TX_API_PRINT(("[MHL]App: Got event = MHL_TX_EVENT_DISCONNECTION\n"));
+			resetSiI9232();
 			break;
 
 		case	MHL_TX_EVENT_CONNECTION:
@@ -381,9 +443,9 @@ static bool_t match_id(const struct i2c_device_id *id, const struct i2c_client *
 bool_t Sii92326_mhl_reset(void)
 {
 	gpio_direction_output(MX53_PCBA_MHL_RST_N, 1);	
-	msleep(5);	
+	msleep(10);	
 	gpio_direction_output(MX53_PCBA_MHL_RST_N, 0);	
-	msleep(5);	
+	msleep(20);	
 	gpio_direction_output(MX53_PCBA_MHL_RST_N, 1);	
 	return true;
 }
@@ -475,7 +537,6 @@ void HalTimerSet (uint8_t index, uint16_t m_sec)
 //------------------------------------------------------------------------------
 uint8_t HalTimerExpired (uint8_t timer)
 {
-	printk("FSL ---- HalTimerExpired.\n");
 
     if (timer < TIMER_COUNT)
     {
@@ -624,18 +685,21 @@ static void sii9232_setup(struct fb_info *fbi)
 	 * choiceVideoMode is video mode defined as macros in sii_92326_driver.h
 	 */
 	if (mhlTxConfig.videomodeIndex == 0) {
-		printk("FSL ---- [MHL] Failed to find out the matched video mode %d.\n", mhlTxConfig.videomodeIndex);
+		printk("FSL ---- [MHL] Failed to find out the most suitable video mode %d.\n", mhlTxConfig.videomodeIndex);
 		mhlTxConfig.videomodeIndex = 4;	// Hard coded in 1280x720p60
 	}
-	#if 0
-	siMhlTx_VideoSel(mhlTxConfig.videomodeIndex);
-	#endif
+	/*
+	 * Here, just calling siMhlTx_VideoSel() directly because it maps the videomode.
+	 */
+	
 	if (fbi->fbops->fb_ioctl) 
 	{		
 		old_fs = get_fs();
 		set_fs(KERNEL_DS);
 		fbi->fbops->fb_ioctl(fbi, MXCFB_GET_DIFMT, (unsigned long)&fmt);
-		set_fs(old_fs);		
+		set_fs(old_fs);	
+		//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
+		#if 0
 		if (fmt == IPU_PIX_FMT_VYU444) {			
 			mhlTxAv.ColorSpace = YCBCR444;			
 			printk("[MHL] input color space YUV\n");		
@@ -644,8 +708,12 @@ static void sii9232_setup(struct fb_info *fbi)
 			mhlTxAv.ColorSpace = RGB;
 			printk("[MHL] input color space RGB\n");
 		}	
-
+		#endif
+		//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
+	
 	}
+	//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
+	#if 0
 	if (fbi->var.xres/16 == fbi->var.yres/9)
 		mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_16x9;
 	else
@@ -660,8 +728,16 @@ static void sii9232_setup(struct fb_info *fbi)
 	} else {
 		mhlTxConfig.Colorimetry = COLORIMETRY_709;
 	}
+		
+	siMhlTx_VideoSel(mhlTxConfig.videomodeIndex, false);
+	#endif
+	//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
 	#if 0
+	msleep(2000);
+	siMhlTx_VideoSel(mhlTxConfig.videomodeIndex, true);
 	siMhlTx_AudioSel( AFS_44K1 );
+
+	siMhlTx_VideoSet();
 	#endif
 }
 
@@ -676,21 +752,34 @@ static int sii9232_fb_event(struct notifier_block *nb, unsigned long val, void *
 	switch (val) {	
 		case FB_EVENT_FB_REGISTERED:
 			if (mhlTxConfig.fbi != NULL) {
+				printk("FSL ---- Already register fbi in mhlTxConfig, ignore.\n");
 				break;
 			}
-			printk("FSL ---- FB REGISTERED!!!\n");
-			mhlTxConfig.fbi = fbi;		
+			else {
+				printk("FSL ---- Register fbi in mhlTxConfig.\n");
+				mhlTxConfig.fbi = fbi;
+			}
 			break;			
 		case FB_EVENT_MODE_CHANGE:
 			printk("FSL ----- FB_EVENT_MODE_CHANGE event.\n");
+			
+			#if 0
+			siMhlTx_VideoSel( HDMI_720P60, false );	// assume video initialize to 720p60, here should be decided by AP
+			siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
+			siMhlTx_VideoSet();   
+
 			sii9232_setup(fbi);
-			break;	
+			#endif
+			break;
+			
 		case FB_EVENT_BLANK:
 			printk("FSL ----- FB_EVENT_BLANK event.\n");
+			#if 0
 			if (*((int *)event->data) == FB_BLANK_UNBLANK)			
 				sii9232_poweron();		
 			else			
-				sii9232_poweroff();		
+				sii9232_poweroff();
+			#endif		
 			break;	
 	}	
 	return 0;
@@ -816,24 +905,19 @@ static int __init mhl_Sii92326_init(void)
 	bool_t 	interruptDriven;
 	uint8_t 	pollIntervalMs;
 	
+	sii9232_poweron();		
+
+    mhlTxConfig.pdev = platform_device_register_simple("sii902x", 0, NULL, 0);	// Keep sii902x name to be recognized by Android HDMI sensor entity
+	if (IS_ERR(mhlTxConfig.pdev)) {
+		printk("FSL ---- Unable to register Sii92326 as a platform device\n");
+		return -EIO;
+	}
+
 	if(false == Sii92326_mhl_reset())
 		return -EIO;
+	
 	strcpy(mhlTxConfig.fb_id, "DISP3 BG - DI1");
-	
-	/* edid reading */
-	memset(&mhlTxConfig.edid[0], 0, (EDID_LENGTH * 4));
-	memset(&mhlTxConfig.edid_cfg, 0, sizeof(struct mxc_edid_cfg));
-	
-	ret = mxc_edid_9232_read(&mhlTxConfig.edid[0], &mhlTxConfig.edid_cfg, &edid_fbi);
-	if (ret >= 0) {
-		#if 0
-		memcpy(&mhlTxConfig.fbi.monspecs.modedb, &cea_modes[4], sizeof(struct fb_videomode));
-		mhlTxConfig.fbi.monspecs.modedb_len = 1;
-		#endif
-		
-		mxcfb_register_mode(1, edid_fbi.monspecs.modedb, edid_fbi.monspecs.modedb_len, MXC_DISP_DDC_DEV);
-	}
-	
+
 	HalTimerInit ( );
 	HalTimerSet (TIMER_POLLING, MONITORING_PERIOD);
 
@@ -857,8 +941,19 @@ static int __init mhl_Sii92326_init(void)
 		INIT_DELAYED_WORK(&sii92326work, work_queue); 
 	}
 
-	siMhlTx_VideoSel( HDMI_720P60 );	// assume video initialize to 720p60, here should be decided by AP
+	siMhlTx_VideoSel( HDMI_720P60, true);	// assume video initialize to 720p60, here should be decided by AP
 	siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
+
+	ret = device_create_file(&mhlTxConfig.pdev->dev, &dev_attr_fb_name);
+	if (ret < 0)
+		printk("FSL ---- Cound not create sys node for fb name\n");
+	ret = device_create_file(&mhlTxConfig.pdev->dev, &dev_attr_cable_state);
+	if (ret < 0)
+		printk("FSL ---- Cound not create sys node for cable state\n");
+	ret = device_create_file(&mhlTxConfig.pdev->dev, &dev_attr_edid);
+	if (ret < 0)
+		printk("FSL ---- Cound not create sys node for edid\n");
+	dev_set_drvdata(&mhlTxConfig.pdev->dev, &mhlTxConfig);
 	
 	StartEventThread();		/* begin monitoring for events */
 	fb_register_client(&nb);
@@ -878,7 +973,7 @@ static void __exit mhl_Sii92326_exit(void)
 	return;
 }
 
-module_init(mhl_Sii92326_init);
+late_initcall(mhl_Sii92326_init);
 module_exit(mhl_Sii92326_exit);
 
 MODULE_VERSION("1.24");

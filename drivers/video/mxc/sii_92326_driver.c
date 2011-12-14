@@ -24,6 +24,7 @@
 #include <mach/gpio.h>
 #include <drm/drm_edid.h>
 #include <linux/console.h>
+#include <linux/delay.h>
 
 #include "sii_92326_driver.h"
 #include "sii_92326_api.h"
@@ -2721,7 +2722,7 @@ uint8_t SetAVI_InfoFrames (void)
 
 	// Write the Inforframe data to the TPI Infoframe registers
     	WriteBlockTPI(TPI_AVI_BYTE_0, SIZE_AVI_INFOFRAME, B_Data);
-
+	
 	if (mhlTxAv.SyncMode == EMBEDDED_SYNC)
 		EnableEmbeddedSync();
 
@@ -3071,7 +3072,7 @@ void OnDownstreamRxPoweredUp (void)
 
 	TX_DEBUG_PRINT (("[MHL]: DSRX -> Powered Up\n"));
 	if (mhlTxConfig.need_mode_change) {
-
+		#if 0
 		mhlTxConfig.fbi->var.activate |= FB_ACTIVATE_FORCE;
 		acquire_console_sem();
 		mhlTxConfig.fbi->flags |= FBINFO_MISC_USEREVENT;
@@ -3079,9 +3080,11 @@ void OnDownstreamRxPoweredUp (void)
 		mhlTxConfig.fbi->flags &= ~FBINFO_MISC_USEREVENT;
 		release_console_sem();
 		mhlTxConfig.need_mode_change = false;
+		#endif
 	}
 	mhlTxConfig.dsRxPoweredUp = true;
 
+	msleep(500);
 	HotPlugService();
 }
 
@@ -3142,6 +3145,7 @@ uint8_t OnHdmiCableConnected (void)
 	/*
 	 * Update framebuffer driver
 	 */
+	#if 0
 	if (mhlTxEdid.edidDataValid == true) {
 		ret = mxc_edid_9232_read(&mhlTxConfig.edid[0], &mhlTxConfig.edid_cfg, mhlTxConfig.fbi);
 		if (ret >= 0)
@@ -3158,20 +3162,18 @@ uint8_t OnHdmiCableConnected (void)
 						fb_add_videomode(&mhlTxConfig.fbi->monspecs.modedb[i],
 								&mhlTxConfig.fbi->modelist);
 				}
-				printk("Done 6.\n");
 
 				fb_var_to_videomode(&m, &mhlTxConfig.fbi->var);
 				mode = fb_find_nearest_mode(&m,
 						&mhlTxConfig.fbi->modelist);
-				printk("Done 7.\n");
 				fb_videomode_to_var(&mhlTxConfig.fbi->var, mode);
-				printk("Done 8.\n");
+				mhlTxConfig.need_mode_change = true;
 			}
 		}
 		else
 			printk("!!!!FSL -- Failed to read edid.\n");
 	}
-	
+	#endif
 #ifdef READKSV
 	ReadModifyWriteTPI(0xBB, 0x08, 0x08);
 #endif
@@ -3200,59 +3202,114 @@ uint8_t OnHdmiCableConnected (void)
 // Returns: none
 // Globals: none
 //------------------------------------------------------------------------------
-void siMhlTx_VideoSel (uint8_t vmode)
+void siMhlTx_VideoSel (uint8_t vmode, bool_t _1stTime)
 {
-	mhlTxAv.HDMIVideoFormat 		= VMD_HDMIFORMAT_CEA_VIC;
-	mhlTxAv.VIC 				= vmode;
-	mhlTxAv.ColorSpace 			= RGB;
-	mhlTxAv.ColorDepth			= VMD_COLOR_DEPTH_8BIT;
-	mhlTxAv.SyncMode 			= EXTERNAL_HSVSDE;
-		
-	switch (vmode)
-	{
-		case HDMI_480I60_4X3:
-		case HDMI_576I50_4X3:
-			mhlTxAv.AspectRatio 	= VMD_ASPECT_RATIO_4x3;
-			mhlTxAv.Colorimetry	= COLORIMETRY_601;
-			mhlTxAv.TclkSel		= X2;
-			break;
+	if (_1stTime) {
+		mhlTxAv.HDMIVideoFormat 	= VMD_HDMIFORMAT_CEA_VIC;
+		mhlTxAv.VIC 				= vmode;
+		mhlTxAv.ColorSpace 			= RGB;
+		mhlTxAv.ColorDepth			= VMD_COLOR_DEPTH_8BIT;
+		mhlTxAv.SyncMode 			= EXTERNAL_HSVSDE;
 			
-		case HDMI_480I60_16X9:
-		case HDMI_576I50_16X9:
-			mhlTxAv.AspectRatio 	= VMD_ASPECT_RATIO_16x9;
-			mhlTxAv.Colorimetry	= COLORIMETRY_601;
-			mhlTxAv.TclkSel		= X2;
-			break;
-			
-		case HDMI_480P60_4X3:
-		case HDMI_576P50_4X3:
-		case HDMI_640X480P:
-			mhlTxAv.AspectRatio 	= VMD_ASPECT_RATIO_4x3;
-			mhlTxAv.Colorimetry	= COLORIMETRY_601;
-			mhlTxAv.TclkSel		= X1;
-			break;
+		switch (vmode)
+		{
+			case HDMI_480I60_4X3:
+			case HDMI_576I50_4X3:
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_4x3;
+				mhlTxAv.Colorimetry	= COLORIMETRY_601;
+				mhlTxAv.TclkSel		= X2;
+				break;
+				
+			case HDMI_480I60_16X9:
+			case HDMI_576I50_16X9:
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_16x9;
+				mhlTxAv.Colorimetry	= COLORIMETRY_601;
+				mhlTxAv.TclkSel		= X2;
+				break;
+				
+			case HDMI_480P60_4X3:
+			case HDMI_576P50_4X3:
+			case HDMI_640X480P:
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_4x3;
+				mhlTxAv.Colorimetry	= COLORIMETRY_601;
+				mhlTxAv.TclkSel		= X1;
+				break;
 
-		case HDMI_480P60_16X9:
-		case HDMI_576P50_16X9:
-			mhlTxAv.AspectRatio 	= VMD_ASPECT_RATIO_16x9;
-			mhlTxAv.Colorimetry	= COLORIMETRY_601;
-			mhlTxAv.TclkSel		= X1;
-			break;
+			case HDMI_480P60_16X9:
+			case HDMI_576P50_16X9:
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_16x9;
+				mhlTxAv.Colorimetry	= COLORIMETRY_601;
+				mhlTxAv.TclkSel		= X1;
+				break;
+				
+			case HDMI_720P60:
+			case HDMI_720P50:
+			case HDMI_1080I60:
+			case HDMI_1080I50:
+			case HDMI_1080P24:
+			case HDMI_1080P25:
+			case HDMI_1080P30:				
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_16x9;
+				mhlTxAv.Colorimetry	= COLORIMETRY_709;
+				mhlTxAv.TclkSel		= X1;
+				break;
+				
+			default:
+				break;
+		}
+	}
+	else {
+		mhlTxAv.HDMIVideoFormat 	= VMD_HDMIFORMAT_CEA_VIC;
+		mhlTxAv.VIC 				= vmode;
+		mhlTxAv.ColorDepth			= VMD_COLOR_DEPTH_8BIT;
+		mhlTxAv.SyncMode 			= EXTERNAL_HSVSDE;
 			
-		case HDMI_720P60:
-		case HDMI_720P50:
-		case HDMI_1080I60:
-		case HDMI_1080I50:
-		case HDMI_1080P24:
-		case HDMI_1080P25:
-		case HDMI_1080P30:				
-			mhlTxAv.AspectRatio 	= VMD_ASPECT_RATIO_16x9;
-			mhlTxAv.Colorimetry	= COLORIMETRY_709;
-			mhlTxAv.TclkSel		= X1;
-			break;
-			
-		default:
-			break;
+		switch (vmode)
+		{
+			case HDMI_480I60_4X3:
+			case HDMI_576I50_4X3:
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_4x3;
+				mhlTxAv.Colorimetry	= COLORIMETRY_601;
+				mhlTxAv.TclkSel		= X2;
+				break;
+				
+			case HDMI_480I60_16X9:
+			case HDMI_576I50_16X9:
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_16x9;
+				mhlTxAv.Colorimetry	= COLORIMETRY_601;
+				mhlTxAv.TclkSel		= X2;
+				break;
+				
+			case HDMI_480P60_4X3:
+			case HDMI_576P50_4X3:
+			case HDMI_640X480P:
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_4x3;
+				mhlTxAv.Colorimetry	= COLORIMETRY_601;
+				mhlTxAv.TclkSel		= X1;
+				break;
+
+			case HDMI_480P60_16X9:
+			case HDMI_576P50_16X9:
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_16x9;
+				mhlTxAv.Colorimetry	= COLORIMETRY_601;
+				mhlTxAv.TclkSel		= X1;
+				break;
+				
+			case HDMI_720P60:
+			case HDMI_720P50:
+			case HDMI_1080I60:
+			case HDMI_1080I50:
+			case HDMI_1080P24:
+			case HDMI_1080P25:
+			case HDMI_1080P30:				
+				mhlTxAv.AspectRatio = VMD_ASPECT_RATIO_16x9;
+				mhlTxAv.Colorimetry	= COLORIMETRY_709;
+				mhlTxAv.TclkSel		= X1;
+				break;
+				
+			default:
+				break;
+		}
 	}
 }
 
@@ -4315,7 +4372,6 @@ void	Int1RsenIsr( void )
 {
 	uint8_t	reg71 = sii_I2CReadByte(PAGE_0_0X72, 0x71);
 	uint8_t	rsen  = sii_I2CReadByte(PAGE_0_0X72, 0x09) & BIT2;
-	printk("FSL ---- Int1RsenIsr.\n");
 
 	// Look at RSEN interrupt.
 	// If RSEN interrupt is lost, check if we should deglitch using the RSEN status only.
@@ -4496,7 +4552,6 @@ static void MhlCbusIsr( void )
 	uint8_t	i;
 	uint8_t	reg71 = sii_I2CReadByte(PAGE_0_0X72, 0x71);
 
-	printk("FSL ---- MhlCbusIsr.\n");
 	//
 	// Main CBUS interrupts on CBUS_INTR_STATUS
 	//
@@ -4717,7 +4772,6 @@ static void SiiMhlTxDrvRecovery( void )
         //
 	// Check PSTABLE interrupt...reset FIFO if so.
         //
-    printk("FSL ---- SiiMhlTxDrvRecovery.\n");
 	if((sii_I2CReadByte(PAGE_0_0X72, (0x72)) & BIT1))
 	{
 
@@ -5291,6 +5345,7 @@ static void SiiMhlTxTmdsEnable(void)
             		if (MHL_STATUS_PATH_ENABLED & mhlTxConfig.status_1)
             		{
             			TX_DEBUG_PRINT(("\t\t\tMHL_STATUS_PATH_ENABLED\n"));
+						
                 		SiiMhlTxDrvTmdsControl( true );
             		}
         	}
@@ -6396,7 +6451,7 @@ void	SiiMhlTxNotifyDsHpdChange( uint8_t dsHpdStatus )
 	    TX_DEBUG_PRINT(("[MHL]: Enable TMDS\n"));
 	    TX_DEBUG_PRINT(("[MHL]: DsHPD ON\n"));
            mhlTxConfig.mhlHpdRSENflags |= MHL_HPD;
-
+		// siMhlTx_VideoSet();
 	    if (mhlTxConfig.hdmiCableConnected == false)
 	    {
 		  if( OnHdmiCableConnected() == false )

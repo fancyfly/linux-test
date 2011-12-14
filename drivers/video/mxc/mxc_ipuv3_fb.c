@@ -428,11 +428,11 @@ static int mxcfb_set_par(struct fb_info *fbi)
 			mxc_fbi->alpha_mem_len = alpha_mem_len;
 		}
 	}
-
+	#if 0
 	if (mxc_fbi->next_blank != FB_BLANK_UNBLANK ||
 	    mxc_fbi->fb_suspended)
 		return retval;
-
+	#endif
 	_setup_disp_channel1(fbi);
 
 	if (!mxc_fbi->overlay) {
@@ -452,116 +452,43 @@ static int mxcfb_set_par(struct fb_info *fbi)
 			sig_cfg.odd_field_first = true;
 		if (mxc_fbi->ipu_int_clk)
 			sig_cfg.int_clk = true;
-		if (mxc_fbi->ipu_di == 1) {
-			out_pixel_fmt = IPU_PIX_FMT_RGB24;
-			sig_cfg.interlaced = false;
-			sig_cfg.odd_field_first = false;
-			fbi->mode =
-			    (struct fb_videomode *)fb_match_mode(&fbi->var,
-								 &fbi->modelist);
-			printk("FSL ---- ipu di unit: %d, pixclock = %ul Hz\n", mxc_fbi->ipu_di, 
-				(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
-			printk("FSL ---- xres: %d, yres: %d, upper_margin: %d, lower_margin: %d.\n", 
-				fbi->mode->xres, fbi->mode->yres, fbi->mode->upper_margin, fbi->mode->lower_margin);
+		if (fbi->var.sync & FB_SYNC_HOR_HIGH_ACT)
+			sig_cfg.Hsync_pol = true;
+		if (fbi->var.sync & FB_SYNC_VERT_HIGH_ACT)
+			sig_cfg.Vsync_pol = true;
+		if (!(fbi->var.sync & FB_SYNC_CLK_LAT_FALL))
+			sig_cfg.clk_pol = true;
+		if (fbi->var.sync & FB_SYNC_DATA_INVERT)
+			sig_cfg.data_pol = true;
+		if (!(fbi->var.sync & FB_SYNC_OE_LOW_ACT))
+			sig_cfg.enable_pol = true;
+		if (fbi->var.sync & FB_SYNC_CLK_IDLE_EN)
+			sig_cfg.clkidle_en = true;
 
-			// if (fbi->mode->sync & FB_SYNC_HOR_HIGH_ACT)
-				sig_cfg.Hsync_pol = true;
-			// if (fbi->mode->sync & FB_SYNC_VERT_HIGH_ACT)
-				sig_cfg.Vsync_pol = true;
-			if (!(fbi->mode->sync & FB_SYNC_CLK_LAT_FALL))
-				sig_cfg.clk_pol = true;
-			if (fbi->mode->sync & FB_SYNC_DATA_INVERT)
-				sig_cfg.data_pol = true;
-			if (!(fbi->mode->sync & FB_SYNC_OE_LOW_ACT))
-				sig_cfg.enable_pol = true;
-			if (fbi->mode->sync & FB_SYNC_CLK_IDLE_EN)
-				sig_cfg.clkidle_en = true;
-
-			dev_dbg(fbi->device, "pixclock = %ul Hz\n",
-				(u32) (PICOS2KHZ(fbi->mode->pixclock) * 1000UL));
+		dev_dbg(fbi->device, "pixclock = %ul Hz\n",
+			(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
 
 
-			if (ipu_init_sync_panel(mxc_fbi->ipu_di,
-						(PICOS2KHZ(fbi->mode->pixclock)) * 1000UL,
-						fbi->mode->xres, fbi->mode->yres,
-						out_pixel_fmt,
-						220,
-						40,
-						110,
-						20,
-						5,
-						5,
-						0, sig_cfg) != 0) {
-				dev_err(fbi->device,
-					"mxcfb: Error initializing panel.\n");
-				printk("mxcfb: Error initializing panel.\n");
-				
-				return -EINVAL;
-			}
+		if (ipu_init_sync_panel(mxc_fbi->ipu_di,
+					(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
+					fbi->var.xres, fbi->var.yres,
+					out_pixel_fmt,
+					fbi->var.left_margin,
+					fbi->var.hsync_len,
+					fbi->var.right_margin,
+					fbi->var.upper_margin,
+					fbi->var.vsync_len,
+					fbi->var.lower_margin,
+					0, sig_cfg) != 0) {
+			dev_err(fbi->device,
+				"mxcfb: Error initializing panel.\n");
+			printk("mxcfb: Error initializing panel.\n");
 			
-			#if 0
-			if (ipu_init_sync_panel(mxc_fbi->ipu_di,
-						(PICOS2KHZ(fbi->mode->pixclock)) * 1000UL,
-						fbi->mode->xres, fbi->mode->yres,
-						out_pixel_fmt,
-						fbi->mode->left_margin,
-						fbi->mode->hsync_len,
-						fbi->mode->right_margin,
-						fbi->mode->upper_margin,
-						fbi->mode->vsync_len,
-						fbi->mode->lower_margin,
-						0, sig_cfg) != 0) {
-				dev_err(fbi->device,
-					"mxcfb: Error initializing panel.\n");
-				printk("mxcfb: Error initializing panel.\n");
-				
-				return -EINVAL;
-			}
-			#endif
-			
+			return -EINVAL;
 		}
-		else
-		{
-			if (fbi->var.sync & FB_SYNC_HOR_HIGH_ACT)
-				sig_cfg.Hsync_pol = true;
-			if (fbi->var.sync & FB_SYNC_VERT_HIGH_ACT)
-				sig_cfg.Vsync_pol = true;
-			if (!(fbi->var.sync & FB_SYNC_CLK_LAT_FALL))
-				sig_cfg.clk_pol = true;
-			if (fbi->var.sync & FB_SYNC_DATA_INVERT)
-				sig_cfg.data_pol = true;
-			if (!(fbi->var.sync & FB_SYNC_OE_LOW_ACT))
-				sig_cfg.enable_pol = true;
-			if (fbi->var.sync & FB_SYNC_CLK_IDLE_EN)
-				sig_cfg.clkidle_en = true;
-
-			dev_dbg(fbi->device, "pixclock = %ul Hz\n",
-				(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
-
-
-			if (ipu_init_sync_panel(mxc_fbi->ipu_di,
-						(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
-						fbi->var.xres, fbi->var.yres,
-						out_pixel_fmt,
-						fbi->var.left_margin,
-						fbi->var.hsync_len,
-						fbi->var.right_margin,
-						fbi->var.upper_margin,
-						fbi->var.vsync_len,
-						fbi->var.lower_margin,
-						0, sig_cfg) != 0) {
-				dev_err(fbi->device,
-					"mxcfb: Error initializing panel.\n");
-				printk("mxcfb: Error initializing panel.\n");
-				
-				return -EINVAL;
-			}
-			fbi->mode =
-			    (struct fb_videomode *)fb_match_mode(&fbi->var,
-								 &fbi->modelist);
-		}
-		
-
+		fbi->mode =
+		    (struct fb_videomode *)fb_match_mode(&fbi->var,
+							 &fbi->modelist);
 
 		ipu_disp_set_window_pos(mxc_fbi->ipu_ch, 0, 0);
 	}
@@ -2162,7 +2089,6 @@ static int mxcfb_option_setup(struct fb_info *info, char *options)
 
 		if (!strncmp(opt, "RGB24", 5)) {
 			mxcfbi->ipu_di_pix_fmt = IPU_PIX_FMT_RGB24;
-			printk("FSL ---- di #%d: RGB24 format.\n", mxcfbi->ipu_di);
 			continue;
 		}
 		if (!strncmp(opt, "BGR24", 5)) {

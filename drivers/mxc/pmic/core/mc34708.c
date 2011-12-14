@@ -49,6 +49,7 @@
 #ifdef	HUAWEI_3G_MODULE_MU509_POWER_OFF
 #define MX53_PCBA_MODEM_PWR_ON		(0*32 + 30)
 #endif
+#define MX53_PCBA_SD_PWR_EN		(1*32 + 6)	/* GPIO2_6 */
 
 /*
  * Defines
@@ -126,8 +127,6 @@ void mc34708_power_off(void)
 		mdelay(600);
 		gpio_set_value(30,1);
 	}
-	else
-		gpio_set_value(9,0);
 #if 0
 	pmic_read_reg(28, &value, 0xffffff);
 	value |= 0x20 | 0x80000;
@@ -142,9 +141,14 @@ void mc34708_power_off(void)
 	mdelay(600);
 	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,1);
 #endif
+	gpio_direction_output(MX53_PCBA_SD_PWR_EN, 0);/*SD_PWR_EN*/
+	
+	pmic_read_reg(21, &value, 0xffffff);
+	value |= 0x800000;
+	pmic_write_reg(21, value, 0xffffff);/*disable RTC*/
 	pmic_read_reg(REG_POWER_CTL0, &value, 0xffffff);
-
 	value |= 0x00000C;
-
-	pmic_write_reg(REG_POWER_CTL0, value, 0xffffff);
+	pmic_write_reg(REG_POWER_CTL0, value, 0xffffff);/*USER OFF*/
+	mdelay(100);
+	gpio_set_value(9,0);
 }

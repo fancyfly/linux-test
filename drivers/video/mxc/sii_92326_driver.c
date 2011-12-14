@@ -40,6 +40,7 @@ extern uint8_t I2C_ReadSegmentBlockEDID(uint8_t SlaveAddr, uint8_t Segment, uint
 extern int mxc_edid_9232_read(uint8_t * edid, struct mxc_edid_cfg * cfg, struct fb_info * fbi);
 extern void mhl_usb_connect( void );
 extern int resetSiI9232();
+extern void mhl_disconnect( void );
 ///////////////////////////////////////////////////////////////////////////////
 // GPIO for chip reset.
 //
@@ -4409,6 +4410,7 @@ void	Int1RsenIsr( void )
 		// Clear MDI_RSEN interrupt
 		sii_I2CWriteByte(PAGE_0_0X72, 0x71, BIT5);
 		resetSiI9232();
+		mhl_disconnect();
 	}
 	else if( deglitchingRsenNow )
 	{

@@ -746,28 +746,27 @@ static int sii9232_fb_event(struct notifier_block *nb, unsigned long val, void *
 	struct fb_event *event = v;	
 	struct fb_info *fbi = event->info;
 	
-	if (strcmp(event->info->fix.id, mhlTxConfig.fb_id))
+	if (strcmp(event->info->fix.id, mhlTxConfig.fb_id)) {
+		printk("FSL ---- Incoming para is %s, current inst is %s.\n", event->info->fix.id, mhlTxConfig.fb_id);
 		return 0;
+	}
 		
 	switch (val) {	
 		case FB_EVENT_FB_REGISTERED:
 			if (mhlTxConfig.fbi != NULL) {
 				printk("FSL ---- Already register fbi in mhlTxConfig, ignore.\n");
-				break;
 			}
 			else {
-				printk("FSL ---- Register fbi in mhlTxConfig.\n");
+				printk("FSL ---- FB REGISTERED for %s.\n", mhlTxConfig.fb_id);
 				mhlTxConfig.fbi = fbi;
 			}
 			break;			
 		case FB_EVENT_MODE_CHANGE:
 			printk("FSL ----- FB_EVENT_MODE_CHANGE event.\n");
-			
 			#if 0
 			siMhlTx_VideoSel( HDMI_720P60, false );	// assume video initialize to 720p60, here should be decided by AP
 			siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
-			siMhlTx_VideoSet();   
-
+			siMhlTx_VideoSet();
 			sii9232_setup(fbi);
 			#endif
 			break;
@@ -918,6 +917,27 @@ static int __init mhl_Sii92326_init(void)
 	
 	strcpy(mhlTxConfig.fb_id, "DISP3 BG - DI1");
 
+	if(false == Sii92326_mhl_reset())
+		return -EIO;
+	strcpy(mhlTxConfig.fb_id, "DISP3 BG");
+	// strcpy(mhlTxConfig.fb_id, "DISP3 BG - DI1");
+	//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
+	#if 0
+	/* edid reading */
+	memset(&mhlTxConfig.edid[0], 0, (EDID_LENGTH * 4));
+	memset(&mhlTxConfig.edid_cfg, 0, sizeof(struct mxc_edid_cfg));
+	
+	ret = mxc_edid_9232_read(&mhlTxConfig.edid[0], &mhlTxConfig.edid_cfg, &edid_fbi);
+	if (ret >= 0) {
+		#if 0
+		memcpy(&mhlTxConfig.fbi.monspecs.modedb, &cea_modes[4], sizeof(struct fb_videomode));
+		mhlTxConfig.fbi.monspecs.modedb_len = 1;
+		#endif
+		
+		mxcfb_register_mode(1, edid_fbi.monspecs.modedb, edid_fbi.monspecs.modedb_len, MXC_DISP_DDC_DEV);
+	}
+	#endif
+	//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
 	HalTimerInit ( );
 	HalTimerSet (TIMER_POLLING, MONITORING_PERIOD);
 

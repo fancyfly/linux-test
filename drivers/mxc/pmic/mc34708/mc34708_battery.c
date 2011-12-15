@@ -167,7 +167,20 @@
 
 #define DEFAULT_INTER_RESISTOR_mOhm	200
 
-#define	BATTERY_UPDATE_INTERVAL		32	/* seconds */
+#define	BATTERY_UPDATE_INTERVAL		8	/* seconds */
+
+/* calibration for voltage, to avoid the deviation caused by hw */
+//#define	CALIB_GPADC_HIGH
+//#define	CALIB_GPADC_MEDIUM
+//#define	CALIB_GPADC_LOW
+#define CALIB_VOLT_HIGH			HIGH_VOLT_THRESHOLD
+#define CALIB_VOLT_MEDIUM		3700000
+#define CALIB_VOLT_LOW			LOW_VOLT_THRESHOLD
+//
+//#define	SLOPE_HIGH			1000 * (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM) / \
+//					(CALIB_GPADC_HIGH - CALIB_GPADC_MEDIUM)
+//#define	SLOPE_LOW			1000 * (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW) / \
+					(CALIB_GPADC_MEDIUM - CALIB_GPADC_LOW)
 
 static int suspend_flag;
 static int power_supply_changed_flag;
@@ -242,7 +255,7 @@ static struct mc34708_charger_config ripley_charge_config = {
 	.vauxThresholdHigh = 5000000,
 	.lowBattThreshold = 3000000,
 	.toppingOffMicroAmp = 400000,	/* 400 mA */
-	.maxChargingHour = 8,
+	.maxChargingHour = 1,
 	.chargingPoints = ripley_charger_setting_point,
 	.pointsNumber = 1,
 };
@@ -499,6 +512,49 @@ static int ripley_get_batt_volt_curr_raw(unsigned short *volt,
 	*curr /= ((ADC_MAX_CHANNEL / 2) - 2);
 
 	return 0;
+}
+
+static void _calibration_voltage(int volt, int *volt_cali)
+{
+	int gpadc_low, gpadc_medium, gpadc_high;
+	int SLOPE_LOW, SLOPE_HIGH;
+	int delta_low, delta_medium, delta_high;
+	int delta;
+	int ret;
+
+	ret = pmic_read_reg(MC34708_REG_MEM_A, &gpadc_low, PMIC_ALL_BITS);
+	ret = pmic_read_reg(MC34708_REG_MEM_B, &gpadc_medium, PMIC_ALL_BITS);
+	ret = pmic_read_reg(MC34708_REG_MEM_C, &gpadc_high, PMIC_ALL_BITS);
+
+	if (gpadc_low == 0 || gpadc_medium == 0 || gpadc_high == 0) {
+		*volt_cali = volt;
+		return;
+	}
+
+	delta_low = gpadc_low - CALIB_VOLT_LOW;
+	delta_medium = gpadc_medium - CALIB_VOLT_MEDIUM;
+	delta_high = gpadc_high - CALIB_VOLT_HIGH;
+
+	SLOPE_HIGH = 1000 * (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM) /
+					(gpadc_high - gpadc_medium);
+	SLOPE_LOW = 1000 * (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW) /
+					(gpadc_medium - gpadc_low);
+
+	 if (volt <= CALIB_VOLT_MEDIUM) {
+		*volt_cali = CALIB_VOLT_MEDIUM - SLOPE_LOW * (gpadc_medium - volt) / 1000;
+	 } else {
+		*volt_cali = CALIB_VOLT_MEDIUM + SLOPE_HIGH * (volt - gpadc_medium) / 1000;
+	 }
+	printk(" volt_cali 1 %d    ", *volt_cali);
+
+	if (volt <= CALIB_VOLT_MEDIUM) {
+		delta = (volt - gpadc_low) * (delta_medium - delta_low) / (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW);
+		*volt_cali = volt - delta - delta_low;
+	} else {
+		delta = (volt - gpadc_medium) * (delta_high - delta_medium) / (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM);
+		*volt_cali = volt - delta - delta_medium;
+	}
+	printk(" volt_cali 2 %d    \n", *volt_cali);
 }
 
 static int ripley_get_batt_volt_curr(int *volt, int *curr)
@@ -973,6 +1029,7 @@ static int _record_last_batt_info(struct ripley_dev_info *di)
 			__func__);
 		return ret;
 	}
+//	_calibration_voltage(voltage_uV_org, &(di->voltage_uV));
 
 	last_batt_rec[batt_rec_index].voltage_uV = voltage_uV;
 	last_batt_rec[batt_rec_index].current_uA = current_uA;
@@ -1346,6 +1403,11 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 	int coulomb, ccfault;
 	static int old_delta_coulomb;
 	static unsigned long last;
+	int voltage_uV_org;
+	int volt[10], curr[10];
+	int i;
+	int sum;
+	int max, min;
 
 	/* Do not read info within 1/2 second */
 	if (last && time_before(jiffies, last + HZ / 2))
@@ -1353,10 +1415,40 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 
 	last = jiffies;
 
-	retval = ripley_get_batt_volt_curr(&(di->voltage_uV),
-					&(di->current_uA));
-	if (retval)
-		dev_err(di->dev, "ripley_get_batt_volt_curr() failed.\n");
+	for (i = 0; i < 10; i++) {
+		retval = ripley_get_batt_volt_curr(&volt[i], &curr[i]);
+	//					&(di->current_uA));
+		if (retval)
+			dev_err(di->dev, "ripley_get_batt_volt_curr() failed.\n");
+	}
+	sum = 0;
+	min = max = curr[0];
+	for (i = 0; i < 10; i++) {
+		if (min > curr[i])
+			min = curr[i];
+		if (max < curr[i])
+			max = curr[i];
+		sum += curr[i];
+	}
+	sum -= (max + min);
+	sum /= 8;
+	di->current_uA = sum;
+
+	min = max = volt[0];
+	sum = 0;
+	for (i = 0; i < 10; i++) {
+		if (min > volt[i])
+			min = volt[i];
+		if (max < volt[i])
+			max = volt[i];
+		sum += volt[i];
+	}
+	sum -= (max + min);
+	sum /= 8;
+	voltage_uV_org = sum;
+
+
+	_calibration_voltage(voltage_uV_org, &(di->voltage_uV));
 
 	retval = ripley_get_charger_coulomb(&coulomb, &ccfault);
 	if (retval == 0) {
@@ -1379,11 +1471,11 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 		printk("Battery temperature %d \n", tempC);
 #endif
 
-	pr_info("[readout]: vol %d uV, cur %d uA, cc %d\n", di->voltage_uV,
+	pr_info("[readout]: vol %d uV, cur %d uA, cc %d\n", voltage_uV_org,
 							di->current_uA,
 							di->now_coulomb);
-	pr_info("[calc-ed]: delta cc %d ( %d mC );  "
-		"accum_coulomb %d ( accum_uAh %d )\n", di->delta_coulomb,
+	pr_info("[calc-ed]: cali vol %d uV, delta cc %d ( %d mC );  "
+		"accum_coulomb %d ( accum_uAh %d )\n", di->voltage_uV, di->delta_coulomb,
 					di->delta_coulomb * ccres_mC,
 					di->accum_coulomb,
 					convert_to_uAh(di->accum_coulomb));

@@ -1597,8 +1597,8 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 					convert_to_uAh(di->accum_coulomb),
 					di->full_coulomb,
 					di->empty_coulomb,
-					di->real_capacity,
-					convert_to_uAh(di->real_capacity)/1000);
+					before_use_calculated_capacity ? 0 : di->real_capacity,
+					before_use_calculated_capacity ? 0 : convert_to_uAh(di->real_capacity)/1000);
 	return retval;
 }
 
@@ -1942,12 +1942,12 @@ static void battery_ovp_work(struct work_struct *work)
 	struct ripley_dev_info *di = container_of(work,
 						  struct ripley_dev_info,
 						  ovp_mon_work.work);
-	const int interval = HZ;
+	const int interval = HZ * 10;
 
 	dev_dbg(di->dev, "%s\n", __func__);
 
 	ripley_battery_update_status(di);
-	if (di->voltage_uV >= 4250000) { /* No more than 4250000 */
+	if (get_real_batt_voltage(di) >= 4250000) { /* No more than 4250000 */
 		enable_charger(0);
 		cancel_delayed_work_sync(&di->ovp_mon_work);
 		pr_warning("more than 4.25v, disable charging\n");
@@ -2099,7 +2099,6 @@ static void battery_charge_complete_event_callback(void *para)
 
 	if (chrg_cmpl_status == 0) {
 		pr_info("\n\n battery charge complete event, disable charging\n");
-		queue_delayed_work(di->monitor_wqueue, &di->ovp_mon_work, HZ/10);
 		chrg_cmpl_status = 1;
 		di->battery_status = POWER_SUPPLY_STATUS_FULL;
 	}
@@ -2439,6 +2438,8 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ * 10);
 	queue_delayed_work(di->monitor_wqueue, &di->calc_resistor_mon_work,
 				HZ * 10);
+	queue_delayed_work(di->monitor_wqueue, &di->ovp_mon_work, HZ * 10);
+
 	ripley_charger_update_status(di);
 
 	for (i = 0; i < ARRAY_SIZE(batt_attributes); i++)
@@ -2466,6 +2467,7 @@ static int ripley_battery_suspend(struct platform_device *pdev,
 
 	cancel_delayed_work_sync(&di->calc_resistor_mon_work);
 	cancel_delayed_work_sync(&di->monitor_work);
+	cancel_delayed_work_sync(&di->ovp_mon_work);
 
 	suspend_flag = 1;
 	CHECK_ERROR(pmic_write_reg
@@ -2491,6 +2493,7 @@ static int ripley_battery_resume(struct platform_device *pdev)
 			   &di->calc_resistor_mon_work, HZ / 10);
 	queue_delayed_work(di->monitor_wqueue,
 			   &di->monitor_work, HZ / 10);
+	queue_delayed_work(di->monitor_wqueue, &di->ovp_mon_work, HZ / 10);
 
 	return 0;
 };

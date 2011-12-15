@@ -173,8 +173,8 @@
 //#define	CALIB_GPADC_HIGH
 //#define	CALIB_GPADC_MEDIUM
 //#define	CALIB_GPADC_LOW
-#define CALIB_VOLT_HIGH			HIGH_VOLT_THRESHOLD
-#define CALIB_VOLT_MEDIUM		3700000
+#define CALIB_VOLT_HIGH			4100000
+#define CALIB_VOLT_MEDIUM		3800000
 #define CALIB_VOLT_LOW			LOW_VOLT_THRESHOLD
 //
 //#define	SLOPE_HIGH			1000 * (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM) / \
@@ -555,6 +555,16 @@ static void _calibration_voltage(int volt, int *volt_cali)
 		*volt_cali = volt - delta - delta_medium;
 	}
 	printk(" volt_cali 2 %d    \n", *volt_cali);
+}
+
+static void _calibration_current(int curr, int *curr_cali)
+{
+	int gpadc_delta_curr;
+	int ret;
+
+	ret = pmic_read_reg(MC34708_REG_MEM_D, &gpadc_delta_curr, PMIC_ALL_BITS);
+
+	*curr_cali = curr + gpadc_delta_curr;
 }
 
 static int ripley_get_batt_volt_curr(int *volt, int *curr)
@@ -1012,6 +1022,9 @@ static void _save_and_change_chrcc(int *old_chrcc, int chrcc)
 	if (chrcc < 250000) {
 		pr_warning("CHRCC can not be lower than 250000 uA.\n");
 		return;
+	} else if (chrcc > 1550000) {
+		pr_warning("CHRCC can not be higher than 1550000 uA.\n");
+		return;
 	}
 	pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 			BITFVAL(CHRCC, CHRCC_UA_TO_BITS(chrcc)),
@@ -1403,7 +1416,7 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 	int coulomb, ccfault;
 	static int old_delta_coulomb;
 	static unsigned long last;
-	int voltage_uV_org;
+	int voltage_uV_org, current_uA_org;
 	int volt[10], curr[10];
 	int i;
 	int sum;
@@ -1432,7 +1445,7 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 	}
 	sum -= (max + min);
 	sum /= 8;
-	di->current_uA = sum;
+	current_uA_org = sum;
 
 	min = max = volt[0];
 	sum = 0;
@@ -1449,6 +1462,7 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 
 
 	_calibration_voltage(voltage_uV_org, &(di->voltage_uV));
+	_calibration_current(current_uA_org, &(di->current_uA));
 
 	retval = ripley_get_charger_coulomb(&coulomb, &ccfault);
 	if (retval == 0) {
@@ -1472,10 +1486,10 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 #endif
 
 	pr_info("[readout]: vol %d uV, cur %d uA, cc %d\n", voltage_uV_org,
-							di->current_uA,
+							current_uA_org,
 							di->now_coulomb);
-	pr_info("[calc-ed]: cali vol %d uV, delta cc %d ( %d mC );  "
-		"accum_coulomb %d ( accum_uAh %d )\n", di->voltage_uV, di->delta_coulomb,
+	pr_info("[calc-ed]: cali vol %d uV, cali curr %d uA, delta cc %d ( %d mC );  "
+		"accum_coulomb %d ( accum_uAh %d )\n", di->voltage_uV, di->current_uA, di->delta_coulomb,
 					di->delta_coulomb * ccres_mC,
 					di->accum_coulomb,
 					convert_to_uAh(di->accum_coulomb));
@@ -2021,6 +2035,42 @@ static int ripley_battery_get_property(struct power_supply *psy,
 
 	return 0;
 }
+static ssize_t chrcc_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	int value;
+	int chrcc;
+	int count;
+
+	pmic_read_reg(MC34708_REG_BATTERY_PROFILE, &value, BITFMASK(CHRCC));
+	value = BITFEXT(value, CHRCC);
+	chrcc = CHRCC_BITS_TO_UA(value);
+
+	count = sprintf(buf, "%d\n", chrcc);
+
+	return count;
+}
+
+static ssize_t chrcc_store(struct device *dev,
+			     struct device_attribute *attr, const char *buf,
+			     size_t count)
+{
+	int chrcc;
+
+	chrcc = simple_strtoul(buf, NULL, 10);
+	_save_and_change_chrcc(NULL, chrcc);
+
+	return count;
+}
+
+static struct device_attribute pmic_dev_attr = {
+	.attr = {
+		 .name = "chrcc",
+		 .mode = S_IRUSR | S_IWUSR,
+		 },
+	.show = chrcc_show,
+	.store = chrcc_store,
+};
 
 static int ripley_battery_remove(struct platform_device *pdev)
 {
@@ -2169,6 +2219,8 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	queue_delayed_work(di->monitor_wqueue, &di->calc_resistor_mon_work,
 				HZ * 10);
 	ripley_charger_update_status(di);
+
+	device_create_file(&pdev->dev, &pmic_dev_attr);
 
 	goto success;
 

@@ -283,6 +283,12 @@ enum integtime {
 	INTEGTIME_32S,
 };
 
+enum info_type {
+	TYPE_CCOUNT_AVAIL,
+	TYPE_CCOUNT_FULL,
+	TYPE_CCOUNT_EMPTY,
+};
+
 struct ripley_dev_info;
 static void ripley_battery_update_status(struct ripley_dev_info *);
 #ifdef DEBUG
@@ -338,7 +344,7 @@ static int set_coulomb_counter_integtime(enum integtime integtime)
 }
 
 /* uA */
-static int get_columb_counter_battcur_res_ua_lsb(void)
+static int get_coulomb_counter_battcur_res_ua_lsb(void)
 {
 	int ret;
 	unsigned int ccres;
@@ -361,6 +367,59 @@ static int get_columb_counter_battcur_res_ua_lsb(void)
 
 	/* See table: BATTCURRENT Resolution in RM */
 	return 100000 * (2 << ccres) / ((2 << integtime) * 4);
+}
+
+static int save_coulomb_counter_info(enum info_type type, int value)
+{
+	if (type == TYPE_CCOUNT_AVAIL) {
+		CHECK_ERROR(pmic_write_reg(MC34708_REG_MEM_A,
+				value == true ? 1 << 23 : 0 << 23,
+				0x800000));
+	} else if (type == TYPE_CCOUNT_FULL) {
+		if (value < 0) {
+			value *= -1;
+			value = ~value;
+			value += 1;
+			value &= 0x7fff;
+			value |= 0x8000;
+		}
+		CHECK_ERROR(pmic_write_reg(MC34708_REG_MEM_A, value, ~0x800000));
+	} else if (type == TYPE_CCOUNT_EMPTY) {
+		if (value < 0) {
+			value *= -1;
+			value = ~value;
+			value += 1;
+			value &= 0x7fff;
+			value |= 0x8000;
+		}
+		CHECK_ERROR(pmic_write_reg(MC34708_REG_MEM_B, value, ~0x800000));
+	}
+
+	return 0;
+}
+
+static int get_coulomb_counter_info(enum info_type type, int *value)
+{
+	int val;
+
+	if (type == TYPE_CCOUNT_AVAIL) {
+		CHECK_ERROR(pmic_read_reg(MC34708_REG_MEM_A, &val, 0x800000));
+		val = val >> 23;
+
+	} else if (type == TYPE_CCOUNT_FULL) {
+		CHECK_ERROR(pmic_read_reg(MC34708_REG_MEM_A, &val, ~0x800000));
+	} else if (type == TYPE_CCOUNT_EMPTY)
+		CHECK_ERROR(pmic_read_reg(MC34708_REG_MEM_B, &val, ~0x800000));
+
+	/* 2's complement */
+	if (val & 0x8000) {
+		val = ~val;
+		val += 1;
+		val &= 0x7fff;
+		val *= -1;
+	}
+
+	*value = val;
 }
 
 static int enable_charger(int enable)
@@ -936,7 +995,7 @@ static int get_battcur(int *batt_curr)
 	int ret;
 	int battcur_res, battcur;
 
-	battcur_res = get_columb_counter_battcur_res_ua_lsb();
+	battcur_res = get_coulomb_counter_battcur_res_ua_lsb();
 	pr_debug("battcur_res = %d\n", battcur_res);
 	if (battcur_res < 0)
 		return -1;
@@ -1499,14 +1558,21 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 		printk("Battery temperature %d \n", tempC);
 #endif
 
-	pr_info("[readout]: vol %d uV, cur %d uA, cc %d\n", voltage_uV_org,
+	pr_info("[readout]: vol %d uV, cur %d uA, cc %d \n",
+							voltage_uV_org,
 							current_uA_org,
 							di->now_coulomb);
-	pr_info("[calc-ed]: cali vol %d uV, cali curr %d uA, delta cc %d ( %d mC );  "
-		"accum_coulomb %d ( accum_uAh %d )\n", di->voltage_uV, di->current_uA, di->delta_coulomb,
+	pr_info("[calc-ed]: cali vol %d uV, cali curr %d uA\n"
+		"delta cc %d ( %d mC );  di->accum_coulomb %d ( accum_uAh %d ), "
+		"di->full_coulomb %d, di->empty_coulomb %d\n"
+		"di->real_capacity %d ( %d mAh) \n", di->voltage_uV, di->current_uA, di->delta_coulomb,
 					di->delta_coulomb * ccres_mC,
 					di->accum_coulomb,
-					convert_to_uAh(di->accum_coulomb));
+					convert_to_uAh(di->accum_coulomb),
+					di->full_coulomb,
+					di->empty_coulomb,
+					di->real_capacity,
+					convert_to_uAh(di->real_capacity)/1000);
 	return retval;
 }
 
@@ -1543,6 +1609,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 				last_batt_complete_id != BATT_EMPTY) {
 				can_calculate_capacity = true;
 				before_use_calculated_capacity = 0;
+				save_coulomb_counter_info(TYPE_CCOUNT_AVAIL, true);
 			} else
 				can_calculate_capacity = false;
 
@@ -1579,7 +1646,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			if (di->percent < 0)
 				di->percent = 0;
 			else if (di->percent > 99)
-				di->percent = 99;
+				di->percent = 100;
 
 			can_adjust_percent = true;
 
@@ -1594,6 +1661,8 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			can_calculate_capacity = false;
 			pr_debug("DISCHR can_cal real_capacity %d\n",
 						di->real_capacity);
+			save_coulomb_counter_info(TYPE_CCOUNT_FULL, di->full_coulomb);
+			save_coulomb_counter_info(TYPE_CCOUNT_EMPTY, di->empty_coulomb);
 		}
 		di->percent = (di->accum_coulomb - di->empty_coulomb) * 100 / di->real_capacity;
 		_adjust_batt_capacity(di);
@@ -1614,6 +1683,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 				last_batt_complete_id != BATT_EMPTY) {
 				can_calculate_capacity = true;
 				before_use_calculated_capacity = 0;
+				save_coulomb_counter_info(TYPE_CCOUNT_AVAIL, true);
 			} else
 				can_calculate_capacity = false;
 
@@ -1631,6 +1701,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 				last_batt_complete_id != BATT_FULL) {
 				can_calculate_capacity = true;
 				before_use_calculated_capacity = 0;
+				save_coulomb_counter_info(TYPE_CCOUNT_AVAIL, true);
 			} else
 				can_calculate_capacity = false;
 
@@ -1683,6 +1754,8 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			can_calculate_capacity = false;
 			pr_debug("CHR can_cal real_capacity %d\n",
 						di->real_capacity);
+			save_coulomb_counter_info(TYPE_CCOUNT_FULL, di->full_coulomb);
+			save_coulomb_counter_info(TYPE_CCOUNT_EMPTY, di->empty_coulomb);
 		}
 		di->percent = (di->accum_coulomb - di->empty_coulomb) * 100 / di->real_capacity;
 		pr_info("CHR di->real_capacity %d, di->percent %d\n",
@@ -2294,13 +2367,24 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	pmic_event_subscribe(MC34708_EVENT_CHRCMPL, bat_event_callback);
 #endif
 
-	set_coulomb_counter_cres(CCRES_1000_mC_PER_LSB);
-	set_coulomb_counter_integtime(INTEGTIME_32S);
-	ripley_calibrate_coulomb_counter();
+	get_coulomb_counter_info(TYPE_CCOUNT_AVAIL, &i);
+	if (i == 0) {	/* learning phase is not done yet. */
+		set_coulomb_counter_cres(CCRES_1000_mC_PER_LSB);
+		set_coulomb_counter_integtime(INTEGTIME_32S);
+		ripley_calibrate_coulomb_counter();
+		if (ccres_mC < 0)
+			dev_err(di->dev, "can not get correct cc resolution.\n");
+
+	} else {
+		get_coulomb_counter_info(TYPE_CCOUNT_FULL, &i);
+		di->full_coulomb = i;
+		get_coulomb_counter_info(TYPE_CCOUNT_EMPTY, &i);
+		di->empty_coulomb = i;
+
+		before_use_calculated_capacity = 0;
+	}
 	ccres_mC = get_coulomb_counter_cres_mC();
-	printk("ccres_mC %d\n", ccres_mC);
-	if (ccres_mC < 0)
-		dev_err(di->dev, "can not get correct cc resolution.\n");
+	pr_info("ccres_mC %d\n", ccres_mC);
 
 	INIT_DELAYED_WORK(&di->monitor_work, ripley_battery_work);
 	INIT_DELAYED_WORK(&di->ovp_mon_work, battery_ovp_work);

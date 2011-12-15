@@ -169,18 +169,18 @@
 
 #define	BATTERY_UPDATE_INTERVAL		8	/* seconds */
 
-/* calibration for voltage, to avoid the deviation caused by hw */
-//#define	CALIB_GPADC_HIGH
-//#define	CALIB_GPADC_MEDIUM
-//#define	CALIB_GPADC_LOW
+#define HW_CALIB_VOLT_CURR
+#define HW_CALIB_VOLT_CURR_BY_SLOPE
+#ifdef	HW_CALIB_VOLT_CURR
+/* calibration for voltage&current, to avoid the deviation caused by hw */
 #define CALIB_VOLT_HIGH			4100000
 #define CALIB_VOLT_MEDIUM		3800000
 #define CALIB_VOLT_LOW			LOW_VOLT_THRESHOLD
-//
-//#define	SLOPE_HIGH			1000 * (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM) / \
-//					(CALIB_GPADC_HIGH - CALIB_GPADC_MEDIUM)
-//#define	SLOPE_LOW			1000 * (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW) / \
-					(CALIB_GPADC_MEDIUM - CALIB_GPADC_LOW)
+#define	CALIB_CURR_HIGH			550000
+#define	CALIB_CURR_LOW			350000
+static int delta_volt_l, delta_volt_m, delta_volt_h, delta_curr;
+static int delta_curr_l, delta_curr_m;
+#endif
 
 static int suspend_flag;
 static int power_supply_changed_flag;
@@ -516,25 +516,26 @@ static int ripley_get_batt_volt_curr_raw(unsigned short *volt,
 
 static void _calibration_voltage(int volt, int *volt_cali)
 {
+#ifdef HW_CALIB_VOLT_CURR
 	int gpadc_low, gpadc_medium, gpadc_high;
 	int SLOPE_LOW, SLOPE_HIGH;
-	int delta_low, delta_medium, delta_high;
+//	int delta_low, delta_medium, delta_high;
 	int delta;
-	int ret;
 
-	ret = pmic_read_reg(MC34708_REG_MEM_A, &gpadc_low, PMIC_ALL_BITS);
-	ret = pmic_read_reg(MC34708_REG_MEM_B, &gpadc_medium, PMIC_ALL_BITS);
-	ret = pmic_read_reg(MC34708_REG_MEM_C, &gpadc_high, PMIC_ALL_BITS);
-
-	if (gpadc_low == 0 || gpadc_medium == 0 || gpadc_high == 0) {
+	if (delta_volt_l == 0 || delta_volt_m == 0 || delta_volt_h == 0) {
 		*volt_cali = volt;
 		return;
 	}
 
-	delta_low = gpadc_low - CALIB_VOLT_LOW;
-	delta_medium = gpadc_medium - CALIB_VOLT_MEDIUM;
-	delta_high = gpadc_high - CALIB_VOLT_HIGH;
+//	delta_low = gpadc_low - CALIB_VOLT_LOW;
+//	delta_medium = gpadc_medium - CALIB_VOLT_MEDIUM;
+//	delta_high = gpadc_high - CALIB_VOLT_HIGH;
 
+	gpadc_low = delta_volt_l + CALIB_VOLT_LOW;
+	gpadc_medium = delta_volt_m + CALIB_VOLT_MEDIUM;
+	gpadc_high = delta_volt_h + CALIB_VOLT_HIGH;
+
+#ifdef HW_CALIB_VOLT_CURR_BY_SLOPE
 	SLOPE_HIGH = 1000 * (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM) /
 					(gpadc_high - gpadc_medium);
 	SLOPE_LOW = 1000 * (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW) /
@@ -546,25 +547,30 @@ static void _calibration_voltage(int volt, int *volt_cali)
 		*volt_cali = CALIB_VOLT_MEDIUM + SLOPE_HIGH * (volt - gpadc_medium) / 1000;
 	 }
 	printk(" volt_cali 1 %d    ", *volt_cali);
+#endif
 
 	if (volt <= CALIB_VOLT_MEDIUM) {
-		delta = (volt - gpadc_low) * (delta_medium - delta_low) / (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW);
-		*volt_cali = volt - delta - delta_low;
+		delta = (volt - gpadc_low) * (delta_volt_m - delta_volt_l) / (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW);
+		*volt_cali = volt - delta - delta_volt_l;
 	} else {
-		delta = (volt - gpadc_medium) * (delta_high - delta_medium) / (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM);
-		*volt_cali = volt - delta - delta_medium;
+		delta = (volt - gpadc_medium) * (delta_volt_h - delta_volt_m) / (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM);
+		*volt_cali = volt - delta - delta_volt_m;
 	}
 	printk(" volt_cali 2 %d    \n", *volt_cali);
+#else
+	*volt_cali = volt;
+#endif
 }
 
 static void _calibration_current(int curr, int *curr_cali)
 {
+#ifdef HW_CALIB_VOLT_CURR
 	int gpadc_delta_curr;
-	int ret;
 
-	ret = pmic_read_reg(MC34708_REG_MEM_D, &gpadc_delta_curr, PMIC_ALL_BITS);
-
-	*curr_cali = curr + gpadc_delta_curr;
+	*curr_cali = curr - delta_curr;
+#else
+	*curr_cali = curr;
+#endif
 }
 
 static int ripley_get_batt_volt_curr(int *volt, int *curr)
@@ -1033,16 +1039,18 @@ static void _save_and_change_chrcc(int *old_chrcc, int chrcc)
 
 static int _record_last_batt_info(struct ripley_dev_info *di)
 {
+	int voltage_uV_org, current_uA_org;
 	int voltage_uV, current_uA;
 	int ret;
 
-	ret = ripley_get_batt_volt_curr(&voltage_uV, &current_uA);
+	ret = ripley_get_batt_volt_curr(&voltage_uV_org, &current_uA_org);
 	if (ret) {
 		pr_err("%s: ripley_get_batt_volt_curr() failed.\n",
 			__func__);
 		return ret;
 	}
-//	_calibration_voltage(voltage_uV_org, &(di->voltage_uV));
+	_calibration_voltage(voltage_uV_org, &voltage_uV);
+	_calibration_current(current_uA_org, &current_uA);
 
 	last_batt_rec[batt_rec_index].voltage_uV = voltage_uV;
 	last_batt_rec[batt_rec_index].current_uA = current_uA;
@@ -1434,6 +1442,12 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 		if (retval)
 			dev_err(di->dev, "ripley_get_batt_volt_curr() failed.\n");
 	}
+#if 0
+	for (i = 0; i < 10; i++) {
+		printk("[%02d]: volt %d, curr %d\n", i, volt[i], curr[i]);
+	}
+#endif
+
 	sum = 0;
 	min = max = curr[0];
 	for (i = 0; i < 10; i++) {
@@ -2035,6 +2049,85 @@ static int ripley_battery_get_property(struct power_supply *psy,
 
 	return 0;
 }
+
+#ifdef HW_CALIB_VOLT_CURR
+static ssize_t delta_volt_l_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", delta_volt_l);
+	return count;
+}
+
+static ssize_t delta_volt_l_store(struct device *dev,
+			     struct device_attribute *attr, const char *buf,
+			     size_t count)
+{
+	delta_volt_l = simple_strtol(buf, NULL, 10);
+
+	return count;
+}
+
+static ssize_t delta_volt_m_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", delta_volt_m);
+	return count;
+}
+
+static ssize_t delta_volt_m_store(struct device *dev,
+			     struct device_attribute *attr, const char *buf,
+			     size_t count)
+{
+	delta_volt_m = simple_strtol(buf, NULL, 10);
+
+	return count;
+}
+
+static ssize_t delta_volt_h_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", delta_volt_h);
+	return count;
+}
+
+static ssize_t delta_volt_h_store(struct device *dev,
+			     struct device_attribute *attr, const char *buf,
+			     size_t count)
+{
+	delta_volt_h = simple_strtol(buf, NULL, 10);
+
+	return count;
+}
+
+static ssize_t delta_curr_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", delta_curr);
+	return count;
+}
+
+static ssize_t delta_curr_store(struct device *dev,
+			     struct device_attribute *attr, const char *buf,
+			     size_t count)
+{
+	delta_curr = simple_strtol(buf, NULL, 10);
+
+	return count;
+}
+static DEVICE_ATTR(delta_volt_l, S_IRUSR | S_IWUSR, delta_volt_l_show, delta_volt_l_store);
+static DEVICE_ATTR(delta_volt_m, S_IRUSR | S_IWUSR, delta_volt_m_show, delta_volt_m_store);
+static DEVICE_ATTR(delta_volt_h, S_IRUSR | S_IWUSR, delta_volt_h_show, delta_volt_h_store);
+static DEVICE_ATTR(delta_curr, S_IRUSR | S_IWUSR, delta_curr_show, delta_curr_store);
+#endif
+
 static ssize_t chrcc_show(struct device *dev,
 			    struct device_attribute *attr, char *buf)
 {
@@ -2063,13 +2156,16 @@ static ssize_t chrcc_store(struct device *dev,
 	return count;
 }
 
-static struct device_attribute pmic_dev_attr = {
-	.attr = {
-		 .name = "chrcc",
-		 .mode = S_IRUSR | S_IWUSR,
-		 },
-	.show = chrcc_show,
-	.store = chrcc_store,
+static DEVICE_ATTR(chrcc, S_IRUSR | S_IWUSR, chrcc_show, chrcc_store);
+
+static struct device_attribute *batt_attributes[] = {
+#ifdef HW_CALIB_VOLT_CURR
+	&dev_attr_delta_volt_l,
+	&dev_attr_delta_volt_m,
+	&dev_attr_delta_volt_h,
+	&dev_attr_delta_curr,
+#endif
+	&dev_attr_chrcc,
 };
 
 static int ripley_battery_remove(struct platform_device *pdev)
@@ -2101,6 +2197,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	int retval = 0;
 	struct ripley_dev_info *di;
 	pmic_event_callback_t bat_event_callback;
+	int i;
 
 	di = kzalloc(sizeof(*di), GFP_KERNEL);
 	if (!di) {
@@ -2220,7 +2317,8 @@ static int ripley_battery_probe(struct platform_device *pdev)
 				HZ * 10);
 	ripley_charger_update_status(di);
 
-	device_create_file(&pdev->dev, &pmic_dev_attr);
+	for (i = 0; i < ARRAY_SIZE(batt_attributes); i++)
+		device_create_file(&pdev->dev, batt_attributes[i]);
 
 	goto success;
 

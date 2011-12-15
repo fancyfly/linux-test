@@ -2196,7 +2196,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	pmic_event_subscribe(MC34708_EVENT_CHRCMPL, bat_event_callback);
 #endif
 
-	set_coulomb_counter_cres(CCRES_500_mC_PER_LSB);
+	set_coulomb_counter_cres(CCRES_1000_mC_PER_LSB);
 	set_coulomb_counter_integtime(INTEGTIME_32S);
 	ripley_calibrate_coulomb_counter();
 	ccres_mC = get_coulomb_counter_cres_mC();

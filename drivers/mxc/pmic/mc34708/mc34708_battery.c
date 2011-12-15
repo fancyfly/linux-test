@@ -188,6 +188,7 @@ static int power_change_flag;
 static int need_adjust_percent_0;
 static int second_charging_flag;
 static int capacity_changed_flag;
+static int chrg_cmpl_status;
 
 static int last_batt_complete_id = -1;
 bool can_calculate_capacity = false;
@@ -254,7 +255,11 @@ static struct mc34708_charger_config ripley_charge_config = {
 	.vauxThresholdWeak = 4800000,
 	.vauxThresholdHigh = 5000000,
 	.lowBattThreshold = 3000000,
+#ifdef SOFTWARE_CHECK_EOC
 	.toppingOffMicroAmp = 400000,	/* 400 mA */
+#else
+	.toppingOffMicroAmp = 150000,	/* 150 mA */
+#endif
 	.maxChargingHour = 12,
 	.chargingPoints = ripley_charger_setting_point,
 	.pointsNumber = 1,
@@ -422,9 +427,21 @@ static int get_coulomb_counter_info(enum info_type type, int *value)
 	*value = val;
 }
 
+static void _clear_chrg_cmpl_status_bit(void)
+{
+	chrg_cmpl_status = 0;
+	pr_info("_clear_chrg_cmpl_status_bit\n");
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_INT_STATUS0,
+				   BITFVAL(CHRCMPLM, 1),
+				   BITFMASK(CHRCMPLM)));
+	return 0;
+}
+
 static int enable_charger(int enable)
 {
 	pr_info("%s %d\n", __func__, enable);
+	if (enable)
+		_clear_chrg_cmpl_status_bit();
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 				   BITFVAL(CHREN, enable ? 1 : 0),
 				   BITFMASK(CHREN)));
@@ -860,6 +877,13 @@ static int init_battery_profile(struct mc34708_charger_config *config)
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 				   BITFVAL(EOCBUCKEN, 1), BITFMASK(EOCBUCKEN)));
 
+#ifndef	SOFTWARE_CHECK_EOC
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
+				BITFVAL(BATTISOEN, 1),
+				BITFMASK(BATTISOEN)));
+#endif
+
+
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 				   BITFVAL(VBAT_TRKL,
 					   VBAT_TRKL_UV_TO_BITS
@@ -905,8 +929,8 @@ static int init_charger(struct mc34708_charger_config *config)
 	enable_1p5(true);
 
 	/* enable ISO */
-	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
-				   BITFVAL(BATTISOEN, 0), BITFMASK(BATTISOEN)));
+//	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
+//				   BITFVAL(BATTISOEN, 0), BITFMASK(BATTISOEN)));
 
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_CHARGER_SOURCE,
 				   BITFVAL(AUXWEAKEN, 1), BITFMASK(AUXWEAKEN)));
@@ -1042,6 +1066,7 @@ static int get_real_batt_voltage(struct ripley_dev_info *di)
 	return real_batt_volt;
 }
 
+#ifdef	SOFTWARE_CHECK_EOC
 static int check_eoc(struct ripley_dev_info *di)
 {
 	int ret;
@@ -1074,6 +1099,7 @@ static int check_eoc(struct ripley_dev_info *di)
 
 	return 0;
 }
+#endif
 
 static void _save_and_change_chrcc(int *old_chrcc, int chrcc)
 {
@@ -1791,9 +1817,15 @@ out1:
 		pr_info("POWER_SUPPLY_STATUS_FULL\n");
 		di->percent = 100;
 
+#ifdef SOFTWARE_CHECK_EOC
 		pmic_write_reg(MC34708_REG_CHARGER_DEBOUNCE,
 				BITFVAL(BATTISOEN, 1),
 				BITFMASK(BATTISOEN));
+#else
+		CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
+				BITFVAL(CHRITERMEN, 0),
+				BITFMASK(CHRITERMEN)));
+#endif
 		/* set as DISCHARGING WITH CHARGER */
 		di->battery_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
 		second_charging_flag = false;
@@ -1838,7 +1870,9 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 			if (usb_type == USBHOST)
 				di->battery_status = POWER_SUPPLY_STATUS_DISCHARGING;
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
+#ifdef	SOFTWARE_CHECK_EOC
 			check_eoc(di);
+#endif
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_NOT_CHARGING) {
 			compared_batt_volt = get_real_batt_voltage(di);
 			if (compared_batt_volt < RECHARGING_VOLT_THRESHOLD) {
@@ -1857,6 +1891,7 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 		di->battery_status = POWER_SUPPLY_STATUS_DISCHARGING;
 		di->full_counter = 0;
 		second_charging_flag = false;
+		_clear_chrg_cmpl_status_bit();
 	}
 
 	if (power_change_flag) {
@@ -2062,8 +2097,12 @@ static void battery_charge_complete_event_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
 
-	pr_info("\n\n battery charge complete event, disable charging\n");
-	queue_delayed_work(di->monitor_wqueue, &di->ovp_mon_work, HZ/10);
+	if (chrg_cmpl_status == 0) {
+		pr_info("\n\n battery charge complete event, disable charging\n");
+		queue_delayed_work(di->monitor_wqueue, &di->ovp_mon_work, HZ/10);
+		chrg_cmpl_status = 1;
+		di->battery_status = POWER_SUPPLY_STATUS_FULL;
+	}
 }
 #endif
 
@@ -2361,7 +2400,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	bat_event_callback.func = battery_charge_timer_expire_callback;
 	bat_event_callback.param = (void *)di;
 	pmic_event_subscribe(MC34708_EVENT_CHRTIMEEXP, bat_event_callback);
-#if 0
+#ifndef SOFTWARE_CHECK_EOC
 	bat_event_callback.func = battery_charge_complete_event_callback;
 	bat_event_callback.param = (void *)di;
 	pmic_event_subscribe(MC34708_EVENT_CHRCMPL, bat_event_callback);

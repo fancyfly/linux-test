@@ -255,7 +255,7 @@ static struct mc34708_charger_config ripley_charge_config = {
 	.vauxThresholdHigh = 5000000,
 	.lowBattThreshold = 3000000,
 	.toppingOffMicroAmp = 400000,	/* 400 mA */
-	.maxChargingHour = 1,
+	.maxChargingHour = 12,
 	.chargingPoints = ripley_charger_setting_point,
 	.pointsNumber = 1,
 };
@@ -1980,6 +1980,7 @@ static void battery_charge_timer_expire_callback(void *para)
 {
 	struct ripley_dev_info *di = (struct ripley_dev_info *)para;
 
+	enable_charger(false);
 	pr_info("\n\n charging timer expires.\n");
 }
 

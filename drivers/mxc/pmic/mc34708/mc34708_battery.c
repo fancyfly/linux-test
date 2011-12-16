@@ -259,7 +259,7 @@ static struct mc34708_charger_config ripley_charge_config = {
 #ifdef SOFTWARE_CHECK_EOC
 	.toppingOffMicroAmp = 400000,	/* 400 mA */
 #else
-	.toppingOffMicroAmp = 150000,	/* 150 mA */
+	.toppingOffMicroAmp = 200000,	/* 200 mA */
 #endif
 	.maxChargingHour = 12,
 	.chargingPoints = ripley_charger_setting_point,
@@ -1856,9 +1856,9 @@ out1:
 				BITFVAL(BATTISOEN, 1),
 				BITFMASK(BATTISOEN));
 #else
-		pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
-				BITFVAL(CHRITERMEN, 0),
-				BITFMASK(CHRITERMEN));
+//		pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
+//				BITFVAL(CHRITERMEN, 0),
+//				BITFMASK(CHRITERMEN));
 #endif
 		/* set as DISCHARGING WITH CHARGER */
 		di->battery_status = POWER_SUPPLY_STATUS_NOT_CHARGING;

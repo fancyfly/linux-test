@@ -2471,7 +2471,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 		goto workqueue_failed;
 	}
 
-	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ * 10);
+	queue_delayed_work(di->monitor_wqueue, &di->monitor_work, HZ);
 	queue_delayed_work(di->monitor_wqueue, &di->calc_resistor_mon_work,
 				HZ * 10);
 	queue_delayed_work(di->monitor_wqueue, &di->ovp_mon_work, HZ * 10);

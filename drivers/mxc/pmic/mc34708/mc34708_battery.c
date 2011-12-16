@@ -154,6 +154,7 @@
 #define EOC_CURRENT_UA			150000
 #define EOC_VOLTAGE_UV			4150000
 #define EOC_CCOUT			5
+#define LOWER_VOLT_THRESHOLD		3250000
 #define LOW_VOLT_THRESHOLD		3400000
 #define EXTRA_LOW_VOLT_THRESHOLD	2800000
 #define HIGH_VOLT_THRESHOLD		4200000
@@ -1586,9 +1587,10 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 						&current_uA_org);
 	if (retval) {
 		dev_err(di->dev, "ripley_get_batt_volt_curr_by_average() failed.\n");
+	} else {
+		_calibration_voltage(voltage_uV_org, &di->voltage_uV);
+		_calibration_current(current_uA_org, &di->current_uA);
 	}
-	_calibration_voltage(voltage_uV_org, &di->voltage_uV);
-	_calibration_current(current_uA_org, &di->current_uA);
 
 	retval = ripley_get_charger_coulomb(&coulomb, &ccfault);
 	if (retval == 0) {
@@ -1635,6 +1637,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 	static int lowbatt_counter;
 	static int adjust_percent_0_counter;
 	int compared_batt_volt;
+	int compared_threshold;
 
 	if (di->battery_status == POWER_SUPPLY_STATUS_UNKNOWN) {
 		di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
@@ -1650,7 +1653,11 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 		compared_batt_volt = get_real_batt_voltage(di);
 
 		/* trick: trigger before LOW_VOLT_THRESHOLD reached */
-		if (compared_batt_volt <= (LOW_VOLT_THRESHOLD +
+		if (before_use_calculated_capacity == 1)
+			compared_threshold = LOW_VOLT_THRESHOLD;
+		else
+			compared_threshold = LOWER_VOLT_THRESHOLD;
+		if (compared_batt_volt <= (compared_threshold +
 						VOLT_THRESHOLD_DELTA))
 			lowbatt_counter++;
 		else
@@ -1901,6 +1908,7 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 			check_eoc(di);
 #endif
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_NOT_CHARGING) {
+#ifdef	SOFTWARE_CHECK_EOC
 			compared_batt_volt = get_real_batt_voltage(di);
 			if (compared_batt_volt < RECHARGING_VOLT_THRESHOLD) {
 				pr_info("Battery volt < %d uV, Re-Charging.\n",
@@ -1912,6 +1920,7 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 				second_charging_flag = true;
 				di->full_counter = 0;
 			}
+#endif
 		}
 
 	} else {

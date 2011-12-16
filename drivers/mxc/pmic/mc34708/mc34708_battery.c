@@ -179,7 +179,6 @@
 #define	CALIB_CURR_HIGH			550000
 #define	CALIB_CURR_LOW			350000
 static int delta_volt_l, delta_volt_m, delta_volt_h, delta_curr;
-static int delta_curr_l, delta_curr_m;
 #endif
 
 static int suspend_flag;
@@ -719,6 +718,65 @@ static int ripley_get_batt_volt_curr(int *volt, int *curr)
 	return retval;
 }
 
+static int ripley_get_batt_volt_curr_by_average(int *voltage, int *currunt)
+{
+	int voltage_uV, current_uA;
+	int volt[10], curr[10];
+	int bad[10]; /* remove the bad value */
+	int i, j, k;
+	int sum;
+	int max, min;
+	int retval;
+
+	j = 0;
+#define MAX_READ_TIMES	10
+	for (i = 0; i < MAX_READ_TIMES; i++) {
+		retval = ripley_get_batt_volt_curr(&volt[i], &curr[i]);
+		if (retval) {
+			pr_err("ripley_get_batt_volt_curr() failed.\n");
+			bad[j] = i;
+			j++;
+		}
+	}
+
+	sum = 0;
+	min = max = curr[0];
+	for (i = 0; i < (MAX_READ_TIMES - j); i++) {
+		for (k = 0; k < j; k++)
+			if (bad[k] == i)
+				continue;
+
+		if (min > curr[i])
+			min = curr[i];
+		if (max < curr[i])
+			max = curr[i];
+		sum += curr[i];
+	}
+	sum -= (max + min);
+	sum /= MAX_READ_TIMES - 2 - j;
+	current_uA = sum;
+
+	min = max = volt[0];
+	sum = 0;
+	for (i = 0; i < (MAX_READ_TIMES - j); i++) {
+		for (k = 0; k < j; k++)
+			if (bad[k] == i)
+				continue;
+
+		if (min > volt[i])
+			min = volt[i];
+		if (max < volt[i])
+			max = volt[i];
+		sum += volt[i];
+	}
+	sum -= (max + min);
+	sum /= MAX_READ_TIMES - 2 - j;
+	voltage_uV = sum;
+
+	*voltage = voltage_uV;
+	*currunt = current_uA;
+}
+
 static int coulomb_counter_calibration;
 
 static int ripley_calibrate_coulomb_counter(void)
@@ -1128,7 +1186,8 @@ static int _record_last_batt_info(struct ripley_dev_info *di)
 	int voltage_uV, current_uA;
 	int ret;
 
-	ret = ripley_get_batt_volt_curr(&voltage_uV_org, &current_uA_org);
+	ret = ripley_get_batt_volt_curr_by_average(&voltage_uV_org,
+						&current_uA_org);
 	if (ret) {
 		pr_err("%s: ripley_get_batt_volt_curr() failed.\n",
 			__func__);
@@ -1510,10 +1569,6 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 	static int old_delta_coulomb;
 	static unsigned long last;
 	int voltage_uV_org, current_uA_org;
-	int volt[10], curr[10];
-	int i;
-	int sum;
-	int max, min;
 
 	/* Do not read info within 1/2 second */
 	if (last && time_before(jiffies, last + HZ / 2))
@@ -1521,47 +1576,13 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 
 	last = jiffies;
 
-	for (i = 0; i < 10; i++) {
-		retval = ripley_get_batt_volt_curr(&volt[i], &curr[i]);
-	//					&(di->current_uA));
-		if (retval)
-			dev_err(di->dev, "ripley_get_batt_volt_curr() failed.\n");
+	retval = ripley_get_batt_volt_curr_by_average(&voltage_uV_org,
+						&current_uA_org);
+	if (retval) {
+		dev_err(di->dev, "ripley_get_batt_volt_curr_by_average() failed.\n");
 	}
-#if 0
-	for (i = 0; i < 10; i++) {
-		printk("[%02d]: volt %d, curr %d\n", i, volt[i], curr[i]);
-	}
-#endif
-
-	sum = 0;
-	min = max = curr[0];
-	for (i = 0; i < 10; i++) {
-		if (min > curr[i])
-			min = curr[i];
-		if (max < curr[i])
-			max = curr[i];
-		sum += curr[i];
-	}
-	sum -= (max + min);
-	sum /= 8;
-	current_uA_org = sum;
-
-	min = max = volt[0];
-	sum = 0;
-	for (i = 0; i < 10; i++) {
-		if (min > volt[i])
-			min = volt[i];
-		if (max < volt[i])
-			max = volt[i];
-		sum += volt[i];
-	}
-	sum -= (max + min);
-	sum /= 8;
-	voltage_uV_org = sum;
-
-
-	_calibration_voltage(voltage_uV_org, &(di->voltage_uV));
-	_calibration_current(current_uA_org, &(di->current_uA));
+	_calibration_voltage(voltage_uV_org, &di->voltage_uV);
+	_calibration_current(current_uA_org, &di->current_uA);
 
 	retval = ripley_get_charger_coulomb(&coulomb, &ccfault);
 	if (retval == 0) {
@@ -1822,9 +1843,9 @@ out1:
 				BITFVAL(BATTISOEN, 1),
 				BITFMASK(BATTISOEN));
 #else
-		CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
+		pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 				BITFVAL(CHRITERMEN, 0),
-				BITFMASK(CHRITERMEN)));
+				BITFMASK(CHRITERMEN));
 #endif
 		/* set as DISCHARGING WITH CHARGER */
 		di->battery_status = POWER_SUPPLY_STATUS_NOT_CHARGING;

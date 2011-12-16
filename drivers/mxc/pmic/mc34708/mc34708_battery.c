@@ -654,7 +654,7 @@ static int ripley_get_batt_volt_curr(int *volt, int *curr)
 	int retval;
 	unsigned short voltage_raw;
 	signed short current_raw;
-	int volt_tmp, curr_tmp[2], diff;
+	int volt_tmp[2], curr_tmp[2], diff, curr_abs_lower;
 	int read_ok = true;
 	int i, j;
 
@@ -679,7 +679,7 @@ static int ripley_get_batt_volt_curr(int *volt, int *curr)
 		for (j = 0; j < 2; j++) {
 			retval = ripley_get_batt_volt_curr_raw(&voltage_raw, &current_raw);
 			if (retval == 0) {
-				volt_tmp = voltage_raw * BAT_VOLTAGE_UNIT_UV;
+				volt_tmp[j] = voltage_raw * BAT_VOLTAGE_UNIT_UV;
 
 				if (current_raw & 0x200)
 					curr_tmp[j] =
@@ -702,9 +702,10 @@ static int ripley_get_batt_volt_curr(int *volt, int *curr)
 				continue;
 
 			diff = abs(curr_tmp[0]- curr_tmp[1]);
-			if (diff == 0 || abs(curr_tmp[1]) / diff > 10) {
-				*curr = curr_tmp[1];
-				*volt = volt_tmp;
+			curr_abs_lower = min(abs(curr_tmp[0]), abs(curr_tmp[1]));
+			if (diff == 0 || curr_abs_lower / diff > 10) {
+				*curr = (curr_tmp[0] + curr_tmp[1]) / 2;
+				*volt = (volt_tmp[0] + volt_tmp[1]) / 2;
 				break;
 			}
 		}
@@ -721,7 +722,6 @@ static int ripley_get_batt_volt_curr(int *volt, int *curr)
 
 static int ripley_get_batt_volt_curr_by_average(int *voltage, int *currunt)
 {
-	int voltage_uV, current_uA;
 	int volt[10], curr[10];
 	int bad[10]; /* remove the bad value */
 	int i, j, k;
@@ -754,8 +754,11 @@ static int ripley_get_batt_volt_curr_by_average(int *voltage, int *currunt)
 		sum += curr[i];
 	}
 	sum -= (max + min);
-	sum /= MAX_READ_TIMES - 2 - j;
-	current_uA = sum;
+	if ((MAX_READ_TIMES - 2 - j) > 0) {
+		sum /= MAX_READ_TIMES - 2 - j;
+		*currunt = sum;
+	} else
+		return -1;
 
 	min = max = volt[0];
 	sum = 0;
@@ -771,11 +774,13 @@ static int ripley_get_batt_volt_curr_by_average(int *voltage, int *currunt)
 		sum += volt[i];
 	}
 	sum -= (max + min);
-	sum /= MAX_READ_TIMES - 2 - j;
-	voltage_uV = sum;
+	if ((MAX_READ_TIMES - 2 - j) > 0) {
+		sum /= MAX_READ_TIMES - 2 - j;
+		*voltage = sum;
+	} else
+		return -1;
 
-	*voltage = voltage_uV;
-	*currunt = current_uA;
+	return 0;
 }
 
 static int coulomb_counter_calibration;
@@ -1190,7 +1195,7 @@ static int _record_last_batt_info(struct ripley_dev_info *di)
 	ret = ripley_get_batt_volt_curr_by_average(&voltage_uV_org,
 						&current_uA_org);
 	if (ret) {
-		pr_err("%s: ripley_get_batt_volt_curr() failed.\n",
+		pr_err("%s: ripley_get_batt_volt_curr_by_average() failed.\n",
 			__func__);
 		return ret;
 	}

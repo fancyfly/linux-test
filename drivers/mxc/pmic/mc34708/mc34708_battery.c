@@ -1066,7 +1066,7 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 		CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 					   val, mask));
 
-		if (usb_type != USBHOST)
+		if (usb_type != USBHOST && usb_type != 0)
 			enable_charger(1);
 		else
 			enable_charger(0);
@@ -1901,7 +1901,7 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 			init_charger(config);
 			set_charging_point(di, point);
 			di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
-			if (usb_type == USBHOST)
+			if (usb_type == USBHOST || usb_type == 0)
 				di->battery_status = POWER_SUPPLY_STATUS_DISCHARGING;
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 #ifdef	SOFTWARE_CHECK_EOC

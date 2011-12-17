@@ -1381,7 +1381,7 @@ static void _recalc_batt_ivolt(struct ripley_dev_info *di)
 		di->internal_voltage_uV = accum_ivolt / nr;
 }
 
-static void _adjust_batt_capacity(struct ripley_dev_info *di)
+static void _adjust_batt_capacity_by_percent(struct ripley_dev_info *di)
 {
 	static int counter;
 	static int old_battery_status;
@@ -1427,6 +1427,39 @@ static void _adjust_batt_capacity(struct ripley_dev_info *di)
 		} else
 			di->percent = di->old_percent;
 	}
+}
+
+/* if > 95%, show 100%; otherwise split remained into 99 pcs */
+static void _adjust_batt_capacity_by_voltage(struct ripley_dev_info *di,
+					bool is_interval_voltage)
+{
+	int cmp_volt;
+	int volt_95p;	/* 95% threshold */
+
+	if (is_interval_voltage) {
+		cmp_volt = di->internal_voltage_uV;
+	} else
+		cmp_volt = di->voltage_uV;
+
+	volt_95p = (EOC_VOLTAGE_UV - LOW_VOLT_THRESHOLD) * 95 / 100 +
+			LOW_VOLT_THRESHOLD;
+	if (cmp_volt >= volt_95p)
+		di->percent = 100;
+	else
+		di->percent = (cmp_volt - LOW_VOLT_THRESHOLD) * 100 /
+			(volt_95p - LOW_VOLT_THRESHOLD);
+}
+
+static void _adjust_batt_capacity_by_coulomb(struct ripley_dev_info *di)
+{
+	int cap_95p;	/* 95% capacity threshold */
+
+	cap_95p = di->real_capacity  * 95 / 100 + di->empty_coulomb;
+	if (di->accum_coulomb >= cap_95p)
+		di->percent = 100;
+	else
+		di->percent = (di->accum_coulomb - di->empty_coulomb) * 100 /
+			(cap_95p - di->empty_coulomb);
 }
 
 static int ripley_charger_update_status(struct ripley_dev_info *di)
@@ -1681,15 +1714,13 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 
 		if (before_use_calculated_capacity == 1) {
 			if (di->internal_resistor_mOhm <= 0)
-				di->percent = (di->voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
-					 (EOC_VOLTAGE_UV - LOW_VOLT_THRESHOLD);
+				_adjust_batt_capacity_by_voltage(di, false);
 			else if (di->current_uA < 0) {
 				di->internal_voltage_uV = di->voltage_uV +
 					abs(di->current_uA) * di->internal_resistor_mOhm / 1000;
 				_record_batt_ivolt(di);
 				_recalc_batt_ivolt(di);
-				di->percent = (di->internal_voltage_uV - LOW_VOLT_THRESHOLD) * 100 /
-					 (EOC_VOLTAGE_UV - LOW_VOLT_THRESHOLD);
+				_adjust_batt_capacity_by_voltage(di, true);
 				pr_info("di->internal_voltage_uV %d, percent %d\n", di->internal_voltage_uV,
 									di->percent);
 				pr_info("di->internal_resistor_mOhm %d\n", di->internal_resistor_mOhm);
@@ -1700,7 +1731,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 
 			/* smooth the percent value, to avoid glitch */
 			if (can_adjust_percent) {
-				_adjust_batt_capacity(di);
+				_adjust_batt_capacity_by_percent(di);
 			}
 
 			if (di->percent < 0)
@@ -1724,8 +1755,8 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			save_coulomb_counter_info(TYPE_CCOUNT_FULL, di->full_coulomb);
 			save_coulomb_counter_info(TYPE_CCOUNT_EMPTY, di->empty_coulomb);
 		}
-		di->percent = (di->accum_coulomb - di->empty_coulomb) * 100 / di->real_capacity;
-		_adjust_batt_capacity(di);
+		_adjust_batt_capacity_by_coulomb(di);
+		_adjust_batt_capacity_by_percent(di);
 		pr_info("di->real_capacity %d, di->percent %d\n",
 			di->real_capacity, di->percent);
 
@@ -1792,7 +1823,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 
 			/* smooth the percent value, to avoid glitch */
 			if (can_adjust_percent) {
-				_adjust_batt_capacity(di);
+				_adjust_batt_capacity_by_percent(di);
 			}
 
 			if (di->percent < 0)
@@ -1828,7 +1859,7 @@ static void ripley_battery_update_capacity(struct ripley_dev_info *di)
 			pr_info("CHR CMPL(CCOUT): di->full_coulomb %d, di->real_capacity %d\n",
 					di->full_coulomb, di->real_capacity);
 		}
-		_adjust_batt_capacity(di);
+		_adjust_batt_capacity_by_percent(di);
 	}
 out1:
 /* re-consider special case here, delay ~1.5 minute before change to 0% */

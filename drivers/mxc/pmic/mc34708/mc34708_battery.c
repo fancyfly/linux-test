@@ -177,8 +177,9 @@
 #define HW_CALIB_VOLT_BY_SLOPE
 #define HW_CALIB_CURR_BY_SLOPE
 #define HW_CALIB_CURR_GET_4CHANS_AVERAGE_FIRST
-#define HW_CALIB_CURR_BIAS	2		/* 1/100 base */
-#define HW_CALIB_VOLT_BIAS	2		/* 1/1000 base */
+#define HW_CALIB_CURR_BIAS	15		/* 1/1000 base, 3% */
+#define HW_CALIB_VOLT_BIAS	15		/* 1/10000 base 3/1000 */
+/*#define DEBUG_VOLT_CURR_INFO*/
 #ifdef	HW_CALIB_VOLT_CURR
 /* calibration for voltage&current, to avoid the deviation caused by hw */
 #define CALIB_VOLT_HIGH			4100000
@@ -693,6 +694,7 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 		pr_err("ripley_get_batt_volt_curr_raw() failed.\n");
 		return -EINVAL;
 	}
+#ifdef DEBUG_VOLT_CURR_INFO
 	pr_info("j = %d\n", j);
 
 	/* print original value from pmic register  */
@@ -700,6 +702,7 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 		pr_info("volt_raw[%2d]: 0x%x\n", i, volt[i]);
 	for (i = 0; i < j; i++)
 		pr_info("curr_raw[%2d]: 0x%x\n", i, curr[i]);
+#endif
 
 
 	for (i = 0; i < j; i++)
@@ -707,18 +710,22 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 	for (i = 0; i < j; i++)
 		c[i] = curr[i] = _get_curr_from_raw(curr[i]);
 
+#ifdef DEBUG_VOLT_CURR_INFO
 	/* print human-readable value */
 	for (i = 0; i < j; i++)
 		pr_info("volt[%2d]: %d\n", i, volt[i]);
 	for (i = 0; i < j; i++)
 		pr_info("curr[%2d]: %d\n", i, curr[i]);
+#endif
 
 	sort(volt, j, 4, cmp_func, NULL);
+	sort(curr, j, 4, cmp_func, NULL);
+#ifdef DEBUG_VOLT_CURR_INFO
 	for (i = 0; i < j; i++)
 		pr_info("volt_sorted[%2d]: %d\n", i, volt[i]);
-	sort(curr, j, 4, cmp_func, NULL);
 	for (i = 0; i < j; i++)
 		pr_info("curr_sorted[%2d]: %d\n", i, curr[i]);
+#endif
 
 	/* get the average of second max/min of remained. */
 	tmp = (volt[1] + volt[j - 2]) / 2;
@@ -739,12 +746,15 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 	else
 		*volt_o = ((sum_l / k) + (sum_h / l)) / 2;
 
+#ifdef	DEBUG_VOLT_CURR_INFO
+	pr_info("method1 v: %d ", *volt_o);
+#endif
 	tmp = abs(*volt_o - volt[1]);
 	tmp2 = abs(volt[j-2] - *volt_o);
 	if (tmp == 0 || tmp2 == 0)
 		return -EINVAL;
-	if ((tmp * 1000 < *volt_o * HW_CALIB_VOLT_BIAS) &&
-	    (tmp2 * 1000 < *volt_o * HW_CALIB_VOLT_BIAS))
+	if ((tmp * 10000 < *volt_o * HW_CALIB_VOLT_BIAS) &&
+	    (tmp2 * 10000 < *volt_o * HW_CALIB_VOLT_BIAS))
 		return -EINVAL;
 
 	/* get the average of second max/min of remained. */
@@ -765,16 +775,17 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 		*curr_o = (sum_l + sum_h) / (j - 2);
 	else
 		*curr_o = ((sum_l / k) + (sum_h / l)) / 2;
+#ifdef	DEBUG_VOLT_CURR_INFO
+	pr_info("c: %d\n", *curr_o);
+#endif
 
 	tmp = abs(*curr_o - curr[1]);
 	tmp2 = abs(curr[j-2] - *curr_o);
 	if (tmp == 0 || tmp2 == 0)
 		return -EINVAL;
-	if ((tmp * 100 < abs(*curr_o) * HW_CALIB_CURR_BIAS) &&
-	    (tmp2 * 100 < abs(*curr_o) * HW_CALIB_CURR_BIAS))
+	if ((tmp * 1000 < abs(*curr_o) * HW_CALIB_CURR_BIAS) &&
+	    (tmp2 * 1000 < abs(*curr_o) * HW_CALIB_CURR_BIAS))
 		return -EINVAL;
-
-	printk("method1 v: %d c: %d\n", *volt_o, *curr_o);
 
 #ifdef	HW_CALIB_CURR_GET_4CHANS_AVERAGE_FIRST
 	tmp = 0;
@@ -788,14 +799,18 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 		v_[i] = tmp / 4;
 		c_[i] = tmp2 / 4;
 	}
+#ifdef	DEBUG_VOLT_CURR_INFO
 	for (i = 0; i < j/4; i++)
 		pr_info("v_[%2d]: %d\n", i, v_[i]);
 	for (i = 0; i < j/4; i++)
 		pr_info("c_[%2d]: %d\n", i, c_[i]);
+#endif
 
 	sort(v_, j/4, 4, cmp_func, NULL);
+#ifdef	DEBUG_VOLT_CURR_INFO
 	for (i = 0; i < j/4; i++)
 		pr_info("volt_sorted2 [%2d]: %d\n", i, v_[i]);
+#endif
 	tmp = (v_[0] + v_[5]) / 2;
 	sum_l = sum_h = 0;
 	k = l = 0;
@@ -813,10 +828,15 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 		*volt_o = (sum_l + sum_h) / (j/4);
 	else
 		*volt_o = ((sum_l / k) + (sum_h / l)) / 2;
+#ifdef	DEBUG_VOLT_CURR_INFO
+	pr_info("method2 v: %d ", *volt_o);
+#endif
 
 	sort(c_, j/4, 4, cmp_func, NULL);
+#ifdef	DEBUG_VOLT_CURR_INFO
 	for (i = 0; i < j/4; i++)
 		pr_info("curr_sorted2 [%2d]: %d\n", i, c_[i]);
+#endif
 	tmp = (c_[0] + c_[5]) / 2;
 	sum_l = sum_h = 0;
 	k = l = 0;
@@ -834,7 +854,9 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 		*curr_o = (sum_l + sum_h) / (j/4);
 	else
 		*curr_o = ((sum_l / k) + (sum_h / l)) / 2;
-	printk("method2 v: %d c: %d\n", *volt_o, *curr_o);
+#ifdef	DEBUG_VOLT_CURR_INFO
+	pr_info("c: %d\n", *curr_o);
+#endif
 #endif
 
 	return 0;
@@ -1787,12 +1809,14 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 4);
 
+#ifdef	SOFTWARE_CHECK_EOC
 			/* determine EOC only after INTEGTIME (max 32s) */
 			di->ready_to_judge_eoc = false;
 			cancel_delayed_work(&di->eoc_judge_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->eoc_judge_mon_work,
 					   HZ * MAX_INTEGTIME);
+#endif
 		} else if (stopCharging) {
 			pr_info("stopCharging\n");
 			enable_charger(0);
@@ -1809,11 +1833,13 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->monitor_work, HZ / 4);
 
+#ifdef	SOFTWARE_CHECK_EOC
 			cancel_delayed_work(&di->eoc_judge_mon_work);
 			queue_delayed_work(di->monitor_wqueue,
 					   &di->eoc_judge_mon_work, HZ);
 			di->ready_to_judge_eoc = false;
 			di->full_counter = 0;
+#endif
 		}
 	}
 
@@ -2354,6 +2380,7 @@ static void calc_resistor_work(struct work_struct *work)
 	}
 }
 
+#ifdef	SOFTWARE_CHECK_EOC
 static void eoc_judge_work(struct work_struct *work)
 {
 	struct ripley_dev_info *di = container_of(work,
@@ -2365,6 +2392,7 @@ static void eoc_judge_work(struct work_struct *work)
 	else
 		di->ready_to_judge_eoc = false;
 }
+#endif
 
 static void usb_charger_online_event_callback(void *para)
 {
@@ -2793,7 +2821,9 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&di->monitor_work, ripley_battery_work);
 	INIT_DELAYED_WORK(&di->ovp_mon_work, battery_ovp_work);
 	INIT_DELAYED_WORK(&di->calc_resistor_mon_work, calc_resistor_work);
+#ifdef	SOFTWARE_CHECK_EOC
 	INIT_DELAYED_WORK(&di->eoc_judge_mon_work, eoc_judge_work);
+#endif
 	di->monitor_wqueue =
 	    create_singlethread_workqueue(dev_name(&pdev->dev));
 	if (!di->monitor_wqueue) {
@@ -2831,6 +2861,9 @@ static int ripley_battery_suspend(struct platform_device *pdev,
 {
 	struct ripley_dev_info *di = platform_get_drvdata(pdev);
 
+#ifdef	SOFTWARE_CHECK_EOC
+	cancel_delayed_work_sync(&di->eoc_judge_mon_work);
+#endif
 	cancel_delayed_work_sync(&di->calc_resistor_mon_work);
 	cancel_delayed_work_sync(&di->monitor_work);
 	cancel_delayed_work_sync(&di->ovp_mon_work);
@@ -2855,6 +2888,10 @@ static int ripley_battery_resume(struct platform_device *pdev)
 		    (MC34708_REG_INT_MASK0, BITFVAL(BATTOVP, 0),
 		     BITFMASK(BATTOVP)));
 
+#ifdef	SOFTWARE_CHECK_EOC
+	queue_delayed_work(di->monitor_wqueue,
+			   &di->eoc_judge_mon_work, HZ * MAX_INTEGTIME);
+#endif
 	queue_delayed_work(di->monitor_wqueue,
 			   &di->calc_resistor_mon_work, HZ / 10);
 	queue_delayed_work(di->monitor_wqueue,

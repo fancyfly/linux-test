@@ -29,6 +29,7 @@
 #include <linux/pmic_external.h>
 #include <linux/mfd/mc34708/mc34708.h>
 #include <linux/gpio.h>
+#include <linux/sort.h>
 
 /* GPIO2_27, if output set high, pre-charge to approach several mA current */
 #define MX53_PCBA_BTCFG10       (1*32 + 27)
@@ -165,6 +166,7 @@
 
 #define ADC_MAX_CHANNEL		8
 #define ADC_MAX_RETRY		10
+#define ADC_CHANNUM_PER_ITEM	24	/* channel numbers per volt or curr */
 #define MAX_INTEGTIME		32	/* seconds */
 
 #define DEFAULT_INTER_RESISTOR_mOhm	200
@@ -182,6 +184,7 @@
 #define	CALIB_CURR_HIGH			550000
 #define	CALIB_CURR_LOW			350000
 static int delta_volt_l, delta_volt_m, delta_volt_h, delta_curr;
+static int delta_curr_l, delta_curr_h;
 #endif
 
 static int suspend_flag;
@@ -543,6 +546,7 @@ static int ripley_get_batt_temperature(int *tempC)
 	return 0;
 }
 
+#if 0
 static int ripley_get_batt_volt_curr_raw(unsigned short *volt,
 					unsigned short *curr)
 {
@@ -590,6 +594,159 @@ static int ripley_get_batt_volt_curr_raw(unsigned short *volt,
 
 	return 0;
 }
+#endif
+
+static int _get_volt_from_raw(int volt_raw)
+{
+	return volt_raw * BAT_VOLTAGE_UNIT_UV;
+}
+
+static int _get_curr_from_raw(int curr_raw)
+{
+	int curr;
+
+	if (curr_raw & 0x200)
+		curr =
+		    (0x1FF - (curr_raw & 0x1FF)) *
+		    BAT_CURRENT_UNIT_UA * (-1);
+	else
+		curr =
+		    (curr_raw & 0x1FF) * BAT_CURRENT_UNIT_UA;
+
+	return curr;
+}
+
+static int ripley_get_batt_volt_curr_raw(int *volt[], int *curr[], int *size)
+{
+	int channel[ADC_MAX_CHANNEL];
+	unsigned short result[ADC_MAX_CHANNEL];
+	unsigned short max, min;
+	int ret, retry;
+	int i, j, k;
+
+	for (i = 0; i < ADC_MAX_CHANNEL; i++) {
+		if (i % 2)
+			channel[i] = BATTERY_CURRENT;
+		else
+			channel[i] = BATTERY_VOLTAGE;
+	}
+
+	j = 0;
+	for (i = 0; i < ((*size + 3) / 4); i++) {
+		retry = 0;
+retry:
+		ret = mc34708_pmic_adc_convert(channel, result,
+						ADC_MAX_CHANNEL);
+		if (ret && retry < 3) {
+			retry++;
+			goto retry;
+		}
+
+		if (ret == 0) {
+			for (k = 0; k < 4; k++)
+				volt[j + k] = result[k * 2];
+			for (k = 0; k < 4; k++)
+				curr[j + k] = result[k * 2 + 1];
+
+			j += 4;
+		} else if (retry >= 3)
+			pr_warning("mc34708_pmic_adc_convert failed\n");
+	}
+
+	if (j < 4)
+		return -EINVAL;
+
+	*size = j;
+
+	return 0;
+}
+
+static int cmp_func(const void *_a, const void *_b)
+{
+	const int *a = _a, *b = _b;
+
+	if (*a > *b)
+		return 1;
+	if (*a < *b)
+		return -1;
+	return 0;
+}
+
+static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
+{
+	int volt[ADC_CHANNUM_PER_ITEM], curr[ADC_CHANNUM_PER_ITEM];
+	int i, j, k, l;
+	int ret;
+	int tmp;
+	int sum_l, sum_h;
+
+	j = ADC_CHANNUM_PER_ITEM;
+	ret = ripley_get_batt_volt_curr_raw(&volt, &curr, &j);
+	if (ret) {
+		pr_err("ripley_get_batt_volt_curr_raw() failed.\n");
+		return -EINVAL;
+	}
+	pr_info("j = %d\n", j);
+
+	/* print original value from pmic register  */
+	for (i = 0; i < j; i++)
+		pr_info("volt_raw[%2d]: 0x%x\n", i, volt[i]);
+	for (i = 0; i < j; i++)
+		pr_info("curr_raw[%2d]: 0x%x\n", i, curr[i]);
+
+
+	for (i = 0; i < j; i++)
+		volt[i] = _get_volt_from_raw(volt[i]);
+	for (i = 0; i < j; i++)
+		curr[i] = _get_curr_from_raw(curr[i]);
+
+	/* print human-readable value */
+	for (i = 0; i < j; i++)
+		pr_info("volt[%2d]: %d\n", i, volt[i]);
+	for (i = 0; i < j; i++)
+		pr_info("curr[%2d]: %d\n", i, curr[i]);
+
+	sort(volt, j, 4, cmp_func, NULL);
+	for (i = 0; i < j; i++)
+		pr_info("volt_sorted[%2d]: %d\n", i, volt[i]);
+	sort(curr, j, 4, cmp_func, NULL);
+	for (i = 0; i < j; i++)
+		pr_info("curr_sorted[%2d]: %d\n", i, curr[i]);
+
+	/* get the average of second max/min of remained. */
+	tmp = (volt[1] + volt[j - 2]) / 2;
+	sum_l = sum_h = 0;
+	k = l = 0;
+	for (i = 1; i < (j - 1); i++) {
+		if (volt[i] <= tmp) {
+			sum_l += volt[i];
+			k++;
+		} else {
+			sum_h += volt[i];
+			l++;
+		}
+	}
+
+	*volt_o = ((sum_l / k) + (sum_h / l)) / 2;
+
+	/* get the average of second max/min of remained. */
+	tmp = (curr[1] + curr[j - 2]) / 2;
+	sum_l = sum_h = 0;
+	k = l = 0;
+	for (i = 1; i < (j - 1); i++) {
+		if (curr[i] <= tmp) {
+			sum_l += curr[i];
+			k++;
+		} else {
+			sum_h += curr[i];
+			l++;
+		}
+	}
+
+	*curr_o = ((sum_l / k) + (sum_h / l)) / 2;
+
+	return 0;
+}
 
 static void _calibration_voltage(int volt, int *volt_cali)
 {
@@ -613,11 +770,11 @@ static void _calibration_voltage(int volt, int *volt_cali)
 	SLOPE_LOW = 1000 * (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW) /
 					(gpadc_medium - gpadc_low);
 
-	 if (volt <= CALIB_VOLT_MEDIUM) {
+	if (volt <= CALIB_VOLT_MEDIUM) {
 		*volt_cali = CALIB_VOLT_MEDIUM - SLOPE_LOW * (gpadc_medium - volt) / 1000;
-	 } else {
+	} else {
 		*volt_cali = CALIB_VOLT_MEDIUM + SLOPE_HIGH * (volt - gpadc_medium) / 1000;
-	 }
+	}
 	pr_info(" volt_cali 1 %d    ", *volt_cali);
 #endif
 
@@ -640,14 +797,35 @@ static void _calibration_voltage(int volt, int *volt_cali)
 static void _calibration_current(int curr, int *curr_cali)
 {
 #ifdef HW_CALIB_VOLT_CURR
-	int gpadc_delta_curr;
+//	int gpadc_delta_curr;
 
-	*curr_cali = curr - delta_curr;
+//	*curr_cali = curr - delta_curr;
+
+	int gpadc_low, gpadc_high;
+	int SLOPE;
+
+	if (delta_curr_l == 0 || delta_curr_h == 0) {
+		*curr_cali = curr;
+		return;
+	}
+
+	gpadc_low = delta_volt_l + CALIB_VOLT_LOW;
+	gpadc_high = delta_volt_h + CALIB_VOLT_HIGH;
+
+	SLOPE = 1000 * (CALIB_CURR_HIGH - CALIB_CURR_LOW) /
+					(gpadc_high - gpadc_low);
+
+	if (curr <= CALIB_CURR_HIGH)
+		*curr_cali = CALIB_CURR_HIGH - SLOPE * (gpadc_high - curr) / 1000;
+	else
+		*curr_cali = CALIB_CURR_HIGH + SLOPE * (curr - gpadc_high) / 1000;
+
 #else
 	*curr_cali = curr;
 #endif
 }
 
+#if 0
 static int ripley_get_batt_volt_curr(int *volt, int *curr)
 {
 	int retval;
@@ -658,21 +836,6 @@ static int ripley_get_batt_volt_curr(int *volt, int *curr)
 	int i, j;
 
 #if 0
-	retval = ripley_get_batt_voltage(&voltage_raw);
-	if (retval == 0)
-		*volt = voltage_raw * BAT_VOLTAGE_UNIT_UV;
-
-	retval = ripley_get_batt_current(&(di->current_raw));
-	if (retval == 0) {
-		if (di->current_raw & 0x200)
-			*curr =
-			    (0x1FF - (di->current_raw & 0x1FF)) *
-			    BAT_CURRENT_UNIT_UA * (-1);
-		else
-			*curr =
-			    (di->current_raw & 0x1FF) * BAT_CURRENT_UNIT_UA;
-	}
-#else
 	/* AMPD suggests to sample volt/curr alternately */
 	for (i = 0; i < ADC_MAX_RETRY; i++) {
 		for (j = 0; j < 2; j++) {
@@ -781,6 +944,7 @@ static int ripley_get_batt_volt_curr_by_average(int *voltage, int *currunt)
 
 	return 0;
 }
+#endif
 
 static int coulomb_counter_calibration;
 
@@ -1191,10 +1355,10 @@ static int _record_last_batt_info(struct ripley_dev_info *di)
 	int voltage_uV, current_uA;
 	int ret;
 
-	ret = ripley_get_batt_volt_curr_by_average(&voltage_uV_org,
+	ret = ripley_get_batt_volt_curr(&voltage_uV_org,
 						&current_uA_org);
 	if (ret) {
-		pr_err("%s: ripley_get_batt_volt_curr_by_average() failed.\n",
+		pr_err("%s: ripley_get_batt_volt_curr() failed.\n",
 			__func__);
 		return ret;
 	}
@@ -1614,10 +1778,10 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 
 	last = jiffies;
 
-	retval = ripley_get_batt_volt_curr_by_average(&voltage_uV_org,
+	retval = ripley_get_batt_volt_curr(&voltage_uV_org,
 						&current_uA_org);
 	if (retval) {
-		dev_err(di->dev, "ripley_get_batt_volt_curr_by_average() failed.\n");
+		dev_err(di->dev, "ripley_get_batt_volt_curr() failed.\n");
 	} else {
 		_calibration_voltage(voltage_uV_org, &di->voltage_uV);
 		_calibration_current(current_uA_org, &di->current_uA);
@@ -2287,6 +2451,42 @@ static ssize_t delta_volt_h_store(struct device *dev,
 	return count;
 }
 
+static ssize_t delta_curr_l_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", delta_curr_l);
+	return count;
+}
+
+static ssize_t delta_curr_l_store(struct device *dev,
+			     struct device_attribute *attr, const char *buf,
+			     size_t count)
+{
+	delta_curr_l = simple_strtol(buf, NULL, 10);
+
+	return count;
+}
+
+static ssize_t delta_curr_h_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", delta_curr_h);
+	return count;
+}
+
+static ssize_t delta_curr_h_store(struct device *dev,
+			     struct device_attribute *attr, const char *buf,
+			     size_t count)
+{
+	delta_curr_h = simple_strtol(buf, NULL, 10);
+
+	return count;
+}
+
 static ssize_t delta_curr_show(struct device *dev,
 			    struct device_attribute *attr, char *buf)
 {
@@ -2307,6 +2507,8 @@ static ssize_t delta_curr_store(struct device *dev,
 static DEVICE_ATTR(delta_volt_l, S_IRUSR | S_IWUSR, delta_volt_l_show, delta_volt_l_store);
 static DEVICE_ATTR(delta_volt_m, S_IRUSR | S_IWUSR, delta_volt_m_show, delta_volt_m_store);
 static DEVICE_ATTR(delta_volt_h, S_IRUSR | S_IWUSR, delta_volt_h_show, delta_volt_h_store);
+static DEVICE_ATTR(delta_curr_l, S_IRUSR | S_IWUSR, delta_curr_l_show, delta_curr_l_store);
+static DEVICE_ATTR(delta_curr_h, S_IRUSR | S_IWUSR, delta_curr_h_show, delta_curr_h_store);
 static DEVICE_ATTR(delta_curr, S_IRUSR | S_IWUSR, delta_curr_show, delta_curr_store);
 #endif
 
@@ -2345,6 +2547,8 @@ static struct device_attribute *batt_attributes[] = {
 	&dev_attr_delta_volt_l,
 	&dev_attr_delta_volt_m,
 	&dev_attr_delta_volt_h,
+	&dev_attr_delta_curr_l,
+	&dev_attr_delta_curr_h,
 	&dev_attr_delta_curr,
 #endif
 	&dev_attr_chrcc,

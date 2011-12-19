@@ -176,6 +176,7 @@
 #define HW_CALIB_VOLT_CURR
 #define HW_CALIB_VOLT_BY_SLOPE
 #define HW_CALIB_CURR_BY_SLOPE
+#define HW_CALIB_CURR_METHOD2
 #ifdef	HW_CALIB_VOLT_CURR
 /* calibration for voltage&current, to avoid the deviation caused by hw */
 #define CALIB_VOLT_HIGH			4100000
@@ -675,6 +676,7 @@ static int cmp_func(const void *_a, const void *_b)
 static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 {
 	int volt[ADC_CHANNUM_PER_ITEM], curr[ADC_CHANNUM_PER_ITEM];
+	int v[ADC_CHANNUM_PER_ITEM], c[ADC_CHANNUM_PER_ITEM];
 	int i, j, k, l;
 	int ret;
 	int tmp;
@@ -696,9 +698,9 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 
 
 	for (i = 0; i < j; i++)
-		volt[i] = _get_volt_from_raw(volt[i]);
+		v[i] = volt[i] = _get_volt_from_raw(volt[i]);
 	for (i = 0; i < j; i++)
-		curr[i] = _get_curr_from_raw(curr[i]);
+		c[i] = curr[i] = _get_curr_from_raw(curr[i]);
 
 	/* print human-readable value */
 	for (i = 0; i < j; i++)
@@ -727,7 +729,10 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 		}
 	}
 
-	*volt_o = ((sum_l / k) + (sum_h / l)) / 2;
+	if (k == 0 || l == 0)
+		*volt_o = (sum_l + sum_h) / (j - 2);
+	else
+		*volt_o = ((sum_l / k) + (sum_h / l)) / 2;
 
 	/* get the average of second max/min of remained. */
 	tmp = (curr[1] + curr[j - 2]) / 2;
@@ -743,7 +748,75 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 		}
 	}
 
-	*curr_o = ((sum_l / k) + (sum_h / l)) / 2;
+	if (k == 0 || l == 0)
+		*curr_o = (sum_l + sum_h) / (j - 2);
+	else
+		*curr_o = ((sum_l / k) + (sum_h / l)) / 2;
+
+	printk("method1 v: %d c: %d\n", *volt_o, *curr_o);
+
+#ifdef	HW_CALIB_CURR_METHOD2
+	int v_[ADC_CHANNUM_PER_ITEM/4], c_[ADC_CHANNUM_PER_ITEM/4];
+	tmp = 0;
+	int tmp2;
+	for (i = 0; i < j / 4; i++) {
+		tmp = tmp2 = 0;
+		for (k = i * 4; k < (i + 1) * 4; k++) {
+			tmp += v[k];
+			tmp2 += c[k];
+		}
+
+		v_[i] = tmp / 4;
+		c_[i] = tmp2 / 4;
+	}
+	for (i = 0; i < j/4; i++)
+		pr_info("v_[%2d]: %d\n", i, v_[i]);
+	for (i = 0; i < j/4; i++)
+		pr_info("c_[%2d]: %d\n", i, c_[i]);
+
+	sort(v_, j/4, 4, cmp_func, NULL);
+	for (i = 0; i < j/4; i++)
+		pr_info("volt_sorted2 [%2d]: %d\n", i, v_[i]);
+	tmp = (v_[0] + v_[5]) / 2;
+	sum_l = sum_h = 0;
+	k = l = 0;
+	for (i = 0; i < (j/4); i++) {
+		if (v_[i] < tmp) {
+			sum_l += v_[i];
+			k++;
+		} else {
+			sum_h += v_[i];
+			l++;
+		}
+	}
+
+	if (k == 0 || l == 0)
+		*volt_o = (sum_l + sum_h) / (j/4);
+	else
+		*volt_o = ((sum_l / k) + (sum_h / l)) / 2;
+
+	sort(c_, j/4, 4, cmp_func, NULL);
+	for (i = 0; i < j/4; i++)
+		pr_info("curr_sorted2 [%2d]: %d\n", i, c_[i]);
+	tmp = (c_[0] + c_[5]) / 2;
+	sum_l = sum_h = 0;
+	k = l = 0;
+	for (i = 0; i < (j/4); i++) {
+		if (c_[i] < tmp) {
+			sum_l += c_[i];
+			k++;
+		} else {
+			sum_h += c_[i];
+			l++;
+		}
+	}
+
+	if (k == 0 || l == 0)
+		*curr_o = (sum_l + sum_h) / (j/4);
+	else
+		*curr_o = ((sum_l / k) + (sum_h / l)) / 2;
+	printk("method2 v: %d c: %d\n", *volt_o, *curr_o);
+#endif
 
 	return 0;
 }

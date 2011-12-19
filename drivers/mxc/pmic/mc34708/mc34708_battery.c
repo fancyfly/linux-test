@@ -176,7 +176,9 @@
 #define HW_CALIB_VOLT_CURR
 #define HW_CALIB_VOLT_BY_SLOPE
 #define HW_CALIB_CURR_BY_SLOPE
-#define HW_CALIB_CURR_METHOD2
+#define HW_CALIB_CURR_GET_4CHANS_AVERAGE_FIRST
+#define HW_CALIB_CURR_BIAS	2		/* 1/100 base */
+#define HW_CALIB_VOLT_BIAS	2		/* 1/1000 base */
 #ifdef	HW_CALIB_VOLT_CURR
 /* calibration for voltage&current, to avoid the deviation caused by hw */
 #define CALIB_VOLT_HIGH			4100000
@@ -676,10 +678,13 @@ static int cmp_func(const void *_a, const void *_b)
 static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 {
 	int volt[ADC_CHANNUM_PER_ITEM], curr[ADC_CHANNUM_PER_ITEM];
+#ifdef	HW_CALIB_CURR_GET_4CHANS_AVERAGE_FIRST
+	int v_[ADC_CHANNUM_PER_ITEM/4], c_[ADC_CHANNUM_PER_ITEM/4];
+#endif
 	int v[ADC_CHANNUM_PER_ITEM], c[ADC_CHANNUM_PER_ITEM];
 	int i, j, k, l;
 	int ret;
-	int tmp;
+	int tmp, tmp2;
 	int sum_l, sum_h;
 
 	j = ADC_CHANNUM_PER_ITEM;
@@ -734,6 +739,14 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 	else
 		*volt_o = ((sum_l / k) + (sum_h / l)) / 2;
 
+	tmp = abs(*volt_o - volt[1]);
+	tmp2 = abs(volt[j-2] - *volt_o);
+	if (tmp == 0 || tmp2 == 0)
+		return -EINVAL;
+	if ((tmp * 1000 < *volt_o * HW_CALIB_VOLT_BIAS) &&
+	    (tmp2 * 1000 < *volt_o * HW_CALIB_VOLT_BIAS))
+		return -EINVAL;
+
 	/* get the average of second max/min of remained. */
 	tmp = (curr[1] + curr[j - 2]) / 2;
 	sum_l = sum_h = 0;
@@ -753,12 +766,18 @@ static int ripley_get_batt_volt_curr(int *volt_o, int *curr_o)
 	else
 		*curr_o = ((sum_l / k) + (sum_h / l)) / 2;
 
+	tmp = abs(*curr_o - curr[1]);
+	tmp2 = abs(curr[j-2] - *curr_o);
+	if (tmp == 0 || tmp2 == 0)
+		return -EINVAL;
+	if ((tmp * 100 < abs(*curr_o) * HW_CALIB_CURR_BIAS) &&
+	    (tmp2 * 100 < abs(*curr_o) * HW_CALIB_CURR_BIAS))
+		return -EINVAL;
+
 	printk("method1 v: %d c: %d\n", *volt_o, *curr_o);
 
-#ifdef	HW_CALIB_CURR_METHOD2
-	int v_[ADC_CHANNUM_PER_ITEM/4], c_[ADC_CHANNUM_PER_ITEM/4];
+#ifdef	HW_CALIB_CURR_GET_4CHANS_AVERAGE_FIRST
 	tmp = 0;
-	int tmp2;
 	for (i = 0; i < j / 4; i++) {
 		tmp = tmp2 = 0;
 		for (k = i * 4; k < (i + 1) * 4; k++) {

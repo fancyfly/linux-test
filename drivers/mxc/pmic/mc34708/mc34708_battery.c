@@ -172,7 +172,8 @@
 #define	BATTERY_UPDATE_INTERVAL		8	/* seconds */
 
 #define HW_CALIB_VOLT_CURR
-#define HW_CALIB_VOLT_CURR_BY_SLOPE
+#define HW_CALIB_VOLT_BY_SLOPE
+#define HW_CALIB_CURR_BY_SLOPE
 #ifdef	HW_CALIB_VOLT_CURR
 /* calibration for voltage&current, to avoid the deviation caused by hw */
 #define CALIB_VOLT_HIGH			4100000
@@ -435,7 +436,6 @@ static void _clear_chrg_cmpl_status_bit(void)
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_INT_STATUS0,
 				   BITFVAL(CHRCMPLM, 1),
 				   BITFMASK(CHRCMPLM)));
-	return 0;
 }
 
 static int enable_charger(int enable)
@@ -596,7 +596,6 @@ static void _calibration_voltage(int volt, int *volt_cali)
 #ifdef HW_CALIB_VOLT_CURR
 	int gpadc_low, gpadc_medium, gpadc_high;
 	int SLOPE_LOW, SLOPE_HIGH;
-//	int delta_low, delta_medium, delta_high;
 	int delta;
 
 	if (delta_volt_l == 0 || delta_volt_m == 0 || delta_volt_h == 0) {
@@ -604,15 +603,11 @@ static void _calibration_voltage(int volt, int *volt_cali)
 		return;
 	}
 
-//	delta_low = gpadc_low - CALIB_VOLT_LOW;
-//	delta_medium = gpadc_medium - CALIB_VOLT_MEDIUM;
-//	delta_high = gpadc_high - CALIB_VOLT_HIGH;
-
 	gpadc_low = delta_volt_l + CALIB_VOLT_LOW;
 	gpadc_medium = delta_volt_m + CALIB_VOLT_MEDIUM;
 	gpadc_high = delta_volt_h + CALIB_VOLT_HIGH;
 
-#ifdef HW_CALIB_VOLT_CURR_BY_SLOPE
+#ifdef	HW_CALIB_VOLT_BY_SLOPE
 	SLOPE_HIGH = 1000 * (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM) /
 					(gpadc_high - gpadc_medium);
 	SLOPE_LOW = 1000 * (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW) /
@@ -623,9 +618,10 @@ static void _calibration_voltage(int volt, int *volt_cali)
 	 } else {
 		*volt_cali = CALIB_VOLT_MEDIUM + SLOPE_HIGH * (volt - gpadc_medium) / 1000;
 	 }
-	printk(" volt_cali 1 %d    ", *volt_cali);
+	pr_info(" volt_cali 1 %d    ", *volt_cali);
 #endif
 
+#ifdef	HW_CALIB_VOLT_BY_DELTA_SLOPE
 	if (volt <= CALIB_VOLT_MEDIUM) {
 		delta = (volt - gpadc_low) * (delta_volt_m - delta_volt_l) / (CALIB_VOLT_MEDIUM - CALIB_VOLT_LOW);
 		*volt_cali = volt - delta - delta_volt_l;
@@ -633,7 +629,9 @@ static void _calibration_voltage(int volt, int *volt_cali)
 		delta = (volt - gpadc_medium) * (delta_volt_h - delta_volt_m) / (CALIB_VOLT_HIGH - CALIB_VOLT_MEDIUM);
 		*volt_cali = volt - delta - delta_volt_m;
 	}
-	printk(" volt_cali 2 %d    \n", *volt_cali);
+	pr_info(" volt_cali 2 %d    \n", *volt_cali);
+#endif
+
 #else
 	*volt_cali = volt;
 #endif

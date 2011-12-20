@@ -234,9 +234,10 @@ struct temp_array {
 	int BPTHERM_uV;
 };
 
+/*TODO*/
 struct temp_array temp_array[] =
 {
-	{0, 1305000}, {1, 1305000},
+	{0, 0}, {20, 1015000}, {30, 1300000},
 };
 
 /*
@@ -528,7 +529,7 @@ static int ripley_get_batt_temperature(int *tempC)
 	*tempC = 0;
 	retval = ripley_get_batt_thermistor_raw(&voltage_raw);
 	if (retval == 0)
-		voltage_uV = voltage_raw * BAT_VOLTAGE_UNIT_UV;
+		voltage_uV = voltage_raw * BAT_VOLTAGE_UNIT_UV / 2;
 	else
 		return retval;
 
@@ -1919,13 +1920,6 @@ static int ripley_battery_read_status(struct ripley_dev_info *di)
 		di->accum_coulomb += di->delta_coulomb;
 	}
 
-#if 0
-	int tempC;
-	retval = ripley_get_batt_temperature(&tempC);
-	if (retval == 0)
-		printk("Battery temperature %d \n", tempC);
-#endif
-
 	pr_info("[readout]: vol %d uV, cur %d uA, cc %d \n",
 							voltage_uV_org,
 							current_uA_org,
@@ -2464,6 +2458,7 @@ static int ripley_battery_get_property(struct power_supply *psy,
 				       union power_supply_propval *val)
 {
 	static unsigned long last;
+	int tempC, ret;
 	struct ripley_dev_info *di = to_ripley_dev_info(psy);
 
 	switch (psp) {
@@ -2507,7 +2502,11 @@ static int ripley_battery_get_property(struct power_supply *psy,
 				(di->percent > 100 ? 100 : di->percent);
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
-		val->intval = 30;	/*TODO*/
+		ret = ripley_get_batt_temperature(&tempC);
+		if (ret == 0)
+			val->intval = tempC;
+		else
+			val->intval = -EINVAL;
 		break;
 	default:
 		return -EINVAL;

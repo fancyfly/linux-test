@@ -182,13 +182,14 @@
 /*#define DEBUG_VOLT_CURR_INFO*/
 #ifdef	HW_CALIB_VOLT_CURR
 /* calibration for voltage&current, to avoid the deviation caused by hw */
-#define CALIB_VOLT_HIGH			4100000
+#define CALIB_VOLT_HIGH			4100000	/* uV */
 #define CALIB_VOLT_MEDIUM		3800000
 #define CALIB_VOLT_LOW			LOW_VOLT_THRESHOLD
-#define	CALIB_CURR_HIGH			550000
-#define	CALIB_CURR_LOW			350000
+#define	CALIB_CURR_HIGH			650000	/* uA */
+#define	CALIB_CURR_MEDIUM		450000
+#define	CALIB_CURR_LOW			250000
 static int delta_volt_l, delta_volt_m, delta_volt_h, delta_curr;
-static int delta_curr_l, delta_curr_h;
+static int delta_curr_l, delta_curr_m, delta_curr_h;
 #endif
 
 static int suspend_flag;
@@ -916,24 +917,28 @@ static void _calibration_current(int curr, int *curr_cali)
 
 //	*curr_cali = curr - delta_curr;
 
-	int gpadc_low, gpadc_high;
-	int SLOPE;
+	int gpadc_low, gpadc_medium, gpadc_high;
+	int SLOPE_LOW, SLOPE_HIGH, SLOPE;
 
-	if (delta_curr_l == 0 || delta_curr_h == 0) {
+	if (delta_curr_l == 0 || delta_curr_m == 0 || delta_curr_h == 0) {
 		*curr_cali = curr;
 		return;
 	}
 
-	gpadc_low = delta_volt_l + CALIB_VOLT_LOW;
-	gpadc_high = delta_volt_h + CALIB_VOLT_HIGH;
+	gpadc_low = delta_curr_l + CALIB_CURR_LOW;
+	gpadc_medium = delta_curr_m + CALIB_CURR_MEDIUM;
+	gpadc_high = delta_curr_h + CALIB_CURR_HIGH;
 
-	SLOPE = 1000 * (CALIB_CURR_HIGH - CALIB_CURR_LOW) /
-					(gpadc_high - gpadc_low);
+	SLOPE_HIGH = 1000 * (CALIB_CURR_HIGH - CALIB_CURR_MEDIUM) /
+					(gpadc_high - gpadc_medium);
+	SLOPE_LOW = 1000 * (CALIB_CURR_MEDIUM - CALIB_CURR_LOW) /
+					(gpadc_medium - gpadc_low);
+	SLOPE = (SLOPE_HIGH + SLOPE_LOW) / 2;
 
-	if (curr <= CALIB_CURR_HIGH)
-		*curr_cali = CALIB_CURR_HIGH - SLOPE * (gpadc_high - curr) / 1000;
+	if (curr <= CALIB_CURR_MEDIUM)
+		*curr_cali = CALIB_CURR_MEDIUM - SLOPE * (gpadc_medium - curr) / 1000;
 	else
-		*curr_cali = CALIB_CURR_HIGH + SLOPE * (curr - gpadc_high) / 1000;
+		*curr_cali = CALIB_CURR_MEDIUM + SLOPE * (curr - gpadc_medium) / 1000;
 
 #else
 	*curr_cali = curr;
@@ -2588,6 +2593,24 @@ static ssize_t delta_curr_l_store(struct device *dev,
 	return count;
 }
 
+static ssize_t delta_curr_m_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", delta_curr_m);
+	return count;
+}
+
+static ssize_t delta_curr_m_store(struct device *dev,
+			     struct device_attribute *attr, const char *buf,
+			     size_t count)
+{
+	delta_curr_m = simple_strtol(buf, NULL, 10);
+
+	return count;
+}
+
 static ssize_t delta_curr_h_show(struct device *dev,
 			    struct device_attribute *attr, char *buf)
 {
@@ -2627,6 +2650,7 @@ static DEVICE_ATTR(delta_volt_l, S_IRUSR | S_IWUSR, delta_volt_l_show, delta_vol
 static DEVICE_ATTR(delta_volt_m, S_IRUSR | S_IWUSR, delta_volt_m_show, delta_volt_m_store);
 static DEVICE_ATTR(delta_volt_h, S_IRUSR | S_IWUSR, delta_volt_h_show, delta_volt_h_store);
 static DEVICE_ATTR(delta_curr_l, S_IRUSR | S_IWUSR, delta_curr_l_show, delta_curr_l_store);
+static DEVICE_ATTR(delta_curr_m, S_IRUSR | S_IWUSR, delta_curr_l_show, delta_curr_m_store);
 static DEVICE_ATTR(delta_curr_h, S_IRUSR | S_IWUSR, delta_curr_h_show, delta_curr_h_store);
 static DEVICE_ATTR(delta_curr, S_IRUSR | S_IWUSR, delta_curr_show, delta_curr_store);
 #endif
@@ -2667,6 +2691,7 @@ static struct device_attribute *batt_attributes[] = {
 	&dev_attr_delta_volt_m,
 	&dev_attr_delta_volt_h,
 	&dev_attr_delta_curr_l,
+	&dev_attr_delta_curr_m,
 	&dev_attr_delta_curr_h,
 	&dev_attr_delta_curr,
 #endif

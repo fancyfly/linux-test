@@ -177,6 +177,7 @@ typedef struct
    	uint8_t Colorimetry;			// 0 = 601; 1 = 709
    	uint8_t fb_id[12];
 	struct platform_device * pdev;
+	bool_t ipuDataOutput;
 
 } mhlTx_config_t;
 

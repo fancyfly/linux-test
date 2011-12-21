@@ -50,6 +50,9 @@
 #include <linux/gpio.h>
 #include <asm/mach-types.h>
 
+#include "sii_92326_driver.h"
+#include "sii_92326_api.h"
+extern mhlTx_config_t	mhlTxConfig;
 /*
  * Driver name
  */
@@ -428,7 +431,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 			mxc_fbi->alpha_mem_len = alpha_mem_len;
 		}
 	}
-	#if 0
+	#if 1
 	if (mxc_fbi->next_blank != FB_BLANK_UNBLANK ||
 	    mxc_fbi->fb_suspended)
 		return retval;
@@ -468,7 +471,10 @@ static int mxcfb_set_par(struct fb_info *fbi)
 		dev_dbg(fbi->device, "pixclock = %ul Hz\n",
 			(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
 
-
+		printk("FSL ---- DI#%d stream out frame data. pixelclock %d, xres %d, yres %d, fmt 0x%08X.\n", \
+			mxc_fbi->ipu_di, (PICOS2KHZ(fbi->var.pixclock)) * 1000UL, \
+			fbi->var.xres, fbi->var.yres, out_pixel_fmt);
+		
 		if (ipu_init_sync_panel(mxc_fbi->ipu_di,
 					(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
 					fbi->var.xres, fbi->var.yres,
@@ -1954,13 +1960,13 @@ static int mxcfb_probe(struct platform_device *pdev)
 	if (pdev->id == 0) {
 		ipu_disp_set_global_alpha(mxcfbi->ipu_ch, true, 0x80);
 		ipu_disp_set_color_key(mxcfbi->ipu_ch, false, 0);
-		strcpy(fbi->fix.id, "DISP3 BG");
+		strcpy(fbi->fix.id, "DISP3 BG - DI0");
 
 		if (!g_dp_in_use)
 			mxcfbi->ipu_alp_ch_irq = IPU_IRQ_BG_ALPHA_SYNC_EOF;
 		g_dp_in_use = true;
 	} else if (pdev->id == 1) {
-		strcpy(fbi->fix.id, "DISP3 BG - DI1");
+		strcpy(fbi->fix.id, "DISP3 BG");
 
 		if (!g_dp_in_use)
 			mxcfbi->ipu_alp_ch_irq = IPU_IRQ_BG_ALPHA_SYNC_EOF;

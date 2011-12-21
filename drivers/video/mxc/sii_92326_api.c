@@ -70,6 +70,7 @@ bool_t	vbusPowerState = true;		// false: 0 = vbus output on; true: 1 = vbus outp
 static void sii9232_poweron();
 static void sii9232_poweroff();
 extern void mhl_disconnect( void );
+extern uint8_t siMhlTx_AudioSet (void);
 
 static ssize_t sii902x_show_name(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -692,7 +693,10 @@ static void sii9232_setup(struct fb_info *fbi)
 	 */
 	if (mhlTxConfig.videomodeIndex == 0) {
 		printk("FSL ---- [MHL] Failed to find out the most suitable video mode %d.\n", mhlTxConfig.videomodeIndex);
-		mhlTxConfig.videomodeIndex = 4;	// Hard coded in 1280x720p60
+		mhlTxConfig.videomodeIndex = 4;	// 1280 x 720
+	}
+	else {
+		printk("FSL ---- [MHL] will setup videomode %d.\n", mhlTxConfig.videomodeIndex);
 	}
 	/*
 	 * Here, just calling siMhlTx_VideoSel() directly because it maps the videomode.
@@ -738,12 +742,15 @@ static void sii9232_setup(struct fb_info *fbi)
 	siMhlTx_VideoSel(mhlTxConfig.videomodeIndex, false);
 	#endif
 	//////////////////////////////*********commented by GaryYuan *******************////////////////////////////
-	#if 0
-	msleep(2000);
+	#if 1
 	siMhlTx_VideoSel(mhlTxConfig.videomodeIndex, true);
 	siMhlTx_AudioSel( AFS_44K1 );
-
+	#endif
+	#if 0
 	siMhlTx_VideoSet();
+	#endif
+	#if 0
+	siMhlTx_AudioSet();
 	#endif
 }
 
@@ -772,8 +779,6 @@ static int sii9232_fb_event(struct notifier_block *nb, unsigned long val, void *
 			#if 0
 			siMhlTx_VideoSel( HDMI_720P60, false );	// assume video initialize to 720p60, here should be decided by AP
 			siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
-			siMhlTx_VideoSet();   
-
 			sii9232_setup(fbi);
 			#endif
 			break;
@@ -865,6 +870,11 @@ int mxc_edid_9232_read(uint8_t * edid, struct mxc_edid_cfg * cfg, struct fb_info
 
 	if (edid[1] == 0x00)
 		return -ENOENT;
+
+	if (fbi == NULL) {
+		printk("FSL ---- fbi HAVE NOT been registered, so igore current mxc_edid_9232_read.\n");
+		return -ENOENT;
+	}
 	
 	extblknum = edid[0x7E];
 	if (extblknum == 0)
@@ -885,6 +895,10 @@ int mxc_edid_9232_read(uint8_t * edid, struct mxc_edid_cfg * cfg, struct fb_info
 		printk("FSL ---- extblknum is %d.\n", extblknum);
 		for (i = 1; i <= extblknum; i++) {
 			/* edid ext block parsing */
+			if (fbi == NULL) {
+				printk("FSL ---- FBI is NULL due to no registered.\n");
+				break;
+			}
 			ret = mxc_edid_parse_ext_blk(edid + i * 128,
 					cfg, &fbi->monspecs);
 			if (ret < 0)
@@ -922,8 +936,20 @@ static int __init mhl_Sii92326_init(void)
 	if(false == Sii92326_mhl_reset())
 		return -EIO;
 	
-	strcpy(mhlTxConfig.fb_id, "DISP3 BG - DI1");
-
+	strcpy(mhlTxConfig.fb_id, "DISP3 BG");
+	#if 1	/* edid reading */
+	memset(&mhlTxConfig.edid[0], 0, (EDID_LENGTH * 4));	
+	memset(&mhlTxConfig.edid_cfg, 0, sizeof(struct mxc_edid_cfg));		
+	ret = mxc_edid_9232_read(&mhlTxConfig.edid[0], &mhlTxConfig.edid_cfg, &edid_fbi);	
+	if (ret >= 0) {		
+		#if 0
+		memcpy(&mhlTxConfig.fbi.monspecs.modedb, &cea_modes[4], sizeof(struct fb_videomode));		
+		mhlTxConfig.fbi.monspecs.modedb_len = 1;		
+		#endif
+		if (! strcmp(mhlTxConfig.fb_id, "DISP3 BG - DI1"))
+			mxcfb_register_mode(1, edid_fbi.monspecs.modedb, edid_fbi.monspecs.modedb_len, MXC_DISP_DDC_DEV);	
+	}
+	#endif
 	HalTimerInit ( );
 	HalTimerSet (TIMER_POLLING, MONITORING_PERIOD);
 
@@ -946,9 +972,11 @@ static int __init mhl_Sii92326_init(void)
 		//printk(KERN_INFO "%s:%d:Sii92326 interrupt successed\n", __func__,__LINE__);	
 		INIT_DELAYED_WORK(&sii92326work, work_queue); 
 	}
-
-	siMhlTx_VideoSel( HDMI_720P60, true);	// assume video initialize to 720p60, here should be decided by AP
-	siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
+	
+	// if (mhlTxConfig.ipuDataOutput) {
+		siMhlTx_VideoSel( HDMI_720P60, true);	// assume video initialize to 720p60, here should be decided by AP
+		siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
+	// }
 
 	ret = device_create_file(&mhlTxConfig.pdev->dev, &dev_attr_fb_name);
 	if (ret < 0)
@@ -979,8 +1007,8 @@ static void __exit mhl_Sii92326_exit(void)
 	sii9232_poweroff();	/* Release HDMI pins */	
 	return;
 }
-
-late_initcall(mhl_Sii92326_init);
+module_init(mhl_Sii92326_init);
+// late_initcall(mhl_Sii92326_init);
 module_exit(mhl_Sii92326_exit);
 
 MODULE_VERSION("1.24");

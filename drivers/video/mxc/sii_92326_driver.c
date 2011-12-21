@@ -3072,8 +3072,8 @@ void OnDownstreamRxPoweredUp (void)
 {
 
 	TX_DEBUG_PRINT (("[MHL]: DSRX -> Powered Up\n"));
-	if (mhlTxConfig.need_mode_change) {
-		#if 0
+	#if 1
+	if ((mhlTxConfig.need_mode_change) && (mhlTxConfig.fbi != NULL)) {
 		mhlTxConfig.fbi->var.activate |= FB_ACTIVATE_FORCE;
 		acquire_console_sem();
 		mhlTxConfig.fbi->flags |= FBINFO_MISC_USEREVENT;
@@ -3081,8 +3081,8 @@ void OnDownstreamRxPoweredUp (void)
 		mhlTxConfig.fbi->flags &= ~FBINFO_MISC_USEREVENT;
 		release_console_sem();
 		mhlTxConfig.need_mode_change = false;
-		#endif
 	}
+	#endif
 	mhlTxConfig.dsRxPoweredUp = true;
 
 	msleep(500);
@@ -3146,7 +3146,7 @@ uint8_t OnHdmiCableConnected (void)
 	/*
 	 * Update framebuffer driver
 	 */
-	#if 0
+	#if 1
 	if (mhlTxEdid.edidDataValid == true) {
 		ret = mxc_edid_9232_read(&mhlTxConfig.edid[0], &mhlTxConfig.edid_cfg, mhlTxConfig.fbi);
 		if (ret >= 0)
@@ -3172,7 +3172,7 @@ uint8_t OnHdmiCableConnected (void)
 			}
 		}
 		else
-			printk("!!!!FSL -- Failed to read edid.\n");
+			printk("!!!!FSL -- Failed to process readback EDID due to invalid FBI.\n");
 	}
 	#endif
 #ifdef READKSV
@@ -3189,7 +3189,9 @@ uint8_t OnHdmiCableConnected (void)
 		TX_DEBUG_PRINT (("[MHL]: DVI Sink Detected\n"));
 		ReadModifyWriteTPI(TPI_SYSTEM_CONTROL_DATA_REG, OUTPUT_MODE_MASK, OUTPUT_MODE_DVI);
 	}
+	#if 0
     mhlTxConfig.need_mode_change = true;
+	#endif
 	OnDownstreamRxPoweredUp();		// RX power not determinable? Force to on for now.
 
 	return true;
@@ -5596,6 +5598,10 @@ void SiiMhlTxGetEvents( uint8_t *event, uint8_t *eventParameter )
 	// If interrupts have not been routed to our ISR, manually call it here.
 	//
 	//if(false == mhlTxConfig.interruptDriven)
+	#if 0
+	printk("FSL ---- Entry SiiMhlTxGetEvents.\n");
+	#endif
+	
 	if (Int_count)
 	{	
 		Int_count --;

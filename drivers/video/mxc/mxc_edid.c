@@ -45,6 +45,10 @@ const struct fb_videomode cea_modes[64] = {
 		NULL, 60, 640, 480, 39722, 48, 16, 33, 10, 96, 2, 0,
 		FB_VMODE_NONINTERLACED, 0,
 	},
+	[2] = {
+        NULL, 57, 800, 480, 37037, 40, 60, 10, 10, 20, 10, 0x40000000,
+         FB_VMODE_NONINTERLACED, 0,
+    },
 	/* #3: 720x480p@59.94/60Hz */
 	[3] = {
 		NULL, 60, 720, 480, 37037, 60, 16, 30, 9, 62, 6, 0,

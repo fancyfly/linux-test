@@ -32,6 +32,8 @@
 
 #include "../core/pmic.h"
 
+#define	BATTERY_THERMISTOR	7
+
 #define ADCSEL_WID		4
 #define ADCRESULT_WID		10
 #define ADCRESULT_MASK(x)	(((1U << ADCRESULT_WID) - 1) << (x))
@@ -45,6 +47,8 @@
 
 #define ADSTOP_LSH 4
 #define ADSTOP_WID 3
+#define THERM_LSH	8
+#define THERM_WID	1
 
 #define THERMxxxS_LSH	11
 #define THERMxxxS_WID	4
@@ -214,6 +218,16 @@ PMIC_STATUS mc34708_pmic_adc_convert(int *channel, unsigned short *result,
 		return -EBUSY;
 
 	down(&convert_mutex);
+
+	for (i = 0; i < num; i++) {
+		if (channel[i] == BATTERY_THERMISTOR) {
+			pmic_write_reg(MC34708_REG_ADC0,
+				       BITFVAL(THERM, 1),
+				       BITFMASK(THERM));
+			break;
+		}
+	}
+
 	_save_and_change_thfb(&saved_thfb, 0);
 	_save_and_change_therm_mask(&saved_therm, 0xF);
 
@@ -277,6 +291,16 @@ PMIC_STATUS mc34708_pmic_adc_convert(int *channel, unsigned short *result,
 error1:
 	_save_and_change_therm_mask(NULL, saved_therm);
 	_save_and_change_thfb(NULL, saved_thfb);
+
+	for (i = 0; i < num; i++) {
+		if (channel[i] == BATTERY_THERMISTOR) {
+			pmic_write_reg(MC34708_REG_ADC0,
+				       BITFVAL(THERM, 0),
+				       BITFMASK(THERM));
+			break;
+		}
+	}
+
 	up(&convert_mutex);
 
 	return ret;

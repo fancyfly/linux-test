@@ -88,7 +88,6 @@
  */
 
 // LCD Module related
-#define MX53_PCBA_LCD_BL_PWM		(0*32 + 1)	/* GPIO1_1, PWM modulator, adjsut illumination */
 #define MX53_PCBA_LCD_MODE		(1*32 + 5)	/* GPIO2_5, Once choice one time, before reset (double check) */
 #define MX53_PCBA_LCD_UD		(1*32 + 12)	/* GPIO2_12, Up to Down */
 #define MX53_PCBA_LCD_LR		(1*32 + 13)	/* GPIO2_13, Left to Right */
@@ -443,7 +442,7 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	/* CAM_MCLK */
 	MX53_PAD_GPIO_0__CCM_SSI_EXT1_CLK,
 	/* LCD_BL_PWM */
-	MX53_PAD_GPIO_1__GPIO1_1, // Change it to be GPIO instead, not work in PWM2_PWMO
+	MX53_PAD_GPIO_1__PWM2_PWMO,
 	/* CAM2_PWR_DWN */
 	MX53_PAD_GPIO_2__GPIO1_2,
 	/* AU_MCLK1 */

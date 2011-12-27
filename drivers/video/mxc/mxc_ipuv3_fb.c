@@ -1487,7 +1487,6 @@ static irqreturn_t mxcfb_alpha_irq_handler(int irq, void *dev_id)
  * Macros defined for LCD power control
  */
 #define MX53_PCBA_LCD_PWR_EN		(2*32 + 22)	/* GPIO3_22 */
-#define MX53_PCBA_LCD_BL_PWM 		(0*32 + 1)	/* GPIO1_1*/
 #define MX53_PCBA_BL_PWR_EN		(3*32 + 7)	/* GPIO4_7 */
 #define MX53_PCBA_LCD_SEL		(6*32 + 8)	/* GPIO7_8 */
 
@@ -1512,11 +1511,6 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 	 */
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 0);/*LCD_PWR_EN*/	
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 0); /*BL_PWR_EN*/
-	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
-	if(!ret){
-		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 0);
-		gpio_free(MX53_PCBA_LCD_BL_PWM);
-	}
 	gpio_direction_input(MX53_PCBA_LCD_SEL);
 	release_console_sem();
 
@@ -1541,11 +1535,6 @@ static int mxcfb_resume(struct platform_device *pdev)
 	 */
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 1);/*LCD_PWR_EN*/
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1); /*BL_PWR_EN*/
-	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
-	if(!ret){
-		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 1);
-		gpio_free(MX53_PCBA_LCD_BL_PWM);
-	}
 	gpio_direction_output(MX53_PCBA_LCD_SEL, 0);
 	release_console_sem();
 

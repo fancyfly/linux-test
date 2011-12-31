@@ -386,9 +386,7 @@ static int ehci_fsl_bus_suspend(struct usb_hcd *hcd)
 		return ret;
 
 	if (portsc & PORT_CCS) {
-
-		printk(KERN_DEBUG "there is a device on the port\n");
-
+		printk("there is a device on the port\n");
 		tmp = ehci_readl(ehci, &ehci->regs->command);
 		tmp |= CMD_RUN;
 		ehci_writel(ehci, tmp, &ehci->regs->command);
@@ -409,8 +407,6 @@ static int ehci_fsl_bus_resume(struct usb_hcd *hcd)
 {
 	int ret = 0;
 	struct fsl_usb2_platform_data *pdata;
-	u32 tmp, portsc;
-	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 
 	pdata = hcd->self.controller->platform_data;
 	printk(KERN_DEBUG "%s, %s\n", __func__, pdata->name);

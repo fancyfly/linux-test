@@ -991,7 +991,7 @@ static struct fb_videomode video_modes[] = {
 	 FB_VMODE_NONINTERLACED,
 	 0,},
 	{
-	 NULL, 60, 1280, 720, 13468,
+	 "1280x720M@60", 60, 1280, 720, 13468,
 	 220, 110,
 	 20, 5,
 	 40, 5,
@@ -1106,7 +1106,7 @@ static struct resource mxcfb_resources[] = {
 static struct mxc_fb_platform_data fb_data[] = {
 	{
 	 .interface_pix_fmt = IPU_PIX_FMT_RGB24,
-	 .mode_str = "AT070TNA2-WSVGA",
+	 .mode_str = "AT070TN93",
 	 .mode = video_modes,
 	 .num_modes = ARRAY_SIZE(video_modes),
 	},

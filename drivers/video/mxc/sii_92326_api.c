@@ -45,6 +45,7 @@
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
+#include <linux/console.h>
 
 #include "sii_92326_driver.h"
 #include "sii_92326_api.h"
@@ -585,7 +586,7 @@ static void work_queue(struct work_struct *work)
 	
 	uint8_t	event;
 	uint8_t	eventParameter;
-
+	
 	Int_count++;
 	SiiMhlTxGetEvents( &event, &eventParameter );
 
@@ -758,6 +759,7 @@ static int sii9232_fb_event(struct notifier_block *nb, unsigned long val, void *
 {	
 	struct fb_event *event = v;	
 	struct fb_info *fbi = event->info;
+	unsigned long lock_flags = 0;	
 	
 	if (strcmp(event->info->fix.id, mhlTxConfig.fb_id))
 		return 0;
@@ -771,14 +773,28 @@ static int sii9232_fb_event(struct notifier_block *nb, unsigned long val, void *
 			else {
 				printk("FSL ---- Register fbi in mhlTxConfig.\n");
 				mhlTxConfig.fbi = fbi;
+				#if 0
+				mhlTxConfig.fbi->var.activate |= FB_ACTIVATE_FORCE;
+				acquire_console_sem();
+				mhlTxConfig.fbi->flags |= FBINFO_MISC_USEREVENT;
+				fb_set_var(mhlTxConfig.fbi, &mhlTxConfig.fbi->var);
+				mhlTxConfig.fbi->flags &= ~FBINFO_MISC_USEREVENT;
+				release_console_sem();
+				#endif
 			}
 			break;			
 		case FB_EVENT_MODE_CHANGE:
 			printk("FSL ----- FB_EVENT_MODE_CHANGE event.\n");
-			
+			if (mhlTxConfig.fbi != NULL) {
+				#if 0
+				siMhlTx_VideoSel( HDMI_720P60, false );	// assume video initialize to 720p60, here should be decided by AP
+				siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
+				#endif
+			}
+			else {
+				printk("FSL ---- Ignore the incoming FB_EVENT_MODE_CHANGE because no fbi registered.\n");
+			}
 			#if 0
-			siMhlTx_VideoSel( HDMI_720P60, false );	// assume video initialize to 720p60, here should be decided by AP
-			siMhlTx_AudioSel( AFS_44K1 );	// assume audio initialize to 44.1K, here should be decided by AP
 			sii9232_setup(fbi);
 			#endif
 			break;
@@ -786,11 +802,21 @@ static int sii9232_fb_event(struct notifier_block *nb, unsigned long val, void *
 		case FB_EVENT_BLANK:
 			printk("FSL ----- FB_EVENT_BLANK event.\n");
 			#if 0
-			if (*((int *)event->data) == FB_BLANK_UNBLANK)			
+			if (*((int *)event->data) == FB_BLANK_BLANK)			
 				sii9232_poweron();		
 			else			
 				sii9232_poweroff();
-			#endif		
+			#endif
+			#if 0
+			sii9232_poweroff();
+			
+			if (*((int *) event->data) != FB_BLANK_UNBLANK) {
+				printk("FSL ---- Process FB_BLANK_BLANK event.\n");
+				disable_irq_nosync(gpio_to_irq(MX53_PCBA_MHL_INT));
+				resetSiI9232();
+				enable_irq(gpio_to_irq(MX53_PCBA_MHL_INT));
+			}
+			#endif
 			break;	
 	}	
 	return 0;
@@ -887,7 +913,7 @@ int mxc_edid_9232_read(uint8_t * edid, struct mxc_edid_cfg * cfg, struct fb_info
 	printk("FSL ---- process extblknum is %d.\n", extblknum);
 	/* edid first block parsing */
 	fb_edid_to_monspecs(edid, &fbi->monspecs);
-    printk("Done 2\n");
+
 	if (extblknum) {
 		int i;
 

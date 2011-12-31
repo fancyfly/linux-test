@@ -217,7 +217,7 @@ static int mxcfb_set_fix(struct fb_info *info)
 {
 	struct fb_fix_screeninfo *fix = &info->fix;
 	struct fb_var_screeninfo *var = &info->var;
-	printk("FSL ---- xres_virtual: %d, yres_virtual: %d, bits_per_pixel: %d.\n", var->xres_virtual, var->yres_virtual, var->bits_per_pixel);
+	printk("FSL ---- %s xres_virtual: %d, yres_virtual: %d, bits_per_pixel: %d.\n", __FUNCTION__, var->xres_virtual, var->yres_virtual, var->bits_per_pixel);
 	fix->line_length = var->xres_virtual * var->bits_per_pixel / 8;
 
 	fix->type = FB_TYPE_PACKED_PIXELS;
@@ -1487,6 +1487,7 @@ static irqreturn_t mxcfb_alpha_irq_handler(int irq, void *dev_id)
  * Macros defined for LCD power control
  */
 #define MX53_PCBA_LCD_PWR_EN		(2*32 + 22)	/* GPIO3_22 */
+#define MX53_PCBA_LCD_BL_PWM 		(0*32 + 1)	/* GPIO1_1*/
 #define MX53_PCBA_BL_PWR_EN		(3*32 + 7)	/* GPIO4_7 */
 #define MX53_PCBA_LCD_SEL		(6*32 + 8)	/* GPIO7_8 */
 
@@ -1511,6 +1512,11 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 	 */
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 0);/*LCD_PWR_EN*/	
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 0); /*BL_PWR_EN*/
+	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
+	if(!ret){
+		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 0);
+		gpio_free(MX53_PCBA_LCD_BL_PWM);
+	}
 	gpio_direction_input(MX53_PCBA_LCD_SEL);
 	release_console_sem();
 
@@ -1535,6 +1541,11 @@ static int mxcfb_resume(struct platform_device *pdev)
 	 */
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 1);/*LCD_PWR_EN*/
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1); /*BL_PWR_EN*/
+	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
+	if(!ret){
+		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 1);
+		gpio_free(MX53_PCBA_LCD_BL_PWM);
+	}
 	gpio_direction_output(MX53_PCBA_LCD_SEL, 0);
 	release_console_sem();
 
@@ -1759,6 +1770,9 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 		mxcfbi->fb_mode_str = plat_data->mode_str;
 
 	if (mxcfbi->fb_mode_str) {
+		#if 1
+		printk("FSL ---- Setup videomode %s for DI#%d.\n", mxcfbi->fb_mode_str, mxcfbi->ipu_di);
+		#endif
 		if (mxcfbi->ipu_di >= 0) {
 			const struct fb_videomode *mode = NULL;
 			struct fb_videomode m;
@@ -1783,8 +1797,10 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 						& MXC_DISP_DDC_DEV) &&
 						(mode[i].vmode & FB_VMODE_INTERLACED))
 						continue;
-					else
+					else {
 						fb_add_videomode(&mode[i], &fbi->modelist);
+						printk("FSL ---- %s: add videomode %d x %d into fbi->modelist.\n", __FUNCTION__, mode[i].xres, mode[i].yres);
+					}
 				}
 			}
 
@@ -1869,6 +1885,11 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 				ret = -EINVAL;
 				goto done;
 			}
+			else {
+				#if 1
+				printk("FSL ---- %s found videomode %s in mxc_fb_platform_data.\n", __FUNCTION__, mxcfbi->fb_mode_str);
+				#endif
+			}
 
 			/*added found mode to fbi modelist*/
 			fb_var_to_videomode(&m, &fbi->var);
@@ -1938,7 +1959,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 	} else {
 		mxcfbi->ipu_ch_irq = IPU_IRQ_DC_SYNC_EOF;
 		mxcfbi->ipu_ch = MEM_DC_SYNC;
-		mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_POWERDOWN;
+		mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_UNBLANK;
 	}
 
 	mxcfbi->ipu_di = pdev->id;

@@ -15,7 +15,10 @@
 */
 
 // Standard C Library
-
+#include <linux/module.h>
+#include <linux/errno.h>
+#include <linux/init.h>
+#include <linux/platform_device.h>
 #include <linux/bug.h>
 #include <linux/err.h>
 #include <linux/i2c.h>
@@ -2804,7 +2807,12 @@ void siMhlTx_Init (void)
 				//LINK_INTEGRITY_DYNAMIC | TMDS_OUTPUT_CONTROL_ACTIVE | AV_MUTE_MUTED);
 			
 			WriteByteTPI(TPI_PIX_REPETITION, tpivmode[0]);      		// Write register 0x08
+			#if 0
 			EnableInterrupts(HOT_PLUG_EVENT | RX_SENSE_EVENT | AUDIO_ERROR_EVENT | SECURITY_CHANGE_EVENT | V_READY_EVENT | HDCP_CHANGE_EVENT);
+			#endif
+			#if 1
+			EnableInterrupts(HOT_PLUG_EVENT | RX_SENSE_EVENT | SECURITY_CHANGE_EVENT | V_READY_EVENT | HDCP_CHANGE_EVENT);
+			#endif
 		}
 	}
 	else
@@ -2817,7 +2825,12 @@ void siMhlTx_Init (void)
 			//LINK_INTEGRITY_DYNAMIC | TMDS_OUTPUT_CONTROL_ACTIVE | AV_MUTE_NORMAL);
 			
 		WriteByteTPI(TPI_PIX_REPETITION, tpivmode[0]);      		// Write register 0x08
+		#if 0
 		EnableInterrupts(HOT_PLUG_EVENT | RX_SENSE_EVENT | AUDIO_ERROR_EVENT);
+		#endif
+		#if 1
+		EnableInterrupts(HOT_PLUG_EVENT | RX_SENSE_EVENT);
+		#endif
 	}
 
 #ifdef INFOFRAMES_AFTER_TMDS
@@ -3072,17 +3085,6 @@ void OnDownstreamRxPoweredUp (void)
 {
 
 	TX_DEBUG_PRINT (("[MHL]: DSRX -> Powered Up\n"));
-	#if 1
-	if ((mhlTxConfig.need_mode_change) && (mhlTxConfig.fbi != NULL)) {
-		mhlTxConfig.fbi->var.activate |= FB_ACTIVATE_FORCE;
-		acquire_console_sem();
-		mhlTxConfig.fbi->flags |= FBINFO_MISC_USEREVENT;
-		fb_set_var(mhlTxConfig.fbi, &mhlTxConfig.fbi->var);
-		mhlTxConfig.fbi->flags &= ~FBINFO_MISC_USEREVENT;
-		release_console_sem();
-		mhlTxConfig.need_mode_change = false;
-	}
-	#endif
 	mhlTxConfig.dsRxPoweredUp = true;
 
 	msleep(500);
@@ -3155,6 +3157,8 @@ uint8_t OnHdmiCableConnected (void)
 
 				const struct fb_videomode *mode;
 				struct fb_videomode m;
+				struct fb_var_screeninfo var;
+				
 				fb_destroy_modelist(&mhlTxConfig.fbi->modelist);
 
 				for (i = 0; i < mhlTxConfig.fbi->monspecs.modedb_len; i++) {
@@ -3163,12 +3167,22 @@ uint8_t OnHdmiCableConnected (void)
 						fb_add_videomode(&mhlTxConfig.fbi->monspecs.modedb[i],
 								&mhlTxConfig.fbi->modelist);
 				}
-
+				printk("FSL ---- %s Checkpoint 1. fbi->var.xres %d, fbi->var.yres %d.\n", __FUNCTION__, mhlTxConfig.fbi->var.xres, mhlTxConfig.fbi->var.yres);
 				fb_var_to_videomode(&m, &mhlTxConfig.fbi->var);
 				mode = fb_find_nearest_mode(&m,
 						&mhlTxConfig.fbi->modelist);
 				fb_videomode_to_var(&mhlTxConfig.fbi->var, mode);
-				mhlTxConfig.need_mode_change = true;
+				printk("FSL ---- %s Checkpoint 2. fbi->var.xres %d, fbi->var.yres %d.\n", __FUNCTION__, mhlTxConfig.fbi->var.xres, mhlTxConfig.fbi->var.yres);
+				
+				var = mhlTxConfig.fbi->var;
+				fb_videomode_to_var(&var, mode);
+				var.activate |= FB_ACTIVATE_FORCE;
+				acquire_console_sem();
+				mhlTxConfig.fbi->flags |= FBINFO_MISC_USEREVENT;
+				fb_set_var(mhlTxConfig.fbi, &var);
+				mhlTxConfig.fbi->flags &= ~FBINFO_MISC_USEREVENT;
+				release_console_sem();
+				
 			}
 		}
 		else
@@ -3189,9 +3203,6 @@ uint8_t OnHdmiCableConnected (void)
 		TX_DEBUG_PRINT (("[MHL]: DVI Sink Detected\n"));
 		ReadModifyWriteTPI(TPI_SYSTEM_CONTROL_DATA_REG, OUTPUT_MODE_MASK, OUTPUT_MODE_DVI);
 	}
-	#if 0
-    mhlTxConfig.need_mode_change = true;
-	#endif
 	OnDownstreamRxPoweredUp();		// RX power not determinable? Force to on for now.
 
 	return true;
@@ -4373,6 +4384,9 @@ static void DeglitchRsenLow( void )
 ////////////////////////////////////////////////////////////////////
 void	Int1RsenIsr( void )
 {
+	char event_string[16];
+	char *envp[] = { event_string, NULL };
+
 	uint8_t	reg71 = sii_I2CReadByte(PAGE_0_0X72, 0x71);
 	uint8_t	rsen  = sii_I2CReadByte(PAGE_0_0X72, 0x09) & BIT2;
 
@@ -4411,8 +4425,12 @@ void	Int1RsenIsr( void )
 		}
 		// Clear MDI_RSEN interrupt
 		sii_I2CWriteByte(PAGE_0_0X72, 0x71, BIT5);
+		#if 1
 		resetSiI9232();
+		#endif
 		mhl_disconnect();
+        sprintf(event_string, "EVENT=plugout");
+        kobject_uevent_env(&mhlTxConfig.pdev->dev.kobj, KOBJ_CHANGE, envp);
 	}
 	else if( deglitchingRsenNow )
 	{
@@ -4947,6 +4965,9 @@ void SiiMhlTxDeviceIsr( void )
 		if (InterruptStatusImage & AUDIO_ERROR_EVENT)
 		{
 			// The hardware handles the event without need for host intervention (PR, p. 31)
+			#if 0
+			TX_DEBUG_PRINT(("[MHL]: Detected AUDIO_ERROR_EVENT.\n"));
+			#endif
 			ClearInterrupt(AUDIO_ERROR_EVENT);
 		}
 		//
@@ -4979,6 +5000,8 @@ void SiiMhlTxDeviceIsr( void )
 void SiiMhlTxDrvTmdsControl( bool_t enable )
 {
 	uint8_t Mask,Value;
+	char event_string[16];
+	char *envp[] = { event_string, NULL };
 	
 	if( enable )
 	{
@@ -5004,6 +5027,8 @@ void SiiMhlTxDrvTmdsControl( bool_t enable )
 		HDCP_On();
 	}
 #endif
+          sprintf(event_string, "EVENT=plugin");
+          kobject_uevent_env(&mhlTxConfig.pdev->dev.kobj, KOBJ_CHANGE, envp);
 	}
 	else
 	{
@@ -6441,6 +6466,9 @@ void	SiiMhlTxNotifyConnection( bool_t mhlConnected )
 //
 void	SiiMhlTxNotifyDsHpdChange( uint8_t dsHpdStatus )
 {
+	char event_string[16];
+	char *envp[] = { event_string, NULL };
+
 	if( 0 == dsHpdStatus )
 	{
 	    TX_DEBUG_PRINT(("[MHL]: Disable TMDS\n"));
@@ -6449,6 +6477,10 @@ void	SiiMhlTxNotifyDsHpdChange( uint8_t dsHpdStatus )
 
 	    if (mhlTxConfig.hdmiCableConnected == true)
 	    {
+
+          sprintf(event_string, "EVENT=plugout");
+          kobject_uevent_env(&mhlTxConfig.pdev->dev.kobj, KOBJ_CHANGE, envp);
+
 		  OnHdmiCableDisconnected();
 		  return;
 	    }
@@ -6463,6 +6495,8 @@ void	SiiMhlTxNotifyDsHpdChange( uint8_t dsHpdStatus )
 		// siMhlTx_VideoSet();
 	    if (mhlTxConfig.hdmiCableConnected == false)
 	    {
+          sprintf(event_string, "EVENT=plugin");
+          kobject_uevent_env(&mhlTxConfig.pdev->dev.kobj, KOBJ_CHANGE, envp);
 		  if( OnHdmiCableConnected() == false )
 		  {
 			TX_DEBUG_PRINT(("[MHL]: **********************************EDID read fail 0**********************************\n"));

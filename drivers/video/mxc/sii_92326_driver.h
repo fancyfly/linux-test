@@ -166,7 +166,6 @@ typedef struct
 	//  uint8_t 	mscData[ 16 ]; 		// What we got back as message data
 
 // for 92326 only! 
-	bool_t		need_mode_change;
 	bool_t 		hdmiCableConnected;
 	bool_t		dsRxPoweredUp;
 	struct fb_info * fbi;	

@@ -155,21 +155,6 @@ static int mx5_suspend_prepare(void)
 				break;
 	if (suspend_wp == cpu_wp_nr)
 		suspend_wp = 0;
-	pr_info("suspend wp cpu=%d\n", cpu_wp_tbl[suspend_wp].cpu_rate);
-#if 1
-	/*SW5 USER OFF*/
-	value = 0x800000;
-	register_mask = 0x800000;
-	pmic_write_reg(REG_MC34708_SW_3_4_5_OP, value, register_mask);
-	/*decease voltage when standby*/
-	value = 0x0;
-	register_mask = 0x7c00;
-	pmic_write_reg(REG_MC34708_SW_5, value, register_mask);
-#endif
-	/*VDAC disable*/
-	value = 0x0;//0xc0000;
-	register_mask =0x10;//0xc0010;
-//	pmic_write_reg(REG_MC34708_MODE_0, value, register_mask);
 
         
 	freqs.old = org_freq / 1000;
@@ -218,15 +203,8 @@ static void mx5_suspend_end(void)
 	unsigned int value;
 	unsigned int register_mask = 0;
 	/*User off mode exit*/
-#if 1
 	value = 0;
 	register_mask = 0x800000;
-	pmic_write_reg(REG_MC34708_SW_3_4_5_OP, value, register_mask);
-#endif	
-	/**VDAC enable**/
-	value = 0x10;
-	register_mask = 0x10;
-//	pmic_write_reg(REG_MC34708_MODE_0, value, register_mask);
 #endif
 }
 

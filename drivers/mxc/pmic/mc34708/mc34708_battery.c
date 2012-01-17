@@ -205,6 +205,7 @@ bool can_calculate_capacity = false;
 
 static int before_use_calculated_capacity = 1;
 
+ int charger_online=0;
 struct last_batt_rec {
 	int voltage_uV;
 	int current_uA;
@@ -1802,6 +1803,7 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 		if (restartCharging) {
 			pr_info("restartCharging\n");
 			enable_charger(1);
+			charger_online=1;
 
 			power_supply_changed_flag = 1;
 			power_change_flag = 1;
@@ -2728,6 +2730,7 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	struct ripley_dev_info *di;
 	pmic_event_callback_t bat_event_callback;
 	int i;
+	int value;
 
 	di = kzalloc(sizeof(*di), GFP_KERNEL);
 	if (!di) {
@@ -2783,6 +2786,12 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	}
 
 	init_battery_profile(di->chargeConfig);
+
+	/* clear reboot flag into mem D, which should be only set in kernel/sys.c*/
+	pmic_read_reg(MC34708_REG_MEM_D, &value, 0xffffff);
+	value &= ~0x800000;
+	pmic_write_reg(MC34708_REG_MEM_D, value, 0xffffff);
+	
 	di->old_percent = -1;
 //	enable_charger(false);
 

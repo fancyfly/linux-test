@@ -47,6 +47,13 @@
 #include <asm/io.h>
 #include <asm/unistd.h>
 
+#include <linux/mfd/mc34708/mc34708_battery.h>
+#include <linux/mfd/mc34708/mc34708.h>
+#include <linux/pmic_status.h>
+#include <linux/pmic_external.h>
+
+
+
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
 #endif
@@ -357,6 +364,9 @@ EXPORT_SYMBOL_GPL(kernel_power_off);
 
 static DEFINE_MUTEX(reboot_mutex);
 
+
+extern int charger_online;
+
 /*
  * Reboot system call: for obvious reasons only root may call it,
  * and even root needs to set up some magic numbers in the registers
@@ -370,6 +380,8 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 {
 	char buffer[256];
 	int ret = 0;
+	int value;
+	int charger_type;
 
 	/* We only trust the superuser with rebooting the system. */
 	if (!capable(CAP_SYS_BOOT))
@@ -383,6 +395,17 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	                magic2 != LINUX_REBOOT_MAGIC2C))
 		return -EINVAL;
 
+#define USBCHARGER 0x20
+#define DEDICATEDCHARGER 0x40
+	
+	ret = pmic_read_reg(MC34708_REG_USB_DEVICE_TYPE,
+				&charger_type, PMIC_ALL_BITS);
+
+	if( ((charger_type & USBCHARGER) != 0) ||((charger_type & DEDICATEDCHARGER) != 0))
+		{
+		pm_power_off = NULL;
+		}
+
 	/* Instead of trying to make the power_off code look like
 	 * halt when pm_power_off is not set do it the easy way.
 	 */
@@ -392,6 +415,10 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	mutex_lock(&reboot_mutex);
 	switch (cmd) {
 	case LINUX_REBOOT_CMD_RESTART:
+		  /* write reboot flag into mem D, which will be used by uboot*/
+		pmic_read_reg(MC34708_REG_MEM_D, &value, 0xffffff);
+		value |= 0x800000;
+		pmic_write_reg(MC34708_REG_MEM_D, value, 0xffffff);
 		kernel_restart(NULL);
 		break;
 
@@ -404,10 +431,17 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 		break;
 
 	case LINUX_REBOOT_CMD_HALT:
+#if 0
 		kernel_halt();
 		do_exit(0);
 		panic("cannot halt");
-
+#endif
+	if( ((charger_type & USBCHARGER) != 0) ||((charger_type & DEDICATEDCHARGER) != 0))
+	{
+	   pr_info("USB charger attached!!!\n");//charger_online
+	   kernel_restart(NULL);
+	} 
+	break;
 	case LINUX_REBOOT_CMD_POWER_OFF:
 		kernel_power_off();
 		do_exit(0);

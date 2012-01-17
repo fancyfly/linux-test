@@ -1,6 +1,6 @@
 /*
  * cs42888.c  -- CS42888 ALSA SoC Audio Driver
- * Copyright (C) 2010-2011 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2012 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 /*
  * The code contained herein is licensed under the GNU General Public
@@ -764,8 +764,7 @@ struct snd_soc_dai_driver cs42888_dai = {
 			SNDRV_PCM_RATE_192000),
 #endif
 #ifdef CONFIG_SOC_IMX6Q
-		.rates = (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_88200 |\
-			SNDRV_PCM_RATE_176400),
+		.rates = (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_88200),
 #endif
 		.formats = CS42888_FORMATS,
 	},
@@ -778,8 +777,7 @@ struct snd_soc_dai_driver cs42888_dai = {
 			SNDRV_PCM_RATE_192000),
 #endif
 #ifdef CONFIG_SOC_IMX6Q
-		.rates = (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_88200 |\
-			SNDRV_PCM_RATE_176400),
+		.rates = (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_88200),
 #endif
 		.formats = CS42888_FORMATS,
 	},

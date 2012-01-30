@@ -1,7 +1,7 @@
 /*
  * Freescale GPMI NFC NAND Flash Driver
  *
- * Copyright (C) 2010-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2012 Freescale Semiconductor, Inc.
  * Copyright (C) 2008 Embedded Alley Solutions, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2318,8 +2318,8 @@ static int __devinit gpmi_nfc_mil_init(struct gpmi_nfc_data *this)
 	nand->badblock_pattern	= &gpmi_bbt_descr;
 
 	/* Disallow partial page writes */
-	nand->options		|= NAND_NO_SUBPAGE_WRITE;
-
+	nand->options		|= NAND_NO_SUBPAGE_WRITE | NAND_USE_FLASH_BBT |
+					NAND_USE_FLASH_BBT_NO_OOB;
 	/*
 	 * Tell the NAND Flash MTD system that we'll be handling ECC with our
 	 * own hardware. It turns out that we still have to fill in the ECC size

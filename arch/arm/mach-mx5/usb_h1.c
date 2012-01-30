@@ -107,9 +107,9 @@ static void usbh1_clock_gate(bool on)
 	if (on) {
 		clk_enable(usb_ahb_clk);
 		clk_enable(usb_oh3_clk);
-		clk_enable(usb_phy2_clk);
+//		clk_enable(usb_phy2_clk);
 	} else {
-		clk_disable(usb_phy2_clk);
+//		clk_disable(usb_phy2_clk);
 		clk_disable(usb_oh3_clk);
 		clk_disable(usb_ahb_clk);
 	}

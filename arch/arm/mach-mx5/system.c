@@ -24,6 +24,8 @@
 #include <asm/system.h>
 #include "crm_regs.h"
 
+#define CONFIG_24M_ON_USB_REMOTE_WAKEUP
+
 /*!
  * @defgroup MSL_MX51 i.MX51 Machine Specific Layer (MSL)
  */
@@ -62,7 +64,7 @@ static struct clk *sys_clk ;
 /* set cpu low power mode before WFI instruction */
 void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 {
-	u32 plat_lpc, arm_srpgcr, ccm_clpcr;
+	u32 plat_lpc, arm_srpgcr, ccm_clpcr, ccm_ccr;
 	u32 empgc0 = 0;
 	u32 empgc1 = 0;
 	int stop_mode = 0;
@@ -71,6 +73,7 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 	plat_lpc = __raw_readl(arm_plat_base + MXC_CORTEXA8_PLAT_LPC) &
 	    ~(MXC_CORTEXA8_PLAT_LPC_DSM);
 	ccm_clpcr = __raw_readl(MXC_CCM_CLPCR) & ~(MXC_CCM_CLPCR_LPM_MASK);
+	ccm_ccr = __raw_readl(MXC_CCM_CCR);
 	arm_srpgcr = __raw_readl(MXC_SRPG_ARM_SRPGCR) & ~(MXC_SRPGCR_PCR);
 	if (!cpu_is_mx53()) {
 		empgc0 = __raw_readl(MXC_SRPG_EMPGC0_SRPGCR) & ~(MXC_SRPGCR_PCR);
@@ -93,10 +96,24 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 			ccm_clpcr &= ~MXC_CCM_CLPCR_SBYOS;
 			stop_mode = 0;
 		} else {
+#ifdef CONFIG_24M_ON_USB_REMOTE_WAKEUP
+			ccm_clpcr |= (0x2 << MXC_CCM_CLPCR_LPM_OFFSET);
+			ccm_clpcr |= (0x3 << MXC_CCM_CLPCR_STBY_COUNT_OFFSET);
+			ccm_clpcr |= MXC_CCM_CLPCR_VSTBY;
+			ccm_clpcr &= ~MXC_CCM_CLPCR_SBYOS;
+			/* 
+			* If 24M is on, we do not need to wait 
+			* Oscillator ready time.
+			*/
+			ccm_ccr &= ~MXC_CCM_CCR_OSCNT_MASK;
+			__raw_writel(ccm_ccr, MXC_CCM_CCR);
+#else
+
 			ccm_clpcr |= (0x2 << MXC_CCM_CLPCR_LPM_OFFSET);
 			ccm_clpcr |= (0x3 << MXC_CCM_CLPCR_STBY_COUNT_OFFSET);
 			ccm_clpcr |= MXC_CCM_CLPCR_VSTBY;
 			ccm_clpcr |= MXC_CCM_CLPCR_SBYOS;
+#endif
 			stop_mode = 1;
 		}
 

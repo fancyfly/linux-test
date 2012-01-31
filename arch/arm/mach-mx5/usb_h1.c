@@ -189,6 +189,7 @@ static int fsl_usb_host_init_ext(struct platform_device *pdev)
 		gpio_free(IOMUX_TO_GPIO(MX51_PIN_USBH1_STP));
 	}
 
+	USBH1_PHY_CTRL0 &= ~(1<<10);
 	/* disable remote wakeup irq */
 	USBCTRL &= ~UCTRL_H1WIE;
 	return 0;

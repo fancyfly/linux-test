@@ -839,6 +839,7 @@ int usbotg_init(struct platform_device *pdev)
 	if (usb_register_remote_wakeup(pdev))
 		pr_debug("DR is not a wakeup source.\n");
 
+	USB_PHY_CTR_FUNC &= ~(1<<10);
 	mxc_otg_used++;
 	pr_debug("%s: success\n", __func__);
 	return 0;

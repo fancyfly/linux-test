@@ -104,8 +104,8 @@ static int mc34708_pmic_adc_suspend(struct platform_device *pdev,
 				    pm_message_t state)
 {
 	suspend_flag = 1;
-	CHECK_ERROR(pmic_write_reg
-		    (MC34708_REG_ADC0, BITFVAL(ADEN, 0), BITFMASK(ADEN)));
+	//CHECK_ERROR(pmic_write_reg
+	//	    (MC34708_REG_ADC0, BITFVAL(ADEN, 0), BITFMASK(ADEN)));
 
 	return 0;
 };
@@ -113,8 +113,8 @@ static int mc34708_pmic_adc_suspend(struct platform_device *pdev,
 static int mc34708_pmic_adc_resume(struct platform_device *pdev)
 {
 	suspend_flag = 0;
-	CHECK_ERROR(pmic_write_reg
-		    (MC34708_REG_ADC0, BITFVAL(ADEN, 1), BITFMASK(ADEN)));
+	//CHECK_ERROR(pmic_write_reg
+	//	    (MC34708_REG_ADC0, BITFVAL(ADEN, 1), BITFMASK(ADEN)));
 
 	return 0;
 };

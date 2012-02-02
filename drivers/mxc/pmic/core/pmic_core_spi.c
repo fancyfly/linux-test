@@ -163,8 +163,8 @@ static const char *get_chipname(struct spi_device *spidev)
  */
 static void pmic_pdev_register(void)
 {
-	platform_device_register(&adc_ldm);
 	platform_device_register(&battery_ldm);
+	platform_device_register(&adc_ldm);
 	platform_device_register(&rtc_ldm);
 	platform_device_register(&power_ldm);
 	platform_device_register(&light_ldm);

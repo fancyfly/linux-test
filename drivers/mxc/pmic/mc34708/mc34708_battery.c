@@ -645,6 +645,8 @@ retry:
 		ret = mc34708_pmic_adc_convert(channel, result,
 						ADC_MAX_CHANNEL);
 		if (ret && retry < 3) {
+			if (ret == -EBUSY)
+				return -EINVAL;
 			retry++;
 			goto retry;
 		}
@@ -2893,14 +2895,12 @@ static int ripley_battery_suspend(struct platform_device *pdev,
 				  pm_message_t state)
 {
 	struct ripley_dev_info *di = platform_get_drvdata(pdev);
-
 #ifdef	SOFTWARE_CHECK_EOC
 	cancel_delayed_work_sync(&di->eoc_judge_mon_work);
 #endif
 	cancel_delayed_work_sync(&di->calc_resistor_mon_work);
 	cancel_delayed_work_sync(&di->monitor_work);
 	cancel_delayed_work_sync(&di->ovp_mon_work);
-
 	suspend_flag = 1;
 	CHECK_ERROR(pmic_write_reg
 		    (MC34708_REG_INT_STATUS0, BITFVAL(BATTOVP, 0),

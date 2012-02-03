@@ -396,6 +396,10 @@ static int _clk_pll_enable(struct clk *clk)
 
 	__raw_writel(reg, pllbase);
 
+	/* It will power on pll3 */
+	if (clk == &pll3_usb_otg_main_clk)
+		__raw_writel(BM_ANADIG_ANA_MISC2_CONTROL0, apll_base + HW_ANADIG_ANA_MISC2_CLR);
+
 	/* Wait for PLL to lock */
 	if (!WAIT(__raw_readl(pllbase) & ANADIG_PLL_LOCK,
 				SPIN_DELAY))
@@ -421,6 +425,13 @@ static void _clk_pll_disable(struct clk *clk)
 	reg &= ~ANADIG_PLL_ENABLE;
 
 	__raw_writel(reg, pllbase);
+
+	/*
+	 * It will power off PLL3's power, it is the TO1.1 fix
+	 * Please see TKT064178 for detail.
+	 */
+	if (clk == &pll3_usb_otg_main_clk)
+		__raw_writel(BM_ANADIG_ANA_MISC2_CONTROL0, apll_base + HW_ANADIG_ANA_MISC2_SET);
 }
 
 static unsigned long  _clk_pll1_main_get_rate(struct clk *clk)

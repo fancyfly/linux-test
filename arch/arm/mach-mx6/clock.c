@@ -31,6 +31,7 @@
 #include <mach/mxc_dvfs.h>
 #include "crm_regs.h"
 #include "cpu_op-mx6.h"
+#include "regs-anadig.h"
 
 #ifdef CONFIG_CLK_DEBUG
 #define __INIT_CLK_DEBUG(n)	.name = #n,

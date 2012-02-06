@@ -23,6 +23,7 @@
 #include <linux/suspend.h>
 #include <mach/arc_otg.h>
 #include <mach/hardware.h>
+#include <mach/gpio.h>
 
 
 struct wakeup_ctrl {
@@ -115,6 +116,7 @@ static enum usb_wakeup_event is_wakeup(struct fsl_usb2_platform_data *pdata)
 	else
 		return WAKEUP_EVENT_INVALID;
 }
+#define MX53_PCBA_USB_OTG_PWR_EN	(1*32 + 4)
 
 static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 {
@@ -124,8 +126,8 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 	int i;
 	u32 temp;
 
-	if(!mhl_flag)
-		init_completion(&otg_event);
+	//if(!mhl_flag)
+	//	init_completion(&otg_event);
 	mhl_flag = false;
 	wakeup_clk_gate(ctrl->pdata, true);
 	/* In order to get the real id/vbus value */
@@ -139,13 +141,15 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 			wakeup_evt = is_wakeup(usb_pdata);
 			if (wakeup_evt != WAKEUP_EVENT_INVALID) {
 				if( (wakeup_evt == WAKEUP_EVENT_ID)) {					
-					if(usb_pdata->platform_driver_vbus)
-						usb_pdata->platform_driver_vbus(1);
+				//	if(usb_pdata->platform_driver_vbus)
+				//		usb_pdata->platform_driver_vbus(1);
+						gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 1);
 						/*we will wait for mhl driver until mhl driver tell me what cale plug in */
 						printk(KERN_DEBUG "(wait_for_completion_interruptible ++)\n");
 						wait_for_completion_interruptible(&otg_event);
 						printk(KERN_DEBUG "(wait_for_completion_interruptible --OTGSC:0x%x)\n",UOG_OTGSC);
-						usb_pdata->platform_driver_vbus(0);
+						//usb_pdata->platform_driver_vbus(0);
+						gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
 						/*if mhl cable insert we will clear all interrupt,USB host need keep ID interrupt */
 						if(mhl_flag== true) {
 							temp = UOG_OTGSC;
@@ -167,6 +171,7 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 					if (usb_pdata->wakeup_handler) {
 						usb_pdata->wakeup_handler(usb_pdata);
 					}
+					init_completion(&otg_event);
 				}
 				if(mhl_flag== true) {
 					wakeup_clk_gate(ctrl->pdata, false);

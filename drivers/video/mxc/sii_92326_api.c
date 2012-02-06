@@ -994,7 +994,7 @@ static int __init mhl_Sii92326_init(void)
 		free_irq(gpio_to_irq(MX53_PCBA_MHL_INT), "SII9232_det");
 	}
 	else{
-		enable_irq_wake(gpio_to_irq(MX53_PCBA_MHL_INT));	
+	      //enable_irq_wake(gpio_to_irq(MX53_PCBA_MHL_INT));
 		//printk(KERN_INFO "%s:%d:Sii92326 interrupt successed\n", __func__,__LINE__);	
 		INIT_DELAYED_WORK(&sii92326work, work_queue); 
 	}

@@ -1406,6 +1406,19 @@ static void __init pcba_add_device_buttons(void)
 static void __init pcba_add_device_buttons(void) {}
 #endif
 
+static void my_mdelay(int ms)
+{
+	unsigned long timeout;
+	timeout = jiffies + msecs_to_jiffies(ms);
+	/* Wait for jiffies timeout  */
+	while (1) {
+		if (time_after(jiffies, timeout)) {
+			break;
+		}
+		msleep(1);
+	}
+}
+
 static void mx53_gpio_usbotg_driver_vbus(bool on)
 {
 	pmic_write_reg(REG_USB_TIMING, BITFVAL(USBtiming, 0x0), BITFMASK(USBtiming));
@@ -1415,7 +1428,7 @@ static void mx53_gpio_usbotg_driver_vbus(bool on)
 				| BITFVAL( DPSWITCHING, 2) | BITFVAL(DMSWITCHING, 2),BITFMASK(ManualSW)\
 				| BITFMASK(SWHOLD)| BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));
 			gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 1);
-			msleep(800);
+			my_mdelay(800);
 			pmic_write_reg(REG_USB_CTL, BITFVAL(ManualSW, 0) | BITFVAL(SWHOLD, 0) \
 				| BITFVAL( DPSWITCHING, 1) | BITFVAL(DMSWITCHING, 1),BITFMASK(ManualSW)\
 				| BITFMASK(SWHOLD) | BITFMASK(DPSWITCHING) | BITFMASK(DMSWITCHING));

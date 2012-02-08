@@ -1690,9 +1690,12 @@ static int mx53_pcba_wifi_set_power(int val)
 	}else if (0 == val)
 	{
 		bcm4329_power_wifi_on = false;
+#if 0
+		//workaround system hang up when playback media files by MHL.
 		gpio_request(MX53_PCBA_WLAN_ENABLE, "wl-enable");
 		gpio_direction_output(MX53_PCBA_WLAN_ENABLE, val);
 		gpio_free(MX53_PCBA_WLAN_ENABLE);
+#endif
 		msleep(100);
 		if (!bcm4329_power_bt_on)
 		{
@@ -1903,7 +1906,12 @@ static void __init mx53_pcba_io_init(void)
 	gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
 	gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, 0);
 	gpio_request(MX53_PCBA_WLAN_ENABLE, "wl-enable");
+#if 0
+	//workaround system hang up when playback media files by MHL.
 	gpio_direction_output(MX53_PCBA_WLAN_ENABLE, 0);
+#else
+	gpio_direction_output(MX53_PCBA_WLAN_ENABLE, 1);
+#endif
 	gpio_request(MX53_PCBA_WLAN_WAKE_B, "wl-wake");
 	gpio_direction_output(MX53_PCBA_WLAN_WAKE_B, 0);
 	gpio_request(MX53_PCBA_WLAN_HOST_WAKE_B, "wl-host-wake");

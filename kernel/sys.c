@@ -397,11 +397,15 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 
 #define USBCHARGER 0x20
 #define DEDICATEDCHARGER 0x40
+#define USBHOST 0x4
+
 	
 	ret = pmic_read_reg(MC34708_REG_USB_DEVICE_TYPE,
 				&charger_type, PMIC_ALL_BITS);
 
-	if( ((charger_type & USBCHARGER) != 0) ||((charger_type & DEDICATEDCHARGER) != 0))
+	if( ((charger_type & USBCHARGER) != 0) ||
+		((charger_type & DEDICATEDCHARGER) != 0)||
+		((charger_type & USBHOST) != 0))
 		{
 		pm_power_off = NULL;
 		}
@@ -436,7 +440,9 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 		do_exit(0);
 		panic("cannot halt");
 #endif
-	if( ((charger_type & USBCHARGER) != 0) ||((charger_type & DEDICATEDCHARGER) != 0))
+	if( ((charger_type & USBCHARGER) != 0) ||
+		((charger_type & DEDICATEDCHARGER) != 0)||
+		((charger_type & USBHOST) != 0))
 	{
 	   pr_info("USB charger attached!!!\n");//charger_online
 	   kernel_restart(NULL);

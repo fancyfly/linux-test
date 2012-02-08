@@ -148,6 +148,14 @@
 #define BATTISOEN_LSH 23
 #define BATTISOEN_WID 1
 
+#define ManualSW_LSH 1
+#define ManualSW_WID 1
+#define SWHOLD_LSH 12
+#define SWHOLD_WID 1
+#define SWITCH_OPEN_LSH 3
+#define SWITCH_OPEN_WID 1
+
+
 #define USBHOST 0x4
 #define USBCHARGER 0x20
 #define DEDICATEDCHARGER 0x40
@@ -205,7 +213,10 @@ bool can_calculate_capacity = false;
 
 static int before_use_calculated_capacity = 1;
 
- int charger_online=0;
+int charger_online=0;
+int usbhost_flag=0; 
+int openwifi_flag=0;
+
 struct last_batt_rec {
 	int voltage_uV;
 	int current_uA;
@@ -645,8 +656,6 @@ retry:
 		ret = mc34708_pmic_adc_convert(channel, result,
 						ADC_MAX_CHANNEL);
 		if (ret && retry < 3) {
-			if (ret == -EBUSY)
-				return -EINVAL;
 			retry++;
 			goto retry;
 		}
@@ -1301,6 +1310,7 @@ static int init_charger(struct mc34708_charger_config *config)
 static int set_charging_point(struct ripley_dev_info *di, int point)
 {
 	unsigned int val, mask;
+	unsigned int value_tmp;
 	if (point >= 0 && point < di->chargeConfig->pointsNumber) {
 
 		val =
@@ -1316,8 +1326,35 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 		 * enable_1p5(true) called in init_charger()
 		 */
 		case USBHOST:
+			pmic_read_reg(REG_MC34708_MEM_D,
+					  &value_tmp, 0xffffffff);
+			if (!(value_tmp & (1 << 22))) {
+				usbhost_flag=0;
+				openwifi_flag=0;
+				pr_info("MC34708_MEM_D bit22 is 0\n");
+			} else {
+				usbhost_flag=1;
+				openwifi_flag=1;
+				pr_info("MC34708_MEM_D bit22 is 1\n");
+			}
 			/* disable 1P5 large current */
 			enable_1p5(false);
+			if(usbhost_flag == 1) {
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+						   BITFVAL(ManualSW, 0),
+						   BITFMASK(ManualSW)));
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+						   BITFVAL(SWHOLD, 0),
+						   BITFMASK(SWHOLD)));			
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+						   BITFVAL(MUSBCHRG, 2),
+						   BITFMASK(MUSBCHRG)));
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+							BITFVAL(SWITCH_OPEN, 1),
+							BITFMASK(SWITCH_OPEN)));
+			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(500000));
+			}
+#if 0
 			/*
 			 * set current limit to 500mA
 			 * Table 7.2-2, Buck input current limit settings
@@ -1328,10 +1365,26 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
 						   BITFVAL(MUSBCHRG, 2),
 						   BITFMASK(MUSBCHRG)));
-			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(250000));
+			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(500000));
+#endif
 			break;
 		case USBCHARGER:
 		case DEDICATEDCHARGER:
+			if(usbhost_flag == 0) {
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+						   BITFVAL(ManualSW, 1),
+						   BITFMASK(ManualSW)));
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+						   BITFVAL(SWHOLD, 1),
+						   BITFMASK(SWHOLD)));			
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+						   BITFVAL(MUSBCHRG, 2),
+						   BITFMASK(MUSBCHRG)));
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+							BITFVAL(SWITCH_OPEN, 0),
+							BITFMASK(SWITCH_OPEN)));
+			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(500000));
+			}
 			/* set current limit to 950mA */
 			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
 						   BITFVAL(MUSBCHRG, 3),
@@ -1350,9 +1403,12 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 		mask = BITFMASK(CHRCV) | BITFMASK(CHRCC);
 		CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 					   val, mask));
-
-		if (usb_type != USBHOST && usb_type != 0)
+		if (usb_type != USBHOST && usb_type != 0){
 			enable_charger(1);
+			}
+		else if (usb_type == USBHOST && usb_type != 0 && usbhost_flag == 1){
+			enable_charger(1);
+			}
 		else
 			enable_charger(0);
 
@@ -2215,7 +2271,7 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 			init_charger(config);
 			set_charging_point(di, point);
 			di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
-			if (usb_type == USBHOST || usb_type == 0)
+			if ((usbhost_flag == 0 && usb_type == USBHOST) || usb_type == 0)
 				di->battery_status = POWER_SUPPLY_STATUS_DISCHARGING;
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 #ifdef	SOFTWARE_CHECK_EOC
@@ -2895,12 +2951,14 @@ static int ripley_battery_suspend(struct platform_device *pdev,
 				  pm_message_t state)
 {
 	struct ripley_dev_info *di = platform_get_drvdata(pdev);
+
 #ifdef	SOFTWARE_CHECK_EOC
 	cancel_delayed_work_sync(&di->eoc_judge_mon_work);
 #endif
 	cancel_delayed_work_sync(&di->calc_resistor_mon_work);
 	cancel_delayed_work_sync(&di->monitor_work);
 	cancel_delayed_work_sync(&di->ovp_mon_work);
+
 	suspend_flag = 1;
 	CHECK_ERROR(pmic_write_reg
 		    (MC34708_REG_INT_STATUS0, BITFVAL(BATTOVP, 0),

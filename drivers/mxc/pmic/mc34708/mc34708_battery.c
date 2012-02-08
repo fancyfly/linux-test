@@ -656,6 +656,8 @@ retry:
 		ret = mc34708_pmic_adc_convert(channel, result,
 						ADC_MAX_CHANNEL);
 		if (ret && retry < 3) {
+			if (ret == -EBUSY)
+				return -EINVAL;
 			retry++;
 			goto retry;
 		}

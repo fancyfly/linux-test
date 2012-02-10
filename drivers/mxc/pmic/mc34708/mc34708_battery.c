@@ -239,6 +239,8 @@ static int batt_ivolt_index;
 static int batt_iresistor_rec[NUM_BATT_RECORD];
 static int batt_iresistor_index;
 
+#define MX53_PCBA_MODEM_PWR_ON		(0*32 + 30)
+
 /*
  * map table between temperature (0C-45C) and the voltage at BPTHERM
  */
@@ -1337,6 +1339,8 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 			} else {
 				usbhost_flag=1;
 				openwifi_flag=1;
+				gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);
+				mdelay(10);
 				pr_info("MC34708_MEM_D bit22 is 1\n");
 			}
 			/* disable 1P5 large current */
@@ -1386,6 +1390,17 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 							BITFVAL(SWITCH_OPEN, 0),
 							BITFMASK(SWITCH_OPEN)));
 			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(500000));
+			}
+			pmic_read_reg(REG_MC34708_MEM_D,
+					  &value_tmp, 0xffffffff);
+			if (!(value_tmp & (1 << 22))) {
+				openwifi_flag=0;
+				pr_info("MC34708_MEM_D bit22 is 0\n");
+			} else {
+				openwifi_flag=1;
+  	            gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);
+				mdelay(10);
+				pr_info("MC34708_MEM_D bit22 is 1\n");
 			}
 			/* set current limit to 950mA */
 			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,

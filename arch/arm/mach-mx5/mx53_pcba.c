@@ -206,7 +206,6 @@
 
 extern int __init mx53_pcba_init_mc34708(void);
 extern void mxc_mmc_force_detect(int id);
-extern int openwifi_flag;
 static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	/* GYRO_DRDY */
 	MX53_PAD_EIM_OE__GPIO2_25,
@@ -1648,9 +1647,7 @@ static struct platform_device mxc_spdif_audio_device = {
 static int mx53_pcba_bt_power_change(int status)
 {
 	if (1 == status)
-	{
-		if (openwifi_flag==1)
-      {		
+	{		
         bcm4329_power_bt_on = true;
 		gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
 		gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, status);
@@ -1660,7 +1657,6 @@ static int mx53_pcba_bt_power_change(int status)
 		gpio_request(MX53_PCBA_BT_ENABLE, "bt-reset");
 		gpio_direction_output(MX53_PCBA_BT_ENABLE, status);
 		gpio_free(MX53_PCBA_BT_ENABLE);
-	  }
 	}else if (0 == status)
 	{
 		bcm4329_power_bt_on = false;
@@ -1682,8 +1678,6 @@ static int mx53_pcba_wifi_set_power(int val)
 {
 	if (1 == val)
 	{
-		if (openwifi_flag==1)
-		{
 		bcm4329_power_wifi_on = true;
 		gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
 		gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, val);
@@ -1693,7 +1687,6 @@ static int mx53_pcba_wifi_set_power(int val)
 		gpio_request(MX53_PCBA_WLAN_ENABLE, "wl-enable");
 		gpio_direction_output(MX53_PCBA_WLAN_ENABLE, val);
 		gpio_free(MX53_PCBA_WLAN_ENABLE);
-		}
 	}else if (0 == val)
 	{
 		bcm4329_power_wifi_on = false;
@@ -1801,12 +1794,9 @@ static int mxc_pwrkey_getstatus(int id)
 
 void huawei_mu509_poweron(void)
 {
-	if (openwifi_flag==1)
-	{
 	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);
 	mdelay(330);
 	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,1);
-	}
 }
 
 static struct power_key_platform_data pwrkey_data = {

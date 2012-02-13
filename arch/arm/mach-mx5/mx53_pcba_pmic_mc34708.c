@@ -301,6 +301,12 @@ static int mc34708_regulator_init(struct mc34708 *mc34708)
 	value &= ~REG_REGULATOR_MODE0_MASK;
 	value |= REG_REGULATOR_MODE0_VALUE;
 	pmic_write_reg(REG_MC34708_MODE_0, value, 0xffffff);
+
+	/*decease voltage when standby*/
+	value = 0x0;
+	register_mask = 0x7c00;
+	pmic_write_reg(REG_MC34708_SW_5, value, register_mask);
+
 #endif
 	/* clear SWHOLD bit  to enable USB MUX */
 	pmic_read_reg(REG_MC34708_USB_CONTROL, &value, 0xffffff);

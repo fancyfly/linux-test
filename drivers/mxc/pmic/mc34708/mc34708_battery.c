@@ -1376,6 +1376,21 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 			break;
 		case USBCHARGER:
 		case DEDICATEDCHARGER:
+			/* enable 1P5 large current */
+			enable_1p5(true);
+			pmic_read_reg(REG_MC34708_MEM_D,
+						&value_tmp, 0xffffffff);
+			if (!(value_tmp & (1 << 22))) {
+				usbhost_flag=0;
+				openwifi_flag=0;
+				pr_info("MC34708_MEM_D bit22 is 0\n");
+			} else {
+				usbhost_flag=1;
+				openwifi_flag=1;
+				gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);
+				mdelay(10);
+				pr_info("MC34708_MEM_D bit22 is 1\n");
+			}
 			if(usbhost_flag == 0) {
 			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
 						   BITFVAL(ManualSW, 1),
@@ -1391,22 +1406,17 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 							BITFMASK(SWITCH_OPEN)));
 			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(500000));
 			}
-			pmic_read_reg(REG_MC34708_MEM_D,
-					  &value_tmp, 0xffffffff);
-			if (!(value_tmp & (1 << 22))) {
-				openwifi_flag=0;
-				pr_info("MC34708_MEM_D bit22 is 0\n");
-			} else {
-				openwifi_flag=1;
-  	            gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);
-				mdelay(10);
-				pr_info("MC34708_MEM_D bit22 is 1\n");
-			}
+			
 			/* set current limit to 950mA */
 			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
 						   BITFVAL(MUSBCHRG, 3),
 						   BITFMASK(MUSBCHRG)));
-			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1550000));
+			if (!(value_tmp & (1 << 22))) {
+				val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1350000));
+
+			} else {
+				val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(950000));
+			}	
 			break;
 		default:
 			val |=
@@ -2968,7 +2978,18 @@ static int ripley_battery_suspend(struct platform_device *pdev,
 				  pm_message_t state)
 {
 	struct ripley_dev_info *di = platform_get_drvdata(pdev);
+	int i;
+	int value;
+	unsigned int val, mask;
 
+	/* set current limit to 1.5A */
+	enable_1p5(true);	
+	/* set charger current  to 1.35A */
+	val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1350000));
+	mask =  BITFMASK(CHRCC);
+			CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
+						   val, mask));
+			
 #ifdef	SOFTWARE_CHECK_EOC
 	cancel_delayed_work_sync(&di->eoc_judge_mon_work);
 #endif
@@ -2990,7 +3011,16 @@ static int ripley_battery_suspend(struct platform_device *pdev,
 static int ripley_battery_resume(struct platform_device *pdev)
 {
 	struct ripley_dev_info *di = platform_get_drvdata(pdev);
+	unsigned int val, mask;
+	
+	/* set current limit to 1.5A */
+	enable_1p5(false);
 
+	/* set current limit to 950mA */
+	CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+			   BITFVAL(ManualSW, 1),
+			   BITFMASK(ManualSW)));
+	
 	suspend_flag = 0;
 	CHECK_ERROR(pmic_write_reg
 		    (MC34708_REG_INT_MASK0, BITFVAL(BATTOVP, 0),

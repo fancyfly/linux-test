@@ -241,6 +241,8 @@ static int batt_iresistor_index;
 
 #define MX53_PCBA_MODEM_PWR_ON		(0*32 + 30)
 
+extern bool is_host_mhl_connected();
+
 /*
  * map table between temperature (0C-45C) and the voltage at BPTHERM
  */
@@ -1878,11 +1880,12 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			} else {
 				restartCharging = 0;
 			}
-
+		if (!is_host_mhl_connected()) {
 			di->usb_charger_online = usbOnline;
 			dev_info(di->usb_charger.dev, "usb cable status: %s\n",
 				 usbOnline ? "online" : "offline");
 			power_supply_changed(&di->usb_charger);
+			}
 		}
 
 		if (restartCharging) {

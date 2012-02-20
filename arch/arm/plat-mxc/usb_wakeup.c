@@ -40,6 +40,13 @@ extern void usb_debounce_id_vbus(void);
 struct completion  otg_event;
 static bool mhl_flag = false;
 #define CHECK_MHL_TIME (msecs_to_jiffies(200)) /* 200 ms */
+static bool mhl_connected = false;
+
+bool is_host_mhl_connected()
+{
+	return mhl_connected || (!(UOG_OTGSC&(1<<8)));
+}
+EXPORT_SYMBOL(is_host_mhl_connected);
 
 /*The fuction is called by mhl driver tell me the mhl host caled plug out */
 void mhl_usb_connect( void )
@@ -146,6 +153,7 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 						gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 1);
 						/*we will wait for mhl driver until mhl driver tell me what cale plug in */
 						printk(KERN_DEBUG "(wait_for_completion_interruptible ++)\n");
+						mhl_connected=true;
 						wait_for_completion_interruptible(&otg_event);
 						printk(KERN_DEBUG "(wait_for_completion_interruptible --OTGSC:0x%x)\n",UOG_OTGSC);
 						//usb_pdata->platform_driver_vbus(0);
@@ -162,6 +170,7 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 							temp |= (0x7e<<16);
 							UOG_OTGSC = temp;
 						}
+						mhl_connected=false;
 				}				
 				if(mhl_flag == false) {
 					if (usb_pdata->usb_clock_for_pm)

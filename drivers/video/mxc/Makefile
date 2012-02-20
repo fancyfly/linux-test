@@ -1,6 +1,11 @@
 obj-$(CONFIG_FB_MXC_TVOUT_TVE)             	+= tve.o
 obj-$(CONFIG_FB_MXC_SII9232)                    += sii_92326_api.o sii_92326_driver.o mhl_i2c.o
+ifeq ($(CONFIG_AT070TN2_WSVGA), y)
 obj-$(CONFIG_FB_MXC_LDB)			+= ldb.o
+endif
+ifeq ($(CONFIG_AT070TN93), y)
+obj-$(CONFIG_AT070TN93)				+=
+endif
 obj-$(CONFIG_FB_MODE_HELPERS)			+= mxc_edid.o mxc_ddc.o
 ifeq ($(CONFIG_ARCH_MX21)$(CONFIG_ARCH_MX27)$(CONFIG_ARCH_MX25),y)
 	obj-$(CONFIG_FB_MXC_TVOUT)              += fs453.o

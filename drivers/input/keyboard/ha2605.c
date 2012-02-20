@@ -143,8 +143,12 @@ static void ha2605_work(struct work_struct *work)
 		input_sync(input);
 	} else if (key_val >= KEY_VALID_CODE_MIN &&
 			key_val <= KEY_VALID_CODE_MAX){
-
+		#if defined(CONFIG_AT070TN93)
 		*old_keycode = ha2605->keycodes[key_val - 2];
+		#endif
+		#if defined(CONFIG_AT070TN2_WSVGA)
+		*old_keycode = ha2605->keycodes[key_val - 1];
+		#endif
 		input_report_key(input, *old_keycode, 1);
 		input_sync(input);
 	}

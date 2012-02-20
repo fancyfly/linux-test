@@ -272,9 +272,14 @@ static void goodix_ts_work_func(struct work_struct *work)
 			p->pressure = point_data[28];
 		}
 #endif
-
+		#if defined(CONFIG_AT070TN93)
 		x = x * SCREEN_MAX_WIDTH / TOUCH_MAX_WIDTH;	/*y */
 		y = (TOUCH_MAX_HEIGHT - y) * SCREEN_MAX_HEIGHT / TOUCH_MAX_HEIGHT;	/*x */
+		#endif
+		#if defined(CONFIG_AT070TN2_WSVGA)
+		x = (TOUCH_MAX_WIDTH - x) * SCREEN_MAX_WIDTH / TOUCH_MAX_WIDTH;   /*y */
+		y = y * SCREEN_MAX_HEIGHT / TOUCH_MAX_HEIGHT;    /*x */
+		#endif
 		swap(x, y);
 
 		p->x = x;

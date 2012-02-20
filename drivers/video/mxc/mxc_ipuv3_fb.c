@@ -1484,12 +1484,34 @@ static irqreturn_t mxcfb_alpha_irq_handler(int irq, void *dev_id)
 }
 
 /*
- * Macros defined for LCD power control
+ * Macros copied from mx53_pcba.c directly.
  */
-#define MX53_PCBA_LCD_PWR_EN		(2*32 + 22)	/* GPIO3_22 */
-#define MX53_PCBA_LCD_BL_PWM 		(0*32 + 1)	/* GPIO1_1*/
+/*
+ * Following GPIO definitions are for RGB panel, 800 x 480
+ */
+#if defined(CONFIG_AT070TN93)
 #define MX53_PCBA_BL_PWR_EN		(3*32 + 7)	/* GPIO4_7 */
+#define MX53_PCBA_LCD_MODE		(1*32 + 5)	/* GPIO2_5, Once choice one time, before reset (double check) */
+#define MX53_PCBA_LCD_DITH			(1 * 32 + 7)	/* GPIO2_7, used as before in rev.B */
+#endif
+
+/*
+ * Following GPIO definitions are for LVDS panel, 1024 x 600
+ */
+#if defined(CONFIG_AT070TN2_WSVGA)
+#define MX53_PCBA_LCD_CABC_EN1		(1*32 + 14)	/* GPIO2_14 */
+#define MX53_PCBA_LCD_CABC_EN2		(1*32 + 15)	/* GPIO2_15 */
 #define MX53_PCBA_LCD_SEL		(6*32 + 8)	/* GPIO7_8 */
+#define MX53_PCBA_LCD_GPIO0		(6*32 + 9)	/* GPIO7_9 */
+#define MX53_PCBA_LCD_GPIO1		(6*32 + 10)	/* GPIO7_10 */
+#define MX53_PCBA_LCD_STBY_N		(3*32 + 9)	/* GPIO4_9 */
+#endif
+
+/* Common used GPIO pins for both RGB panel & LVDS panel */
+#define MX53_PCBA_LCD_UD		(1*32 + 12)	/* GPIO2_12, Up to Down */
+#define MX53_PCBA_LCD_LR		(1*32 + 13)	/* GPIO2_13, Left to Right */
+#define MX53_PCBA_LCD_PWR_EN		(2*32 + 22)	/* GPIO3_22, Turn VGH, VGL, and AVDD */
+#define MX53_PCBA_LCD_RESET		(3*32 + 10)	/* GPIO4_10 */
 
 
 /*
@@ -1510,13 +1532,20 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 	/*
 	 * Turn off
 	 */
-	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 0);/*LCD_PWR_EN*/	
+	#if defined(CONFIG_AT070TN2_WSVGA)
+	gpio_direction_output(MX53_PCBA_LCD_GPIO0, 0);
+	#endif
+	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 0);/*LCD_PWR_EN*/
+	#if defined(CONFIG_AT070TN93)
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 0); /*BL_PWR_EN*/
+	#endif
+	#if 0
 	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
 	if(!ret){
 		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 0);
 		gpio_free(MX53_PCBA_LCD_BL_PWM);
 	}
+	#endif
 	gpio_direction_input(MX53_PCBA_LCD_SEL);
 	release_console_sem();
 
@@ -1540,12 +1569,16 @@ static int mxcfb_resume(struct platform_device *pdev)
 	 * Turn on
 	 */
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 1);/*LCD_PWR_EN*/
+	#if defined(CONFIG_AT070TN93)
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1); /*BL_PWR_EN*/
+	#endif
+	#if 0
 	ret = gpio_request(MX53_PCBA_LCD_BL_PWM, "lcd_bl_pwm");/*LCD_BL_PWM */
 	if(!ret){
 		gpio_direction_output(MX53_PCBA_LCD_BL_PWM, 1);
 		gpio_free(MX53_PCBA_LCD_BL_PWM);
 	}
+	#endif
 	gpio_direction_output(MX53_PCBA_LCD_SEL, 0);
 	release_console_sem();
 

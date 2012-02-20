@@ -87,19 +87,33 @@
  * MX53 PCBA rev.C GPIO-typed PINs' configurations 
  */
 
-// LCD Module related
+/*
+ * Following GPIO definitions are for RGB panel, 800 x 480
+ */
+#if defined(CONFIG_AT070TN93)
+#define MX53_PCBA_BL_PWR_EN		(3*32 + 7)	/* GPIO4_7 */
 #define MX53_PCBA_LCD_MODE		(1*32 + 5)	/* GPIO2_5, Once choice one time, before reset (double check) */
+#define MX53_PCBA_LCD_DITH			(1 * 32 + 7)	/* GPIO2_7, used as before in rev.B */
+#endif
+
+/*
+ * Following GPIO definitions are for LVDS panel, 1024 x 600
+ */
+#if defined(CONFIG_AT070TN2_WSVGA)
+#define MX53_PCBA_LCD_CABC_EN1		(1*32 + 14)	/* GPIO2_14 */
+#define MX53_PCBA_LCD_CABC_EN2		(1*32 + 15)	/* GPIO2_15 */
+#define MX53_PCBA_LCD_SEL		(6*32 + 8)	/* GPIO7_8 */
+#define MX53_PCBA_LCD_GPIO0		(6*32 + 9)	/* GPIO7_9 */
+#define MX53_PCBA_LCD_GPIO1		(6*32 + 10)	/* GPIO7_10 */
+#define MX53_PCBA_LCD_STBY_N		(3*32 + 9)	/* GPIO4_9 */
+#endif
+
+/* Common used GPIO pins for both RGB panel & LVDS panel */
 #define MX53_PCBA_LCD_UD		(1*32 + 12)	/* GPIO2_12, Up to Down */
 #define MX53_PCBA_LCD_LR		(1*32 + 13)	/* GPIO2_13, Left to Right */
-#define MX53_PCBA_LCD_CABC_EN1		(1*32 + 14)	/* GPIO2_14, no used in current screen */
-#define MX53_PCBA_LCD_CABC_EN2		(1*32 + 15)	/* GPIO2_15, no used in current screen */
 #define MX53_PCBA_LCD_PWR_EN		(2*32 + 22)	/* GPIO3_22, Turn VGH, VGL, and AVDD */
 #define MX53_PCBA_LCD_RESET		(3*32 + 10)	/* GPIO4_10 */
-#define MX53_PCBA_LCD_SEL		(6*32 + 8)	/* GPIO7_8, no used in current screen */
-#define MX53_PCBA_LCD_GPIO0		(6*32 + 9)	/* GPIO7_9, no used in current screen */
-#define MX53_PCBA_LCD_GPIO1		(6*32 + 10)	/* GPIO7_10, no used in current screen */
-#define MX53_PCBA_BL_PWR_EN		(3*32 + 7)	/* GPIO4_7 */
-#define MX53_PCBA_LCD_DITH			(1 * 32 + 7)	/* GPIO2_7, used as before in rev.B */
+
 
 // CAMERA 1 & 2 Related
 #define MX53_PCBA_CAMERA1_RST		(4 * 32 + 20)	/* GPIO5_20 */
@@ -176,7 +190,13 @@
 // Touch Pad Related
 #define MX53_PCBA_TP_SHUTDOWN		(6*32 + 3)	/* GPIO7_3 */
 #define MX53_PCBA_TOUCH_INT		(6*32 + 6)	/* GPIO7_6 */
-#define MX53_PCBA_TK_INT		(6*32 + 7)	/* GPIO7_7, Touch Key */
+#if defined(CONFIG_AT070TN93)
+#define MX53_PCBA_TK_INT		(6*32 + 7)	/* GPIO7_7, Touch Key interrupt for old IO board */
+#endif
+#if defined(CONFIG_AT070TN2_WSVGA)
+#define MX53_PCBA_TK_INT		(3*32 + 7)	/* GPIO4_7, Touch Key interrupt for new IO board */
+#endif
+
 #define MX53_PCBA_TOUCH_RST		(6*32 + 3)	/* GPIO7_3 */
 
 // Misc Related
@@ -267,8 +287,6 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_EIM_D20__GPIO3_20,
 	/* WLAN_VCC_EN */
 	MX53_PAD_DI0_PIN4__GPIO4_20,
-	/* LCD_PWR_EN */
-	MX53_PAD_EIM_D22__GPIO3_22,
 	/* GPS_UART2 */
 	MX53_PAD_EIM_D29__UART2_RTS,
 	MX53_PAD_EIM_D28__UART2_CTS,
@@ -321,6 +339,135 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_CSI0_PIXCLK__IPU_CSI0_PIXCLK,
 	/* CAMERA1_RST */
 	MX53_PAD_CSI0_DATA_EN__GPIO5_20,
+	/* MODEM_WAKEUP_IN */
+	MX53_PAD_FEC_RXD0__GPIO1_27,
+	/* MODEM_WAKEUP_OUT */
+	MX53_PAD_FEC_RXD1__GPIO1_26,
+	/* MODEM_PWR_ON */
+	MX53_PAD_FEC_TXD0__GPIO1_30,
+	/* GPS_ONOFF */
+	MX53_PAD_FEC_RX_ER__GPIO1_24,
+	/* AU_LDO_EN */
+	MX53_PAD_FEC_TX_EN__GPIO1_28,
+	/* GPS_1V8_ON */
+	MX53_PAD_FEC_REF_CLK__GPIO1_23,
+	/* GPS_TSYNC */
+	MX53_PAD_FEC_CRS_DV__GPIO1_25,
+	/* AUD_REQ */
+	MX53_PAD_FEC_MDC__GPIO1_31,
+	/* PMIC ON REQ2 */
+	MX53_PAD_FEC_MDIO__GPIO1_22,
+	/* KEY_VOL+ */
+	MX53_PAD_KEY_COL4__GPIO4_14,
+	/* KEY_VOL- */
+	MX53_PAD_KEY_ROW2__GPIO4_11,
+	/* I2C2 */
+	MX53_PAD_KEY_COL3__I2C2_SCL,
+	MX53_PAD_KEY_ROW3__I2C2_SDA,
+	/* KEY FLASH LED3 */
+	MX53_PAD_KEY_ROW4__GPIO4_15,
+	/* SD1 */
+	MX53_PAD_SD1_CMD__ESDHC1_CMD,
+	MX53_PAD_SD1_CLK__ESDHC1_CLK,
+	MX53_PAD_SD1_DATA0__ESDHC1_DAT0,
+	MX53_PAD_SD1_DATA1__ESDHC1_DAT1,
+	MX53_PAD_SD1_DATA2__ESDHC1_DAT2,
+	MX53_PAD_SD1_DATA3__ESDHC1_DAT3,
+	/* SD2 */
+	MX53_PAD_SD2_CMD__ESDHC2_CMD,
+	MX53_PAD_SD2_CLK__ESDHC2_CLK,
+	MX53_PAD_SD2_DATA0__ESDHC2_DAT0,
+	MX53_PAD_SD2_DATA1__ESDHC2_DAT1,
+	MX53_PAD_SD2_DATA2__ESDHC2_DAT2,
+	MX53_PAD_SD2_DATA3__ESDHC2_DAT3,
+	#if defined(CONFIG_AT070TN93)
+	/* TK_INT */
+	MX53_PAD_PATA_DA_1__GPIO7_7,
+	#endif
+	#if defined(CONFIG_AT070TN2_WSVGA)
+	/* TK_INT */
+	MX53_PAD_KEY_ROW0__GPIO4_7,
+	#endif
+	/* SD3 */
+	MX53_PAD_PATA_DATA8__ESDHC3_DAT0,
+	MX53_PAD_PATA_DATA9__ESDHC3_DAT1,
+	MX53_PAD_PATA_DATA10__ESDHC3_DAT2,
+	MX53_PAD_PATA_DATA11__ESDHC3_DAT3,
+	MX53_PAD_PATA_DATA0__ESDHC3_DAT4,
+	MX53_PAD_PATA_DATA1__ESDHC3_DAT5,
+	MX53_PAD_PATA_DATA2__ESDHC3_DAT6,
+	MX53_PAD_PATA_DATA3__ESDHC3_DAT7,
+	MX53_PAD_PATA_IORDY__ESDHC3_CLK,
+	MX53_PAD_PATA_RESET_B__ESDHC3_CMD,
+	/* OTG_PWR_EN */
+	MX53_PAD_PATA_DATA4__GPIO2_4,
+	/* TP_SHUTDOWN */
+	MX53_PAD_PATA_DIOR__GPIO7_3,
+	/* UART1 */
+	MX53_PAD_PATA_DIOW__UART1_TXD_MUX,
+	MX53_PAD_PATA_DMACK__UART1_RXD_MUX,
+	/* OTG_PWR_FAULT */
+	MX53_PAD_PATA_DMARQ__GPIO7_0,
+	/* HEADSET_DET */
+	MX53_PAD_PATA_INTRQ__GPIO7_2,
+	/* CAM_MCLK */
+	MX53_PAD_GPIO_0__CCM_SSI_EXT1_CLK,
+	/* CAM2_PWR_DWN */
+	MX53_PAD_GPIO_2__GPIO1_2,
+	/* AU_MCLK1 */
+	MX53_PAD_GPIO_3__CCM_CLKO2,
+	/* GPS_RESET */
+	MX53_PAD_GPIO_4__GPIO1_4,
+	/* I2C3 */
+	MX53_PAD_GPIO_5__I2C3_SCL,
+	MX53_PAD_GPIO_6__I2C3_SDA,
+	/* PMIC_INT */
+	MX53_PAD_GPIO_16__GPIO7_11,
+	/* PMIC_ICTEST */
+	MX53_PAD_EIM_A25__GPIO5_2,
+	/* HDMI SPDIF_TX*/
+	MX53_PAD_GPIO_17__SPDIF_OUT1,
+	/* CAM1 POWER DOWN */
+	MX53_PAD_GPIO_18__GPIO7_13,
+	/* SD_PWR_EN */
+	MX53_PAD_PATA_DATA6__GPIO2_6,
+
+	/*
+	 * Following mux definitions are used for both LVDS and RGB.
+	 */
+	/* LCD_UD */
+	MX53_PAD_PATA_DATA12__GPIO2_12,
+	/* LCD_LR */
+	MX53_PAD_PATA_DATA13__GPIO2_13,
+	/* LCD_BL_PWM */
+	MX53_PAD_GPIO_1__PWM2_PWMO,
+	/* LCD_PWR_EN */
+	MX53_PAD_EIM_D22__GPIO3_22,
+	/* LCD_RESET */
+	MX53_PAD_KEY_COL2__GPIO4_10,
+
+	#if defined(CONFIG_AT070TN2_WSVGA)
+	/* LCD_GPIO0 */
+	MX53_PAD_PATA_CS_0__GPIO7_9,
+	/* LCD_GPIO1 */
+	MX53_PAD_PATA_CS_1__GPIO7_10,
+	/* LCD_SEL */
+	MX53_PAD_PATA_DA_2__GPIO7_8,
+	/* LCD_STBY_N */
+	MX53_PAD_KEY_ROW1__GPIO4_9,
+	/* LCD_CABC_EN1 */
+	MX53_PAD_PATA_DATA14__GPIO2_14,
+	/* LCD_CABC_EN2 */
+	MX53_PAD_PATA_DATA15__GPIO2_15,
+	/* LVDS */
+	MX53_PAD_LVDS0_TX3_P__LDB_LVDS0_TX3,
+	MX53_PAD_LVDS0_CLK_P__LDB_LVDS0_CLK,
+	MX53_PAD_LVDS0_TX2_P__LDB_LVDS0_TX2,
+	MX53_PAD_LVDS0_TX1_P__LDB_LVDS0_TX1,
+	MX53_PAD_LVDS0_TX0_P__LDB_LVDS0_TX0,
+	#endif
+
+	#if defined(CONIG_AT070TN93)
 	/* DISPLAY */
 	MX53_PAD_DI0_DISP_CLK__IPU_DI0_DISP_CLK,
 	MX53_PAD_DI0_PIN15__IPU_DI0_PIN15,
@@ -350,122 +497,15 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_DISP0_DAT21__IPU_DISP0_DAT_21,
 	MX53_PAD_DISP0_DAT22__IPU_DISP0_DAT_22,
 	MX53_PAD_DISP0_DAT23__IPU_DISP0_DAT_23,
-	/* MODEM_WAKEUP_IN */
-	MX53_PAD_FEC_RXD0__GPIO1_27,
-	/* MODEM_WAKEUP_OUT */
-	MX53_PAD_FEC_RXD1__GPIO1_26,
-	/* MODEM_PWR_ON */
-	MX53_PAD_FEC_TXD0__GPIO1_30,
-	/* GPS_ONOFF */
-	MX53_PAD_FEC_RX_ER__GPIO1_24,
-	/* AU_LDO_EN */
-	MX53_PAD_FEC_TX_EN__GPIO1_28,
-	/* GPS_1V8_ON */
-	MX53_PAD_FEC_REF_CLK__GPIO1_23,
-	/* GPS_TSYNC */
-	MX53_PAD_FEC_CRS_DV__GPIO1_25,
-	/* AUD_REQ */
-	MX53_PAD_FEC_MDC__GPIO1_31,
-	/* PMIC ON REQ2 */
-	MX53_PAD_FEC_MDIO__GPIO1_22,
-	/* LCD_RESET */
-	MX53_PAD_KEY_COL2__GPIO4_10,
-	/* KEY_VOL+ */
-	MX53_PAD_KEY_COL4__GPIO4_14,
-	/* KEY_VOL- */
-	MX53_PAD_KEY_ROW2__GPIO4_11,
+
 	/* BL_PWR_EN */
 	MX53_PAD_KEY_ROW0__GPIO4_7,
-	/* I2C2 */
-	MX53_PAD_KEY_COL3__I2C2_SCL,
-	MX53_PAD_KEY_ROW3__I2C2_SDA,
-	/* KEY FLASH LED3 */
-	MX53_PAD_KEY_ROW4__GPIO4_15,
-	/* SD1 */
-	MX53_PAD_SD1_CMD__ESDHC1_CMD,
-	MX53_PAD_SD1_CLK__ESDHC1_CLK,
-	MX53_PAD_SD1_DATA0__ESDHC1_DAT0,
-	MX53_PAD_SD1_DATA1__ESDHC1_DAT1,
-	MX53_PAD_SD1_DATA2__ESDHC1_DAT2,
-	MX53_PAD_SD1_DATA3__ESDHC1_DAT3,
-	/* SD2 */
-	MX53_PAD_SD2_CMD__ESDHC2_CMD,
-	MX53_PAD_SD2_CLK__ESDHC2_CLK,
-	MX53_PAD_SD2_DATA0__ESDHC2_DAT0,
-	MX53_PAD_SD2_DATA1__ESDHC2_DAT1,
-	MX53_PAD_SD2_DATA2__ESDHC2_DAT2,
-	MX53_PAD_SD2_DATA3__ESDHC2_DAT3,
-	/* LCD_GPIO0 */
-	MX53_PAD_PATA_CS_0__GPIO7_9,
-	/* LCD_GPIO1 */
-	MX53_PAD_PATA_CS_1__GPIO7_10,
-	/* TK_INT */
-	MX53_PAD_PATA_DA_1__GPIO7_7,
-	/* LCD_SEL */
-	MX53_PAD_PATA_DA_2__GPIO7_8,
-	/* SD3 */
-	MX53_PAD_PATA_DATA8__ESDHC3_DAT0,
-	MX53_PAD_PATA_DATA9__ESDHC3_DAT1,
-	MX53_PAD_PATA_DATA10__ESDHC3_DAT2,
-	MX53_PAD_PATA_DATA11__ESDHC3_DAT3,
-	MX53_PAD_PATA_DATA0__ESDHC3_DAT4,
-	MX53_PAD_PATA_DATA1__ESDHC3_DAT5,
-	MX53_PAD_PATA_DATA2__ESDHC3_DAT6,
-	MX53_PAD_PATA_DATA3__ESDHC3_DAT7,
-	MX53_PAD_PATA_IORDY__ESDHC3_CLK,
-	MX53_PAD_PATA_RESET_B__ESDHC3_CMD,
-	/* OTG_PWR_EN */
-	MX53_PAD_PATA_DATA4__GPIO2_4,
 	/* LCD_MODE */
 	MX53_PAD_PATA_DATA5__GPIO2_5,
-	/* SD_PWR_EN */
-	MX53_PAD_PATA_DATA6__GPIO2_6,
 	/* LCD_DITH */
 	MX53_PAD_PATA_DATA7__GPIO2_7,
-	/* LCD_UD */
-	MX53_PAD_PATA_DATA12__GPIO2_12,
-	/* LCD_LR */
-	MX53_PAD_PATA_DATA13__GPIO2_13,
-	/* LCD_CABC_EN1 */
-	MX53_PAD_PATA_DATA14__GPIO2_14,
-	/* LCD_CABC_EN2 */
-	MX53_PAD_PATA_DATA15__GPIO2_15,
-	/* TP_SHUTDOWN */
-	MX53_PAD_PATA_DIOR__GPIO7_3,
-	/* UART1 */
-	MX53_PAD_PATA_DIOW__UART1_TXD_MUX,
-	MX53_PAD_PATA_DMACK__UART1_RXD_MUX,
-	/* OTG_PWR_FAULT */
-	MX53_PAD_PATA_DMARQ__GPIO7_0,
-	/* HEADSET_DET */
-	MX53_PAD_PATA_INTRQ__GPIO7_2,
-	/* CAM_MCLK */
-	MX53_PAD_GPIO_0__CCM_SSI_EXT1_CLK,
-	/* LCD_BL_PWM */
-	MX53_PAD_GPIO_1__PWM2_PWMO,
-	/* CAM2_PWR_DWN */
-	MX53_PAD_GPIO_2__GPIO1_2,
-	/* AU_MCLK1 */
-	MX53_PAD_GPIO_3__CCM_CLKO2,
-	/* GPS_RESET */
-	MX53_PAD_GPIO_4__GPIO1_4,
-	/* I2C3 */
-	MX53_PAD_GPIO_5__I2C3_SCL,
-	MX53_PAD_GPIO_6__I2C3_SDA,
-	/* PMIC_INT */
-	MX53_PAD_GPIO_16__GPIO7_11,
-	/* PMIC_ICTEST */
-	MX53_PAD_EIM_A25__GPIO5_2,
-	/* HDMI SPDIF_TX*/
-	MX53_PAD_GPIO_17__SPDIF_OUT1,
-	/* CAM1 POWER DOWN */
-	MX53_PAD_GPIO_18__GPIO7_13,
-	/* LVDS */
-	MX53_PAD_LVDS0_TX3_P__LDB_LVDS0_TX3,
-	MX53_PAD_LVDS0_CLK_P__LDB_LVDS0_CLK,
-	MX53_PAD_LVDS0_TX2_P__LDB_LVDS0_TX2,
-	MX53_PAD_LVDS0_TX1_P__LDB_LVDS0_TX1,
-	MX53_PAD_LVDS0_TX0_P__LDB_LVDS0_TX0,
+	#endif
+
 	/* USIM_CDT */
 	MX53_PAD_KEY_COL1__GPIO4_8,
 	
@@ -1294,9 +1334,17 @@ static struct goodix_i2c_platform_data goodix_data = {
 	.gpio_irq = MX53_PCBA_TOUCH_INT,
 	.gpio_shutdown = MX53_PCBA_TOUCH_RST,
 };
-
+/*
+ * NOTE: Here exist 2 possible declarations, one for Huawei new IO board,
+ *       the other is for Huawei old IO board.
+ */
 static u16 pcba_touchkey_martix[] = {
+	#if defined(CONFIG_AT070TN93)
 	KEY_MENU, KEY_HOME,KEY_BACK, KEY_SEARCH,
+	#endif
+	#if defined(CONFIG_AT070TN2_WSVGA)
+	KEY_HOME, KEY_BACK, KEY_MENU, KEY_SEARCH,
+	#endif
 };
 
 static struct ha2605_platform_data ha2605_keyboard_platdata = {
@@ -1859,16 +1907,18 @@ static void __init mx53_pcba_io_init(void)
 	/* LCD power enable */
 	gpio_request(MX53_PCBA_LCD_PWR_EN, "lcd-pwr-en");
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 1);
-	/* LVDS backlight power */
-	gpio_request(MX53_PCBA_LCD_GPIO0, "lcd-gpio0-en");
-	gpio_direction_input(MX53_PCBA_LCD_GPIO0);			// Work in input mode for power saving
-	gpio_request(MX53_PCBA_LCD_GPIO1, "lcd-gpio1-en");	// Work in input mode for power saving
-	gpio_direction_input(MX53_PCBA_LCD_GPIO1);
+
+	#if defined(CONFIG_AT070TN93)
 	/* backlight power */
 	gpio_request(MX53_PCBA_BL_PWR_EN, "bl-pwr-en");
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1);
-	/* LCD ID RST */
-	
+	#endif
+
+	/* LVDS backlight power */
+	gpio_request(MX53_PCBA_LCD_GPIO0, "lcd-gpio0-en");
+	gpio_direction_input(MX53_PCBA_LCD_GPIO0);		// Work in input mode for power saving
+	gpio_request(MX53_PCBA_LCD_GPIO1, "lcd-gpio1-en");	// Work in input mode for power saving
+	gpio_direction_input(MX53_PCBA_LCD_GPIO1);
 	gpio_request(MX53_PCBA_LCD_RESET, "lcd-id");
 	gpio_direction_output(MX53_PCBA_LCD_RESET, 0);
 	msleep(100);
@@ -1878,19 +1928,22 @@ static void __init mx53_pcba_io_init(void)
 	gpio_direction_output(MX53_PCBA_LCD_UD, 0);
 	gpio_request(MX53_PCBA_LCD_LR, "lcd-lr");
 	gpio_direction_output(MX53_PCBA_LCD_LR, 1);
+	#if defined(CONFIG_AT070TN93)
 	gpio_request(MX53_PCBA_LCD_CABC_EN1, "lcd-cabc-en1");
-	gpio_direction_output(MX53_PCBA_LCD_CABC_EN1, 0);
+	gpio_direction_output(MX53_PCBA_LCD_CABC_EN1, 1);
 	gpio_request(MX53_PCBA_LCD_CABC_EN2, "lcd-cabc-en2");
-	gpio_direction_output(MX53_PCBA_LCD_CABC_EN2, 0);
-
+	gpio_direction_output(MX53_PCBA_LCD_CABC_EN2, 1);
 	/* LCD normal mode */
 	gpio_request(MX53_PCBA_LCD_MODE, "lcd_mode");
 	gpio_direction_output(MX53_PCBA_LCD_MODE, 1);
+	#endif
 
+	#if defined(CONFIG_AT070TN2_WSVGA)
 	/* LCD 6/8bits select, 1-6bit, 0-8bit */
 	/* 8 bits mode */
 	gpio_request(MX53_PCBA_LCD_SEL, "lcd_sel");
 	gpio_direction_output(MX53_PCBA_LCD_SEL, 0);
+	#endif
 
 	/* ecompass sensor intr */
 	gpio_request(MX53_PCBA_COMPASS_INT, "ecompass int");

@@ -216,6 +216,8 @@ static int before_use_calculated_capacity = 1;
 int charger_online=0;
 int usbhost_flag=0; 
 int openwifi_flag=0;
+unsigned int value_tmp=0;
+
 
 struct last_batt_rec {
 	int voltage_uV;
@@ -1316,7 +1318,6 @@ static int init_charger(struct mc34708_charger_config *config)
 static int set_charging_point(struct ripley_dev_info *di, int point)
 {
 	unsigned int val, mask;
-	unsigned int value_tmp;
 	if (point >= 0 && point < di->chargeConfig->pointsNumber) {
 
 		val =
@@ -1840,7 +1841,8 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 	int usbOnline, auxOnline;
 	int restartCharging = 0;
 	int stopCharging = 0;
-
+	pmic_read_reg(REG_MC34708_MEM_D,
+				&value_tmp, 0xffffffff);
 	ret = pmic_read_reg(MC34708_REG_INT_SENSE0, &value, PMIC_ALL_BITS);
 
 	if (ret == 0) {
@@ -1880,12 +1882,19 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			} else {
 				restartCharging = 0;
 			}
-		if (!is_host_mhl_connected()) {
-			di->usb_charger_online = usbOnline;
-			dev_info(di->usb_charger.dev, "usb cable status: %s\n",
-				 usbOnline ? "online" : "offline");
-			power_supply_changed(&di->usb_charger);
-			}
+			if (!(value_tmp & (1 << 22))) {
+				if (!is_host_mhl_connected()) {
+				di->usb_charger_online = usbOnline;
+				dev_info(di->usb_charger.dev, "usb cable status: %s\n",
+					 usbOnline ? "online" : "offline");
+				power_supply_changed(&di->usb_charger);
+				}
+			} else {
+					di->usb_charger_online = usbOnline;
+					dev_info(di->usb_charger.dev, "usb cable status: %s\n",
+						 usbOnline ? "online" : "offline");
+					power_supply_changed(&di->usb_charger);
+			}					
 		}
 
 		if (restartCharging) {
@@ -2879,7 +2888,9 @@ static int ripley_battery_probe(struct platform_device *pdev)
 	pmic_read_reg(MC34708_REG_MEM_D, &value, 0xffffff);
 	value &= ~0x800000;
 	pmic_write_reg(MC34708_REG_MEM_D, value, 0xffffff);
-	
+
+	pmic_read_reg(REG_MC34708_MEM_D,
+			&value_tmp, 0xffffffff);
 	di->old_percent = -1;
 //	enable_charger(false);
 

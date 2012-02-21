@@ -1416,9 +1416,12 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 						   BITFMASK(MUSBCHRG)));
 			if (!(value_tmp & (1 << 22))) {
 				val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1350000));
-
 			} else {
-				val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(950000));
+				enable_1p5(false);
+				CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
+				BITFVAL(ManualSW, 1),
+				BITFMASK(ManualSW)));
+				val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1050000));
 			}	
 			break;
 		default:

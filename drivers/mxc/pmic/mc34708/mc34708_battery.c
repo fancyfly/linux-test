@@ -1380,14 +1380,15 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 		case USBCHARGER:
 		case DEDICATEDCHARGER:
 			/* enable 1P5 large current */
-			enable_1p5(true);
 			pmic_read_reg(REG_MC34708_MEM_D,
 						&value_tmp, 0xffffffff);
 			if (!(value_tmp & (1 << 22))) {
+				enable_1p5(true);
 				usbhost_flag=0;
 				openwifi_flag=0;
 				pr_info("MC34708_MEM_D bit22 is 0\n");
 			} else {
+				enable_1p5(false);
 				usbhost_flag=1;
 				openwifi_flag=1;
 				gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);

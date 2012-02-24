@@ -3720,6 +3720,7 @@ static struct clk spdif0_clk[] = {
 	{
 	.id = 0,
 	.parent = &pll3_sw_clk,
+	.secondary = &spdif0_clk[1],
 	.set_parent = _clk_spdif0_set_parent,
 	.get_rate = _clk_spdif0_get_rate,
 	.enable = _clk_enable,
@@ -3777,6 +3778,7 @@ static struct clk spdif1_clk[] = {
 	{
 	.id = 1,
 	.parent = &pll3_sw_clk,
+	.secondary = &spdif1_clk[1],
 	.set_parent = _clk_spdif1_set_parent,
 	.get_rate = _clk_spdif1_get_rate,
 	.enable = _clk_enable,

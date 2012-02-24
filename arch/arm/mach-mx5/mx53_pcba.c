@@ -465,6 +465,44 @@ static iomux_v3_cfg_t mx53_pcba_pads[] = {
 	MX53_PAD_LVDS0_TX2_P__LDB_LVDS0_TX2,
 	MX53_PAD_LVDS0_TX1_P__LDB_LVDS0_TX1,
 	MX53_PAD_LVDS0_TX0_P__LDB_LVDS0_TX0,
+
+	/*
+	 * Following are MUX pins to be programmed in INPUT mode to save power.
+	 */
+	MX53_PAD_DI0_DISP_CLK__GPIO4_16,
+	MX53_PAD_DI0_PIN15__GPIO4_17,
+	MX53_PAD_DI0_PIN2__GPIO4_18,
+	MX53_PAD_DI0_PIN3__GPIO4_19,
+	MX53_PAD_DISP0_DAT0__GPIO4_21,
+	MX53_PAD_DISP0_DAT1__GPIO4_22,
+	MX53_PAD_DISP0_DAT2__GPIO4_23,
+	MX53_PAD_DISP0_DAT3__GPIO4_24,
+	MX53_PAD_DISP0_DAT4__GPIO4_25,
+	MX53_PAD_DISP0_DAT5__GPIO4_26,
+	MX53_PAD_DISP0_DAT6__GPIO4_27,
+	MX53_PAD_DISP0_DAT7__GPIO4_28,
+	MX53_PAD_DISP0_DAT8__GPIO4_29,
+	MX53_PAD_DISP0_DAT9__GPIO4_30,
+	MX53_PAD_DISP0_DAT10__GPIO4_31,
+	MX53_PAD_DISP0_DAT11__GPIO5_5,
+	MX53_PAD_DISP0_DAT12__GPIO5_6,
+	MX53_PAD_DISP0_DAT13__GPIO5_7,
+	MX53_PAD_DISP0_DAT14__GPIO5_8,
+	MX53_PAD_DISP0_DAT15__GPIO5_9,
+	MX53_PAD_DISP0_DAT16__GPIO5_10,
+	MX53_PAD_DISP0_DAT17__GPIO5_11,
+	MX53_PAD_DISP0_DAT18__GPIO5_12,
+	MX53_PAD_DISP0_DAT19__GPIO5_13,
+	MX53_PAD_DISP0_DAT20__GPIO5_14,
+	MX53_PAD_DISP0_DAT21__GPIO5_15,
+	MX53_PAD_DISP0_DAT22__GPIO5_16,
+	MX53_PAD_DISP0_DAT23__GPIO5_17,
+
+	/* LCD_MODE */
+	MX53_PAD_PATA_DATA5__GPIO2_5,
+	/* LCD_DITH */
+	MX53_PAD_PATA_DATA7__GPIO2_7,
+
 	#endif
 
 	#if defined(CONIG_AT070TN93)
@@ -723,8 +761,10 @@ static iomux_v3_cfg_t suspend_enter_pads[] = {
 	MX53_PAD_NANDF_CLE__GPIO6_7_PD,
 	/*KEY_HOME*/
 	MX53_PAD_CSI0_DAT8__GPIO5_26_PD,
+	#if defined(CONFIG_AT070TN93)
 	/* BL_PWR_EN Output*/
 	MX53_PAD_KEY_ROW0__GPIO4_7,
+	#endif
 
 	/* LCD_ID */
 	MX53_PAD_PATA_CS_0__GPIO7_9_PD,
@@ -991,7 +1031,7 @@ static void pcba_suspend_enter()
 {
 	iomux_v3_cfg_t *p = suspend_enter_pads;
 	int i, ret;
-
+	printk("[FSL] Entry suspend.\n");
 	for (i = 0; i < ARRAY_SIZE(suspend_enter_pads); i++) {
 		suspend_exit_pads[i] = *p;
 		*p &= ~MUX_PAD_CTRL_MASK;
@@ -1009,6 +1049,7 @@ static void pcba_suspend_enter()
 static void pcba_suspend_exit()
 {
 	int i,ret;
+	printk("[FSL] Exit suspend.\n");
 	mxc_iomux_v3_setup_multiple_pads(suspend_exit_pads,
 			ARRAY_SIZE(suspend_exit_pads));
 	gpio_direction_output(MX53_PCBA_SD_PWR_EN, 1);/*SD_PWR_EN*/
@@ -1556,7 +1597,7 @@ static struct mxc_audio_platform_data wm8958_data;
 
 static int mxc_wm8958_init(void)
 {
-	wm8958_data.sysclk = 25000000;
+	wm8958_data.sysclk = 25000000;	// Changed due to switch clock source. For axi_b_clk, it is 25000000; for osc_clk, it is 24000000.
 	return 0;
 }
 
@@ -1692,7 +1733,7 @@ static struct platform_device mxc_spdif_audio_device = {
 	.name = "imx-spdif-audio-device",
 };
 
-static int mx53_pcba_bt_power_change(int status)
+int mx53_pcba_bt_power_change(int status)
 {
 	if (1 == status)
 	{		
@@ -1722,7 +1763,7 @@ static int mx53_pcba_bt_power_change(int status)
 
 	return 0;
 }
-static int mx53_pcba_wifi_set_power(int val)
+int mx53_pcba_wifi_set_power(int val)
 {
 	if (1 == val)
 	{
@@ -1847,6 +1888,13 @@ void huawei_mu509_poweron(void)
 	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,1);
 }
 
+void huawei_mu509_poweroff(void)
+{
+	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);
+	mdelay(3500);
+	gpio_set_value(MX53_PCBA_MODEM_PWR_ON,1);
+}
+
 static struct power_key_platform_data pwrkey_data = {
 	.key_value = KEY_F4,
 	.register_pwrkey = mxc_register_powerkey,
@@ -1914,11 +1962,16 @@ static void __init mx53_pcba_io_init(void)
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1);
 	#endif
 
+	#if defined(CONFIG_AT070TN2_WSVGA)
+	/* LCD 6/8bits select, 1-6bit, 0-8bit */
+	/* 8 bits mode */
 	/* LVDS backlight power */
 	gpio_request(MX53_PCBA_LCD_GPIO0, "lcd-gpio0-en");
-	gpio_direction_input(MX53_PCBA_LCD_GPIO0);		// Work in input mode for power saving
+	gpio_direction_output(MX53_PCBA_LCD_GPIO0, 1);		// Work in input mode for power saving
 	gpio_request(MX53_PCBA_LCD_GPIO1, "lcd-gpio1-en");	// Work in input mode for power saving
 	gpio_direction_input(MX53_PCBA_LCD_GPIO1);
+	#endif
+
 	gpio_request(MX53_PCBA_LCD_RESET, "lcd-id");
 	gpio_direction_output(MX53_PCBA_LCD_RESET, 0);
 	msleep(100);
@@ -1928,11 +1981,17 @@ static void __init mx53_pcba_io_init(void)
 	gpio_direction_output(MX53_PCBA_LCD_UD, 0);
 	gpio_request(MX53_PCBA_LCD_LR, "lcd-lr");
 	gpio_direction_output(MX53_PCBA_LCD_LR, 1);
-	#if defined(CONFIG_AT070TN93)
+	/*
+	 * Due to not used for LVDS panel, so set it to be input mode for power saving.
+	 */
 	gpio_request(MX53_PCBA_LCD_CABC_EN1, "lcd-cabc-en1");
-	gpio_direction_output(MX53_PCBA_LCD_CABC_EN1, 1);
+	gpio_direction_input(MX53_PCBA_LCD_CABC_EN1);
 	gpio_request(MX53_PCBA_LCD_CABC_EN2, "lcd-cabc-en2");
-	gpio_direction_output(MX53_PCBA_LCD_CABC_EN2, 1);
+	gpio_direction_input(MX53_PCBA_LCD_CABC_EN2);
+	gpio_request(MX53_PCBA_LCD_SEL, "lcd_sel");
+	gpio_direction_input(MX53_PCBA_LCD_SEL);
+
+	#if defined(CONFIG_AT070TN93)
 	/* LCD normal mode */
 	gpio_request(MX53_PCBA_LCD_MODE, "lcd_mode");
 	gpio_direction_output(MX53_PCBA_LCD_MODE, 1);

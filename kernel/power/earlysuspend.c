@@ -20,7 +20,10 @@
 #include <linux/syscalls.h> /* sys_sync */
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
-
+#include <mach/gpio.h>
+#include <linux/mfd/mc34708/mc34708.h>
+#include <linux/mfd/mc34708/core.h>
+#include <linux/delay.h>
 #include "power.h"
 
 enum {
@@ -72,6 +75,26 @@ void unregister_early_suspend(struct early_suspend *handler)
 }
 EXPORT_SYMBOL(unregister_early_suspend);
 
+/*
+ * References for suspend/resume
+ */
+extern void camera1_suspend(void );
+extern void camera1_resume(void );
+extern void camera2_suspend(void );
+extern void camera2_resume(void );
+extern void camera1_powerdown(int down);
+extern void camera2_powerdown(int down);
+extern int mx53_pcba_bt_power_change(int status);
+extern int mx53_pcba_wifi_set_power(int val);
+extern int resetSiI9232();
+extern void huawei_mu509_poweroff(void);
+extern void huawei_mu509_poweron(void);
+extern void usbh1_phy2_clock_gate(bool on);
+
+#define MX53_PCBA_MHL_1V3_ON		(2*32 + 21)	/* GPIO2_7 */
+#define MX53_PCBA_MHL_3V3_ON		(6*32 + 1)	/* GPIO7_1 */
+#define MX53_PCBA_POWER_ON_1V8_PE	(4 * 32 + 29)	/* GPIO5_29, Control the global 1v8 power network on board */
+#define MX53_PCBA_SD_PWR_EN		(1*32 + 6)	/* GPIO2_6 */
 static void early_suspend(struct work_struct *work)
 {
 	struct early_suspend *pos;
@@ -104,6 +127,35 @@ static void early_suspend(struct work_struct *work)
 			pos->suspend(pos);
 		}
 	}
+	/*
+	 * Added more power off in terms of power distribution network.
+	 */
+	pr_info("[FSL] Checkpoint in early suspend.\n");
+	huawei_mu509_poweroff();
+	msleep(5000);
+	usbh1_phy2_clock_gate(0);
+	#if 0
+	gpio_direction_output(MX53_PCBA_SD_PWR_EN, 0);/*SD_PWR_EN*/
+	#endif
+	#if 1
+	camera1_suspend();
+	camera2_suspend();
+	#endif
+	#if 0
+	/* Turn off VDAC */
+	unsigned int value = 0;	
+	unsigned int register_mask = 0;
+        register_mask =0x10;//0xc0010;
+	pmic_write_reg(REG_MC34708_MODE_0, value, register_mask);
+	#endif
+	#if 0
+        gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 1);
+        gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 1);
+        gpio_direction_output(MX53_PCBA_POWER_ON_1V8_PE, 1);
+	mx53_pcba_bt_power_change(0);
+	mx53_pcba_wifi_set_power(0);
+	#endif
+
 	mutex_unlock(&early_suspend_lock);
 
 	if (debug_mask & DEBUG_SUSPEND)
@@ -141,7 +193,41 @@ static void late_resume(struct work_struct *work)
 	list_for_each_entry_reverse(pos, &early_suspend_handlers, link)
 		if (pos->resume != NULL)
 			pos->resume(pos);
+	/*
+	 * Add more resume here.
+	 */
+	pr_info("[FSL] Checkpoint in late resume.\n");
+	usbh1_phy2_clock_gate(1);
+	msleep(5000);
+	huawei_mu509_poweron();
+	#if 0
+	gpio_direction_output(MX53_PCBA_SD_PWR_EN, 1);/*SD_PWR_EN*/
+	#endif
 
+	#if 0
+	mx53_pcba_bt_power_change(1);
+	mx53_pcba_wifi_set_power(1);
+	#endif
+
+	#if 1
+	camera1_resume();
+	camera2_resume();
+	#endif
+	#if 0
+	/* Turn on VDAC */
+	unsigned int value = 0;	
+	unsigned int register_mask = 0;
+        value = 0x10;
+        register_mask = 0x10;
+	pmic_write_reg(REG_MC34708_MODE_0, value, register_mask);
+	#endif
+
+	#if 0
+        gpio_direction_output(MX53_PCBA_MHL_1V3_ON, 0);
+        gpio_direction_output(MX53_PCBA_MHL_3V3_ON, 0);
+        gpio_direction_output(MX53_PCBA_POWER_ON_1V8_PE, 0);
+	resetSiI9232();
+	#endif
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("late_resume: done\n");
 abort:

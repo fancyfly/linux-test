@@ -1216,7 +1216,12 @@ static struct clk emi_intr_clk[] = {
 	.disable = _clk_disable_inwait,
 	}
 };
-
+#if 1
+void my_disable_emi_fast()
+{
+	clk_disable(&emi_fast_clk); 
+}
+#endif
 static unsigned long _clk_ipg_get_rate(struct clk *clk)
 {
 	u32 reg, div;
@@ -5030,8 +5035,13 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	/* Initialise the parents to be axi_b, parents are set to
 	 * axi_a when the clocks are enabled.
 	 */
-
+	#if 1
+	/* Here change is for disabling axi_b_clk in cat /proc/cpu/clocks to save more power in early suspend mode */
 	clk_set_parent(&cko2_clk, &axi_b_clk);
+	#endif
+	#if 0
+	clk_set_parent(&cko2_clk, &osc_clk);
+	#endif
 	clk_set_rate(&cko2_clk, 25000000);
 	clk_enable(&cko2_clk);
 

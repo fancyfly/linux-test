@@ -151,6 +151,7 @@ static void voltage_work_handler(struct work_struct *work)
 
 int set_low_bus_freq(void)
 {
+
 	if (busfreq_suspended)
 		return 0;
 	if (bus_freq_scaling_initialized) {
@@ -172,8 +173,10 @@ int set_low_bus_freq(void)
 			enter_lpapm_mode_mx50();
 		else if (cpu_is_mx51())
 			enter_lpapm_mode_mx51();
-		else
+		else {
+			printk("[FSL] %s, %s, %d\n",__FILE__, __FUNCTION__, __LINE__);
 			enter_lpapm_mode_mx53();
+		}
 		mutex_unlock(&bus_freq_mutex);
 	}
 	return 0;
@@ -336,13 +339,18 @@ void enter_lpapm_mode_mx51()
 	high_bus_freq_mode = 0;
 	med_bus_freq_mode = 0;
 }
-
+#if 1
+extern void my_disable_emi_fast();
+#endif
 void enter_lpapm_mode_mx53()
 {
 	u32 reg;
 	struct timespec nstimeofday;
 	struct timespec curtime;
-
+	#if 1
+	printk("[FSL] %s, %s, %d. We are in low power mode!!!\n",__FILE__, __FUNCTION__, __LINE__);
+	my_disable_emi_fast();
+	#endif
 	/* TBD: Reduce DDR frequency for DDR2 */
 	/* if (mx53_ddr_type == DDR_TYPE_DDR2) {
 	} */

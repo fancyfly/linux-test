@@ -1681,6 +1681,19 @@ exit_auxiliary:
 	}
 }
 
+#define MAX_PAGESIZE 8192
+static uint8_t verify_buf[MAX_PAGESIZE];
+
+static int mil_verify_buf(struct mtd_info *mtd, const uint8_t * buf, int len)
+{
+	struct nand_chip *nand = mtd->priv;
+
+	mil_ecc_read_page(mtd, nand, verify_buf, len);
+	if (memcmp(buf, verify_buf, len))
+		return -EFAULT;
+	return 0;
+}
+
 static int mil_hook_block_markbad(struct mtd_info *mtd, loff_t ofs)
 {
 	register struct nand_chip *chip = mtd->priv;
@@ -2303,6 +2316,7 @@ static int __devinit gpmi_nfc_mil_init(struct gpmi_nfc_data *this)
 	nand->read_byte		= mil_read_byte;
 	nand->read_buf		= mil_read_buf;
 	nand->write_buf		= mil_write_buf;
+	nand->verify_buf	= mil_verify_buf;
 
 	/* ECC-aware I/O */
 	nand->ecc.read_page	= mil_ecc_read_page;

@@ -1574,12 +1574,12 @@ static int mxcfb_resume(struct platform_device *pdev)
 	/* LCD 6/8bits select, 1-6bit, 0-8bit */
 	/* 8 bits mode */
 	/* LVDS backlight power */
-	gpio_request(MX53_PCBA_LCD_GPIO0, "lcd-gpio0-en");
+	// gpio_request(MX53_PCBA_LCD_GPIO0, "lcd-gpio0-en");
 	gpio_direction_output(MX53_PCBA_LCD_GPIO0, 1);		// Work in input mode for power saving
-	gpio_request(MX53_PCBA_LCD_GPIO1, "lcd-gpio1-en");	// Work in input mode for power saving
-	gpio_direction_input(MX53_PCBA_LCD_GPIO1);
+	// gpio_request(MX53_PCBA_LCD_GPIO1, "lcd-gpio1-en");	// Work in input mode for power saving
+	// gpio_direction_input(MX53_PCBA_LCD_GPIO1);
 	#endif
-
+	#if 0
 	gpio_request(MX53_PCBA_LCD_RESET, "lcd-id");
 	gpio_direction_output(MX53_PCBA_LCD_RESET, 0);
 	msleep(100);
@@ -1598,14 +1598,14 @@ static int mxcfb_resume(struct platform_device *pdev)
 	gpio_direction_input(MX53_PCBA_LCD_CABC_EN2);
 	gpio_request(MX53_PCBA_LCD_SEL, "lcd_sel");
 	gpio_direction_input(MX53_PCBA_LCD_SEL);
-
-	#if defined(CONFIG_AT070TN93)
+	#endif
+	#if 0
 	/* LCD normal mode */
 	gpio_request(MX53_PCBA_LCD_MODE, "lcd_mode");
 	gpio_direction_output(MX53_PCBA_LCD_MODE, 1);
 	#endif
 
-	#if defined(CONFIG_AT070TN2_WSVGA)
+	#if 0
 	/* LCD 6/8bits select, 1-6bit, 0-8bit */
 	/* 8 bits mode */
 	gpio_request(MX53_PCBA_LCD_SEL, "lcd_sel");

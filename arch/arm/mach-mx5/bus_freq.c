@@ -347,7 +347,7 @@ void enter_lpapm_mode_mx53()
 	u32 reg;
 	struct timespec nstimeofday;
 	struct timespec curtime;
-	#if 1
+	#if 0
 	printk("[FSL] %s, %s, %d. We are in low power mode!!!\n",__FILE__, __FUNCTION__, __LINE__);
 	my_disable_emi_fast();
 	#endif

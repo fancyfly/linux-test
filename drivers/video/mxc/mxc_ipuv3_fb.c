@@ -1569,47 +1569,8 @@ static int mxcfb_resume(struct platform_device *pdev)
 	gpio_request(MX53_PCBA_BL_PWR_EN, "bl-pwr-en");
 	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 1);
 	#endif
-
 	#if defined(CONFIG_AT070TN2_WSVGA)
-	/* LCD 6/8bits select, 1-6bit, 0-8bit */
-	/* 8 bits mode */
-	/* LVDS backlight power */
-	// gpio_request(MX53_PCBA_LCD_GPIO0, "lcd-gpio0-en");
 	gpio_direction_output(MX53_PCBA_LCD_GPIO0, 1);		// Work in input mode for power saving
-	// gpio_request(MX53_PCBA_LCD_GPIO1, "lcd-gpio1-en");	// Work in input mode for power saving
-	// gpio_direction_input(MX53_PCBA_LCD_GPIO1);
-	#endif
-	#if 0
-	gpio_request(MX53_PCBA_LCD_RESET, "lcd-id");
-	gpio_direction_output(MX53_PCBA_LCD_RESET, 0);
-	msleep(100);
-	gpio_direction_output(MX53_PCBA_LCD_RESET, 1);	// Recover from LCD RESET
-	/* LCD misc */
-	gpio_request(MX53_PCBA_LCD_UD, "lcd-ud");
-	gpio_direction_output(MX53_PCBA_LCD_UD, 0);
-	gpio_request(MX53_PCBA_LCD_LR, "lcd-lr");
-	gpio_direction_output(MX53_PCBA_LCD_LR, 1);
-	/*
-	 * Due to not used for LVDS panel, so set it to be input mode for power saving.
-	 */
-	gpio_request(MX53_PCBA_LCD_CABC_EN1, "lcd-cabc-en1");
-	gpio_direction_input(MX53_PCBA_LCD_CABC_EN1);
-	gpio_request(MX53_PCBA_LCD_CABC_EN2, "lcd-cabc-en2");
-	gpio_direction_input(MX53_PCBA_LCD_CABC_EN2);
-	gpio_request(MX53_PCBA_LCD_SEL, "lcd_sel");
-	gpio_direction_input(MX53_PCBA_LCD_SEL);
-	#endif
-	#if 0
-	/* LCD normal mode */
-	gpio_request(MX53_PCBA_LCD_MODE, "lcd_mode");
-	gpio_direction_output(MX53_PCBA_LCD_MODE, 1);
-	#endif
-
-	#if 0
-	/* LCD 6/8bits select, 1-6bit, 0-8bit */
-	/* 8 bits mode */
-	gpio_request(MX53_PCBA_LCD_SEL, "lcd_sel");
-	gpio_direction_output(MX53_PCBA_LCD_SEL, 0);
 	#endif
 
 	release_console_sem();

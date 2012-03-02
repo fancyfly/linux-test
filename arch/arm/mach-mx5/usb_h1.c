@@ -100,18 +100,32 @@ static void _phy_lowpower_suspend(struct fsl_usb2_platform_data *pdata, bool ena
 		UH1_PORTSC1 &= ~PORTSC_PHCD;
 	}
 }
-
+extern int turnOffMU509;
 static void usbh1_clock_gate(bool on)
 {
-	pr_debug("%s: on is %d\n", __func__, on);
+	pr_info("[FSL] %s: on is %d\n", __func__, on);
 	if (on) {
-		clk_enable(usb_ahb_clk);
-		clk_enable(usb_oh3_clk);
-//		clk_enable(usb_phy2_clk);
+		if (turnOffMU509 == 0) {
+ 			clk_enable(usb_ahb_clk);
+			clk_enable(usb_oh3_clk);
+			// clk_enable(usb_phy2_clk);
+		}
+		else {
+ 			clk_enable(usb_ahb_clk);
+			clk_enable(usb_oh3_clk);
+			clk_enable(usb_phy2_clk);
+		}
 	} else {
-//		clk_disable(usb_phy2_clk);
-		clk_disable(usb_oh3_clk);
-		clk_disable(usb_ahb_clk);
+		if (turnOffMU509 == 0) {
+			// clk_disable(usb_phy2_clk);
+			clk_disable(usb_oh3_clk);
+			clk_disable(usb_ahb_clk);
+		}
+		else {
+			clk_disable(usb_phy2_clk);
+			clk_disable(usb_oh3_clk);
+			clk_disable(usb_ahb_clk);
+		}
 	}
 }
 

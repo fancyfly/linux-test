@@ -174,7 +174,7 @@ int set_low_bus_freq(void)
 		else if (cpu_is_mx51())
 			enter_lpapm_mode_mx51();
 		else {
-			printk("[FSL] %s, %s, %d\n",__FILE__, __FUNCTION__, __LINE__);
+			pr_info("[FSL] %s, %s, %d\n",__FILE__, __FUNCTION__, __LINE__);
 			enter_lpapm_mode_mx53();
 		}
 		mutex_unlock(&bus_freq_mutex);

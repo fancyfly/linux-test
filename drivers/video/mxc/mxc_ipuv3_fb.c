@@ -217,7 +217,7 @@ static int mxcfb_set_fix(struct fb_info *info)
 {
 	struct fb_fix_screeninfo *fix = &info->fix;
 	struct fb_var_screeninfo *var = &info->var;
-	printk("FSL ---- %s xres_virtual: %d, yres_virtual: %d, bits_per_pixel: %d.\n", __FUNCTION__, var->xres_virtual, var->yres_virtual, var->bits_per_pixel);
+
 	fix->line_length = var->xres_virtual * var->bits_per_pixel / 8;
 
 	fix->type = FB_TYPE_PACKED_PIXELS;
@@ -431,11 +431,11 @@ static int mxcfb_set_par(struct fb_info *fbi)
 			mxc_fbi->alpha_mem_len = alpha_mem_len;
 		}
 	}
-	#if 1
+
 	if (mxc_fbi->next_blank != FB_BLANK_UNBLANK ||
 	    mxc_fbi->fb_suspended)
 		return retval;
-	#endif
+
 	_setup_disp_channel1(fbi);
 
 	if (!mxc_fbi->overlay) {
@@ -471,10 +471,6 @@ static int mxcfb_set_par(struct fb_info *fbi)
 		dev_dbg(fbi->device, "pixclock = %ul Hz\n",
 			(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
 
-		printk("FSL ---- DI#%d stream out frame data. pixelclock %d, xres %d, yres %d, fmt 0x%08X.\n", \
-			mxc_fbi->ipu_di, (PICOS2KHZ(fbi->var.pixclock)) * 1000UL, \
-			fbi->var.xres, fbi->var.yres, out_pixel_fmt);
-		
 		if (ipu_init_sync_panel(mxc_fbi->ipu_di,
 					(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
 					fbi->var.xres, fbi->var.yres,
@@ -488,10 +484,9 @@ static int mxcfb_set_par(struct fb_info *fbi)
 					0, sig_cfg) != 0) {
 			dev_err(fbi->device,
 				"mxcfb: Error initializing panel.\n");
-			printk("mxcfb: Error initializing panel.\n");
-			
 			return -EINVAL;
 		}
+
 		fbi->mode =
 		    (struct fb_videomode *)fb_match_mode(&fbi->var,
 							 &fbi->modelist);
@@ -1537,7 +1532,7 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 	#endif
 	gpio_direction_output(MX53_PCBA_LCD_PWR_EN, 0);/*LCD_PWR_EN*/
 	#if defined(CONFIG_AT070TN93)
-	gpio_direciton_output(MX53_PCBA_BL_PWR_EN, 0);
+	gpio_direction_output(MX53_PCBA_BL_PWR_EN, 0);
 	#endif
 	release_console_sem();
 
@@ -1796,9 +1791,6 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 		mxcfbi->fb_mode_str = plat_data->mode_str;
 
 	if (mxcfbi->fb_mode_str) {
-		#if 1
-		printk("FSL ---- Setup videomode %s for DI#%d.\n", mxcfbi->fb_mode_str, mxcfbi->ipu_di);
-		#endif
 		if (mxcfbi->ipu_di >= 0) {
 			const struct fb_videomode *mode = NULL;
 			struct fb_videomode m;
@@ -1823,10 +1815,8 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 						& MXC_DISP_DDC_DEV) &&
 						(mode[i].vmode & FB_VMODE_INTERLACED))
 						continue;
-					else {
+					else
 						fb_add_videomode(&mode[i], &fbi->modelist);
-						printk("FSL ---- %s: add videomode %d x %d into fbi->modelist.\n", __FUNCTION__, mode[i].xres, mode[i].yres);
-					}
 				}
 			}
 
@@ -1910,11 +1900,6 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 					"Not found any valid video mode");
 				ret = -EINVAL;
 				goto done;
-			}
-			else {
-				#if 1
-				printk("FSL ---- %s found videomode %s in mxc_fb_platform_data.\n", __FUNCTION__, mxcfbi->fb_mode_str);
-				#endif
 			}
 
 			/*added found mode to fbi modelist*/

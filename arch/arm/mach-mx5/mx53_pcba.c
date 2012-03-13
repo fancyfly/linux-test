@@ -1960,13 +1960,14 @@ static void __init mx53_pcba_io_init(void)
 	/*
 	 * Due to not used for LVDS panel, so set it to be input mode for power saving.
 	 */
+#if defined(CONFIG_AT070TN2_WSVGA)
 	gpio_request(MX53_PCBA_LCD_CABC_EN1, "lcd-cabc-en1");
 	gpio_direction_input(MX53_PCBA_LCD_CABC_EN1);
 	gpio_request(MX53_PCBA_LCD_CABC_EN2, "lcd-cabc-en2");
 	gpio_direction_input(MX53_PCBA_LCD_CABC_EN2);
 	gpio_request(MX53_PCBA_LCD_SEL, "lcd_sel");
 	gpio_direction_input(MX53_PCBA_LCD_SEL);
-
+#endif
 	#if defined(CONFIG_AT070TN93)
 	/* LCD normal mode */
 	gpio_request(MX53_PCBA_LCD_MODE, "lcd_mode");

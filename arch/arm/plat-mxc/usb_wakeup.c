@@ -24,6 +24,7 @@
 #include <mach/arc_otg.h>
 #include <mach/hardware.h>
 #include <mach/gpio.h>
+#include <linux/wakelock.h>
 
 
 struct wakeup_ctrl {
@@ -41,6 +42,7 @@ struct completion  otg_event;
 static bool mhl_flag = false;
 #define CHECK_MHL_TIME (msecs_to_jiffies(200)) /* 200 ms */
 static bool mhl_connected = false;
+static struct wake_lock detect_mhl_wake_lock;
 
 bool is_host_mhl_connected()
 {
@@ -150,14 +152,26 @@ static void wakeup_event_handler(struct wakeup_ctrl *ctrl)
 				if( (wakeup_evt == WAKEUP_EVENT_ID)) {					
 				//	if(usb_pdata->platform_driver_vbus)
 				//		usb_pdata->platform_driver_vbus(1);
+				            //we need handle only  otg cable plug in case
+						if(UOG_OTGSC & OTGSC_STS_A_VBUS_VALID)
+							mhl_usb_connect();
 						gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 1);
+						mhl_connected=true;
+						if(!strcmp(pdata->name,"DR wakeup")) {
+							printk(KERN_DEBUG "wake_lock:%s\n",pdata->name);
+							wake_lock(&detect_mhl_wake_lock);
+						}
 						/*we will wait for mhl driver until mhl driver tell me what cale plug in */
 						printk(KERN_DEBUG "(wait_for_completion_interruptible ++)\n");
-						mhl_connected=true;
 						wait_for_completion_interruptible(&otg_event);
 						printk(KERN_DEBUG "(wait_for_completion_interruptible --OTGSC:0x%x)\n",UOG_OTGSC);
 						//usb_pdata->platform_driver_vbus(0);
 						gpio_set_value(MX53_PCBA_USB_OTG_PWR_EN, 0);
+						if(!strcmp(pdata->name,"DR wakeup")) {
+							printk(KERN_DEBUG "wake_unlock:%s\n",pdata->name);
+							if (wake_lock_active(&detect_mhl_wake_lock))	
+								wake_unlock(&detect_mhl_wake_lock);
+						}
 						/*if mhl cable insert we will clear all interrupt,USB host need keep ID interrupt */
 						if(mhl_flag== true) {
 							temp = UOG_OTGSC;
@@ -232,7 +246,10 @@ static int wakeup_dev_probe(struct platform_device *pdev)
 	pdata = pdev->dev.platform_data;
 	init_waitqueue_head(&pdata->wq);
 	pdata->usb_wakeup_is_pending = false;
-
+	if(!strcmp(pdata->name,"DR wakeup")) {
+		printk(KERN_INFO "wake_lock_init:%s\n",pdata->name);
+		wake_lock_init(&detect_mhl_wake_lock, WAKE_LOCK_SUSPEND, "mhl_usb_connect");
+	}
 	ctrl->pdata = pdata;
 	init_completion(&ctrl->event);
 	init_completion(&otg_event);

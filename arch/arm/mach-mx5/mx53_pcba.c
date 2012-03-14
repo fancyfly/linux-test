@@ -1676,7 +1676,7 @@ static struct mxc_audio_platform_data wm8958_data;
 
 static int mxc_wm8958_init(void)
 {
-	wm8958_data.sysclk = 25000000;	// Changed due to switch clock source. For axi_b_clk, it is 25000000; for osc_clk, it is 24000000.
+	wm8958_data.sysclk = 24000000;	// Changed due to switch clock source. For axi_b_clk, it is 25000000; for osc_clk, it is 24000000.
 	return 0;
 }
 
@@ -1817,9 +1817,13 @@ int mx53_pcba_bt_power_change(int status)
 	if (1 == status)
 	{		
         bcm4329_power_bt_on = true;
+		#if 1
 		gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
+		#endif
 		gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, status);
+		#if 1
 		gpio_free(MX53_PCBA_WLAN_VCC_EN);
+		#endif
 		msleep(100);
 		printk(KERN_INFO"mx53_pcba bt power on\r\n");
 		gpio_request(MX53_PCBA_BT_ENABLE, "bt-reset");
@@ -1834,9 +1838,13 @@ int mx53_pcba_bt_power_change(int status)
 		if (!bcm4329_power_wifi_on)
 		{
 			printk(KERN_INFO"mx53_pcba bt power off\r\n");
+			#if 1
 			gpio_request(MX53_PCBA_WLAN_VCC_EN, "wl-vcc-enable");
+			#endif
 			gpio_direction_output(MX53_PCBA_WLAN_VCC_EN, status);
+			#if 1
 			gpio_free(MX53_PCBA_WLAN_VCC_EN);
+			#endif
 		}
 	}
 
@@ -1852,16 +1860,22 @@ int mx53_pcba_wifi_set_power(int val)
 		gpio_free(MX53_PCBA_WLAN_VCC_EN);
 		msleep(100);
 		printk(KERN_INFO"mx53_pcba wifi power on\r\n");
+		#if 0
 		gpio_request(MX53_PCBA_WLAN_ENABLE, "wl-enable");
+		#endif
 		gpio_direction_output(MX53_PCBA_WLAN_ENABLE, val);
+		#if 0
 		gpio_free(MX53_PCBA_WLAN_ENABLE);
+		#endif
 	}else if (0 == val)
 	{
 		bcm4329_power_wifi_on = false;
 #if 0
 		//workaround system hang up when playback media files by MHL.
 		gpio_request(MX53_PCBA_WLAN_ENABLE, "wl-enable");
+#endif
 		gpio_direction_output(MX53_PCBA_WLAN_ENABLE, val);
+#if 0
 		gpio_free(MX53_PCBA_WLAN_ENABLE);
 #endif
 		msleep(100);

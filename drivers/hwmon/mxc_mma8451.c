@@ -326,6 +326,7 @@ static int __devexit mma8451_remove(struct i2c_client *client)
 #ifdef CONFIG_PM_SLEEP
 static int mma8451_suspend(struct device *dev)
 {
+	pr_info("[FSL] mma8451 entry suspend.\n");
 	struct i2c_client *client = to_i2c_client(dev);
 
 	return mma8451_stop_chip(client);
@@ -333,6 +334,7 @@ static int mma8451_suspend(struct device *dev)
 
 static int mma8451_resume(struct device *dev)
 {
+	pr_info("[FSL] mma8451 entry resume.\n");
 	struct i2c_client *client = to_i2c_client(dev);
 
 	return i2c_smbus_write_byte_data(client, MMA8451_CTRL_REG1,

@@ -51,6 +51,7 @@ extern void stop_dvfs(void);
 extern void *wait_in_iram_base;
 extern void __iomem *apll_base;
 extern void __iomem *arm_plat_base;
+extern void (*mx53_wait_in_ram)(void);
 extern void (*suspend_in_iram)(void *param1, void *param2, void* param3);
 extern void __iomem *suspend_param1;
 
@@ -248,8 +249,9 @@ void arch_idle(void)
 			} else
 				wait_in_iram(ccm_base, databahn_base,
 					clk_get_usecount(sys_clk));
-		} else if (cpu_is_mx53() && (clk_get_usecount(ddr_clk) == 0)
-				&& low_bus_freq_mode) {
+		} else if (cpu_is_mx53() && (clk_get_usecount(ddr_clk) == 0) && (mx53_wait_in_ram !=NULL) && low_bus_freq_mode ) {
+			mx53_wait_in_ram();
+		} else if (cpu_is_mx53() && (clk_get_usecount(ddr_clk) == 0) && low_bus_freq_mode) {
 			suspend_in_iram(suspend_param1, NULL, NULL);
 		} else
 			cpu_do_idle();

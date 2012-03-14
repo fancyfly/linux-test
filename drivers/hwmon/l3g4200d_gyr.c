@@ -38,7 +38,7 @@
 #include <linux/mutex.h>
 #include <linux/input-polldev.h>
 #include <linux/slab.h>
-
+#include <linux/earlysuspend.h>
 #include <linux/l3g4200d.h>
 
 
@@ -118,6 +118,8 @@ static const struct output_rate odr_table[] = {
 	{	5,	ODR200|BW00},
 	{	10,	ODR100|BW00},
 };
+static int l3g4200d_suspend(struct device *dev);
+static int l3g4200d_resume(struct device *dev);
 
 struct l3g4200d_data {
 	struct i2c_client *client;
@@ -132,6 +134,7 @@ struct l3g4200d_data {
 
 	u8 reg_addr;
 	u8 resume_state[RESUME_ENTRIES];
+	struct early_suspend l3g4200d_early_suspend;	// Added for audio playing back power consumption
 };
 
 static int l3g4200d_i2c_read(struct l3g4200d_data *gyro,
@@ -894,7 +897,11 @@ static int l3g4200d_probe(struct i2c_client *client,
 	pr_info("%s probed: device created successfully\n",
 							L3G4200D_GYR_DEV_NAME);
 #endif
-
+	#if 0
+	gyro->l3g4200d_early_suspend.suspend = l3g4200d_suspend;
+	gyro->l3g4200d_early_suspend.resume = l3g4200d_resume;
+	register_early_suspend(&gyro->l3g4200d_early_suspend);
+	#endif
 	return 0;
 
 err4:
@@ -940,6 +947,7 @@ static int l3g4200d_suspend(struct device *dev)
 #endif /* DEBUG */
 	/* TO DO */
 #endif /*CONFIG_SUSPEND*/
+	l3g4200d_device_power_off(gyro);
 	return 0;
 }
 
@@ -953,6 +961,7 @@ static int l3g4200d_resume(struct device *dev)
 #endif /*DEBUG */
 	/* TO DO */
 #endif /*CONFIG_SUSPEND*/
+	l3g4200d_device_power_on(gyro);
 	return 0;
 }
 

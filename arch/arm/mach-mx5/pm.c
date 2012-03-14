@@ -70,6 +70,7 @@ void (*suspend_in_iram)(void *param1, void *param2, void* param3) = NULL;
 void __iomem *suspend_param1;
 void *mx53_iram_base;
 void (*mx53_wait_in_ram)(void) = NULL;
+extern void mx53_wait(void);
 
 static int mx5_suspend_enter(suspend_state_t state)
 {
@@ -276,6 +277,17 @@ static int __init pm_init(void)
 	suspend_in_iram = (void *)suspend_iram_base;
 
 	cpu_wp_tbl = get_cpu_wp(&cpu_wp_nr);
+
+	if (cpu_is_mx53()) {
+		iram_alloc(SZ_4K, &iram_paddr);
+		/* Need to remap the area here since we want the memory region
+			 to be executable and uncacheable. */
+		mx53_iram_base = __arm_ioremap(iram_paddr, SZ_4K,
+						  MT_MEMORY_NONCACHED);
+
+		memcpy(mx53_iram_base, mx53_wait, SZ_4K);
+		mx53_wait_in_ram = (void *)mx53_iram_base;
+	}
 
 	cpu_clk = clk_get(NULL, "cpu_clk");
 	if (IS_ERR(cpu_clk)) {

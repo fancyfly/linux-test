@@ -5035,14 +5035,14 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	/* Initialise the parents to be axi_b, parents are set to
 	 * axi_a when the clocks are enabled.
 	 */
-	#if 1
+	#if 0
 	/* Here change is for disabling axi_b_clk in cat /proc/cpu/clocks to save more power in early suspend mode */
 	clk_set_parent(&cko2_clk, &axi_b_clk);
 	#endif
-	#if 0
+	#if 1
 	clk_set_parent(&cko2_clk, &osc_clk);
 	#endif
-	clk_set_rate(&cko2_clk, 25000000);
+	clk_set_rate(&cko2_clk, 24000000);
 	clk_enable(&cko2_clk);
 
 	clk_set_parent(&vpu_clk[0], &axi_b_clk);

@@ -1221,6 +1221,10 @@ void my_disable_emi_fast()
 {
 	clk_disable(&emi_fast_clk); 
 }
+void my_enable_emi_fast()
+{
+	clk_enable(&emi_fast_clk);
+}
 #endif
 static unsigned long _clk_ipg_get_rate(struct clk *clk)
 {

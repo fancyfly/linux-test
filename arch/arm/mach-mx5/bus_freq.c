@@ -341,13 +341,14 @@ void enter_lpapm_mode_mx51()
 }
 #if 1
 extern void my_disable_emi_fast();
+extern void my_enable_emi_fast();
 #endif
 void enter_lpapm_mode_mx53()
 {
 	u32 reg;
 	struct timespec nstimeofday;
 	struct timespec curtime;
-	#if 0
+	#if 1
 	printk("[FSL] %s, %s, %d. We are in low power mode!!!\n",__FILE__, __FUNCTION__, __LINE__);
 	my_disable_emi_fast();
 	#endif
@@ -727,7 +728,9 @@ void exit_lpapm_mode_mx53()
 	struct timespec nstimeofday;
 	struct timespec curtime;
 
-
+	#if 0
+	my_enable_emi_fast();
+	#endif
 	/* move cpu clk to pll1 */
 	reg = __raw_readl(MXC_CCM_CDHIPR);
 	while (1) {

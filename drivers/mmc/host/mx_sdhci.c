@@ -1832,33 +1832,30 @@ static int sdhci_suspend(struct platform_device *pdev, pm_message_t state)
 	for (i = 0; i < chip->num_slots; i++) {
 		if (!chip->hosts[i])
 			continue;
-if (chip->hosts[i]->mmc && chip->hosts[i]->mmc->card && chip->hosts[i]->mmc->card->type != MMC_TYPE_SDIO){
-		free_irq(chip->hosts[i]->irq, chip->hosts[i]);
-                ret = mmc_suspend_host(chip->hosts[i]->mmc);
-                if (ret) {
-                        for (i--; i >= 0; i--)
-                                mmc_resume_host(chip->hosts[i]->mmc);
-                        return ret;
-                }
-}else{
-	continue;
-}
 		mmc = chip->hosts[i]->mmc;
+		if (chip->hosts[i]->mmc && chip->hosts[i]->mmc->card && chip->hosts[i]->mmc->card->type != MMC_TYPE_SDIO){
 		ret = mmc_suspend_host(mmc);
 		if (ret) {
 			for (i--; i >= 0; i--)
 				mmc_resume_host(mmc);
 			return ret;
 		}
+		}else{
+		  continue;
+	}
 	}
 
 	for (i = 0; i < chip->num_slots; i++) {
 		if (!chip->hosts[i])
 			continue;
 		mmc = chip->hosts[i]->mmc;
+		if (chip->hosts[i]->mmc && chip->hosts[i]->mmc->card && chip->hosts[i]->mmc->card->type != MMC_TYPE_SDIO){
 		/* Only free irq when not require sdio irq wake up. */
 		if (mmc && !(mmc->pm_flags & MMC_PM_WAKE_SDIO_IRQ))
 			free_irq(chip->hosts[i]->irq, chip->hosts[i]);
+		}else{
+		  continue;
+	}
 	}
 
 	return 0;
@@ -1879,20 +1876,26 @@ static int sdhci_resume(struct platform_device *pdev)
 	for (i = 0; i < chip->num_slots; i++) {
 		if (!chip->hosts[i])
 			continue;
-		if (chip->hosts[i]->mmc && chip->hosts[i]->mmc->card && chip->hosts[i]->mmc->card->type != MMC_TYPE_SDIO) {
-                	ret = request_irq(chip->hosts[i]->irq, sdhci_irq, IRQF_SHARED, mmc_hostname(chip->hosts[i]->mmc), chip->hosts[i]);
-                	if (ret)
-				return ret;
-			sdhci_init(chip->hosts[i]);
-			chip->hosts[i]->init_flag = 2;
-			mmiowb();
-			ret = mmc_resume_host(chip->hosts[i]->mmc);
+		mmc = chip->hosts[i]->mmc;
+		/* Only request irq when not require sdio irq wake up. */
+		if (chip->hosts[i]->mmc && chip->hosts[i]->mmc->card && chip->hosts[i]->mmc->card->type != MMC_TYPE_SDIO){
+		if (mmc && !(mmc->pm_flags & MMC_PM_WAKE_SDIO_IRQ)) {
+			ret = request_irq(chip->hosts[i]->irq, sdhci_irq,
+					  IRQF_SHARED,
+					  mmc_hostname(chip->hosts[i]->mmc),
+					  chip->hosts[i]);
 			if (ret)
 				return ret;
 		}
-		else {
-			continue;
-		}
+		sdhci_init(chip->hosts[i]);
+		chip->hosts[i]->init_flag = 2;
+		mmiowb();
+		ret = mmc_resume_host(chip->hosts[i]->mmc);
+		if (ret)
+			return ret;
+		}else{
+		  continue;
+	}
 	}
 
 	return 0;

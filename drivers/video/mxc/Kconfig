@@ -35,13 +35,13 @@ config FB_MXC_LDB
 	depends on MXC_IPU_V3
 
 config AT070TN93
-	bool
-	default n
+	tristate "AT070TN93 RGB"
+	default y
 
 config AT070TN2_WSVGA
-	bool
+	tristate "AT070TN2 LVDS"
 	depends on FB_MXC_LDB
-	default y
+	default n
 
 config FB_MXC_CLAA_WVGA_SYNC_PANEL
 	depends on FB_MXC_SYNC_PANEL

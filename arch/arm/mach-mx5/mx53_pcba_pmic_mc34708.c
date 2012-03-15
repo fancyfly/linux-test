@@ -64,8 +64,8 @@
 #define SW5_MODE_MASK		(0xf << 18)
 
 #define SW3_MODE_VALUE		(0x0 << 0)
-#define SW4A_MODE_VALUE		(0xd << 6)
-#define SW4B_MODE_VALUE		(0xd << 12)
+#define SW4A_MODE_VALUE		(0x6 << 6)
+#define SW4B_MODE_VALUE		(0x6 << 12)
 #define SW5_MODE_VALUE		(0xd << 18)
 
 #define REG_SW_3_4_5_MASK	(SW3_MODE_MASK | SW4A_MODE_MASK\
@@ -308,6 +308,10 @@ static int mc34708_regulator_init(struct mc34708 *mc34708)
 	pmic_write_reg(REG_MC34708_SW_5, value, register_mask);
 
 #endif
+       /*decease voltage when standby*/
+	value = 0x0;
+	register_mask = 0x7c00;
+	pmic_write_reg(REG_MC34708_SW_5, value, register_mask);
 	/* clear SWHOLD bit  to enable USB MUX */
 	pmic_read_reg(REG_MC34708_USB_CONTROL, &value, 0xffffff);
 	value &= ~SWHOLD_MASK;

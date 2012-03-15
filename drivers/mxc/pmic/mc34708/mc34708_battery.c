@@ -1330,9 +1330,10 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 		 * NOTE: When set the ILIM_1P5 bit to 1, the USBCHR[1:0]
 		 * and AUXILIM[1:0] settings are ignored.
 		 *
-		 * enable_1p5(true) called in init_charger()
+		 * enable_1p5(false) called in init_charger()
 		 */
 		case USBHOST:
+#if 0
 			pmic_read_reg(REG_MC34708_MEM_D,
 					  &value_tmp, 0xffffffff);
 			if (!(value_tmp & (1 << 22))) {
@@ -1363,7 +1364,7 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 							BITFMASK(SWITCH_OPEN)));
 			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(500000));
 			}
-#if 0
+
 			/*
 			 * set current limit to 500mA
 			 * Table 7.2-2, Buck input current limit settings
@@ -1388,27 +1389,12 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 				openwifi_flag=0;
 				pr_info("MC34708_MEM_D bit22 is 0\n");
 			} else {
-				enable_1p5(false);
+				enable_1p5(true);
 				usbhost_flag=1;
 				openwifi_flag=1;
 				gpio_set_value(MX53_PCBA_MODEM_PWR_ON,0);
 				mdelay(10);
 				pr_info("MC34708_MEM_D bit22 is 1\n");
-			}
-			if(usbhost_flag == 0) {
-			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
-						   BITFVAL(ManualSW, 1),
-						   BITFMASK(ManualSW)));
-			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
-						   BITFVAL(SWHOLD, 1),
-						   BITFMASK(SWHOLD)));			
-			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
-						   BITFVAL(MUSBCHRG, 2),
-						   BITFMASK(MUSBCHRG)));
-			CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
-							BITFVAL(SWITCH_OPEN, 0),
-							BITFMASK(SWITCH_OPEN)));
-			val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(500000));
 			}
 			
 			/* set current limit to 950mA */
@@ -1416,13 +1402,13 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 						   BITFVAL(MUSBCHRG, 3),
 						   BITFMASK(MUSBCHRG)));
 			if (!(value_tmp & (1 << 22))) {
-				val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1350000));
+				val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1550000));
 			} else {
-				enable_1p5(false);
+				enable_1p5(true);
 				CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,
 				BITFVAL(ManualSW, 1),
 				BITFMASK(ManualSW)));
-				val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1050000));
+				val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1550000));
 			}	
 			break;
 		default:
@@ -1441,7 +1427,7 @@ static int set_charging_point(struct ripley_dev_info *di, int point)
 			enable_charger(1);
 			}
 		else if (usb_type == USBHOST && usb_type != 0 && usbhost_flag == 1){
-			enable_charger(1);
+			enable_charger(0);
 			}
 		else
 			enable_charger(0);
@@ -1845,8 +1831,8 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 	int usbOnline, auxOnline;
 	int restartCharging = 0;
 	int stopCharging = 0;
-	pmic_read_reg(REG_MC34708_MEM_D,
-				&value_tmp, 0xffffffff);
+//	pmic_read_reg(REG_MC34708_MEM_D,
+//				&value_tmp, 0xffffffff);
 	ret = pmic_read_reg(MC34708_REG_INT_SENSE0, &value, PMIC_ALL_BITS);
 
 	if (ret == 0) {
@@ -1886,26 +1872,32 @@ static int ripley_charger_update_status(struct ripley_dev_info *di)
 			} else {
 				restartCharging = 0;
 			}
-			if (!(value_tmp & (1 << 22))) {
-				if (!is_host_mhl_connected()) {
-				di->usb_charger_online = usbOnline;
-				dev_info(di->usb_charger.dev, "usb cable status: %s\n",
-					 usbOnline ? "online" : "offline");
-				power_supply_changed(&di->usb_charger);
+				if (usb_type != USBHOST) {
+					if (!(value_tmp & (1 << 22))) {
+						if (!is_host_mhl_connected()) {
+							di->usb_charger_online = usbOnline;
+							dev_info(di->usb_charger.dev, "usb cable status: %s\n",
+								usbOnline ? "online" : "offline");
+							power_supply_changed(&di->usb_charger);
+						}
+						else {
+							enable_charger(0);
+						}
+					} else {
+						di->usb_charger_online = usbOnline;
+						dev_info(di->usb_charger.dev, "usb cable status: %s\n",
+							usbOnline ? "online" : "offline");
+						power_supply_changed(&di->usb_charger);
+					}
 				}
-			} else {
-					di->usb_charger_online = usbOnline;
-					dev_info(di->usb_charger.dev, "usb cable status: %s\n",
-						 usbOnline ? "online" : "offline");
-					power_supply_changed(&di->usb_charger);
-			}					
 		}
 
 		if (restartCharging) {
 			pr_debug("restartCharging\n");
-			enable_charger(1);
+			if (!is_host_mhl_connected()) {
+				enable_charger(1);
+			}
 			charger_online=1;
-
 			power_supply_changed_flag = 1;
 			power_change_flag = 1;
 			need_adjust_percent_0 = false;
@@ -2314,7 +2306,7 @@ static void ripley_battery_update_status(struct ripley_dev_info *di)
 			init_charger(config);
 			set_charging_point(di, point);
 			di->battery_status = POWER_SUPPLY_STATUS_CHARGING;
-			if ((usbhost_flag == 0 && usb_type == USBHOST) || usb_type == 0)
+			if ((usb_type == USBHOST) || usb_type == 0)
 				di->battery_status = POWER_SUPPLY_STATUS_DISCHARGING;
 		} else if (di->battery_status == POWER_SUPPLY_STATUS_CHARGING) {
 #ifdef	SOFTWARE_CHECK_EOC
@@ -3003,7 +2995,7 @@ static int ripley_battery_suspend(struct platform_device *pdev,
 	/* set current limit to 1.5A */
 	enable_1p5(true);	
 	/* set charger current  to 1.35A */
-	val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1350000));
+	val |= BITFVAL(CHRCC, CHRCC_UA_TO_BITS(1550000));
 	mask =  BITFMASK(CHRCC);
 			CHECK_ERROR(pmic_write_reg(MC34708_REG_BATTERY_PROFILE,
 						   val, mask));
@@ -3032,7 +3024,7 @@ static int ripley_battery_resume(struct platform_device *pdev)
 	unsigned int val, mask;
 	
 	/* set current limit to 1.5A */
-	enable_1p5(false);
+	enable_1p5(true);
 
 	/* set current limit to 950mA */
 	CHECK_ERROR(pmic_write_reg(MC34708_REG_USB_CTL,

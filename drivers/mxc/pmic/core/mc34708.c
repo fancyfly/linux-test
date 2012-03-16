@@ -143,9 +143,6 @@ void mc34708_power_off(void)
 #endif
 	gpio_direction_output(MX53_PCBA_SD_PWR_EN, 0);/*SD_PWR_EN*/
 	
-	pmic_read_reg(21, &value, 0xffffff);
-	value |= 0x800000;
-	pmic_write_reg(21, value, 0xffffff);/*disable RTC*/
 	pmic_read_reg(REG_POWER_CTL0, &value, 0xffffff);
 	value |= 0x00000C;
 	pmic_write_reg(REG_POWER_CTL0, value, 0xffffff);/*USER OFF*/

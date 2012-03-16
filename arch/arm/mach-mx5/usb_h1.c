@@ -105,27 +105,13 @@ static void usbh1_clock_gate(bool on)
 {
 	pr_info("[FSL] %s: on is %d\n", __func__, on);
 	if (on) {
-		if (turnOffMU509 == 0) {
- 			clk_enable(usb_ahb_clk);
-			clk_enable(usb_oh3_clk);
-			// clk_enable(usb_phy2_clk);
-		}
-		else {
- 			clk_enable(usb_ahb_clk);
-			clk_enable(usb_oh3_clk);
-			clk_enable(usb_phy2_clk);
-		}
+		clk_enable(usb_ahb_clk);
+		clk_enable(usb_oh3_clk);
+		clk_enable(usb_phy2_clk);
 	} else {
-		if (turnOffMU509 == 0) {
-			// clk_disable(usb_phy2_clk);
-			clk_disable(usb_oh3_clk);
-			clk_disable(usb_ahb_clk);
-		}
-		else {
-			clk_disable(usb_phy2_clk);
-			clk_disable(usb_oh3_clk);
-			clk_disable(usb_ahb_clk);
-		}
+		clk_disable(usb_phy2_clk);
+		clk_disable(usb_oh3_clk);
+		clk_disable(usb_ahb_clk);
 	}
 }
 
@@ -138,13 +124,13 @@ void usbh1_phy2_clock_gate(bool on)
 {
 	pr_info("%s: on is %d\n", __func__, on);
 	if (on) {
-		clk_enable(usb_ahb_clk);
-		clk_enable(usb_oh3_clk);
+		// clk_enable(usb_ahb_clk);
+		// clk_enable(usb_oh3_clk);
 		clk_enable(usb_phy2_clk);
 	} else {
 		clk_disable(usb_phy2_clk);
-		clk_disable(usb_oh3_clk);
-		clk_disable(usb_ahb_clk);
+		// clk_disable(usb_oh3_clk);
+		// clk_disable(usb_ahb_clk);
 	}
 }
 

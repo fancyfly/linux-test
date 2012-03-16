@@ -137,8 +137,8 @@ static void early_suspend(struct work_struct *work)
 	huawei_mu509_poweroff();
 	turnOffMU509 = 1;
 	msleep(500);
-	usbh1_phy2_clock_gate(0);
-	msleep(500);
+	// usbh1_phy2_clock_gate(0);
+	// msleep(500);
 	#if 1
 	camera1_suspend();
 	camera2_suspend();
@@ -187,8 +187,8 @@ static void late_resume(struct work_struct *work)
 	 * Add more resume here.
 	 */
 	pr_info("[FSL] Checkpoint in late resume.\n");
-	usbh1_phy2_clock_gate(1);
-	msleep(500);
+	// usbh1_phy2_clock_gate(1);
+	// msleep(500);
 	huawei_mu509_poweron();
 	msleep(500);
 	turnOffMU509 = 0;

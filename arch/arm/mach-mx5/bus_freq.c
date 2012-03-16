@@ -340,6 +340,7 @@ void enter_lpapm_mode_mx51()
 	med_bus_freq_mode = 0;
 }
 #if 1
+extern int curAudPlay;
 extern void my_disable_emi_fast();
 extern void my_enable_emi_fast();
 #endif
@@ -349,8 +350,10 @@ void enter_lpapm_mode_mx53()
 	struct timespec nstimeofday;
 	struct timespec curtime;
 	#if 1
-	printk("[FSL] %s, %s, %d. We are in low power mode!!!\n",__FILE__, __FUNCTION__, __LINE__);
-	my_disable_emi_fast();
+	if (curAudPlay) {
+		printk("[FSL] %s, %s, %d. We are in low power mode!!!\n",__FILE__, __FUNCTION__, __LINE__);
+		my_disable_emi_fast();
+	}
 	#endif
 	/* TBD: Reduce DDR frequency for DDR2 */
 	/* if (mx53_ddr_type == DDR_TYPE_DDR2) {
@@ -728,9 +731,6 @@ void exit_lpapm_mode_mx53()
 	struct timespec nstimeofday;
 	struct timespec curtime;
 
-	#if 0
-	my_enable_emi_fast();
-	#endif
 	/* move cpu clk to pll1 */
 	reg = __raw_readl(MXC_CCM_CDHIPR);
 	while (1) {
@@ -775,6 +775,12 @@ void exit_lpapm_mode_mx53()
 	/* TBD: Restore DDR frequency for DDR2 */
 	/* if (mx53_ddr_type == DDR_TYPE_DDR2) {
 	} */
+	#if 1
+	if (curAudPlay) {
+		printk("[FSL] %s, %s, %d. We are exit from low power mode!!!\n",__FILE__, __FUNCTION__, __LINE__);
+		my_enable_emi_fast();
+	}
+	#endif
 }
 
 void set_ddr_freq(int ddr_rate)

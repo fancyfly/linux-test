@@ -31,6 +31,7 @@ const char *const pm_states[PM_SUSPEND_MAX] = {
 #endif
 	[PM_SUSPEND_STANDBY]	= "standby",
 	[PM_SUSPEND_MEM]	= "mem",
+	[PM_SUSPEND_AUDPLAY]	= "audplay",
 };
 
 static struct platform_suspend_ops *suspend_ops;

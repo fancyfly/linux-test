@@ -90,7 +90,7 @@ extern int resetSiI9232();
 extern void huawei_mu509_poweroff(void);
 extern void huawei_mu509_poweron(void);
 extern void usbh1_phy2_clock_gate(bool on);
-
+extern int curAudPlay;
 #define MX53_PCBA_MHL_1V3_ON		(2*32 + 21)	/* GPIO2_7 */
 #define MX53_PCBA_MHL_3V3_ON		(6*32 + 1)	/* GPIO7_1 */
 #define MX53_PCBA_POWER_ON_1V8_PE	(4 * 32 + 29)	/* GPIO5_29, Control the global 1v8 power network on board */
@@ -130,21 +130,23 @@ static void early_suspend(struct work_struct *work)
 			pos->suspend(pos);
 		}
 	}
-	/*
-	 * Added more power off in terms of power distribution network.
-	 */
-	pr_info("[FSL] Checkpoint in early suspend.\n");
-	huawei_mu509_poweroff();
-	turnOffMU509 = 1;
-	msleep(500);
-	// usbh1_phy2_clock_gate(0);
-	// msleep(500);
-	#if 1
-	camera1_suspend();
-	camera2_suspend();
-	mx53_pcba_wifi_set_power(0);
-	mx53_pcba_bt_power_change(0);
-	#endif
+	if (curAudPlay) {
+		/*
+		 * Added more power off in terms of power distribution network.
+		 */
+		pr_info("[FSL] Checkpoint in early suspend.\n");
+		huawei_mu509_poweroff();
+		turnOffMU509 = 1;
+		msleep(500);
+		// usbh1_phy2_clock_gate(0);
+		// msleep(500);
+		#if 1
+		camera1_suspend();
+		camera2_suspend();
+		mx53_pcba_wifi_set_power(0);
+		mx53_pcba_bt_power_change(0);
+		#endif
+	}
 
 	mutex_unlock(&early_suspend_lock);
 
@@ -183,22 +185,23 @@ static void late_resume(struct work_struct *work)
 	list_for_each_entry_reverse(pos, &early_suspend_handlers, link)
 		if (pos->resume != NULL)
 			pos->resume(pos);
-	/*
-	 * Add more resume here.
-	 */
-	pr_info("[FSL] Checkpoint in late resume.\n");
-	// usbh1_phy2_clock_gate(1);
-	// msleep(500);
-	huawei_mu509_poweron();
-	msleep(500);
-	turnOffMU509 = 0;
-	#if 1
-	camera1_resume();
-	camera2_resume();
-	mx53_pcba_wifi_set_power(1);
-	mx53_pcba_bt_power_change(1);
-	#endif
-
+	if (curAudPlay) {
+		/*
+		 * Add more resume here.
+		 */
+		pr_info("[FSL] Checkpoint in late resume.\n");
+		// usbh1_phy2_clock_gate(1);
+		// msleep(500);
+		huawei_mu509_poweron();
+		msleep(500);
+		turnOffMU509 = 0;
+		#if 1
+		camera1_resume();
+		camera2_resume();
+		mx53_pcba_wifi_set_power(1);
+		mx53_pcba_bt_power_change(1);
+		#endif
+	}
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("late_resume: done\n");
 abort:

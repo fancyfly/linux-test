@@ -168,7 +168,7 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 #endif
 	return (s - buf);
 }
-
+int curAudPlay = 0;	// Referenced by earlysuspend process to judge whether the optimization code will be executed or not for Audio Playing
 static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 			   const char *buf, size_t n)
 {
@@ -192,7 +192,11 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 		error = hibernate();
   goto Exit;
 	}
-
+	if (len == 7 && !strncmp(buf, "audplay", len)) {
+		curAudPlay = 1;
+	}
+	else
+		curAudPlay = 0;
 #ifdef CONFIG_SUSPEND
 	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++) {
 		if (*s && len == strlen(*s) && !strncmp(buf, *s, len))

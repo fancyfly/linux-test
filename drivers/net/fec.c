@@ -19,7 +19,7 @@
  * Copyright (c) 2004-2006 Macq Electronique SA.
  *
  * Support for FEC IEEE 1588.
- * Copyright (C) 2010 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2012 Freescale Semiconductor, Inc.
  */
 
 #include <linux/module.h>
@@ -1533,6 +1533,9 @@ fec_probe(struct platform_device *pdev)
 			fep->ptimer_present = 1;
 	} else
 		printk(KERN_ERR "IEEE1588: failed to malloc memory\n");
+
+	/* Carrier starts down, phylib will start on */
+	netif_carrier_off(ndev);
 
 	ret = register_netdev(ndev);
 	if (ret)

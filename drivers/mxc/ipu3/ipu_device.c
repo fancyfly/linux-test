@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2011 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2012 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -820,9 +820,9 @@ static int check_task(struct ipu_task_entry *t)
 		t->output.crop.h = tmp;
 	}
 
+	/* if mode is NULL, then allow blit copy using image converter */
 	if (t->set.mode == NULL_MODE) {
-		ret = IPU_CHECK_ERR_PROC_NO_NEED;
-		goto done;
+		t->set.mode |= IC_MODE;
 	}
 
 	if ((t->set.i_uoff % 8) || (t->set.i_voff % 8))

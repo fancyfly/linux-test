@@ -953,13 +953,13 @@ static struct ipuv3_fb_platform_data smd_fb_data[] = {
 	.disp_dev = "ldb",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
 	.mode_str = "LDB-XGA",
-	.default_bpp = 16,
+	.default_bpp = 32,
 	.int_clk = false,
 	}, {
 	.disp_dev = "hdmi",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
-	.mode_str = "1024x768M-16@60",
-	.default_bpp = 16,
+	.mode_str = "1024x768M-32@60",
+	.default_bpp = 32,
 	.int_clk = false,
 	},
 };

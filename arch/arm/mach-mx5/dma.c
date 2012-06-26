@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
+ *  Copyright (C) 2008-2012 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -281,7 +281,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_8bit_tx0_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_rx0_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.watermark_level = MXC_SSI_RXFIFO_WML * (sizeof(u16)),
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX0_REG,
 			.peripheral_type = SSI,
 			.transfer_type = per_2_emi,
@@ -295,7 +295,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_rx0_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_tx0_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.watermark_level = MXC_SSI_TXFIFO_WML * (sizeof(u16)),
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX0_REG,
 			.peripheral_type = SSI,
 			.transfer_type = emi_2_per,
@@ -309,7 +309,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_tx0_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_rx0_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.watermark_level = MXC_SSI_RXFIFO_WML * (sizeof(u32)),
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX0_REG,
 			.peripheral_type = SSI,
 			.transfer_type = per_2_emi,
@@ -323,7 +323,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_rx0_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_tx0_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.watermark_level = MXC_SSI_TXFIFO_WML * (sizeof(u32)),
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX0_REG,
 			.peripheral_type = SSI,
 			.transfer_type = emi_2_per,
@@ -365,7 +365,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_8bit_tx1_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_rx1_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.watermark_level = MXC_SSI_RXFIFO_WML * (sizeof(u16)),
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX1_REG,
 			.peripheral_type = SSI,
 			.transfer_type = per_2_emi,
@@ -379,7 +379,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_rx1_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_tx1_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.watermark_level = MXC_SSI_TXFIFO_WML * (sizeof(u16)),
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX1_REG,
 			.peripheral_type = SSI,
 			.transfer_type = emi_2_per,
@@ -393,7 +393,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_16bit_tx1_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_rx1_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.watermark_level = MXC_SSI_RXFIFO_WML * (sizeof(u32)),
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_RX1_REG,
 			.peripheral_type = SSI,
 			.transfer_type = per_2_emi,
@@ -407,7 +407,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_rx1_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi1_24bit_tx1_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.watermark_level = MXC_SSI_TXFIFO_WML * (sizeof(u32)),
 			.per_address = SSI1_BASE_ADDR + MXC_SSI_TX1_REG,
 			.peripheral_type = SSI,
 			.transfer_type = emi_2_per,
@@ -449,7 +449,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi2_8bit_tx0_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi2_16bit_rx0_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.watermark_level = MXC_SSI_RXFIFO_WML * (sizeof(u16)),
 			.per_address = SSI2_BASE_ADDR + MXC_SSI_RX0_REG,
 			.peripheral_type = SSI_SP,
 			.transfer_type = per_2_emi,
@@ -463,7 +463,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi2_16bit_rx0_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi2_16bit_tx0_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.watermark_level = MXC_SSI_TXFIFO_WML * (sizeof(u16)),
 			.per_address = SSI2_BASE_ADDR + MXC_SSI_TX0_REG,
 			.peripheral_type = SSI_SP,
 			.transfer_type = emi_2_per,
@@ -477,7 +477,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi2_16bit_tx0_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_rx0_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.watermark_level = MXC_SSI_RXFIFO_WML * (sizeof(u32)),
 			.per_address = SSI2_BASE_ADDR + MXC_SSI_RX0_REG,
 			.peripheral_type = SSI_SP,
 			.transfer_type = per_2_emi,
@@ -491,7 +491,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_rx0_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_tx0_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.watermark_level = MXC_SSI_TXFIFO_WML * (sizeof(u32)),
 			.per_address = SSI2_BASE_ADDR + MXC_SSI_TX0_REG,
 			.peripheral_type = SSI_SP,
 			.transfer_type = emi_2_per,
@@ -561,7 +561,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi2_16bit_tx1_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_rx1_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_RXFIFO_WML,
+			.watermark_level = MXC_SSI_RXFIFO_WML * (sizeof(u32)),
 			.per_address = SSI2_BASE_ADDR + MXC_SSI_RX1_REG,
 			.peripheral_type = SSI_SP,
 			.transfer_type = per_2_emi,
@@ -575,7 +575,7 @@ static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_rx1_params = {
 
 static mxc_sdma_channel_params_t mxc_sdma_ssi2_24bit_tx1_params = {
 	.chnl_params = {
-			.watermark_level = MXC_SSI_TXFIFO_WML,
+			.watermark_level = MXC_SSI_TXFIFO_WML * (sizeof(u32)),
 			.per_address = SSI2_BASE_ADDR + MXC_SSI_TX1_REG,
 			.peripheral_type = SSI_SP,
 			.transfer_type = emi_2_per,

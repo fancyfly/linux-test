@@ -53,6 +53,7 @@
 #include <linux/console.h>
 #include <linux/types.h>
 
+#include "edid.h"
 #include <mach/mxc_edid.h>
 #include "mxc/mxc_dispdrv.h"
 
@@ -186,6 +187,11 @@ static bool hdmi_inited;
 
 extern const struct fb_videomode mxc_cea_mode[64];
 extern void mxc_hdmi_cec_handle(u16 cec_stat);
+
+static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event);
+static void mxc_hdmi_enable_pins(struct mxc_hdmi *hdmi);
+static void mxc_hdmi_disable_pins(struct mxc_hdmi *hdmi);
+
 #ifdef DEBUG
 static void dump_fb_videomode(struct fb_videomode *m)
 {
@@ -244,6 +250,40 @@ static ssize_t mxc_hdmi_show_edid(struct device *dev,
 }
 
 static DEVICE_ATTR(edid, S_IRUGO, mxc_hdmi_show_edid, NULL);
+
+static ssize_t mxc_hdmi_show_hdcp_enable(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mxc_hdmi *hdmi = dev_get_drvdata(dev);
+
+	if (hdmi->hdmi_data.hdcp_enable == false)
+		strcpy(buf, "hdcp disable\n");
+	else
+		strcpy(buf, "hdcp enable\n");
+
+	return strlen(buf);
+
+}
+
+static ssize_t mxc_hdmi_store_hdcp_enable(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mxc_hdmi *hdmi = dev_get_drvdata(dev);
+	char *last = NULL;
+
+	hdmi->hdmi_data.hdcp_enable =
+			(unsigned int)simple_strtoul(buf, &last, 0);
+
+	/* Reconfig HDMI for HDCP */
+	mxc_hdmi_setup(hdmi, 0);
+
+	return strlen(buf);
+
+}
+
+static DEVICE_ATTR(hdcp_enable, S_IRUGO | S_IWUSR,
+			mxc_hdmi_show_hdcp_enable, mxc_hdmi_store_hdcp_enable);
+
 
 /*!
  * this submodule is responsible for the video data synchronization.
@@ -778,6 +818,47 @@ static int hdmi_phy_i2c_write_verify(struct mxc_hdmi *hdmi, unsigned short data,
 }
 #endif
 
+static bool  hdmi_edid_wait_i2c_done(struct mxc_hdmi *hdmi, int msec)
+{
+    unsigned char val = 0;
+    val = hdmi_readb(HDMI_IH_I2CM_STAT0) & 0x2;
+    while (val == 0) {
+
+		udelay(1000);
+		if (msec-- == 0) {
+			dev_dbg(&hdmi->pdev->dev,
+					"HDMI EDID i2c operation time out!!\n");
+			return false;
+		}
+		val = hdmi_readb(HDMI_IH_I2CM_STAT0) & 0x2;
+	}
+	return true;
+}
+
+static u8 hdmi_edid_i2c_read(struct mxc_hdmi *hdmi,
+					u8 addr, u8 blockno)
+{
+	u8 spointer = blockno / 2;
+	u8 edidaddress = ((blockno % 2) * 0x80) + addr;
+	u8 data;
+
+	hdmi_writeb(0xFF, HDMI_IH_I2CM_STAT0);
+	hdmi_writeb(edidaddress, HDMI_I2CM_ADDRESS);
+	hdmi_writeb(spointer, HDMI_I2CM_SEGADDR);
+	if (spointer == 0)
+		hdmi_writeb(HDMI_I2CM_OPERATION_READ,
+			HDMI_I2CM_OPERATION);
+	else
+		hdmi_writeb(HDMI_I2CM_OPERATION_READ_EXT,
+			HDMI_I2CM_OPERATION);
+
+	hdmi_edid_wait_i2c_done(hdmi, 1000);
+	data = hdmi_readb(HDMI_I2CM_DATAI);
+	hdmi_writeb(0xFF, HDMI_IH_I2CM_STAT0);
+	return data;
+}
+
+
 /* "Power-down enable (active low)"
  * That mean that power up == 1! */
 static void mxc_hdmi_phy_enable_power(u8 enable)
@@ -1114,28 +1195,101 @@ static void mxc_hdmi_phy_init(struct mxc_hdmi *hdmi)
 
 static void hdmi_tx_hdcp_config(struct mxc_hdmi *hdmi)
 {
-	u8 de, val;
+	u8 val;
 
-	if (hdmi->hdmi_data.video_mode.mDataEnablePolarity)
-		de = HDMI_A_VIDPOLCFG_DATAENPOL_ACTIVE_HIGH;
-	else
-		de = HDMI_A_VIDPOLCFG_DATAENPOL_ACTIVE_LOW;
+	if (!hdmi->hdmi_data.hdcp_enable) {
+		/* HDCP Disable */
+		hdmi_writeb(0, HDMI_A_HDCPCFG0);
+		/* Disable HDMI DDC pin */
+		mxc_hdmi_disable_pins(hdmi);
+		return;
+	}
 
-	/* disable rx detect */
+	/* Enable HDMI DDC pin */
+	mxc_hdmi_enable_pins(hdmi);
+
+	/* Config HDCP CFG0 */
 	val = hdmi_readb(HDMI_A_HDCPCFG0);
-	val &= HDMI_A_HDCPCFG0_RXDETECT_MASK;
+
+	/* Device mode -- HDMI/DVI */
+	val &= ~HDMI_A_HDCPCFG0_HDMIDVI_MASK;
+	val |= (hdmi->hdmi_data.video_mode.mDVI ?
+		HDMI_A_HDCPCFG0_HDMIDVI_DVI :
+		HDMI_A_HDCPCFG0_HDMIDVI_HDMI);
+
+	val &= ~HDMI_A_HDCPCFG0_RXDETECT_MASK;
 	val |= HDMI_A_HDCPCFG0_RXDETECT_DISABLE;
+
+	/* Enable feature 11 -- disable */
+	val &= ~HDMI_A_HDCPCFG0_EN11FEATURE_MASK;
+	val |= HDMI_A_HDCPCFG0_EN11FEATURE_DISABLE;
+	/* Richeck -- disable */
+	val &= ~HDMI_A_HDCPCFG0_SYNCRICHECK_MASK;
+	val |= HDMI_A_HDCPCFG0_SYNCRICHECK_DISABLE;
+	/* Disable I2c fast mode */
+	val &= ~HDMI_A_HDCPCFG0_I2CFASTMODE_MASK;
+	val |= HDMI_A_HDCPCFG0_I2CFASTMODE_DISABLE;
+	/* enhanced link verification -- disable */
+	val &= ~HDMI_A_HDCPCFG0_ELVENA_MASK;
+	val |= HDMI_A_HDCPCFG0_ELVENA_DISABLE;
+	/* Enable AV mute -- 0 */
+	val &= ~HDMI_A_HDCPCFG0_AVMUTE_MASK;
+	val |= HDMI_A_HDCPCFG0_AVMUTE_DISABLE;
+	/*  Bypass encryption -- 0 */
+	val &= ~HDMI_A_HDCPCFG0_BYPENCRYPTION_MASK;
+	val |= HDMI_A_HDCPCFG0_BYPENCRYPTION_DISABLE;
+
 	hdmi_writeb(val, HDMI_A_HDCPCFG0);
 
+	/* Config HDCP VIDPOLCFG */
 	val = hdmi_readb(HDMI_A_VIDPOLCFG);
-	val &= HDMI_A_VIDPOLCFG_DATAENPOL_MASK;
-	val |= de;
+
+	/* Data enable polarity */
+	val &= ~HDMI_A_VIDPOLCFG_DATAENPOL_MASK;
+	val |= (hdmi->hdmi_data.video_mode.mDataEnablePolarity ?
+		HDMI_A_VIDPOLCFG_DATAENPOL_ACTIVE_HIGH :
+		HDMI_A_VIDPOLCFG_DATAENPOL_ACTIVE_LOW);
+
+	val &= ~(HDMI_A_VIDPOLCFG_VSYNCPOL_MASK |
+		HDMI_A_VIDPOLCFG_HSYNCPOL_MASK);
+	/* Vsync Polarity */
+	val |= (hdmi->hdmi_data.video_mode.mVSyncPolarity ?
+		HDMI_A_VIDPOLCFG_VSYNCPOL_ACTIVE_HIGH :
+		HDMI_A_VIDPOLCFG_VSYNCPOL_ACTIVE_LOW);
+	/* Hsync Polarity */
+	val |= (hdmi->hdmi_data.video_mode.mHSyncPolarity ?
+		HDMI_A_VIDPOLCFG_HSYNCPOL_ACTIVE_HIGH  :
+		HDMI_A_VIDPOLCFG_HSYNCPOL_ACTIVE_LOW);
+
+	/* Unencrypted Video color, 0: red,1: green, 2: blue, 3: white*/
+	val &= ~HDMI_A_VIDPOLCFG_UNENCRYPTCONF_MASK;
+	val |= (0 << HDMI_A_VIDPOLCFG_UNENCRYPTCONF_OFFSET);
+
 	hdmi_writeb(val, HDMI_A_VIDPOLCFG);
 
+	/* Oess window size -- 64 */
+	hdmi_writeb(0x40, HDMI_A_OESSWCFG);
+
+	/* Config HDCP CFG1 */
 	val = hdmi_readb(HDMI_A_HDCPCFG1);
-	val &= HDMI_A_HDCPCFG1_ENCRYPTIONDISABLE_MASK;
+
+	val &= ~HDMI_A_HDCPCFG1_ENCRYPTIONDISABLE_MASK;
 	val |= HDMI_A_HDCPCFG1_ENCRYPTIONDISABLE_DISABLE;
+
+	val &= HDMI_A_HDCPCFG1_PH2UPSHFTENC_MASK;
+	val |= HDMI_A_HDCPCFG1_PH2UPSHFTENC_ENABLE;
+
+	val &= ~HDMI_A_HDCPCFG1_SWRESET_MASK;
+	val |= HDMI_A_HDCPCFG1_SWRESET_ASSERT;
+
 	hdmi_writeb(val, HDMI_A_HDCPCFG1);
+
+	/* HDCP start */
+	val = hdmi_readb(HDMI_A_HDCPCFG0);
+	val &= ~HDMI_A_HDCPCFG0_RXDETECT_MASK;
+	val |= HDMI_A_HDCPCFG0_RXDETECT_ENABLE;
+	hdmi_writeb(val, HDMI_A_HDCPCFG0);
+
 }
 
 static void hdmi_config_AVI(struct mxc_hdmi *hdmi)
@@ -1267,6 +1421,7 @@ static void hdmi_config_AVI(struct mxc_hdmi *hdmi)
 	hdmi_writeb(0, HDMI_FC_AVISRB1);
 }
 
+
 /*!
  * this submodule is responsible for the video/audio data composition.
  */
@@ -1362,9 +1517,101 @@ static void hdmi_av_composer(struct mxc_hdmi *hdmi)
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 }
 
+static int mxc_edid_read_internal(struct mxc_hdmi *hdmi, unsigned char *edid,
+			struct mxc_edid_cfg *cfg, struct fb_info *fbi)
+{
+	int extblknum;
+	int i, j, ret;
+	unsigned char *ediddata = edid;
+	unsigned char tmpedid[EDID_LENGTH];
+
+	dev_info(&hdmi->pdev->dev, "%s\n", __func__);
+
+	if (!edid || !cfg || !fbi)
+		return -EINVAL;
+
+	/* init HDMI I2CM for read edid*/
+	hdmi_writeb(0x8, HDMI_I2CM_DIV);
+	hdmi_writeb(0x00, HDMI_I2CM_SS_SCL_HCNT_1_ADDR);
+	hdmi_writeb(0x79, HDMI_I2CM_SS_SCL_HCNT_0_ADDR);
+	hdmi_writeb(0x00, HDMI_I2CM_SS_SCL_LCNT_1_ADDR);
+	hdmi_writeb(0x91, HDMI_I2CM_SS_SCL_LCNT_0_ADDR);
+
+	hdmi_writeb(0x00, HDMI_I2CM_FS_SCL_HCNT_1_ADDR);
+	hdmi_writeb(0x0F, HDMI_I2CM_FS_SCL_HCNT_0_ADDR);
+	hdmi_writeb(0x00, HDMI_I2CM_FS_SCL_LCNT_1_ADDR);
+	hdmi_writeb(0x21, HDMI_I2CM_FS_SCL_LCNT_0_ADDR);
+
+	hdmi_writeb(0x50, HDMI_I2CM_SLAVE);
+	hdmi_writeb(0x30, HDMI_I2CM_SEGADDR);
+
+	/* Umask edid interrupt */
+	hdmi_writeb(HDMI_I2CM_INT_DONE_POL,
+		    HDMI_I2CM_INT);
+
+	hdmi_writeb(HDMI_I2CM_CTLINT_NAC_POL |
+		    HDMI_I2CM_CTLINT_ARBITRATION_POL,
+		    HDMI_I2CM_CTLINT);
+
+	/* reset edid data zero */
+	memset(edid, 0, EDID_LENGTH*4);
+	memset(cfg, 0, sizeof(struct mxc_edid_cfg));
+
+	/* Check first three byte of EDID head */
+	if (!(hdmi_edid_i2c_read(hdmi, 0, 0) == 0x00) ||
+		!(hdmi_edid_i2c_read(hdmi, 1, 0) == 0xFF) ||
+		!(hdmi_edid_i2c_read(hdmi, 2, 0) == 0xFF)) {
+		dev_info(&hdmi->pdev->dev, "EDID head check failed!");
+		return -ENOENT;
+	}
+
+	for (i = 0; i < 128; i++) {
+		*ediddata = hdmi_edid_i2c_read(hdmi, i, 0);
+		ediddata++;
+	}
+
+	extblknum = edid[0x7E];
+	if (extblknum < 0)
+		return extblknum;
+
+	if (extblknum) {
+		ediddata = edid + EDID_LENGTH;
+		for (i = 0; i < 128; i++) {
+			*ediddata = hdmi_edid_i2c_read(hdmi, i, 1);
+			ediddata++;
+		}
+	}
+
+	/* edid first block parsing */
+	memset(&fbi->monspecs, 0, sizeof(fbi->monspecs));
+	fb_edid_to_monspecs(edid, &fbi->monspecs);
+
+	ret = mxc_edid_parse_ext_blk(edid + EDID_LENGTH,
+			cfg, &fbi->monspecs);
+	if (ret < 0)
+		return -ENOENT;
+
+	/* need read segment block? */
+	if (extblknum > 1) {
+		for (j = 1; j <= extblknum; j++) {
+			for (i = 0; i < 128; i++)
+				*(tmpedid + 1) = hdmi_edid_i2c_read(hdmi, i, j);
+
+			/* edid ext block parsing */
+			ret = mxc_edid_parse_ext_blk(tmpedid + EDID_LENGTH,
+					cfg, &fbi->monspecs);
+			if (ret < 0)
+				return -ENOENT;
+		}
+	}
+
+	return 0;
+}
+
 static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 {
 	int ret;
+	u8 val0, val1, val2;
 	u8 edid_old[HDMI_EDID_LEN];
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
@@ -1372,9 +1619,27 @@ static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 	/* save old edid */
 	memcpy(edid_old, hdmi->edid, HDMI_EDID_LEN);
 
-	ret = mxc_edid_read(hdmi_i2c->adapter, hdmi_i2c->addr, hdmi->edid,
-			    &hdmi->edid_cfg, hdmi->fbi);
+	if (!hdmi->hdmi_data.hdcp_enable)
+		ret = mxc_edid_read(hdmi_i2c->adapter, hdmi_i2c->addr,
+				hdmi->edid, &hdmi->edid_cfg, hdmi->fbi);
+	else {
+		/* Disable HDCP when read EDID by HDMI DDC */
+		val0 = hdmi_readb(HDMI_A_HDCPCFG0);
+		val1 = hdmi_readb(HDMI_FC_INVIDCONF);
+		val2 = hdmi_readb(HDMI_MC_CLKDIS);
+		hdmi_writeb(val1 &  ~HDMI_FC_INVIDCONF_HDCP_KEEPOUT_ACTIVE,
+						HDMI_FC_INVIDCONF);
+		hdmi_writeb(0, HDMI_A_HDCPCFG0);
+		hdmi_writeb(val2 | HDMI_MC_CLKDIS_HDCPCLK_DISABLE,
+					HDMI_MC_CLKDIS);
 
+		ret = mxc_edid_read_internal(hdmi, hdmi->edid,
+				&hdmi->edid_cfg, hdmi->fbi);
+		/* Restore HDCP config */
+		hdmi_writeb(val2, HDMI_MC_CLKDIS);
+		hdmi_writeb(val0, HDMI_A_HDCPCFG0);
+		hdmi_writeb(val1, HDMI_FC_INVIDCONF);
+	}
 	if (ret < 0)
 		return HDMI_EDID_FAIL;
 
@@ -1464,6 +1729,12 @@ static void mxc_hdmi_enable_video_path(struct mxc_hdmi *hdmi)
 	/* Enable csc path */
 	if (isColorSpaceConversion(hdmi)) {
 		clkdis &= ~HDMI_MC_CLKDIS_CSCCLK_DISABLE;
+		hdmi_writeb(clkdis, HDMI_MC_CLKDIS);
+	}
+
+	/* Enable HDCP clk */
+	if (hdmi->hdmi_data.hdcp_enable) {
+		clkdis &= ~HDMI_MC_CLKDIS_HDCPCLK_DISABLE;
 		hdmi_writeb(clkdis, HDMI_MC_CLKDIS);
 	}
 }
@@ -1651,7 +1922,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 	if (fb_mode_is_equal(&hdmi->previous_non_vga_mode, mode)) {
 		dev_dbg(&hdmi->pdev->dev,
 				"%s: Video mode same as previous\n", __func__);
-		mxc_hdmi_phy_init(hdmi);
+		mxc_hdmi_setup(hdmi, 0);
 	} else {
 		dev_dbg(&hdmi->pdev->dev, "%s: New video mode\n", __func__);
 		mxc_hdmi_set_mode_to_vga_dvi(hdmi);
@@ -1932,7 +2203,6 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 
 	hdmi->hdmi_data.enc_color_depth = 8;
 	hdmi->hdmi_data.pix_repet_factor = 0;
-	hdmi->hdmi_data.hdcp_enable = 0;
 	hdmi->hdmi_data.video_mode.mDataEnablePolarity = true;
 
 	/* HDMI Initialization Step B.1 */
@@ -2041,7 +2311,6 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 
 			hdmi->blank = *((int *)event->data);
 
-			mxc_hdmi_enable_pins(hdmi);
 			if (hdmi->fb_reg && hdmi->cable_plugin)
 				mxc_hdmi_setup(hdmi, val);
 
@@ -2049,7 +2318,6 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 			dev_dbg(&hdmi->pdev->dev,
 				"event=FB_EVENT_BLANK - BLANK\n");
 
-			mxc_hdmi_disable_pins(hdmi);
 			mxc_hdmi_phy_disable(hdmi);
 
 			hdmi->blank = *((int *)event->data);
@@ -2238,6 +2506,10 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	if (ret < 0)
 		dev_warn(&hdmi->pdev->dev,
 			"cound not create sys node for edid\n");
+	ret = device_create_file(&hdmi->pdev->dev, &dev_attr_hdcp_enable);
+	if (ret < 0)
+		dev_warn(&hdmi->pdev->dev,
+			"cound not create sys node for hdcp enabl\n");
 
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 

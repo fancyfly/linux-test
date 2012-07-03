@@ -611,9 +611,9 @@ static void hdmi_video_packetize(struct mxc_hdmi *hdmi)
 	} else
 		return;
 
-	if (!hdmi->edid_cfg.vsd_dc_48bit && !hdmi->edid_cfg.vsd_dc_36bit &&
-		!hdmi->edid_cfg.vsd_dc_30bit && !hdmi->edid_cfg.vsd_dc_y444)
-		color_depth = 0;
+	/* HDMI not support deep color,
+	 * because IPU MAX support color depth is 24bit */
+	color_depth = 0;
 
 	/* set the packetizer registers */
 	val = ((color_depth << HDMI_VP_PR_CD_COLOR_DEPTH_OFFSET) &
@@ -2201,6 +2201,7 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 				hdmi->hdmi_data.enc_out_format = YCBCR422_8BITS;
 		}
 
+	/* IPU not support depth color output */
 	hdmi->hdmi_data.enc_color_depth = 8;
 	hdmi->hdmi_data.pix_repet_factor = 0;
 	hdmi->hdmi_data.video_mode.mDataEnablePolarity = true;

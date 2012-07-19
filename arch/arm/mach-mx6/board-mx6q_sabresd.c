@@ -1277,8 +1277,34 @@ static void hdmi_init(int ipu_id, int disp_id)
 	mxc_iomux_set_gpr_register(3, 2, 2, hdmi_mux_setting);
 }
 
+/* On mx6x sabresd board i2c2 iomux with hdmi ddc,
+ * the pins default work at i2c2 function,
+ when hdcp enable, the pins should work at ddc function */
+
+static void hdmi_enable_ddc_pin(void)
+{
+	if (cpu_is_mx6dl())
+		mxc_iomux_v3_setup_multiple_pads(mx6dl_sabresd_hdmi_ddc_pads,
+			ARRAY_SIZE(mx6dl_sabresd_hdmi_ddc_pads));
+	else
+		mxc_iomux_v3_setup_multiple_pads(mx6q_sabresd_hdmi_ddc_pads,
+			ARRAY_SIZE(mx6q_sabresd_hdmi_ddc_pads));
+}
+
+static void hdmi_disable_ddc_pin(void)
+{
+	if (cpu_is_mx6dl())
+		mxc_iomux_v3_setup_multiple_pads(mx6dl_sabresd_i2c2_pads,
+			ARRAY_SIZE(mx6dl_sabresd_i2c2_pads));
+	else
+		mxc_iomux_v3_setup_multiple_pads(mx6q_sabresd_i2c2_pads,
+			ARRAY_SIZE(mx6q_sabresd_i2c2_pads));
+}
+
 static struct fsl_mxc_hdmi_platform_data hdmi_data = {
 	.init = hdmi_init,
+	.enable_pins = hdmi_enable_ddc_pin,
+	.disable_pins = hdmi_disable_ddc_pin,
 };
 
 static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
@@ -1702,6 +1728,8 @@ static void __init mx6_sabresd_board_init(void)
 	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
 	imx6q_add_imx_snvs_rtc();
 
+	imx6q_add_imx_caam();
+
 	if (board_is_mx6_reva()) {
 		strcpy(mxc_i2c0_board_info[0].type, "wm8958");
 		mxc_i2c0_board_info[0].platform_data = &wm8958_config_data;
@@ -1842,6 +1870,7 @@ static void __init mx6_sabresd_board_init(void)
 	pm_power_off = mx6_snvs_poweroff;
 	imx6q_add_busfreq();
 
+	/* Add PCIe RC interface support */
 	imx6q_add_pcie(&mx6_sabresd_pcie_data);
 	if (cpu_is_mx6dl()) {
 		mxc_iomux_v3_setup_multiple_pads(mx6dl_arm2_elan_pads,
@@ -1872,6 +1901,11 @@ static void __init mx6_sabresd_board_init(void)
 		sdio_clk->flags = AHB_MED_SET_POINT | CPU_FREQ_TRIG_UPDATE;
 		clk_put(sdio_clk);
 	}
+
+	imx6_add_armpmu();
+	imx6q_add_perfmon(0);
+	imx6q_add_perfmon(1);
+	imx6q_add_perfmon(2);
 }
 
 extern void __iomem *twd_base;

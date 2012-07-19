@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2012 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -21,31 +21,24 @@
 #include <asm/sizes.h>
 #include <mach/hardware.h>
 #include <mach/devices-common.h>
+#include <asm/pmu.h>
 
-#define imx6_mxc_hdmi_data_entry_single(soc)				\
-	{								\
-		.irq = soc ## _INT_HDMI_TX,				\
-	}
+static struct resource mx6_pmu_resources[] = {
+	[0] = {
+		.start	= MXC_INT_CHEETAH_PERFORM,
+		.end	= MXC_INT_CHEETAH_PERFORM,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
 
-#ifdef CONFIG_SOC_IMX6Q
-const struct imx_mxc_hdmi_data imx6q_mxc_hdmi_data __initconst =
-			imx6_mxc_hdmi_data_entry_single(MX6Q);
-#endif
+struct platform_device mx6_pmu_device = {
+	.name		= "arm-pmu",
+	.id		= ARM_PMU_DEVICE_CPU,
+	.num_resources	= ARRAY_SIZE(mx6_pmu_resources),
+	.resource	= mx6_pmu_resources,
+};
 
-struct platform_device *__init imx_add_mxc_hdmi(
-		const struct imx_mxc_hdmi_data *data,
-		const struct fsl_mxc_hdmi_platform_data *pdata)
+void __init imx_add_imx_armpmu()
 {
-	struct resource res[] = {
-		{
-			.start = data->irq,
-			.end = data->irq,
-			.flags = IORESOURCE_IRQ,
-		},
-	};
-	imx_add_platform_device("mxc_hdmi_cec", 0,
-				       res, ARRAY_SIZE(res), NULL, 0);
-	return imx_add_platform_device_dmamask("mxc_hdmi", -1,
-		res, ARRAY_SIZE(res), pdata, sizeof(*pdata), DMA_BIT_MASK(32));
+	platform_device_register(&mx6_pmu_device);
 }
-

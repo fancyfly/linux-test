@@ -104,30 +104,6 @@ static struct regulator_init_data da9052_regulators_init[] = {
 		DA9052_BUCK_PERI_VOLT_LOWER, "DA9052_BUCK_PERI", 2500, 0, NULL)
 };
 
-#define MX53_SMD_WiFi_BT_PWR_EN		IMX_GPIO_NR(3, 10)	/*GPIO_3_10 */
-struct regulator_init_data wifi_bt_reg_initdata = {
-	.constraints = {
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-	},
-};
-
-static struct fixed_voltage_config wifi_bt_reg_config = {
-	.supply_name		= "wifi_bt",
-	.microvolts		= 3300000,
-	.gpio			= MX53_SMD_WiFi_BT_PWR_EN,
-	.enable_high		= 1,
-	.enabled_at_boot	= 0,
-	.init_data		= &wifi_bt_reg_initdata,
-};
-
-static struct platform_device wifi_bt_reg_device = {
-	.name	= "reg-fixed-voltage",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &wifi_bt_reg_config,
-	},
-};
-
 #ifdef CONFIG_SND_SOC_SGTL5000
 
 static struct regulator_consumer_supply sgtl5000_consumer[] = {
@@ -308,7 +284,7 @@ static int __init smd_da9052_init(struct da9052 *da9052)
 {
 	/* Configuring for DA9052 interrupt servce */
 	/* s3c_gpio_setpull(DA9052_IRQ_PIN, S3C_GPIO_PULL_UP);*/
-	int ret;
+
 	/* Set interrupt as LOW LEVEL interrupt source */
 	irq_set_irq_type(gpio_to_irq(MX53_SMD_DA9052_IRQ), IRQF_TRIGGER_LOW);
 
@@ -316,8 +292,6 @@ static int __init smd_da9052_init(struct da9052 *da9052)
 #ifdef CONFIG_SND_SOC_SGTL5000
 	platform_device_register(&sgtl5000_reg_devices);
 #endif
-	ret = platform_device_register(&wifi_bt_reg_device);
-
 	return 0;
 }
 

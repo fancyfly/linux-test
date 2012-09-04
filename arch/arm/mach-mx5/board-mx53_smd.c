@@ -868,19 +868,8 @@ static void mx53_smd_bt_reset(void)
 
 static int mx53_smd_bt_power_change(int status)
 {
-	struct regulator *wifi_bt_pwren;
-
-	wifi_bt_pwren = regulator_get(NULL, "wifi_bt");
-	if (IS_ERR(wifi_bt_pwren)) {
-		printk(KERN_ERR "%s: regulator_get error\n", __func__);
-		return -1;
-	}
-
-	if (status) {
-		regulator_enable(wifi_bt_pwren);
+	if (status)
 		mx53_smd_bt_reset();
-	} else
-		regulator_disable(wifi_bt_pwren);
 
 	return 0;
 }

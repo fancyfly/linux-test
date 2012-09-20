@@ -3553,7 +3553,8 @@ static void handle_exception(struct fsg_dev *fsg)
 		break;
 
 	case FSG_STATE_DISCONNECT:
-		fsync_all(fsg);
+		if (fsg->config != 0)
+			fsync_all(fsg);
 		do_set_config(fsg, 0);		// Unconfigured state
 		break;
 

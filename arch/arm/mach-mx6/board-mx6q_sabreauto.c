@@ -141,6 +141,7 @@ extern char *soc_reg_id;
 extern char *pu_reg_id;
 
 static int mma8451_position = 3;
+static int mag3110_position = 3;
 static struct clk *sata_clk;
 static int mipi_sensor;
 static int can0_enable;
@@ -682,6 +683,10 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("mma8451", 0x1c),
 		.platform_data = (void *)&mma8451_position,
+	},
+	{
+		I2C_BOARD_INFO("mag3110", 0x0e),
+		.platform_data = (void *)&mag3110_position,
 	},
 };
 

@@ -107,7 +107,6 @@ extern char *pu_reg_id;
 
 extern struct regulator *(*get_cpu_regulator)(void);
 extern void (*put_cpu_regulator)(void);
-extern void mx6_cpu_regulator_init(void);
 
 static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	/* AUDMUX */
@@ -1247,7 +1246,6 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_dma();
 
 	imx6q_add_dvfs_core(&sabrelite_dvfscore_data);
-	mx6_cpu_regulator_init();
 
 	imx6q_add_ion(0, &imx_ion_data,
 		sizeof(imx_ion_data) + sizeof(struct ion_platform_heap));

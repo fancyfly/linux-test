@@ -3697,13 +3697,7 @@ static void epdc_intr_work_func(struct work_struct *work)
 					next_marker->update_marker);
 				complete(&next_marker->update_completion);
 			}
-		} else if (epdc_lut_cancelled && !epdc_collision) {
-			/*
-			* Note: The update may be cancelled (void) if all
-			* pixels collided. In that case we handle it as a
-			* collision, not a cancel.
-			*/
-
+		} else if (epdc_lut_cancelled) {
 			/* Clear LUT status (might be set if no AUTOWV used) */
 
 			/*

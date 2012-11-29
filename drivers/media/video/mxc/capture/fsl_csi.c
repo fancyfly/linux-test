@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2009-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -59,7 +59,9 @@ static irqreturn_t csi_irq_handler(int irq, void *data)
 
 	if (status & BIT_DMA_TSF_DONE_FB1) {
 		if (cam->capture_on) {
+			spin_lock(&cam->queue_int_lock);
 			cam->ping_pong_csi = 1;
+			spin_unlock(&cam->queue_int_lock);
 			cam->enc_callback(0, cam);
 		} else {
 			cam->still_counter++;
@@ -69,7 +71,9 @@ static irqreturn_t csi_irq_handler(int irq, void *data)
 
 	if (status & BIT_DMA_TSF_DONE_FB2) {
 		if (cam->capture_on) {
+			spin_lock(&cam->queue_int_lock);
 			cam->ping_pong_csi = 2;
+			spin_unlock(&cam->queue_int_lock);
 			cam->enc_callback(0, cam);
 		} else {
 			cam->still_counter++;

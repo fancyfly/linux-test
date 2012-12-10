@@ -330,6 +330,8 @@ static int csi_cap_image(cam_data *cam)
 {
 	unsigned int value;
 
+	value = __raw_readl(CSI_CSICR3);
+	__raw_writel(value | BIT_DMA_REFLASH_RFF | BIT_FRMCNT_RST, CSI_CSICR3);
 	value = __raw_readl(CSI_CSISR);
 	__raw_writel(value, CSI_CSISR);
 
@@ -545,7 +547,8 @@ static int csi_streamon(cam_data *cam)
 	cam->capture_on = true;
 	csi_cap_image(cam);
 	csi_enable_int(1);
-	csi_dma_enable();
+	csi_dmareq_rff_enable();
+
 	return 0;
 }
 
@@ -565,7 +568,7 @@ static int csi_streamoff(cam_data *cam)
 	if (cam->capture_on == false)
 		return 0;
 
-	csi_dma_disable();
+	csi_dmareq_rff_disable();
 	csi_disable_int();
 	cam->capture_on = false;
 

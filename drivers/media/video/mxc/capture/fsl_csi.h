@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2009-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -195,5 +195,5 @@ void csi_enable_int(int arg);
 void csi_disable_int(void);
 void csi_mclk_enable(void);
 void csi_mclk_disable(void);
-void csi_dma_enable(void);
-void csi_dma_disable(void);
+void csi_dmareq_rff_enable(void);
+void csi_dmareq_rff_disable(void);

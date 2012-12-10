@@ -56,6 +56,8 @@ static irqreturn_t csi_irq_handler(int irq, void *data)
 			__raw_writel(cr3 | BIT_DMA_REFLASH_RFF, CSI_CSICR3);
 	}
 
+	if (status & BIT_HRESP_ERR_INT)
+		pr_warning("Hresponse error is detected.\n");
 
 	if (status & BIT_DMA_TSF_DONE_FB1) {
 		if (cam->capture_on) {
@@ -263,7 +265,7 @@ void csi_mclk_disable(void)
 	clk_disable(&csi_mclk);
 }
 
-void csi_dma_enable(void)
+void csi_dmareq_rff_enable(void)
 {
 	unsigned long cr3 = __raw_readl(CSI_CSICR3);
 
@@ -272,7 +274,7 @@ void csi_dma_enable(void)
 	__raw_writel(cr3, CSI_CSICR3);
 }
 
-void csi_dma_disable(void)
+void csi_dmareq_rff_disable(void)
 {
 	unsigned long cr3 = __raw_readl(CSI_CSICR3);
 
@@ -310,7 +312,7 @@ static int __devinit csi_probe(struct platform_device *pdev)
 
 	csihw_reset();
 	csi_init_interface();
-	csi_dma_disable();
+	csi_dmareq_rff_disable();
 
 	per_clk = clk_get(NULL, "csi_clk");
 	if (IS_ERR(per_clk))

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -301,6 +301,8 @@
 
 #define SRC_GPR9			0x40
 #define SRC_GPR10			0x44
+
+#define SNVS_LPGPR			0x68
 
 /* GPC offsets */
 #define MXC_GPC_CNTR_OFFSET		0x0

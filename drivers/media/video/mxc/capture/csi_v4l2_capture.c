@@ -324,8 +324,6 @@ static int csi_cap_image(cam_data *cam)
 {
 	unsigned int value;
 
-	value = __raw_readl(CSI_CSICR3);
-	__raw_writel(value | BIT_DMA_REFLASH_RFF | BIT_FRMCNT_RST, CSI_CSICR3);
 	value = __raw_readl(CSI_CSISR);
 	__raw_writel(value, CSI_CSISR);
 
@@ -489,7 +487,7 @@ static int csi_v4l2_prepare_bufs(cam_data *cam, struct v4l2_buffer *buf)
 static inline int valid_mode(u32 palette)
 {
 	return (palette == V4L2_PIX_FMT_RGB565) ||
-	    (palette == V4L2_PIX_FMT_UYVY) || (palette == V4L2_PIX_FMT_YUV420);
+	    (palette == V4L2_PIX_FMT_YUYV) || (palette == V4L2_PIX_FMT_YUV420);
 }
 
 /*!
@@ -536,7 +534,7 @@ static int csi_streamon(cam_data *cam)
 	cam->capture_on = true;
 	csi_cap_image(cam);
 	csi_enable_int(1);
-
+	csi_dma_enable();
 	return 0;
 }
 
@@ -556,14 +554,13 @@ static int csi_streamoff(cam_data *cam)
 	if (cam->capture_on == false)
 		return 0;
 
+	csi_dma_disable();
 	csi_disable_int();
 	cam->capture_on = false;
 
 	/* set CSI_CSIDMASA_FB1 and CSI_CSIDMASA_FB2 to default value */
 	__raw_writel(0, CSI_CSIDMASA_FB1);
 	__raw_writel(0, CSI_CSIDMASA_FB2);
-	cr3 = __raw_readl(CSI_CSICR3);
-	__raw_writel(cr3 | BIT_DMA_REFLASH_RFF, CSI_CSICR3);
 
 	csi_free_frames(cam);
 	csi_free_frame_buf(cam);
@@ -716,7 +713,7 @@ static int csi_v4l2_s_fmt(cam_data *cam, struct v4l2_format *f)
 					       f->fmt.pix.height);
 			bytesperline = f->fmt.pix.width * 2;
 			break;
-		case V4L2_PIX_FMT_UYVY:
+		case V4L2_PIX_FMT_YUYV:
 			size = f->fmt.pix.width * f->fmt.pix.height * 2;
 			csi_set_16bit_imagpara(f->fmt.pix.width,
 					       f->fmt.pix.height);
@@ -1415,7 +1412,7 @@ static int csi_mmap(struct file *file, struct vm_area_struct *vma)
 		return -EINTR;
 
 	size = vma->vm_end - vma->vm_start;
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	vma->vm_page_prot = pgprot_writethrough(vma->vm_page_prot);
 
 	if (remap_pfn_range(vma, vma->vm_start,
 			    vma->vm_pgoff, size, vma->vm_page_prot)) {

@@ -195,3 +195,5 @@ void csi_enable_int(int arg);
 void csi_disable_int(void);
 void csi_mclk_enable(void);
 void csi_mclk_disable(void);
+void csi_dma_enable(void);
+void csi_dma_disable(void);

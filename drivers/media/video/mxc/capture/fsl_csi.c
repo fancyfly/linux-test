@@ -56,6 +56,7 @@ static irqreturn_t csi_irq_handler(int irq, void *data)
 			__raw_writel(cr3 | BIT_DMA_REFLASH_RFF, CSI_CSICR3);
 	}
 
+
 	if (status & BIT_DMA_TSF_DONE_FB1) {
 		if (cam->capture_on) {
 			cam->ping_pong_csi = 1;
@@ -110,9 +111,7 @@ void csi_init_interface(void)
 	val |= BIT_REDGE;
 	val |= BIT_GCLK_MODE;
 	val |= BIT_HSYNC_POL;
-	val |= BIT_PACK_DIR;
 	val |= BIT_FCC;
-	val |= BIT_SWAP16_EN;
 	val |= 1 << SHIFT_MCLKDIV;
 	__raw_writel(val, CSI_CSICR1);
 
@@ -260,6 +259,24 @@ void csi_mclk_disable(void)
 	clk_disable(&csi_mclk);
 }
 
+void csi_dma_enable(void)
+{
+	unsigned long cr3 = __raw_readl(CSI_CSICR3);
+
+	cr3 |= BIT_DMA_REQ_EN_RFF;
+	cr3 |= BIT_HRESP_ERR_EN;
+	__raw_writel(cr3, CSI_CSICR3);
+}
+
+void csi_dma_disable(void)
+{
+	unsigned long cr3 = __raw_readl(CSI_CSICR3);
+
+	cr3 &= ~BIT_DMA_REQ_EN_RFF;
+	cr3 &= ~BIT_HRESP_ERR_EN;
+	__raw_writel(cr3, CSI_CSICR3);
+}
+
 static int __devinit csi_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -289,6 +306,7 @@ static int __devinit csi_probe(struct platform_device *pdev)
 
 	csihw_reset();
 	csi_init_interface();
+	csi_dma_disable();
 
 	per_clk = clk_get(NULL, "csi_clk");
 	if (IS_ERR(per_clk))

@@ -48,11 +48,14 @@ enum ov5640_mode {
 	ov5640_mode_VGA_640_480 = 0,
 	ov5640_mode_QVGA_320_240 = 1,
 	ov5640_mode_NTSC_720_480 = 2,
+/*
 	ov5640_mode_PAL_720_576 = 3,
 	ov5640_mode_720P_1280_720 = 4,
 	ov5640_mode_1080P_1920_1080 = 5,
 	ov5640_mode_QSXGA_2592_1944 = 6,
 	ov5640_mode_MAX = 6
+*/
+	ov5640_mode_MAX = 2
 };
 
 enum ov5640_frame_rate {
@@ -756,12 +759,14 @@ static struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
 		{ov5640_mode_VGA_640_480, 0, 0, NULL, 0},
 		{ov5640_mode_QVGA_320_240, 0, 0, NULL, 0},
 		{ov5640_mode_NTSC_720_480, 0, 0, NULL, 0},
+/*
 		{ov5640_mode_PAL_720_576, 0, 0, NULL, 0},
 		{ov5640_mode_720P_1280_720, 0, 0, NULL, 0},
 		{ov5640_mode_1080P_1920_1080, 0, 0, NULL, 0},
 		{ov5640_mode_QSXGA_2592_1944, 2592, 1944,
 		ov5640_setting_15fps_QSXGA_2592_1944,
 		ARRAY_SIZE(ov5640_setting_15fps_QSXGA_2592_1944)},
+*/
 	},
 	{
 		{ov5640_mode_VGA_640_480,    640,  480,
@@ -773,6 +778,7 @@ static struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
 		{ov5640_mode_NTSC_720_480,   720, 480,
 		ov5640_setting_30fps_NTSC_720_480,
 		ARRAY_SIZE(ov5640_setting_30fps_NTSC_720_480)},
+/*
 		{ov5640_mode_PAL_720_576,    720, 576,
 		ov5640_setting_30fps_PAL_720_576,
 		ARRAY_SIZE(ov5640_setting_30fps_PAL_720_576)},
@@ -783,6 +789,7 @@ static struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
 		ov5640_setting_30fps_1080P_1920_1080,
 		ARRAY_SIZE(ov5640_setting_30fps_1080P_1920_1080)},
 		{ov5640_mode_QSXGA_2592_1944, 0, 0, NULL, 0},
+*/
 	},
 };
 
@@ -1304,7 +1311,7 @@ static int ioctl_g_chip_ident(struct v4l2_int_device *s, int *id)
 {
 	((struct v4l2_dbg_chip_ident *)id)->match.type =
 					V4L2_CHIP_MATCH_I2C_DRIVER;
-	strcpy(((struct v4l2_dbg_chip_ident *)id)->match.name, "ov5640_camera");
+	strcpy(((struct v4l2_dbg_chip_ident *)id)->match.name, "v4l2csisl_ov5640_camera");
 
 	return 0;
 }

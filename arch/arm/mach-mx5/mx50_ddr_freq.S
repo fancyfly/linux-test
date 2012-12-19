@@ -35,34 +35,14 @@ ENTRY(mx50_ddr_freq_change)
     ldr    r10,[sp,#28]                 @save pll1 freq
 
     /* Make sure no TLB miss will occur when the DDR is in self refresh. */
-    /* Invalidate TLB single entry to ensure that the address is not
-      * already in the TLB.
-      */
-    adr   r3, LoopCKE2               @Address in this function.
-    mcr   p15, 0, r3, c8, c7, 1      @ Make sure freq code address
-                                             @ is not already in TLB.
-    mcr   p15, 0, r6, c8, c7, 1      @ Make sure CCM address
-                                             @ is not already in TLB.
-    mcr   p15, 0, r5, c8, c7, 1      @ make sure Databahn address
-                                             @ is not already in TLB.
-    mcr   p15, 0, r8, c8, c7, 1      @ make sure Databahn settings
-                                             @ arrayis not already in TLB.
-
-    mrc   p15, 0, r0, c10, c0, 0    @ Read the TLB lockdown register
-    orr    r0, r0, #1                    @ Set the Preserve bit.
-    mcr   p15, 0, r0, c10, c0, 0    @ Write to the lockdown register
     ldr    r2, [r6]                        @ TLB will miss,
                                              @CCM address will be loaded
     ldr    r2, [r5]                        @ TLB will miss,
                                              @Databahn address will be loaded
     ldr    r2, [r8]                        @ TLB will miss,
                                              @Databahn settings will be loaded
-
+    adr   r3, LoopCKE2               @Address in this function.
     ldr    r2, [r3]                        @ TLB will miss
-    mrc  p15, 0, r0, c10, c0, 0      @ Read the lockdown register
-                                             @ (victim will be incremented)
-    bic   r0, r0, #1                     @ Clear the preserve bit
-    mcr   p15, 0, r0, c10, c0, 0     @ Write to the lockdown register.
 
     /* If Databahn is in LPM4, exit that mode first. */
     ldr     r9,[r5, #0x50]             @Store LPM mode in r9

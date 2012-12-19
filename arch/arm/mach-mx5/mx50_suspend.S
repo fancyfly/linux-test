@@ -48,6 +48,9 @@ ENTRY(mx50_suspend)
     ldr      r0, [r8]
     ldr      r0, [r12]
 
+   /* Ensure all write buffers are flushed. */
+    dsb
+
 /* Before putting DDR into self-refresh, make sure
     any LPM mode that the DDR might be in is exited.
 */
@@ -58,9 +61,6 @@ ENTRY(mx50_suspend)
     ldr     r0,[r6, #0x50]
     bic     r0, r0, #0x1F
     str     r0,[r6, #0x50]
-
-   /* Ensure all write buffers are flushed. */
-    dsb
 
     /* Disable L1 caches */
     mrc     p15, 0, r0, c1, c0, 0    @ R0 = system control reg
@@ -119,6 +119,8 @@ FinishedClean:
     mrc     p15, 0, r0, c1, c0, 1   @ R0 = auxiliary control reg
     bic     r0, r0, #ARM_AUXCR_L2EN @ Disable L2 cache
     mcr     p15, 0, r0, c1, c0, 1   @ Update aux control reg
+
+    dsb
 
 /* Wait for the databahn to idle
      Meaning, no access to the databahn is

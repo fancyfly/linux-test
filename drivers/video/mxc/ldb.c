@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2013 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -216,7 +216,7 @@ static int find_ldb_setting(struct ldb_data *ldb, struct fb_info *fbi)
 static int ldb_disp_setup(struct mxc_dispdrv_handle *disp, struct fb_info *fbi)
 {
 	uint32_t reg, val;
-	uint32_t pixel_clk, rounded_pixel_clk, pixel_clk_roundup, pixel_clk_rounddown;
+	uint32_t pixel_clk, rounded_pixel_clk;
 	struct clk *ldb_clk_parent;
 	struct ldb_data *ldb = mxc_dispdrv_getdata(disp);
 	int setting_idx, di;
@@ -254,18 +254,7 @@ static int ldb_disp_setup(struct mxc_dispdrv_handle *disp, struct fb_info *fbi)
 	/* clk setup */
 	if (ldb->setting[setting_idx].clk_en)
 		clk_disable(ldb->setting[setting_idx].ldb_di_clk);
-	pixel_clk = (PICOS2KHZ(fbi->var.pixclock));
-	/* Round Pixel Clk to next MHz */
-	pixel_clk_roundup = roundup(pixel_clk,1000);
-	/* Round Pixel Clk to down MHz */
-	pixel_clk_rounddown = rounddown(pixel_clk,1000);
-	/* Choose the one closest */
-	if ((pixel_clk_roundup - pixel_clk) > (pixel_clk - pixel_clk_rounddown))
-		pixel_clk = pixel_clk_rounddown;
-	else
-		pixel_clk = pixel_clk_roundup;
-	
-	pixel_clk *= 1000UL;
+	pixel_clk = (PICOS2KHZ(fbi->var.pixclock)) * 1000UL;
 	ldb_clk_parent = clk_get_parent(ldb->setting[setting_idx].ldb_di_clk);
 	if ((ldb->mode == LDB_SPL_DI0) || (ldb->mode == LDB_SPL_DI1))
 		clk_set_rate(ldb_clk_parent, pixel_clk * 7 / 2);

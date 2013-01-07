@@ -75,6 +75,9 @@ ENDPROC(cpu_suspend)
  * r3 = L1 section flags
  */
 ENTRY(cpu_resume_mmu)
+    mrc     p15, 0, r4, c1, c0, 0
+    tst     r4, #CR_M
+    bne     0f                     @ return if MMU already on
 	adr	r4, cpu_resume_turn_mmu_on
 	mov	r4, r4, lsr #20
 	orr	r3, r3, r4, lsl #20
@@ -96,6 +99,7 @@ cpu_resume_turn_mmu_on:
 ENDPROC(cpu_resume_turn_mmu_on)
 cpu_resume_after_mmu:
 	str	r5, [r2, r4, lsl #2]	@ restore old mapping
+0:
 	mcr	p15, 0, r0, c1, c0, 0	@ turn on D-cache
 	mov	pc, lr
 ENDPROC(cpu_resume_after_mmu)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -995,9 +995,9 @@ static char *usb_functions_accessory_adb[] = {
 };
 
 static char *usb_functions_all[] = {
+	"rndis",
 	"usb_mass_storage",
 	"adb",
-	"rndis",
 	"accessory",
 };
 

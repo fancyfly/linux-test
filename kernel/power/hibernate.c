@@ -605,6 +605,7 @@ int hibernate(void)
 	int error;
 
 	mutex_lock(&pm_mutex);
+
 	/* The snapshot device should not be opened while we're running */
 	if (!atomic_add_unless(&snapshot_device_available, -1, 0)) {
 		error = -EBUSY;
@@ -628,6 +629,8 @@ int hibernate(void)
 	printk(KERN_INFO "PM: Syncing filesystems ... ");
 	sys_sync();
 	printk("done.\n");
+
+	entering_platform_hibernation = true;
 
 	error = prepare_processes();
 	if (error)
@@ -672,6 +675,7 @@ int hibernate(void)
 	pm_restore_console();
 	atomic_inc(&snapshot_device_available);
  Unlock:
+	entering_platform_hibernation = false;
 	mutex_unlock(&pm_mutex);
 	return error;
 }
@@ -714,6 +718,8 @@ static int software_resume(void)
 	 * here to avoid lockdep complaining.
 	 */
 	mutex_lock_nested(&pm_mutex, SINGLE_DEPTH_NESTING);
+
+	entering_platform_hibernation = true;
 
 	if (swsusp_resume_device)
 		goto Check_image;
@@ -802,6 +808,7 @@ static int software_resume(void)
 	atomic_inc(&snapshot_device_available);
 	/* For success case, the suspend path will release the lock */
  Unlock:
+	entering_platform_hibernation = false;
 	mutex_unlock(&pm_mutex);
 	pr_debug("PM: Hibernation image not present or could not be loaded.\n");
 	return error;

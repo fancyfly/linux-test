@@ -19,6 +19,7 @@
 #include <linux/suspend.h>
 #include <linux/syscalls.h> /* sys_sync */
 #include <linux/wakelock.h>
+#include <linux/suspend.h>
 #ifdef CONFIG_WAKELOCK_STAT
 #include <linux/proc_fs.h>
 #endif
@@ -268,9 +269,15 @@ static void suspend_backoff(void)
 			  msecs_to_jiffies(SUSPEND_BACKOFF_INTERVAL));
 }
 
+bool wake_lock_can_suspend(void)
+{
+	return system_entering_hibernation() ||
+		!has_wake_lock(WAKE_LOCK_SUSPEND);
+}
+
 static void suspend(struct work_struct *work)
 {
-	int ret;
+	int ret = 0;
 	int entry_event_num;
 	struct timespec ts_entry, ts_exit;
 
@@ -285,7 +292,8 @@ static void suspend(struct work_struct *work)
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("suspend: enter suspend\n");
 	getnstimeofday(&ts_entry);
-	ret = pm_suspend(requested_suspend_state);
+	if (!system_entering_hibernation())
+		ret = pm_suspend(requested_suspend_state);
 	getnstimeofday(&ts_exit);
 
 	if (debug_mask & DEBUG_EXIT_SUSPEND) {
@@ -336,7 +344,7 @@ static DEFINE_TIMER(expire_timer, expire_wake_locks, 0, 0);
 
 static int power_suspend_late(struct device *dev)
 {
-	int ret = has_wake_lock(WAKE_LOCK_SUSPEND) ? -EAGAIN : 0;
+	int ret = wake_lock_can_suspend() ? 0 : -EAGAIN;
 #ifdef CONFIG_WAKELOCK_STAT
 	wait_for_wakeup = !ret;
 #endif

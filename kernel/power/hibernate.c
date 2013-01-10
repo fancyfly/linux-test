@@ -24,6 +24,7 @@
 #include <linux/freezer.h>
 #include <linux/gfp.h>
 #include <linux/syscore_ops.h>
+#include <linux/earlysuspend.h>
 #include <scsi/scsi_scan.h>
 
 #include "power.h"
@@ -469,6 +470,8 @@ int hibernation_restore(int platform_mode)
 {
 	int error;
 
+	force_early_suspend();
+
 	pm_prepare_console();
 	suspend_console();
 	pm_restrict_gfp_mask();
@@ -612,6 +615,8 @@ int hibernate(void)
 		goto Unlock;
 	}
 
+	force_early_suspend();
+
 	pm_prepare_console();
 	error = pm_notifier_call_chain(PM_HIBERNATION_PREPARE);
 	if (error)
@@ -675,6 +680,7 @@ int hibernate(void)
 	pm_restore_console();
 	atomic_inc(&snapshot_device_available);
  Unlock:
+	force_late_resume();
 	entering_platform_hibernation = false;
 	mutex_unlock(&pm_mutex);
 	return error;

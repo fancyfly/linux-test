@@ -1779,12 +1779,8 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 	struct fb_info *fbi = platform_get_drvdata(pdev);
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
 	if (strstr(mxc_fbi->dispdrv->drv->name, "hdmi"))
 		return mxcfb_core_suspend(pdev, state);
-#else
-	return mxcfb_core_suspend(pdev, state);
-#endif
 
 	return 0;
 }
@@ -1822,12 +1818,8 @@ static int mxcfb_resume(struct platform_device *pdev)
 	struct fb_info *fbi = platform_get_drvdata(pdev);
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
 	if (strstr(mxc_fbi->dispdrv->drv->name, "hdmi"))
 		return mxcfb_core_resume(pdev);
-#else
-	return mxcfb_core_resume(pdev);
-#endif
 
 	return 0;
 }

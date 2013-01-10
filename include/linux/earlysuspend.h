@@ -49,9 +49,13 @@ struct early_suspend {
 #ifdef CONFIG_HAS_EARLYSUSPEND
 void register_early_suspend(struct early_suspend *handler);
 void unregister_early_suspend(struct early_suspend *handler);
+void force_early_suspend(void);
+void force_late_resume(void);
 #else
 #define register_early_suspend(handler) do { } while (0)
 #define unregister_early_suspend(handler) do { } while (0)
+#define force_early_suspend() do { } while (0)
+#define force_late_resume() do { } while (0)
 #endif
 
 #endif

@@ -114,6 +114,23 @@ abort:
 	spin_unlock_irqrestore(&state_lock, irqflags);
 }
 
+void force_early_suspend(void)
+{
+	struct early_suspend *pos;
+
+	mutex_lock(&early_suspend_lock);
+
+	list_for_each_entry(pos, &early_suspend_handlers, link) {
+		if (pos->suspend != NULL) {
+			if (debug_mask & DEBUG_VERBOSE)
+				pr_info("early_suspend: calling %pf\n", pos->suspend);
+			pos->suspend(pos);
+		}
+	}
+
+	mutex_unlock(&early_suspend_lock);
+}
+
 static void late_resume(struct work_struct *work)
 {
 	struct early_suspend *pos;
@@ -146,6 +163,24 @@ static void late_resume(struct work_struct *work)
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("late_resume: done\n");
 abort:
+	mutex_unlock(&early_suspend_lock);
+}
+
+void force_late_resume(void)
+{
+	struct early_suspend *pos;
+
+	mutex_lock(&early_suspend_lock);
+
+	list_for_each_entry_reverse(pos, &early_suspend_handlers, link) {
+		if (pos->resume != NULL) {
+			if (debug_mask & DEBUG_VERBOSE)
+				pr_info("late_resume: calling %pf\n", pos->resume);
+
+			pos->resume(pos);
+		}
+	}
+
 	mutex_unlock(&early_suspend_lock);
 }
 

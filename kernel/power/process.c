@@ -83,7 +83,7 @@ static int try_to_freeze_tasks(bool sig_only)
 			todo += wq_busy;
 		}
 
-		if (todo && has_wake_lock(WAKE_LOCK_SUSPEND)) {
+		if (todo && !wake_lock_can_suspend()) {
 			wakeup = 1;
 			break;
 		}

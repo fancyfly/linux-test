@@ -1309,6 +1309,9 @@ static long csi_v4l_do_ioctl(struct file *file,
 		cam->frame[index].buffer.m.offset = buf->m.offset;
 		if ((cam->frame[index].buffer.flags & 0x7) ==
 				V4L2_BUF_FLAG_MAPPED) {
+			unsigned int buf_paddr = cam->frame[index].paddress;
+			unsigned int buf_len  = cam->frame[index].buffer.length;
+			outer_flush_range(buf_paddr, buf_paddr + buf_len);
 			cam->frame[index].buffer.flags |= V4L2_BUF_FLAG_QUEUED;
 			list_add_tail(&cam->frame[index].queue, &cam->ready_q);
 		} else if (cam->frame[index].buffer.flags &

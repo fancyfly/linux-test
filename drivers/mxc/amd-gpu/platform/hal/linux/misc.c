@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -118,7 +118,7 @@ int kgsl_device_clock(gsl_deviceid_t id, int enable)
 		if (enable)
 			kgsl_device_active(device);
 		else
-			kgsl_device_inactive((unsigned long)device);
+			kgsl_device_inactive((unsigned long)device->autogate);
 	} else {
 		printk(KERN_ERR "%s: Dev %d clock is already off!\n", __func__, id);
 		ret = GSL_FAILURE;

@@ -1372,6 +1372,7 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 static int ioctl_s_power(struct v4l2_int_device *s, int on)
 {
 	struct sensor_data *sensor = s->priv;
+	void *mipi_csi2_info;
 
 	if (on && !sensor->on) {
 		if (io_regulator)
@@ -1389,6 +1390,15 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 		/* Make sure power on */
 		if (camera_plat->pwdn)
 			camera_plat->pwdn(0);
+		mipi_csi2_info = mipi_csi2_get_info();
+		/*
+		 * disable/enable mipi csi2 to workaround mipi csi2
+		 * not work resume from hibernation
+		 */
+		if (mipi_csi2_info) {
+			mipi_csi2_disable(mipi_csi2_info);
+			mipi_csi2_enable(mipi_csi2_info);
+		}
 
 	} else if (!on && sensor->on) {
 		if (analog_regulator)

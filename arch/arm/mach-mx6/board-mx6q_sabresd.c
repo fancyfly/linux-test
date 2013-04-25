@@ -1919,13 +1919,13 @@ static void __init mx6_sabresd_board_init(void)
 			imx6q_add_ipuv3fb(i, &sabresd_fb_data[i]);
 
 	imx6q_add_vdoa();
-	imx6q_add_mipi_dsi(&mipi_dsi_pdata);
+	/* imx6q_add_mipi_dsi(&mipi_dsi_pdata); */
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
 	imx6q_add_v4l2_output(0);
 	imx6q_add_v4l2_capture(0, &capture_data[0]);
 	imx6q_add_v4l2_capture(1, &capture_data[1]);
-	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
+	/* imx6q_add_mipi_csi2(&mipi_csi2_pdata); */
 	imx6q_add_imx_snvs_rtc();
 
 	if (1 == caam_enabled)
@@ -2041,6 +2041,7 @@ static void __init mx6_sabresd_board_init(void)
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
 
+#if 0
 	if (cpu_is_mx6dl()) {
 		imx6dl_add_imx_pxp();
 		imx6dl_add_imx_pxp_client();
@@ -2049,6 +2050,7 @@ static void __init mx6_sabresd_board_init(void)
 			imx6dl_add_imx_epdc(&epdc_data);
 		}
 	}
+#endif
 	/*
 	ret = gpio_request_array(mx6q_sabresd_flexcan_gpios,
 			ARRAY_SIZE(mx6q_sabresd_flexcan_gpios));
@@ -2113,9 +2115,11 @@ static void __init mx6_sabresd_board_init(void)
 	}
 
 	imx6_add_armpmu();
+#if 0
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
+#endif
 }
 
 extern void __iomem *twd_base;

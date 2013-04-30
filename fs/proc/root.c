@@ -89,6 +89,20 @@ static struct file_system_type proc_fs_type = {
 	.kill_sb	= proc_kill_sb,
 };
 
+static int deferred_initcalls_read_proc(char *page, char **start, off_t off,
+		int count, int *eof, void *data)
+{
+	static int deferred_initcalls_done;
+	int len;
+
+	len = sprintf(page, "%d\n", deferred_initcalls_done);
+	if (deferred_initcalls_done == 0) {
+		do_deferred_initcalls();
+		deferred_initcalls_done = 1;
+	}
+	return len;
+}
+
 void __init proc_root_init(void)
 {
 	struct vfsmount *mnt;
@@ -125,6 +139,9 @@ void __init proc_root_init(void)
 #endif
 	proc_mkdir("bus", NULL);
 	proc_sys_init();
+
+	create_proc_read_entry("deferred_initcalls", 0, NULL,
+			deferred_initcalls_read_proc, NULL);
 }
 
 static int proc_root_getattr(struct vfsmount *mnt, struct dentry *dentry, struct kstat *stat

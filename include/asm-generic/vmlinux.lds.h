@@ -642,6 +642,11 @@
 		INITCALLS						\
 		VMLINUX_SYMBOL(__initcall_end) = .;
 
+#define DEFERRED_INIT_CALLS						\
+		VMLINUX_SYMBOL(__deferred_initcall_start) = .;		\
+		*(.deferred_initcall.init)				\
+		VMLINUX_SYMBOL(__deferred_initcall_end) = .;
+
 #define CON_INITCALL							\
 		VMLINUX_SYMBOL(__con_initcall_start) = .;		\
 		*(.con_initcall.init)					\

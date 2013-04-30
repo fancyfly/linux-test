@@ -146,6 +146,7 @@ typedef void (*ctor_fn_t)(void);
 
 /* Defined in init/main.c */
 extern int do_one_initcall(initcall_t fn);
+extern void do_deferred_initcalls(void);
 extern char __initdata boot_command_line[];
 extern char *saved_command_line;
 extern unsigned int reset_devices;
@@ -177,6 +178,10 @@ extern int initcall_debug;
 #define __define_initcall(level,fn,id) \
 	static initcall_t __initcall_##fn##id __used \
 	__attribute__((__section__(".initcall" level ".init"))) = fn
+
+#define deferred_initcall(fn) \
+	static initcall_t __initcall_##fn __used \
+	__attribute__((__section__(".deferred_initcall.init"))) = fn
 
 /*
  * Early initcalls run before initializing SMP.
@@ -264,6 +269,7 @@ void __init parse_early_options(char *cmdline);
  * be one per module.
  */
 #define module_init(x)	__initcall(x);
+#define deferred_module_init(x) deferred_initcall(x);
 
 /**
  * module_exit() - driver exit entry point

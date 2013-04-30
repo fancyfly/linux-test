@@ -701,6 +701,20 @@ static void __init do_initcalls(void)
 		do_one_initcall(*fn);
 }
 
+extern initcall_t __deferred_initcall_start[], __deferred_initcall_end[];
+
+void __init do_deferred_initcalls(void)
+{
+	initcall_t *fn;
+
+	printk(KERN_DEBUG "%s\n", __func__);
+
+	for (fn = __deferred_initcall_start; fn < __deferred_initcall_end; fn++)
+		do_one_initcall(*fn);
+
+	free_initmem();
+}
+
 /*
  * Ok, the machine is now initialized. None of the devices
  * have been touched yet, but the CPU subsystem is up and
@@ -740,7 +754,6 @@ static noinline int init_post(void)
 {
 	/* need to finish all async __init code before freeing the memory */
 	async_synchronize_full();
-	free_initmem();
 	mark_rodata_ro();
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();

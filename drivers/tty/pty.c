@@ -793,4 +793,4 @@ static int __init pty_init(void)
 	unix98_pty_init();
 	return 0;
 }
-module_init(pty_init);
+deferred_module_init(pty_init);

@@ -409,7 +409,7 @@ static void __exit elan_touch_exit(void)
 	i2c_del_driver(&elan_touch_driver);
 }
 
-module_init(elan_touch_init);
+deferred_module_init(elan_touch_init);
 module_exit(elan_touch_exit);
 
 MODULE_AUTHOR("Stanley Zeng <stanley.zeng@emc.com.tw>");

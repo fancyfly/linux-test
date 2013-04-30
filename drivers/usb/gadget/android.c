@@ -1263,7 +1263,7 @@ static int __init init(void)
 
 	return usb_composite_probe(&android_usb_driver, android_bind);
 }
-module_init(init);
+deferred_module_init(init);
 
 static void __exit cleanup(void)
 {

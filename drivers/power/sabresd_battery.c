@@ -967,7 +967,7 @@ static int __init max8903_init(void)
 {
 	return platform_driver_register(&max8903_driver);
 }
-module_init(max8903_init);
+deferred_module_init(max8903_init);
 
 static void __exit max8903_exit(void)
 {

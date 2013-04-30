@@ -410,7 +410,7 @@ static void __exit egalax_ts_exit(void)
 	i2c_del_driver(&egalax_ts_driver);
 }
 
-module_init(egalax_ts_init);
+deferred_module_init(egalax_ts_init);
 module_exit(egalax_ts_exit);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");

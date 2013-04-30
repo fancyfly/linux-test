@@ -1,7 +1,7 @@
 /*
  * imx-wm8958.c
  *
- * Copyright (C) 2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2012-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -354,7 +354,7 @@ static void __exit imx_asoc_exit(void)
 	platform_device_unregister(imx_snd_device);
 }
 
-module_init(imx_asoc_init);
+deferred_module_init(imx_asoc_init);
 module_exit(imx_asoc_exit);
 
 /* Module information */

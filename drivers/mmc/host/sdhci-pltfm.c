@@ -57,6 +57,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	struct sdhci_host *host;
 	struct sdhci_pltfm_host *pltfm_host;
 	struct resource *iomem;
+	struct mmc_host *mmc;
 	int ret;
 
 	if (platid && platid->driver_data)
@@ -119,6 +120,10 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	ret = sdhci_add_host(host);
 	if (ret)
 		goto err_add_host;
+
+	/* wait for each mmc host to finish detection */
+	mmc = host->mmc;
+	flush_delayed_work(&mmc->detect);
 
 	platform_set_drvdata(pdev, host);
 

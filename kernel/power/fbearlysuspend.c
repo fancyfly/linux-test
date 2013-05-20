@@ -37,6 +37,10 @@ static void stop_drawing_early_suspend(struct early_suspend *h)
 	fb_state = FB_STATE_REQUEST_STOP_DRAWING;
 	spin_unlock_irqrestore(&fb_state_lock, irq_flags);
 
+	/* FIXME!!! */
+	if (system_entering_hibernation())
+		return;
+
 	wake_up_all(&fb_state_wq);
 	ret = wait_event_timeout(fb_state_wq,
 				 fb_state == FB_STATE_STOPPED_DRAWING,

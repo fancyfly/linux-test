@@ -609,6 +609,8 @@ int hibernate(void)
 
 	mutex_lock(&pm_mutex);
 
+	entering_platform_hibernation = true;
+
 	/* The snapshot device should not be opened while we're running */
 	if (!atomic_add_unless(&snapshot_device_available, -1, 0)) {
 		error = -EBUSY;
@@ -634,8 +636,6 @@ int hibernate(void)
 	printk(KERN_INFO "PM: Syncing filesystems ... ");
 	sys_sync();
 	printk("done.\n");
-
-	entering_platform_hibernation = true;
 
 	error = prepare_processes();
 	if (error)
@@ -679,8 +679,8 @@ int hibernate(void)
 	pm_notifier_call_chain(PM_POST_HIBERNATION);
 	pm_restore_console();
 	atomic_inc(&snapshot_device_available);
- Unlock:
 	force_late_resume();
+ Unlock:
 	entering_platform_hibernation = false;
 	mutex_unlock(&pm_mutex);
 	return error;

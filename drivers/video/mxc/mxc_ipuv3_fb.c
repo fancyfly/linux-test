@@ -52,6 +52,8 @@
 #include <mach/ipu-v3.h>
 #include "mxc_dispdrv.h"
 
+#include <linux/suspend.h>
+
 /*
  * Driver name
  */
@@ -1843,6 +1845,22 @@ static int mxcfb_core_resume(struct platform_device *pdev)
 	return 0;
 }
 
+static char *last_fb;
+
+void save_frame_buffer(struct fb_info *fb)
+{
+	size_t size = fb->fix.smem_len;
+	char *buffer = fb->screen_base;
+
+	if (last_fb != NULL) {
+		kfree(last_fb);
+		last_fb = NULL;
+	}
+
+	last_fb = kzalloc(size, GFP_KERNEL);
+	memcpy(last_fb, buffer, size);
+}
+
 /*
  * Resumes the framebuffer and unblanks the screen. Power management support
  */
@@ -1850,9 +1868,16 @@ static int mxcfb_resume(struct platform_device *pdev)
 {
 	struct fb_info *fbi = platform_get_drvdata(pdev);
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
+	int err;
 
-	if (strstr(mxc_fbi->dispdrv->drv->name, "hdmi"))
-		return mxcfb_core_resume(pdev);
+	mxcfb_core_resume(pdev);
+
+	if (system_entering_hibernation()) {
+		memcpy((char *)fbi->screen_base, last_fb, fbi->fix.smem_len);
+		err = mxcfb_pan_display(&mxc_fbi->cur_var, fbi);
+		if (err)
+			printk(KERN_ERR "pan display failed with %d\n", err);
+	}
 
 	return 0;
 }
@@ -2648,6 +2673,9 @@ static void mxcfb_early_suspend(struct early_suspend *h)
 		return;
 	}
 
+	if (system_entering_hibernation())
+		save_frame_buffer(fbi);
+
 	mxcfb_core_suspend(pdev, state);
 	event.info = fbi;
 	event.data = &blank;
@@ -2664,11 +2692,6 @@ static void mxcfb_later_resume(struct early_suspend *h)
 	if (mxcfbi->ipu_ch == MEM_FG_SYNC)
 		return;
 
-	/* HDMI resume function has been called */
-	if (strstr(mxcfbi->dispdrv->drv->name, "hdmi"))
-		return;
-
-	mxcfb_core_resume(pdev);
 	event.info = fbi;
 	event.data = &mxcfbi->next_blank;
 	fb_notifier_call_chain(FB_EVENT_BLANK, &event);

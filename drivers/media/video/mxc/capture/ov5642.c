@@ -4164,7 +4164,7 @@ static void __exit ov5642_clean(void)
 	i2c_del_driver(&ov5642_i2c_driver);
 }
 
-deferred_module_init(ov5642_init);
+module_init(ov5642_init);
 module_exit(ov5642_clean);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");

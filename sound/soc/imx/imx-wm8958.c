@@ -354,7 +354,7 @@ static void __exit imx_asoc_exit(void)
 	platform_device_unregister(imx_snd_device);
 }
 
-deferred_module_init(imx_asoc_init);
+module_init(imx_asoc_init);
 module_exit(imx_asoc_exit);
 
 /* Module information */

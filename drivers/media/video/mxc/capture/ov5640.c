@@ -1935,7 +1935,7 @@ static void __exit ov5640_clean(void)
 	i2c_del_driver(&ov5640_i2c_driver);
 }
 
-deferred_module_init(ov5640_init);
+module_init(ov5640_init);
 module_exit(ov5640_clean);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");

@@ -211,6 +211,9 @@ config MACH_MX6Q_SABRESD
 	select IMX_HAVE_PLATFORM_FLEXCAN
 	select IMX_HAVE_PLATFORM_IMX_PCIE
 	select IMX_HAVE_PLATFORM_IMX_CAAM
+	select IMX_HAVE_PLATFORM_IMX_SPDIF
+	select IMX_HAVE_PLATFORM_IMX_MIPI_DSI
+	select IMX_HAVE_PLATFORM_IMX_MIPI_CSI2
 	help
 	  Include support for i.MX 6Quad SABRE SD platform. This includes specific
 	  configurations for the board and its peripherals.

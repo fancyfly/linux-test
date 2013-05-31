@@ -1919,13 +1919,13 @@ static void __init mx6_sabresd_board_init(void)
 			imx6q_add_ipuv3fb(i, &sabresd_fb_data[i]);
 
 	imx6q_add_vdoa();
-	/* imx6q_add_mipi_dsi(&mipi_dsi_pdata); */
+	imx6q_add_mipi_dsi(&mipi_dsi_pdata);
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
 	imx6q_add_v4l2_output(0);
 	imx6q_add_v4l2_capture(0, &capture_data[0]);
 	imx6q_add_v4l2_capture(1, &capture_data[1]);
-	/* imx6q_add_mipi_csi2(&mipi_csi2_pdata); */
+	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
 	imx6q_add_imx_snvs_rtc();
 
 	if (1 == caam_enabled)

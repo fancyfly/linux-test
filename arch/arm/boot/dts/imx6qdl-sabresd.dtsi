@@ -559,7 +559,6 @@
 		fsl,dcm_always_high;
 		fsl,dc_valid;
 		fsl,usb_valid;
-		fsl,imx6q;
 		status = "okay";
 	};
 

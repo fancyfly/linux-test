@@ -37,6 +37,7 @@
 #include <linux/init.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
+#include <mach/hardware.h>
 
 
 #define	BATTERY_UPDATE_INTERVAL	5 /*seconds*/
@@ -689,11 +690,10 @@ static struct max8903_pdata *max8903_of_populate_pdata(
 		pdata->dc_valid = true;
 	if (of_get_property(of_node, "fsl,usb_valid", NULL))
 		pdata->usb_valid = true;
-	if (of_get_property(of_node, "fsl,imx6q", NULL))
+	if (cpu_is_imx6q())
 		cpu_type_flag = 1;
-	if (of_get_property(of_node, "fsl,imx6dl", NULL))
+	else
 		cpu_type_flag = 0;
-
 	pdata->dok = of_get_named_gpio(of_node, "dok_input", 0);
 	if (!gpio_is_valid(pdata->dok)) {
 			dev_err(dev, "pin pdata->dok: invalid gpio %d\n",

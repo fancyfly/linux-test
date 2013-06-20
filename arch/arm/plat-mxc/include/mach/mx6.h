@@ -575,4 +575,7 @@ extern int mx6dl_revision(void);
 extern int mx6sl_revision(void);
 #endif
 
+#define MX6SL_DDR3			(0x0)
+#define MX6SL_LPDDR2		(0x1)
+
 #endif				/*  __ASM_ARCH_MXC_MX6_H__ */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -115,6 +115,8 @@ static struct clk *pll3_540;
 
 static struct delayed_work low_bus_freq_handler;
 
+unsigned int mx6sl_ddr_type;
+
 void reduce_bus_freq(void)
 {
 	if (!cpu_is_mx6sl()) {
@@ -170,8 +172,13 @@ void reduce_bus_freq(void)
 			/* Now change DDR freq while running from IRAM. */
 
 			spin_lock_irqsave(&freq_lock, flags);
-			mx6sl_ddr_freq_change_iram(DDR_AUDIO_CLK,
-							low_bus_freq_mode);
+
+			if (mx6sl_ddr_type == MX6SL_LPDDR2) {
+				mx6sl_ddr_freq_change_iram(DDR_AUDIO_CLK,
+					low_bus_freq_mode);
+			} else {
+				update_ddr_freq(DDR_AUDIO_CLK);
+			}
 			spin_unlock_irqrestore(&freq_lock, flags);
 
 			if (low_bus_freq_mode) {
@@ -216,8 +223,13 @@ void reduce_bus_freq(void)
 
 			spin_lock_irqsave(&freq_lock, flags);
 			/* Now change DDR freq while running from IRAM. */
-			mx6sl_ddr_freq_change_iram(LPAPM_CLK,
-					low_bus_freq_mode);
+			if (mx6sl_ddr_type == MX6SL_LPDDR2) {
+				mx6sl_ddr_freq_change_iram(LPAPM_CLK,
+				low_bus_freq_mode);
+			} else {
+				update_ddr_freq(LPAPM_CLK);
+			}
+
 			spin_unlock_irqrestore(&freq_lock, flags);
 
 			low_bus_freq_mode = 1;
@@ -328,7 +340,13 @@ int set_high_bus_freq(int high_bus_freq)
 
 		spin_lock_irqsave(&freq_lock, flags);
 		/* Change DDR freq in IRAM. */
-		mx6sl_ddr_freq_change_iram(ddr_normal_rate, low_bus_freq_mode);
+
+		if (mx6sl_ddr_type == MX6SL_LPDDR2)
+			mx6sl_ddr_freq_change_iram(ddr_normal_rate,
+				low_bus_freq_mode);
+		else
+			update_ddr_freq(ddr_normal_rate);
+
 		spin_unlock_irqrestore(&freq_lock, flags);
 
 		/* Set periph_clk to be sourced from pll2_pfd2_400M */
@@ -733,17 +751,26 @@ static int __devinit busfreq_probe(struct platform_device *pdev)
 		memcpy(mx6sl_wfi_iram_base, mx6sl_wait, SZ_4K);
 		mx6sl_wfi_iram = (void *)mx6sl_wfi_iram_base;
 
-		/* Allocate IRAM for WFI code when system is
-		  *in low freq mode.
-		  */
-		iram_alloc(SZ_4K, &iram_paddr);
-		/* Need to remap the area here since we want the memory region
-			 to be executable. */
-		mx6sl_ddr_freq_base = __arm_ioremap(iram_paddr,
-					SZ_4K, MT_MEMORY_NONCACHED);
-		memcpy(mx6sl_ddr_freq_base, mx6sl_ddr_iram, SZ_4K);
-		mx6sl_ddr_freq_change_iram = (void *)mx6sl_ddr_freq_base;
+		mx6sl_ddr_type = (__raw_readl(MMDC_MDMISC_OFFSET)
+			& MMDC_MDMISC_DDR_TYPE_MASK)
+			>> MMDC_MDMISC_DDR_TYPE_OFFSET;
 
+		if (mx6sl_ddr_type == MX6SL_DDR3) {
+			init_mmdc_settings();
+		} else {
+
+			/* Allocate IRAM for for the DDR freq change code.
+				*/
+			iram_alloc(SZ_4K, &iram_paddr);
+			/*
+			 * Need to remap the area here since we want the
+			 * memory region to be executable.
+			 */
+			mx6sl_ddr_freq_base = __arm_ioremap(iram_paddr,
+						SZ_4K, MT_MEMORY_NONCACHED);
+			memcpy(mx6sl_ddr_freq_base, mx6sl_ddr_iram, SZ_4K);
+			mx6sl_ddr_freq_change_iram = (void *)mx6sl_ddr_freq_base;
+		}
 	}
 
 	return 0;

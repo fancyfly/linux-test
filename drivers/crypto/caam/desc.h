@@ -1631,4 +1631,8 @@ struct sec4_sg_entry {
 #define PDBOPTS_ESPCBC_IPVSN	0x02	/* process IPv6 header */
 #define PDBOPTS_ESPCBC_TUNNEL	0x01	/* tunnel mode next-header byte */
 
+#define ARC4_BLOCK_SIZE       1
+#define ARC4_MAX_KEY_SIZE     256
+#define ARC4_MIN_KEY_SIZE     1
+
 #endif /* DESC_H */

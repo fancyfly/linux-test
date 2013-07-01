@@ -417,14 +417,14 @@ static void sdma_enable_channel(struct sdma_engine *sdma, int channel)
 static int sdma_run_channel0(struct sdma_engine *sdma)
 {
 	int ret;
-	unsigned long timeout = 500;
+	unsigned long timeout = 1000000;
 
 	sdma_enable_channel(sdma, 0);
 
 	while (!(ret = readl_relaxed(sdma->regs + SDMA_H_INTR) & 1)) {
 		if (timeout-- <= 0)
 			break;
-		mdelay(2);
+		udelay(1);
 	}
 
 	if (ret) {

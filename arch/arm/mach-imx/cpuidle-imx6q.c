@@ -21,17 +21,17 @@ static int imx6q_enter_wait(struct cpuidle_device *dev,
 {
 	int cpu = dev->cpu;
 
+	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &cpu);
 	if (enable_wait_mode) {
-		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &cpu);
 
 		imx6q_set_lpm(WAIT_UNCLOCKED);
 		cpu_do_idle();
 		imx6q_set_lpm(WAIT_CLOCKED);
 
-		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &cpu);
 	} else {
 		cpu_do_idle();
 	}
+	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &cpu);
 
 	return index;
 }

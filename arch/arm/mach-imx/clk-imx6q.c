@@ -308,6 +308,7 @@ int __init mx6q_clocks_init(void)
 	struct device_node *np;
 	void __iomem *base;
 	int i, irq;
+	unsigned long freq;
 
 	clk[dummy] = imx_clk_fixed("dummy", 0);
 
@@ -658,6 +659,12 @@ int __init mx6q_clocks_init(void)
 	}
 
 	clk_set_rate(clk[ipg_per], 22000000);
+
+	/* MX6Q MIPI CSI2 ccm_pixel_clk frequency initialization. */
+	clk_set_parent(clk[emi_podf], clk[pll2_pfd2_396m]);
+	freq = clk_get_rate(clk[pll2_pfd2_396m]);
+	clk_set_rate(clk[emi_podf], freq / 2);
+	freq = clk_get_rate(clk[emi_podf]);
 
 	/* ipu clock initialization */
 	clk_set_parent(clk[ldb_di0_sel], clk[pll2_pfd0_352m]);

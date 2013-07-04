@@ -14,7 +14,8 @@
 #include <mach/common.h>
 #include <mach/cpuidle.h>
 
-bool enable_wait_mode = true;
+static atomic_t master = ATOMIC_INIT(0);
+static DEFINE_SPINLOCK(master_lock);
 
 static int imx6q_enter_wait(struct cpuidle_device *dev,
 			    struct cpuidle_driver *drv, int index)
@@ -22,15 +23,24 @@ static int imx6q_enter_wait(struct cpuidle_device *dev,
 	int cpu = dev->cpu;
 
 	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &cpu);
-	if (enable_wait_mode) {
+	if (atomic_inc_return(&master) == num_online_cpus()) {
+		/*
+		 * With this lock, we prevent the other cpu to exit and enter
+		 * this function again and become the master.
+		 */
+		if (!spin_trylock(&master_lock))
+			goto idle;
 
 		imx6q_set_lpm(WAIT_UNCLOCKED);
 		cpu_do_idle();
 		imx6q_set_lpm(WAIT_CLOCKED);
-
-	} else {
-		cpu_do_idle();
+		spin_unlock(&master_lock);
+		goto done;
 	}
+idle:
+	cpu_do_idle();
+done:
+	atomic_dec(&master);
 	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &cpu);
 
 	return index;
@@ -52,6 +62,8 @@ static struct cpuidle_driver imx6q_cpuidle_driver = {
 	.owner = THIS_MODULE,
 	.en_core_tk_irqen = 1,
 	.states = {
+		/* WFI */
+		ARM_CPUIDLE_WFI_STATE,
 		/* WAIT */
 		{
 			.exit_latency = 5,
@@ -62,28 +74,12 @@ static struct cpuidle_driver imx6q_cpuidle_driver = {
 			.desc = "Clock off",
 		},
 	},
-	.state_count = 1,
+	.state_count = 2,
 	.safe_state_index = 0,
 };
 
-static int __init early_enable_wait(char *p)
-{
-	if (memcmp(p, "on", 2) == 0) {
-		enable_wait_mode = true;
-		p += 2;
-	} else if (memcmp(p, "off", 3) == 0) {
-		enable_wait_mode = false;
-		p += 3;
-	}
-
-	return 0;
-}
-early_param("enable_wait_mode", early_enable_wait);
-
 int __init imx6q_cpuidle_init(void)
 {
-	pr_info("WAIT mode is %s!\n", enable_wait_mode ? "enabled" : "disabled");
-
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
 

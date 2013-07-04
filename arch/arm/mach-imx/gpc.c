@@ -246,6 +246,20 @@ static void imx_gpc_irq_mask(struct irq_data *d)
 	writel_relaxed(val, reg);
 }
 
+void imx_gpc_single_irq_mask(int irq, bool enable)
+{
+	void __iomem *reg;
+	u32 val;
+
+	reg = gpc_base + GPC_IMR1 + (irq / 32 - 1) * 4;
+	val = readl_relaxed(reg);
+	if (enable)
+		val |= 1 << (irq % 32);
+	else
+		val &= ~(1 << (irq % 32));
+	writel_relaxed(val, reg);
+}
+
 void __init imx_gpc_init(void)
 {
 	struct device_node *np;

@@ -122,6 +122,18 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 {
 	u32 val = readl_relaxed(ccm_base + CLPCR);
 
+	/*
+	 * CCM state machine has restriction that, everytime enable
+	 * LPM mode, we need to make sure last wakeup from LPM mode
+	 * is a dsm_wakeup_signal, which means the wakeup source
+	 * must be seen by GPC, then CCM will clean its state machine
+	 * and re-sample necessary signal to decide whether it can
+	 * enter LPM mode. Here we use the forever pending irq #125,
+	 * unmask it before we enable LPM mode and mask it after LPM
+	 * is enabled, this flow will make sure CCM state machine in
+	 * reliable state before we enter LPM mode.
+	 */
+	imx_gpc_single_irq_mask(MX6Q_INT_PARITY_CHECK_ERROR, false);
 	val &= ~BM_CLPCR_LPM;
 	switch (mode) {
 	case WAIT_CLOCKED:
@@ -150,10 +162,12 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 		imx6q_set_wb_count();
 		break;
 	default:
+		imx_gpc_single_irq_mask(MX6Q_INT_PARITY_CHECK_ERROR, true);
 		return -EINVAL;
 	}
 
 	writel_relaxed(val, ccm_base + CLPCR);
+	imx_gpc_single_irq_mask(MX6Q_INT_PARITY_CHECK_ERROR, true);
 
 	return 0;
 }

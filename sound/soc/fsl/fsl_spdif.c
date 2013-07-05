@@ -1281,7 +1281,7 @@ static int fsl_spdif_dai_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to get clock: %d\n", ret);
 		goto failed_clk;
 	}
-	clk_prepare_enable(plat_data->spdif_clk);
+	clk_prepare(plat_data->spdif_clk);
 
 	atomic_set(&spdif_priv->dpll_locked, 0);
 
@@ -1354,6 +1354,7 @@ static int __devexit fsl_spdif_dai_remove(struct platform_device *pdev)
 	if (!IS_ERR(spdif_priv->imx_pcm_pdev))
 		platform_device_unregister(spdif_priv->imx_pcm_pdev);
 
+	clk_unprepare(spdif_priv->plat_data->spdif_clk);
 	platform_set_drvdata(pdev, NULL);
 	kfree(spdif_priv);
 

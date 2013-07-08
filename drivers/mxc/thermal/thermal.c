@@ -909,8 +909,8 @@ void thermal_device_update(struct anatop_thermal *tz)
 	long temp, trip_temp;
 	int ret;
 	enum thermal_trip_type trip_type;
-	mutex_lock(&tz->lock);
 
+	temp = 0;
 	if (anatop_thermal_get_temp(tz, &temp)) {
 		/* get_temp failed - retry it later */
 		printk(KERN_WARNING PREFIX "failed to read out thermal zone "
@@ -955,7 +955,6 @@ void thermal_device_update(struct anatop_thermal *tz)
 		thermal_device_set_polling(tz, tz->polling_delay);
 	else
 		thermal_device_set_polling(tz, 0);
-	mutex_unlock(&tz->lock);
 }
 
 static void anatop_thermal_work(struct work_struct *work)
@@ -969,18 +968,10 @@ static void anatop_thermal_work(struct work_struct *work)
 static ssize_t
 temp_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	long temperature;
-	int ret;
 	struct anatop_thermal *tz;
+
 	tz = dev_get_drvdata(dev);
-	mutex_lock(&tz->lock);
-	ret = anatop_thermal_get_temp(tz, &temperature);
-	mutex_unlock(&tz->lock);
-	if (ret)
-		pr_info("thermal temperature read fail!");
-	if (ret)
-		return ret;
-	return sprintf(buf, "%ld\n", temperature);
+	return sprintf(buf, "%ld\n", tz->temperature);
 }
 static DEVICE_ATTR(temp, S_IRUSR | S_IWUSR,
 	temp_show, NULL);

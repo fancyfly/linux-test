@@ -58,6 +58,12 @@
 					status = "okay";
 				};
 
+				asrc_p2p: asrc-p2p {
+					compatible = "fsl,imx6q-asrc-p2p";
+					output-rate  = <44100>;
+					output-width = <24>;
+				};
+
 				ecspi@02008000 { /* eCSPI1 */
 					fsl,spi-num-chipselects = <1>;
 					cs-gpios = <&gpio4 9 0>;
@@ -532,6 +538,7 @@
 			     "fsl,imx-audio-wm8962";
 		model = "wm8962-audio";
 		ssi-controller = <&ssi2>;
+		asrc-controller = <&asrc_p2p>;
 		audio-codec = <&codec>;
 
 		audio-routing =
@@ -542,7 +549,9 @@
 			"MICBIAS", "AMIC",
 			"IN3R", "MICBIAS",
 			"DMIC", "MICBIAS",
-			"DMICDAT", "DMIC";
+			"DMICDAT", "DMIC",
+			"ssi-playback", "asrc-playback",
+			"Playback", "ssi-playback";
 		mux-int-port = <2>;
 		mux-ext-port = <3>;
 		hp-det-gpios = <&gpio7 8 1>;	/*active low*/

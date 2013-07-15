@@ -25,13 +25,14 @@
 
 #include "../codecs/wm8962.h"
 #include "imx-audmux.h"
+#include "fsl_asrc.h"
 
 #define IMX_WM8962_MCLK_RATE 24000000
 
 #define DAI_NAME_SIZE	32
 
 struct imx_wm8962_data {
-	struct snd_soc_dai_link dai;
+	struct snd_soc_dai_link dai[3];
 	struct snd_soc_card card;
 	char codec_dai_name[DAI_NAME_SIZE];
 	char platform_name[DAI_NAME_SIZE];
@@ -39,6 +40,7 @@ struct imx_wm8962_data {
 };
 
 struct imx_priv {
+	int init;
 	int hp_gpio;
 	int hp_active_low;
 	int hp_status;
@@ -251,7 +253,11 @@ static int imx_wm8962_dai_init(struct snd_soc_pcm_runtime *rtd)
 	struct platform_device *pdev = priv->pdev;
 	int ret;
 
+	if (priv->init)
+		return 0;
+
 	gcodec = rtd->codec;
+	priv->init = 1;
 
 	if (priv->hp_gpio != -1) {
 		imx_hp_jack_gpio.gpio = priv->hp_gpio;
@@ -345,7 +351,29 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	int ret = 0;
 	u32 dai_format;
 	unsigned int pll_out;
+	struct snd_soc_dpcm *dpcm;
 
+	/*
+	 * currently we only have one fe, asrc, if someday we have multi fe,
+	 * then we must think about to distinct them.
+	 */
+	list_for_each_entry(dpcm, &rtd->dpcm[substream->stream].fe_clients, list_fe) {
+		if (dpcm->be == rtd) {
+			struct snd_soc_pcm_runtime *fe = dpcm->fe;
+			struct snd_soc_dai *dai = fe->cpu_dai;
+			struct imx_asrc_p2p *asrc_p2p;
+			asrc_p2p = snd_soc_dai_get_drvdata(dai);
+			sample_rate     = asrc_p2p->output_rate;
+			if (asrc_p2p->output_width == 16)
+				sample_format = SNDRV_PCM_FORMAT_S16_LE;
+			else
+				sample_format = SNDRV_PCM_FORMAT_S32_LE;
+			/* ASRC need to use bit clock, so if use the S24_LE,
+			 * the clock is not correct.
+			 */
+			break;
+		}
+	}
 	/*
 	 * WM8962 doesn't support two substreams in different sample rates or
 	 * sample formats. So check the two parameters of two substreams' if
@@ -466,6 +494,8 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 	int int_port, ext_port;
 	char platform_name[32];
 	int ret;
+	struct platform_device *asrc_pdev = NULL;
+	struct device_node *asrc_np;
 
 	priv->pdev = pdev;
 
@@ -525,6 +555,27 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+	asrc_np = of_parse_phandle(pdev->dev.of_node, "asrc-controller", 0);
+	if (asrc_np) {
+		asrc_pdev = of_find_device_by_node(asrc_np);
+		if (asrc_pdev) {
+			struct imx_asrc_p2p *asrc_p2p;
+			asrc_p2p = platform_get_drvdata(asrc_pdev);
+			switch (int_port) {
+			case 0:
+				asrc_p2p->per_dev = SSI1;
+				break;
+			case 1:
+				asrc_p2p->per_dev = SSI2;
+				break;
+			case 6:
+				asrc_p2p->per_dev = SSI3;
+				break;
+			default:
+				asrc_p2p->per_dev = UNKNOWN;
+			}
+		}
+	}
 	priv->hp_gpio = of_get_named_gpio_flags(np, "hp-det-gpios", 0,
 				(enum of_gpio_flags *)&priv->hp_active_low);
 	priv->amic_gpio = of_get_named_gpio_flags(np, "mic-det-gpios", 0,
@@ -541,18 +592,41 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 
 	data->clk_frequency = IMX_WM8962_MCLK_RATE;
 
-	data->dai.name = "HiFi";
-	data->dai.stream_name = "HiFi";
-	data->dai.codec_dai_name = "wm8962";
-	data->dai.codec_of_node = codec_np;
-	data->dai.cpu_dai_name = dev_name(&ssi_pdev->dev);
-
 	sprintf(platform_name, "imx-pcm-audio.%d", of_alias_get_id(ssi_np, "audio"));
-	data->dai.platform_name = platform_name;
-	data->dai.init = &imx_wm8962_dai_init;
-	data->dai.ops = &imx_hifi_ops;
-	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+
+	data->dai[0].name = "HiFi";
+	data->dai[0].stream_name = "HiFi";
+	data->dai[0].codec_dai_name = "wm8962";
+	data->dai[0].codec_of_node = codec_np;
+	data->dai[0].cpu_dai_name = dev_name(&ssi_pdev->dev);
+	data->dai[0].platform_name = platform_name;
+	data->dai[0].init = &imx_wm8962_dai_init;
+	data->dai[0].ops = &imx_hifi_ops;
+	data->dai[0].dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
+	data->card.num_links = 1;
+
+	if (asrc_pdev) {
+		data->dai[1].name = "HiFi-ASRC-FE";
+		data->dai[1].stream_name = "HiFi-ASRC-FE";
+		data->dai[1].codec_name = "snd-soc-dummy";
+		data->dai[1].codec_dai_name = "snd-soc-dummy-dai";
+		data->dai[1].cpu_dai_name = dev_name(&asrc_pdev->dev);
+		data->dai[1].platform_name = platform_name;
+		data->dai[1].init = &imx_wm8962_dai_init;
+		data->dai[1].dynamic = 1;
+
+		data->dai[2].name = "HiFi-ASRC-BE";
+		data->dai[2].stream_name = "HiFi-ASRC-BE";
+		data->dai[2].codec_dai_name = "wm8962";
+		data->dai[2].codec_of_node = codec_np;
+		data->dai[2].cpu_dai_name = dev_name(&ssi_pdev->dev);
+		data->dai[2].platform_name = "snd-soc-dummy";
+		data->dai[2].init = &imx_wm8962_dai_init;
+		data->dai[2].ops = &imx_hifi_ops;
+		data->dai[2].no_pcm = 1;
+		data->card.num_links = 3;
+	}
 
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
@@ -561,8 +635,7 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 	ret = snd_soc_of_parse_audio_routing(&data->card, "audio-routing");
 	if (ret)
 		goto fail;
-	data->card.num_links = 1;
-	data->card.dai_link = &data->dai;
+	data->card.dai_link = data->dai;
 	data->card.dapm_widgets = imx_wm8962_dapm_widgets;
 	data->card.num_dapm_widgets = ARRAY_SIZE(imx_wm8962_dapm_widgets);
 

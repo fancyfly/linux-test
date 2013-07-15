@@ -674,8 +674,8 @@ static int imx_esai_probe(struct platform_device *pdev)
 	else
 		fifo_depth = 32;
 
-	esai->pcm_params.dma_params_tx.burstsize = fifo_depth;
-	esai->pcm_params.dma_params_rx.burstsize = fifo_depth;
+	esai->pcm_params.dma_params_tx.burstsize = 16;
+	esai->pcm_params.dma_params_rx.burstsize = 16;
 
 	esai->pcm_params.dma_params_tx.dma_addr = res->start + ESAI_ETDR;
 	esai->pcm_params.dma_params_rx.dma_addr = res->start + ESAI_ERDR;

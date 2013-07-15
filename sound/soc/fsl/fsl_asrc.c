@@ -44,7 +44,7 @@ static int asrc_p2p_request_channel(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai     = rtd->cpu_dai;
 	struct imx_asrc_p2p *asrc_p2p   = snd_soc_dai_get_drvdata(cpu_dai);
-	enum dma_slave_buswidth buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	enum dma_slave_buswidth buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	struct imx_pcm_dma_params *dma_params_be = NULL;
 	struct imx_pcm_dma_params *dma_params_fe = NULL;
 	struct dma_slave_config slave_config;
@@ -78,6 +78,11 @@ static int asrc_p2p_request_channel(struct snd_pcm_substream *substream)
 	else
 		dma_params_fe = &asrc_p2p->dma_params_rx;
 
+	if (asrc_p2p->output_width == 16)
+		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
+	else
+		buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
+
 	/* reconfig memory to FIFO dma request */
 	dma_params_fe->dma_addr =
 		asrc_p2p->asrc_ops.asrc_p2p_per_addr(
@@ -94,10 +99,10 @@ static int asrc_p2p_request_channel(struct snd_pcm_substream *substream)
 	/* config p2p dma channel */
 	asrc_p2p->asrc_p2p_dma_data.peripheral_type = IMX_DMATYPE_ASRC;
 	asrc_p2p->asrc_p2p_dma_data.priority        = DMA_PRIO_HIGH;
-	asrc_p2p->asrc_p2p_dma_data.dma_request     = asrc_p2p->asrc_ops.
+	asrc_p2p->asrc_p2p_dma_data.dma_request_p2p     = asrc_p2p->asrc_ops.
 			asrc_p2p_get_dma_request(asrc_p2p->asrc_index, 0);
 	/* need to get target device's dma dma_addr, burstsize */
-	asrc_p2p->asrc_p2p_dma_data.dma_request_p2p  = dma_params_be->dma;
+	asrc_p2p->asrc_p2p_dma_data.dma_request  = dma_params_be->dma;
 
 	/* Request channel */
 	asrc_p2p->asrc_p2p_dma_chan =
@@ -109,14 +114,18 @@ static int asrc_p2p_request_channel(struct snd_pcm_substream *substream)
 	}
 	chan = asrc_p2p->asrc_p2p_dma_chan;
 
+	/*
+	 * Buswidth is not used in the sdma for p2p. Here we set the maxburst fix to
+	 * twice of dma_params's burstsize.
+	 */
 	slave_config.direction      = DMA_DEV_TO_DEV;
 	slave_config.src_addr       = asrc_p2p->asrc_ops.
 				asrc_p2p_per_addr(asrc_p2p->asrc_index, 0);
 	slave_config.src_addr_width = buswidth;
-	slave_config.src_maxburst   = dma_params_be->burstsize;
+	slave_config.src_maxburst   = dma_params_fe->burstsize * 2;
 	slave_config.dst_addr       = dma_params_be->dma_addr;
 	slave_config.dst_addr_width = buswidth;
-	slave_config.dst_maxburst   = dma_params_be->burstsize;
+	slave_config.dst_maxburst   = dma_params_be->burstsize * 2;
 
 	ret = dmaengine_slave_config(asrc_p2p->asrc_p2p_dma_chan,
 							&slave_config);
@@ -210,7 +219,24 @@ static int config_asrc(struct snd_pcm_substream *substream,
 	config.input_sample_rate  = rate;
 	config.output_sample_rate = asrc_p2p->output_rate;
 	config.inclk              = INCLK_NONE;
-	config.outclk             = OUTCLK_ESAI_TX;
+
+	switch (asrc_p2p->per_dev) {
+	case SSI1:
+		config.outclk    = OUTCLK_SSI1_TX;
+		break;
+	case SSI2:
+		config.outclk    = OUTCLK_SSI2_TX;
+		break;
+	case SSI3:
+		config.outclk    = OUTCLK_SSI3_TX;
+		break;
+	case ESAI:
+		config.outclk    = OUTCLK_ESAI_TX;
+		break;
+	default:
+		pr_err("peripheral device is not correct\n");
+		return -EINVAL;
+	}
 
 	ret = asrc_p2p->asrc_ops.asrc_p2p_config_pair(&config);
 	if (ret < 0) {
@@ -386,6 +412,11 @@ static int __devinit imx_asrc_p2p_probe(struct platform_device *pdev)
 	iprop_width = of_get_property(np, "output-width", NULL);
 	if (iprop_width)
 		asrc_p2p->output_width = be32_to_cpup(iprop_width);
+
+	if (asrc_p2p->output_width != 16 && asrc_p2p->output_width != 24) {
+		dev_err(&pdev->dev, "output_width is not acceptable\n");
+		return -EINVAL;
+	}
 
 	asrc_p2p->dma_params_tx.peripheral_type = IMX_DMATYPE_ASRC;
 	asrc_p2p->dma_params_rx.peripheral_type = IMX_DMATYPE_ASRC;

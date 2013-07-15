@@ -13,9 +13,18 @@
 #include <linux/mxc_asrc.h>
 #include "imx-pcm.h"
 
+enum peripheral_device_type {
+	UNKNOWN,
+	SSI1,
+	SSI2,
+	SSI3,
+	ESAI,
+};
+
 struct imx_asrc_p2p {
 	int output_rate;
 	int output_width;
+	enum peripheral_device_type per_dev;
 	struct asrc_p2p_ops asrc_ops;
 
 	struct imx_pcm_dma_params dma_params_rx;

@@ -292,9 +292,14 @@ static int __devinit imx_3stack_cs42888_probe(struct platform_device *pdev)
 	}
 
 	asrc_np = of_parse_phandle(pdev->dev.of_node, "asrc-controller", 0);
-	if (asrc_np)
+	if (asrc_np) {
 		asrc_pdev = of_find_device_by_node(asrc_np);
-
+		if (asrc_pdev) {
+			struct imx_asrc_p2p *asrc_p2p;
+			asrc_p2p = platform_get_drvdata(asrc_pdev);
+			asrc_p2p->per_dev = ESAI;
+		}
+	}
 	esai_pdev = of_find_device_by_node(esai_np);
 	if (!esai_pdev) {
 		dev_err(&pdev->dev, "failed to find ESAI platform device\n");

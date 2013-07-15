@@ -37,6 +37,7 @@
 #include <trace/events/asoc.h>
 
 #include "wm8962.h"
+#include "../fsl/fsl_asrc.h"
 
 #define WM8962_NUM_SUPPLIES 8
 static const char *wm8962_supply_names[WM8962_NUM_SUPPLIES] = {
@@ -2541,17 +2542,49 @@ static int wm8962_hw_params(struct snd_pcm_substream *substream,
 			    struct snd_pcm_hw_params *params,
 			    struct snd_soc_dai *dai)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = dai->codec;
 	struct wm8962_priv *wm8962 = snd_soc_codec_get_drvdata(codec);
 	int i;
 	int aif0 = 0;
 	int adctl3 = 0;
+	struct snd_soc_dpcm *dpcm;
+	struct snd_pcm_hw_params params_asrc = *params;
 
-	wm8962->bclk = snd_soc_params_to_bclk(params);
-	if (params_channels(params) == 1)
+	/*
+	 * TOTO: currently we only have one fe, asrc, if someday we have multi fe,
+	 * then we must think about to distinct them.
+	 */
+	list_for_each_entry(dpcm, &rtd->dpcm[substream->stream].fe_clients, list_fe) {
+		if (dpcm->be == rtd) {
+			struct snd_soc_pcm_runtime *fe = dpcm->fe;
+			struct snd_soc_dai *dai = fe->cpu_dai;
+			struct imx_asrc_p2p *asrc_p2p;
+			asrc_p2p = snd_soc_dai_get_drvdata(dai);
+			hw_param_interval(&params_asrc, SNDRV_PCM_HW_PARAM_RATE)->min =
+									asrc_p2p->output_rate;
+			hw_param_interval(&params_asrc, SNDRV_PCM_HW_PARAM_RATE)->max =
+									asrc_p2p->output_rate;
+			snd_mask_none(hw_param_mask(&params_asrc, SNDRV_PCM_HW_PARAM_FORMAT));
+			if (asrc_p2p->output_width == 16) {
+				snd_mask_set(hw_param_mask(&params_asrc, SNDRV_PCM_HW_PARAM_FORMAT),
+									SNDRV_PCM_FORMAT_S16_LE);
+			} else {
+				/* ASRC need to use bit clock, so if use the S24_LE,
+				 * the clock is not correct.
+				 */
+				snd_mask_set(hw_param_mask(&params_asrc, SNDRV_PCM_HW_PARAM_FORMAT),
+									SNDRV_PCM_FORMAT_S32_LE);
+			}
+			break;
+		}
+	}
+
+	wm8962->bclk = snd_soc_params_to_bclk(&params_asrc);
+	if (params_channels(&params_asrc) == 1)
 		wm8962->bclk *= 2;
 
-	wm8962->lrclk = params_rate(params);
+	wm8962->lrclk = params_rate(&params_asrc);
 
 	for (i = 0; i < ARRAY_SIZE(sr_vals); i++) {
 		if (sr_vals[i].rate == wm8962->lrclk) {
@@ -2567,7 +2600,7 @@ static int wm8962_hw_params(struct snd_pcm_substream *substream,
 	if (wm8962->lrclk % 8000 == 0)
 		adctl3 |= WM8962_SAMPLE_RATE_INT_MODE;
 
-	switch (params_format(params)) {
+	switch (params_format(&params_asrc)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
 		break;
 	case SNDRV_PCM_FORMAT_S20_3LE:

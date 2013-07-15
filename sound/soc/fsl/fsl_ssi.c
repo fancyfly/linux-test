@@ -33,6 +33,7 @@
 
 #include "fsl_ssi.h"
 #include "imx-pcm.h"
+#include "fsl_asrc.h"
 
 #ifdef PPC
 #define read_ssi(addr)			 in_be32(addr)
@@ -149,6 +150,7 @@ struct fsl_ssi_private {
 
 	bool new_binding;
 	bool ssi_on_imx;
+	bool dual_fifo;
 	struct clk *clk;
 	struct platform_device *imx_pcm_pdev;
 	struct imx_pcm_params pcm_params;
@@ -448,6 +450,7 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *hw_params, struct snd_soc_dai *cpu_dai)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
 	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
 	unsigned int sample_size =
@@ -459,8 +462,39 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_substream *other_stream;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	snd_pcm_format_t current_fmt;
+	struct snd_soc_dpcm *dpcm;
+	struct imx_asrc_p2p *asrc_p2p = NULL;
+
+	/*
+	 * currently we only have one fe, asrc, if someday we have multi fe,
+	 * then we must think about to distinct them.
+	 */
+	list_for_each_entry(dpcm, &rtd->dpcm[substream->stream].fe_clients, list_fe) {
+		if (dpcm->be == rtd) {
+			struct snd_soc_pcm_runtime *fe = dpcm->fe;
+			struct snd_soc_dai *dai = fe->cpu_dai;
+			asrc_p2p = snd_soc_dai_get_drvdata(dai);
+			break;
+		}
+	}
 
 	current_fmt = params_format(hw_params);
+
+	/*
+	 * In default enable the dual FIFO. but p2p sdma script does not support dual
+	 * FIFO, so disable it when asrc to ssi.
+	 */
+	ssi_private->dual_fifo = true;
+	if (asrc_p2p) {
+		ssi_private->dual_fifo = false;
+		if (asrc_p2p->output_width == 16) {
+			wl = CCSR_SSI_SxCCR_WL(16);
+			current_fmt = SNDRV_PCM_FORMAT_S16_LE;
+		} else {
+			wl = CCSR_SSI_SxCCR_WL(24);
+			current_fmt = SNDRV_PCM_FORMAT_S24_LE;
+		}
+	}
 	runtime->format = current_fmt;
 	runtime->sample_bits = snd_pcm_format_physical_width(current_fmt);
 
@@ -527,6 +561,20 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 		write_ssi_mask(&ssi->stccr, CCSR_SSI_SxCCR_WL_MASK, wl);
 	else
 		write_ssi_mask(&ssi->srccr, CCSR_SSI_SxCCR_WL_MASK, wl);
+
+	/*
+	 * Dual-FIFO support
+	 * p2p sdma script does not support dual FIFO.
+	 */
+	if (ssi_private->dual_fifo) {
+		write_ssi_mask(&ssi->srcr, 0, CCSR_SSI_SRCR_RFEN1);
+		write_ssi_mask(&ssi->stcr, 0, CCSR_SSI_STCR_TFEN1);
+		write_ssi_mask(&ssi->scr, 0, CCSR_SSI_SCR_TCH_EN);
+	} else {
+		write_ssi_mask(&ssi->srcr, CCSR_SSI_SRCR_RFEN1, 0);
+		write_ssi_mask(&ssi->stcr, CCSR_SSI_STCR_TFEN1, 0);
+		write_ssi_mask(&ssi->scr, CCSR_SSI_SCR_TCH_EN, 0);
+	}
 
 	return 0;
 }
@@ -679,10 +727,6 @@ static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 		scr |= CCSR_SSI_SCR_NET;
 	if (ssi_private->flags & IMX_SSI_SYN)
 		scr |= CCSR_SSI_SCR_SYN;
-
-	/* Dual-FIFO support */
-	strcr |= CCSR_SSI_STCR_TFEN1;
-	scr |= CCSR_SSI_SCR_TCH_EN;
 
 	write_ssi(strcr, &ssi->stcr);
 	if (i2s_master)
@@ -878,12 +922,14 @@ static const struct snd_soc_dai_ops fsl_ssi_dai_ops = {
 static struct snd_soc_dai_driver fsl_ssi_dai_template = {
 	.playback = {
 		/* The SSI does not support monaural audio. */
+		.stream_name = "ssi-playback",
 		.channels_min = 2,
 		.channels_max = 2,
 		.rates = FSLSSI_I2S_RATES,
 		.formats = FSLSSI_I2S_FORMATS,
 	},
 	.capture = {
+		.stream_name = "ssi-capture",
 		.channels_min = 2,
 		.channels_max = 2,
 		.rates = FSLSSI_I2S_RATES,

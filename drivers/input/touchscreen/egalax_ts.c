@@ -137,7 +137,6 @@ static irqreturn_t egalax_ts_interrupt(int irq, void *dev_id)
 	}
 
 	if (down) {
-		/* should also report old pointers */
 		events[id].valid = valid;
 		events[id].status = down;
 		events[id].x = x;
@@ -148,24 +147,6 @@ static irqreturn_t egalax_ts_interrupt(int irq, void *dev_id)
 		input_report_abs(input_dev, ABS_Y, y);
 		input_event(ts->input_dev, EV_KEY, BTN_TOUCH, 1);
 		input_report_abs(input_dev, ABS_PRESSURE, 1);
-#else
-		for (i = 0; i < MAX_SUPPORT_POINTS; i++) {
-			if (!events[i].valid)
-				continue;
-			dev_dbg(&client->dev, "report id:%d valid:%d x:%d y:%d",
-				i, valid, x, y);
-			mdelay(5);
-
-			input_report_abs(input_dev,
-					 ABS_MT_TRACKING_ID, i);
-			input_report_abs(input_dev,
-					 ABS_MT_TOUCH_MAJOR, 1);
-			input_report_abs(input_dev,
-					 ABS_MT_POSITION_X, events[i].x);
-			input_report_abs(input_dev,
-					 ABS_MT_POSITION_Y, events[i].y);
-			input_mt_sync(input_dev);
-		}
 #endif
 	} else {
 		dev_dbg(&client->dev, "release id:%d\n", id);
@@ -181,6 +162,24 @@ static irqreturn_t egalax_ts_interrupt(int irq, void *dev_id)
 #endif
 	}
 
+#ifndef CONFIG_TOUCHSCREEN_EGALAX_SINGLE_TOUCH
+	/* report all pointers */
+	for (i = 0; i < MAX_SUPPORT_POINTS; i++) {
+		if (!events[i].valid)
+			continue;
+		dev_dbg(&client->dev, "report id:%d valid:%d x:%d y:%d",
+			i, valid, x, y);
+			input_report_abs(input_dev,
+				 ABS_MT_TRACKING_ID, i);
+		input_report_abs(input_dev,
+				 ABS_MT_TOUCH_MAJOR, 1);
+		input_report_abs(input_dev,
+				 ABS_MT_POSITION_X, events[i].x);
+		input_report_abs(input_dev,
+				 ABS_MT_POSITION_Y, events[i].y);
+		input_mt_sync(input_dev);
+	}
+#endif
 	input_sync(input_dev);
 
 	return IRQ_HANDLED;

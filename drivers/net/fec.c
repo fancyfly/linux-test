@@ -19,7 +19,7 @@
  * Copyright (c) 2004-2006 Macq Electronique SA.
  *
  * Support for FEC IEEE 1588.
- * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013 Freescale Semiconductor, Inc.
  */
 
 #include <linux/module.h>
@@ -101,9 +101,7 @@
 #define TX_RING_SIZE		16	/* Must be power of two */
 #define TX_RING_MOD_MASK	15	/*   for this to work */
 
-#if (((RX_RING_SIZE + TX_RING_SIZE) * 8) > PAGE_SIZE)
-#error "FEC: descriptor ring size constants too large"
-#endif
+#define BUFDES_SIZE ((RX_RING_SIZE + TX_RING_SIZE) * sizeof(struct bufdesc))
 
 /* Interrupt events/masks. */
 #define FEC_ENET_HBERR	((uint)0x80000000)	/* Heartbeat error */
@@ -1214,7 +1212,7 @@ static int fec_enet_init(struct net_device *dev, int index)
 	int i;
 
 	/* Allocate memory for buffer descriptors. */
-	cbd_base = dma_alloc_coherent(NULL, PAGE_SIZE, &fep->bd_dma,
+	cbd_base = dma_alloc_coherent(NULL, BUFDES_SIZE, &fep->bd_dma,
 			GFP_KERNEL);
 	if (!cbd_base) {
 		printk("FEC: allocate descriptor memory failed?\n");

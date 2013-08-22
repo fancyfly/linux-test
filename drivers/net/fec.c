@@ -1022,6 +1022,7 @@ static int
 fec_enet_open(struct net_device *dev)
 {
 	struct fec_enet_private *fep = netdev_priv(dev);
+	struct fec_platform_data *pdata = fep->pdev->dev.platform_data;
 	int ret;
 
 	/* I should reset the ring buffers here, but I don't yet know
@@ -1041,6 +1042,10 @@ fec_enet_open(struct net_device *dev)
 	phy_start(fep->phy_dev);
 	fec_restart(dev, fep->phy_dev->duplex);
 	fep->opened = 1;
+#ifdef CONFIG_ARCH_MXS
+	if (pdata && pdata->init)
+		ret = pdata->init();
+#endif
 	return 0;
 }
 
@@ -1283,11 +1288,6 @@ fec_restart(struct net_device *dev, int duplex)
 	u32 temp_mac[2];
 	unsigned long reg;
 	int val;
-
-#ifdef CONFIG_ARCH_MXS
-	if (pdata && pdata->init)
-		ret = pdata->init();
-#endif
 
 	/* Whack a reset.  We should wait for this. */
 	writel(1, fep->hwp + FEC_ECNTRL);

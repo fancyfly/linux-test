@@ -443,7 +443,7 @@ void fec_ptp_store_rxstamp(struct fec_ptp_private *priv,
 		tmp_rx_time.ts.nsec = bdp->ts;
 
 		/* insert timestamp in circular buffer */
-		fec_ptp_insert(&(fpp->rx_timestamps), &tmp_rx_time);
+		fec_ptp_insert(&(priv->rx_timestamps), &tmp_rx_time);
 	}
 }
 

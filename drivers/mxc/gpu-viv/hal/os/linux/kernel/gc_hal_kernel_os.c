@@ -775,16 +775,21 @@ _AllocateIntegerId(
     int result;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
-	spin_lock(&Database->lock);
-	/* Try to get a id greater than 0. */
-	result = idr_alloc(&Database->idr, KernelPointer, 1, 0,
-			   GFP_KERNEL | gcdNOWARN);
-	spin_unlock(&Database->lock);
+    idr_preload(GFP_KERNEL | gcdNOWARN);
 
-	if (result < 0)
-	    return gcvSTATUS_OUT_OF_RESOURCES;
+    spin_lock(&Database->lock);
 
-	*Id = result;
+    result = idr_alloc(&Database->idr, KernelPointer, 1, 0, GFP_ATOMIC);
+    spin_unlock(&Database->lock);
+
+    idr_preload_end();
+
+    if (result < 0)
+    {
+        return gcvSTATUS_OUT_OF_RESOURCES;
+    }
+
+    *Id = result;
 #else
 again:
     if (idr_pre_get(&Database->idr, GFP_KERNEL | gcdNOWARN) == 0)

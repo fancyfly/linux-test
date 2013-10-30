@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2012-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -219,6 +219,7 @@ static int __devinit mxs_evk_sgtl5000_probe(struct platform_device *pdev)
 	saif_select = (struct mxs_saif *)mxs_evk_dai.cpu_dai->private_data;
 	saif_select->stream_mapping = PLAYBACK_SAIF0_CAPTURE_SAIF1;
 	saif_select->saif_mclk = plat->saif_mclock;
+	saif_select->saif_mclk1 = plat->saif_mclock1;
 	saif_select->saif_clk = SAIF0;
 	return 0;
 err_plat_init:

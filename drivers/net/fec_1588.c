@@ -488,25 +488,9 @@ static void fec_handle_ptpdrift(struct ptp_set_comp *comp,
 		ptc->corr_inc = (u32)(ndrift / FEC_ATIME_40MHZ);
 		ptc->corr_period = 1;
 		return;
-	} else if ((ndrift < FEC_ATIME_40MHZ) && (comp->o_ops == 0)) {
+	} else if (ndrift < FEC_ATIME_40MHZ) {
 		tmp_winner = 0xFFFFFFFF;
-		for (i = 1; i < 25; i++) {
-			tmp_current = (FEC_ATIME_40MHZ * i) % ndrift;
-			if (tmp_current == 0) {
-				ptc->corr_inc = i;
-				ptc->corr_period = (u32)((FEC_ATIME_40MHZ * i)
-								/ ndrift);
-				break;
-			} else if (tmp_current < tmp_winner) {
-				ptc->corr_inc = i;
-				ptc->corr_period = (u32)((FEC_ATIME_40MHZ * i)
-								/ ndrift);
-				tmp_winner = tmp_current;
-			}
-		}
-	} else if ((ndrift < FEC_ATIME_40MHZ) && (comp->o_ops == 1)) {
-		tmp_winner = 0xFFFFFFFF;
-		for (i = 1; i < 100; i++) {
+		for (i = 1; i < FEC_T_INC_40MHZ; i++) {
 			tmp_current = (FEC_ATIME_40MHZ * i) % ndrift;
 			if (tmp_current == 0) {
 				ptc->corr_inc = i;
@@ -521,7 +505,6 @@ static void fec_handle_ptpdrift(struct ptp_set_comp *comp,
 			}
 		}
 	}
-
 }
 
 static void fec_set_drift(struct fec_ptp_private *priv,

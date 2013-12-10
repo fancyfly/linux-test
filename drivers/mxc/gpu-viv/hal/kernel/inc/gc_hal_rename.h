@@ -209,9 +209,6 @@
 #define gckMMU_Destroy                  gcmHAL2D(gckMMU_Destroy)
 #define gckMMU_AllocatePages            gcmHAL2D(gckMMU_AllocatePages)
 #define gckMMU_FreePages                gcmHAL2D(gckMMU_FreePages)
-#define gckMMU_InsertNode               gcmHAL2D(gckMMU_InsertNode)
-#define gckMMU_RemoveNode               gcmHAL2D(gckMMU_RemoveNode)
-#define gckMMU_FreeHandleMemory         gcmHAL2D(gckMMU_FreeHandleMemory)
 #define gckMMU_Test                     gcmHAL2D(gckMMU_Test)
 #define gckHARDWARE_QueryProfileRegisters     gcmHAL2D(gckHARDWARE_QueryProfileRegisters)
 

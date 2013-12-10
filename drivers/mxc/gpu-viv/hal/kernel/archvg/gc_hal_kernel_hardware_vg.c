@@ -312,7 +312,7 @@ gckVGHARDWARE_Construct(
 
         hardware->powerOffTime          = 0;
 #if gcdPOWEROFF_TIMEOUT
-        hardware->powerOffTimeout = gcdPOWEROFF_TIMEOUT;
+        hardware->powerOffTimeout       = gcdPOWEROFF_TIMEOUT;
 
         gcmkVERIFY_OK(gckOS_CreateTimer(Os,
                                         _VGPowerTimerFunction,
@@ -352,14 +352,16 @@ gckVGHARDWARE_Construct(
     while (gcvFALSE);
 
 #if gcdPOWEROFF_TIMEOUT
-        if (hardware->powerOffTimer != gcvNULL)
-        {
-            gcmkVERIFY_OK(gckOS_StopTimer(Os, hardware->powerOffTimer));
-            gcmkVERIFY_OK(gckOS_DestroyTimer(Os, hardware->powerOffTimer));
-        }
+    if (hardware->powerOffTimer != gcvNULL)
+    {
+        gcmkVERIFY_OK(gckOS_StopTimer(Os, hardware->powerOffTimer));
+        gcmkVERIFY_OK(gckOS_DestroyTimer(Os, hardware->powerOffTimer));
+    }
 #endif
 
-    if (hardware->pageTableDirty != gcvNULL)
+    gcmkVERIFY_OK(gckOS_SetGPUPower(Os, gcvCORE_VG, gcvFALSE, gcvFALSE));
+
+    if (hardware != gcvNULL && hardware->pageTableDirty != gcvNULL)
     {
         gcmkVERIFY_OK(gckOS_AtomDestroy(Os, hardware->pageTableDirty));
     }
@@ -368,8 +370,6 @@ gckVGHARDWARE_Construct(
     {
         gcmkVERIFY_OK(gckOS_Free(Os, hardware));
     }
-
-    gcmkVERIFY_OK(gckOS_SetGPUPower(Os, gcvCORE_VG, gcvFALSE, gcvFALSE));
 
     gcmkFOOTER();
     /* Return the status. */
@@ -1436,7 +1436,7 @@ static gceSTATUS _CommandStall(
         gcmkERR_BREAK(gckOS_WaitSignal(
             command->os,
             command->powerStallSignal,
-            gcdGPU_TIMEOUT));
+            command->kernel->kernel->timeOut));
 
 
     }
@@ -1800,17 +1800,10 @@ gckVGHARDWARE_SetPowerManagementState(
         acquired = gcvTRUE;
     }
 
-    if (flag & gcvPOWER_FLAG_STOP)
-    {
-    }
 
     /* Get time until stopped. */
     gcmkPROFILE_QUERY(time, stopTime);
 
-    /* Only process this when hardware is enabled. */
-    if (Hardware->clockState && Hardware->powerState)
-    {
-    }
 
     if (flag & gcvPOWER_FLAG_DELAY)
     {
@@ -1824,7 +1817,10 @@ gckVGHARDWARE_SetPowerManagementState(
 
     if (flag & gcvPOWER_FLAG_INITIALIZE)
     {
+
+        /* Initialize GPU here, replaced by InitializeHardware later */
         gcmkONERROR(gckVGHARDWARE_SetMMU(Hardware, Hardware->kernel->mmu->pageTableLogical));
+        gcmkVERIFY_OK(gckVGHARDWARE_SetFastClear(Hardware, -1));
 
         /* Force the command queue to reload the next context. */
         command->currentContext = 0;
@@ -1854,9 +1850,6 @@ gckVGHARDWARE_SetPowerManagementState(
     /* Get time until off. */
     gcmkPROFILE_QUERY(time, offTime);
 
-    if (flag & gcvPOWER_FLAG_START)
-    {
-    }
 
     /* Get time until started. */
     gcmkPROFILE_QUERY(time, startTime);

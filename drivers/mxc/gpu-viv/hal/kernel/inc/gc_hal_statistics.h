@@ -30,6 +30,7 @@
 */
 #define VIV_STAT_FRAME_BUFFER_SIZE              30
 
+
 /*
     Total number of frames sampled for a mode. This means
 
@@ -64,14 +65,6 @@ typedef struct _gcsSTATISTICS_EARLYZ
 gcsSTATISTICS_EARLYZ;
 
 
-/* Defines the statistical data keys monitored by the statistics module */
-typedef enum _gceSTATISTICS_Call
-{
-	gcvSTAT_ES11_GLDRAWELEMENTS      =   1,
-}
-gceSTATISTICS_Call;
-
-
 /* HAL statistics information. */
 typedef struct _gcsSTATISTICS
 {
@@ -79,8 +72,6 @@ typedef struct _gcsSTATISTICS
     gctUINT64                   previousFrameTime;
     gctUINT                     frame;
     gcsSTATISTICS_EARLYZ        earlyZ;
-	gctUINT						ES11_drawElementsCount;
-	gctBOOL						applyRTestVAFix;
 }
 gcsSTATISTICS;
 
@@ -103,13 +94,6 @@ void
 gcfSTATISTICS_DisableDynamicEarlyZ (
     IN gctBOOL Disabled
     );
-
-/* Checks whether or not glDrawArray function call will be discarded */
-gctBOOL
-gcfSTATISTICS_DiscardCall(
-	gceSTATISTICS_Call Function
-	);
-
 
 #endif /*__gc_hal_statistics_h_ */
 

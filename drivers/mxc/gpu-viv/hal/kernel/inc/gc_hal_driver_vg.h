@@ -221,7 +221,7 @@ typedef struct _gcsTASK_FREE_VIDEO_MEMORY
     IN gceTASK                  id;
 
     /* Allocated video memory. */
-    IN gctUINT64                node;
+    IN gctUINT32                node;
 }
 gcsTASK_FREE_VIDEO_MEMORY;
 

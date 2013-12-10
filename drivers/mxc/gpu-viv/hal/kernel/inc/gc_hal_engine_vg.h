@@ -524,14 +524,14 @@ gcoHAL_CombineAddress(
 gceSTATUS
 gcoHAL_ScheduleVideoMemory(
     IN gcoHAL Hal,
-    IN gctUINT64 Node
+    IN gctUINT32 Node
     );
 
 /* Free linear video memory allocated with gcoHAL_AllocateLinearVideoMemory. */
 gceSTATUS
 gcoHAL_FreeVideoMemory(
     IN gcoHAL Hal,
-    IN gctUINT64 Node
+    IN gctUINT32 Node
     );
 
 /* Query command buffer attributes. */
@@ -547,7 +547,7 @@ gcoHAL_AllocateLinearVideoMemory(
     IN gctUINT Size,
     IN gctUINT Alignment,
     IN gcePOOL Pool,
-    OUT gctUINT64 * Node,
+    OUT gctUINT32 * Node,
     OUT gctUINT32 * Address,
     OUT gctPOINTER * Memory
     );

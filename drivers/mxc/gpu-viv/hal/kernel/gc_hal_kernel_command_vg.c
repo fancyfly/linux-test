@@ -605,11 +605,15 @@ _RemoveRecordFromProcesDB(
     IN gcsTASK_HEADER_PTR Task
     )
 {
+    gceSTATUS status;
     gcsTASK_PTR task = (gcsTASK_PTR)((gctUINT8_PTR)Task - sizeof(gcsTASK));
     gcsTASK_FREE_VIDEO_MEMORY_PTR freeVideoMemory;
     gcsTASK_UNLOCK_VIDEO_MEMORY_PTR unlockVideoMemory;
     gctINT pid;
     gctUINT32 size;
+    gctUINT32 handle;
+    gckKERNEL kernel = Command->kernel->kernel;
+    gckVIDMEM_NODE unlockNode;
 
     /* Get the total size of all tasks. */
     size = task->size;
@@ -628,7 +632,20 @@ _RemoveRecordFromProcesDB(
                 Command->kernel->kernel,
                 pid,
                 gcvDB_VIDEO_MEMORY,
-                gcmUINT64_TO_PTR(freeVideoMemory->node)));
+                gcmINT2PTR(freeVideoMemory->node)));
+
+            handle = (gctUINT32)freeVideoMemory->node;
+
+            status = gckVIDMEM_HANDLE_Lookup(
+                Command->kernel->kernel,
+                pid,
+                handle,
+                (gckVIDMEM_NODE *)&freeVideoMemory->node);
+
+            if(gcmIS_SUCCESS(status))
+            {
+                gckVIDMEM_HANDLE_Dereference(kernel, pid, handle);
+            }
 
             /* Advance to next task. */
             size -= sizeof(gcsTASK_FREE_VIDEO_MEMORY);
@@ -644,6 +661,20 @@ _RemoveRecordFromProcesDB(
                 pid,
                 gcvDB_VIDEO_MEMORY_LOCKED,
                 gcmUINT64_TO_PTR(unlockVideoMemory->node)));
+
+            handle = (gctUINT32)unlockVideoMemory->node;
+
+            status = gckVIDMEM_HANDLE_Lookup(
+                Command->kernel->kernel,
+                pid,
+                handle,
+                &unlockNode);
+            unlockVideoMemory->node = gcmPTR_TO_UINT64(unlockNode);
+
+            if(gcmIS_SUCCESS(status))
+            {
+                gckVIDMEM_HANDLE_Dereference(kernel, pid, handle);
+            }
 
             /* Advance to next task. */
             size -= sizeof(gcsTASK_UNLOCK_VIDEO_MEMORY);
@@ -940,6 +971,11 @@ _ConvertUserCommandBufferPointer(
 {
     gceSTATUS status, last;
     gcsCMDBUFFER_PTR mappedUserCommandBuffer = gcvNULL;
+    gckKERNEL kernel = Command->kernel->kernel;
+    gctUINT32 pid;
+    gckVIDMEM_NODE node;
+
+    gckOS_GetProcessID(&pid);
 
     do
     {
@@ -958,10 +994,16 @@ _ConvertUserCommandBufferPointer(
             = mappedUserCommandBuffer->address
             - mappedUserCommandBuffer->bufferOffset;
 
+        gcmkERR_BREAK(gckVIDMEM_HANDLE_Lookup(
+            kernel,
+            pid,
+            gcmPTR2INT(mappedUserCommandBuffer->node),
+            &node));
+
         /* Translate the logical address to the kernel space. */
         gcmkERR_BREAK(_HardwareToKernel(
             Command->os,
-            gcmUINT64_TO_PTR(mappedUserCommandBuffer->node),
+            node->node,
             headerAddress,
             (gctPOINTER *) KernelCommandBuffer
             ));
@@ -1006,7 +1048,7 @@ _AllocateLinear(
         pool = gcvPOOL_SYSTEM;
 
         /* Allocate memory. */
-        gcmkERR_BREAK(gckKERNEL_AllocateLinearMemory(
+        gcmkERR_BREAK(gckVGKERNEL_AllocateLinearMemory(
             Command->kernel->kernel, &pool,
             Size, Alignment,
             gcvSURF_TYPE_UNKNOWN,
@@ -1059,9 +1101,7 @@ _AllocateLinear(
         }
 
         /* Free the command buffer. */
-        gcmkCHECK_STATUS(gckVIDMEM_Free(
-            node
-            ));
+        gcmkCHECK_STATUS(gckVIDMEM_Free(Command->kernel->kernel, node));
     }
 
     /* Return status. */
@@ -1082,7 +1122,7 @@ _FreeLinear(
         gcmkERR_BREAK(gckVIDMEM_Unlock(Kernel->kernel, Node, gcvSURF_TYPE_UNKNOWN, gcvNULL));
 
         /* Free the linear buffer. */
-        gcmkERR_BREAK(gckVIDMEM_Free(Node));
+        gcmkERR_BREAK(gckVIDMEM_Free(Kernel->kernel, Node));
     }
     while (gcvFALSE);
 
@@ -1135,7 +1175,7 @@ _AllocateCommandBuffer(
 
         /* Initialize the structure. */
         commandBuffer->completion    = gcvVACANT_BUFFER;
-        commandBuffer->node          = gcmPTR_TO_UINT64(node);
+        commandBuffer->node          = node;
         commandBuffer->address       = address + alignedHeaderSize;
         commandBuffer->bufferOffset  = alignedHeaderSize;
         commandBuffer->size          = requestedSize;
@@ -1190,7 +1230,7 @@ _FreeCommandBuffer(
     gceSTATUS status;
 
     /* Free the buffer. */
-    status = _FreeLinear(Kernel, gcmUINT64_TO_PTR(CommandBuffer->node));
+    status = _FreeLinear(Kernel, CommandBuffer->node);
 
     /* Return status. */
     return status;
@@ -1645,9 +1685,13 @@ _TaskUnlockVideoMemory(
         /* Unlock video memory. */
         gcmkERR_BREAK(gckVIDMEM_Unlock(
             Command->kernel->kernel,
-            gcmUINT64_TO_PTR(task->node),
+            ((gckVIDMEM_NODE)gcmUINT64_TO_PTR(task->node))->node,
             gcvSURF_TYPE_UNKNOWN,
             gcvNULL));
+
+        gcmkERR_BREAK(gckVIDMEM_NODE_Dereference(
+            Command->kernel->kernel,
+            gcmUINT64_TO_PTR(task->node)));
 
         /* Update the reference counter. */
         TaskHeader->container->referenceCount -= 1;
@@ -1676,7 +1720,9 @@ _TaskFreeVideoMemory(
             = (gcsTASK_FREE_VIDEO_MEMORY_PTR) TaskHeader->task;
 
         /* Free video memory. */
-        gcmkERR_BREAK(gckVIDMEM_Free(gcmUINT64_TO_PTR(task->node)));
+        gcmkERR_BREAK(gckVIDMEM_NODE_Dereference(
+            Command->kernel->kernel,
+            gcmINT2PTR(task->node)));
 
         /* Update the reference counter. */
         TaskHeader->container->referenceCount -= 1;
@@ -1763,11 +1809,17 @@ _EventHandler_Block(
     IN gctBOOL ProcessAll
     )
 {
-    gceSTATUS status, last;
+    gceSTATUS status = gcvSTATUS_OK, last;
 
     gcmkHEADER_ARG("Kernel=0x%x TaskHeader=0x%x ProcessAll=0x%x", Kernel, TaskHeader, ProcessAll);
     /* Verify the arguments. */
     gcmkVERIFY_OBJECT(Kernel, gcvOBJ_KERNEL);
+
+    if (TaskHeader->task == gcvNULL)
+    {
+        gcmkFOOTER();
+        return gcvSTATUS_OK;
+    }
 
     do
     {

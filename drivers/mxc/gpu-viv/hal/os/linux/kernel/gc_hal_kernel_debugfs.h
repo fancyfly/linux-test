@@ -24,10 +24,10 @@
 #ifndef __gc_hal_kernel_debugfs_h_
 #define __gc_hal_kernel_debugfs_h_
 
- #define MAX_LINE_SIZE 768  	     /* Max bytes for a line of debug info */
+ #define MAX_LINE_SIZE 768           /* Max bytes for a line of debug info */
 
 
- typedef struct _gcsDebugFileSystemNode gcsDebugFileSystemNode ;
+ typedef struct _gcsDEBUGFS_Node gcsDEBUGFS_Node;
 
 
 /*******************************************************************************
@@ -36,11 +36,11 @@
  **
  *******************************************************************************/
 
-gctINT    gckDebugFileSystemIsEnabled(void);
+gctINT gckDEBUGFS_IsEnabled(void);
 
-gctINT   gckDebugFileSystemInitialize(void);
+gctINT gckDEBUGFS_Initialize(void);
 
-gctINT   gckDebugFileSystemTerminate(void);
+gctINT gckDEBUGFS_Terminate(void);
 
 
 /*******************************************************************************
@@ -49,35 +49,36 @@ gctINT   gckDebugFileSystemTerminate(void);
  **
  *******************************************************************************/
 
-gctINT gckDebugFileSystemCreateNode(
- 			IN gctINT SizeInKB,
-                        IN gctCONST_STRING  ParentName ,
-                        IN gctCONST_STRING  NodeName,
-                        OUT gcsDebugFileSystemNode  **Node
-                        );
+gctINT
+gckDEBUGFS_CreateNode(
+    IN gctPOINTER Device,
+    IN gctINT SizeInKB,
+    IN gctCONST_STRING ParentName,
+    IN gctCONST_STRING NodeName,
+    OUT gcsDEBUGFS_Node **Node
+    );
 
-
-void gckDebugFileSystemFreeNode(
-			IN gcsDebugFileSystemNode  * Node
-			);
-
-
-
-void gckDebugFileSystemSetCurrentNode(
-			IN gcsDebugFileSystemNode  * Node
-			);
+void gckDEBUGFS_FreeNode(
+            IN gcsDEBUGFS_Node  * Node
+            );
 
 
 
-void gckDebugFileSystemGetCurrentNode(
-			OUT gcsDebugFileSystemNode  ** Node
-			);
+void gckDEBUGFS_SetCurrentNode(
+            IN gcsDEBUGFS_Node  * Node
+            );
 
 
-void gckDebugFileSystemPrint(
-    			IN gctCONST_STRING  Message,
-    			...
-   			 );
+
+void gckDEBUGFS_GetCurrentNode(
+            OUT gcsDEBUGFS_Node  ** Node
+            );
+
+
+ssize_t gckDEBUGFS_Print(
+                IN gctCONST_STRING  Message,
+                ...
+                );
 
 #endif
 

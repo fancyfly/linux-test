@@ -61,7 +61,6 @@ struct _gckVGHARDWARE
     gctISRMANAGERFUNC           stopIsr;
     gctPOINTER                  isrContext;
     gctPOINTER                  pageTableDirty;
-
 #if gcdPOWEROFF_TIMEOUT
     gctUINT32                   powerOffTime;
     gctUINT32                   powerOffTimeout;

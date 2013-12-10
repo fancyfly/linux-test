@@ -346,7 +346,7 @@ gckVGKERNEL_Destroy(
 
 /* Allocate linear video memory. */
 gceSTATUS
-gckKERNEL_AllocateLinearMemory(
+gckVGKERNEL_AllocateLinearMemory(
     IN gckKERNEL Kernel,
     IN OUT gcePOOL * Pool,
     IN gctSIZE_T Bytes,
@@ -591,7 +591,7 @@ typedef struct _gcsCMDBUFFER
     /* The user sets this to the node of the container buffer whitin which
        this particular command buffer resides. The kernel sets this to the
        node of the internally allocated buffer. */
-    gctUINT64                   node;
+    gcuVIDMEM_NODE_PTR          node;
 
     /* Command buffer hardware address. */
     gctUINT32                   address;

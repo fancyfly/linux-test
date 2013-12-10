@@ -18,6 +18,7 @@
 *
 *****************************************************************************/
 
+
 #ifndef __gc_hal_eglplatform_h_
 #define __gc_hal_eglplatform_h_
 
@@ -75,7 +76,7 @@ typedef struct _gcsWL_EGL_BUFFER_INFO
    gctINT32 height;
    gctINT32 stride;
    gceSURF_FORMAT format;
-   gcuVIDMEM_NODE_PTR node;
+   gctUINT32 node;
    gcePOOL pool;
    gctUINT bytes;
    gcoSURF surface;

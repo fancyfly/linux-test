@@ -91,11 +91,37 @@ typedef struct _gcsSTATE_DELTA
 }
 gcsSTATE_DELTA;
 
+/* Command buffer patch record. */
+struct _gcsPATCH
+{
+    /* Pointer within the buffer. */
+    gctUINT32_PTR               pointer;
+
+    /* 32-bit data to write at the specified offset. */
+    gctUINT32                   data;
+};
+
+/* List of patches for the command buffer. */
+struct _gcsPATCH_LIST
+{
+    /* Array of patch records. */
+    struct _gcsPATCH            patch[1024];
+
+    /* Number of patches in the array. */
+    gctUINT                     count;
+
+    /* Next item in the list. */
+    struct _gcsPATCH_LIST       *next;
+};
+
 /* Command buffer object. */
 struct _gcoCMDBUF
 {
     /* The object. */
     gcsOBJECT                   object;
+
+    /* Commit count. */
+    gctUINT                     count;
 
     /* Command buffer entry and exit pipes. */
     gcePIPE_SELECT              entryPipe;
@@ -142,6 +168,17 @@ struct _gcoCMDBUF
     gctUINT32                   lastLoadStateAddress;
     gctUINT32                   lastLoadStateCount;
 #endif
+
+    /* Completion signal. */
+    gctSIGNAL                   signal;
+
+    /* List of patches. */
+    struct _gcsPATCH_LIST       *patchHead;
+    struct _gcsPATCH_LIST       *patchTail;
+
+    /* Link to the siblings. */
+    gcoCMDBUF                   prev;
+    gcoCMDBUF                   next;
 };
 
 typedef struct _gcsQUEUE

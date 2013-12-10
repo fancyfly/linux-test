@@ -80,12 +80,10 @@ struct _gckHARDWARE
     gctPOINTER                  powerOffTimer;
 #endif
 
-    gctPOINTER                  pageTableDirty;
-
 #if gcdENABLE_FSCALE_VAL_ADJUST
-    /* FSCALE_VAL when gcvPOWER_ON. */
     gctUINT32                   powerOnFscaleVal;
 #endif
+    gctPOINTER                  pageTableDirty;
 
 #if gcdLINK_QUEUE_SIZE
     struct _gckLINKQUEUE        linkQueue;
@@ -119,7 +117,6 @@ gckHARDWARE_SetFscaleValue(
     IN gckHARDWARE Hardware,
     IN gctUINT32   FscaleValue
     );
-
 gceSTATUS
 gckHARDWARE_GetFscaleValue(
     IN gckHARDWARE Hardware,
@@ -127,7 +124,6 @@ gckHARDWARE_GetFscaleValue(
     IN gctUINT * MinFscaleValue,
     IN gctUINT * MaxFscaleValue
     );
-
 #ifdef __cplusplus
 }
 #endif

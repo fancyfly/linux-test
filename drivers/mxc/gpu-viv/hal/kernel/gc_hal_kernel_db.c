@@ -718,6 +718,13 @@ gckKERNEL_CreateProcessDB(
         database->vidMemType[i].totalBytes = 0;
     }
 
+    for (i = 0; i < gcvPOOL_NUMBER_OF_POOLS; i++)
+    {
+        database->vidMemPool[i].bytes = 0;
+        database->vidMemPool[i].maxBytes = 0;
+        database->vidMemPool[i].totalBytes = 0;
+    }
+
     gcmkASSERT(database->handleDatabase == gcvNULL);
     gcmkONERROR(
         gckKERNEL_CreateIntegerDatabase(Kernel, &database->handleDatabase));

@@ -637,6 +637,8 @@ _RemoveRecordFromProcesDB(
                 handle,
                 &nodeObject);
 
+            freeVideoMemory->node = (gctUINT32)nodeObject;
+
             if(gcmIS_SUCCESS(status))
             {
                 gckVIDMEM_HANDLE_Dereference(kernel, pid, handle);

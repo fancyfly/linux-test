@@ -63,6 +63,12 @@ static unsigned int f_calc(unsigned int pfs, unsigned int bpp, unsigned int *wri
 		f_calculated = 8;
 		break;
 
+	case IPU_PIX_FMT_RGB565:
+	case IPU_PIX_FMT_YUYV:
+	case IPU_PIX_FMT_UYVY:
+		f_calculated = 8;
+		break;
+
 	case IPU_PIX_FMT_NV12:
 		f_calculated = 8;
 		break;

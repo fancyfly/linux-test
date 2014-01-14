@@ -89,6 +89,12 @@
 		compatible = "fsl,imx6-dummy-pureg"; /* only used in ldo-bypass */
 	};
 
+	mxs_viim {
+		compatible = "fsl,mxs_viim";
+		reg = <0x02098000 0x1000>, /* GPT base */
+		      <0x021bc000 0x1000>; /* OCOTP base */
+	};
+
 	soc {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -563,6 +569,12 @@
 				fsl,anatop = <&anatop>;
 			};
 
+			usbphy_nop1: usbphy_nop1 {
+				compatible = "usb-nop-xceiv";
+				clocks = <&clks IMX6SL_CLK_USBPHY1>;
+				clock-names = "main_clk";
+			};
+
 			snvs@020cc000 {
 				compatible = "fsl,sec-v4.0-mon", "simple-bus";
 				#address-cells = <1>;
@@ -715,6 +727,9 @@
 				interrupts = <0 40 0x04>;
 				clocks = <&clks IMX6SL_CLK_USBOH3>;
 				fsl,usbmisc = <&usbmisc 2>;
+				phy_type = "hsic";
+				fsl,usbphy = <&usbphy_nop1>;
+				fsl,anatop = <&anatop>;
 				status = "disabled";
 			};
 

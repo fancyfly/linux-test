@@ -51,6 +51,7 @@ static LIST_HEAD(head);
 static int timeout_in_ms = 600;
 static unsigned int block_size;
 static struct kmem_cache *tx_desc_cache;
+struct mutex hard_lock;
 
 struct pxp_dma {
 	struct dma_device dma;

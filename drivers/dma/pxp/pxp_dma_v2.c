@@ -51,7 +51,6 @@ static LIST_HEAD(head);
 static int timeout_in_ms = 600;
 static unsigned int block_size;
 static struct kmem_cache *tx_desc_cache;
-struct mutex hard_lock;
 
 struct pxp_dma {
 	struct dma_device dma;
@@ -1733,7 +1732,6 @@ static int pxp_probe(struct platform_device *pdev)
 
 	spin_lock_init(&pxp->lock);
 	mutex_init(&pxp->clk_mutex);
-	mutex_init(&hard_lock);
 
 	pxp->base = devm_request_and_ioremap(&pdev->dev, res);
 	if (pxp->base == NULL) {

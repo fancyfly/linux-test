@@ -69,7 +69,7 @@ $(obj)/zImage-dtb:	$(obj)/zImage $(DTB_OBJS) FORCE
 	@echo '  Kernel: $@ is ready'
 
 endif
-LOADADDR=0x10008000
+
 ifneq ($(LOADADDR),)
   UIMAGE_LOADADDR=$(LOADADDR)
 else

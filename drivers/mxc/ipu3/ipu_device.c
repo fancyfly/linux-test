@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -940,7 +940,6 @@ static int update_split_setting(struct ipu_task_entry *t, bool vdi_split)
 	   create input stripe that falls just outside of the input window */
 	else if ((t->set.sp_setting.ih + t->set.sp_setting.i_bottom_pos)
 		 > (ih+16))
-	//if ((t->set.sp_setting.ih + t->set.sp_setting.i_bottom_pos) > (ih+16))
 		return IPU_CHECK_ERR_SPLIT_INPUTH_OVER;
 	if (((t->set.sp_setting.oh + t->set.sp_setting.o_bottom_pos) > oh)
 		|| (t->set.sp_setting.oh > soc_max_out_height()))

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2009-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,8 +83,9 @@ int mxs_set_type(unsigned int pin, enum pin_fun fun, const char *lab)
 
 	if (!test_bit(index, &pb->bitmap))
 		return -ENOLCK;
-	if (lab != pb->label[index])	/* label is const string */
-		return -EINVAL;
+	if (pb->label[index] != (const char *)GPIO_ID_NAME)
+		if (lab != pb->label[index])	/* label is const string */
+			return -EINVAL;
 	if (g_chip->set_type)
 		g_chip->set_type(pb, index, fun);
 	return 0;
@@ -106,8 +107,10 @@ int mxs_set_strength(unsigned int pin, enum pad_strength cfg, const char *lab)
 
 	if (!test_bit(index, &pb->bitmap))
 		return -ENOLCK;
-	if (lab != pb->label[index])	/* label is const string */
-		return -EINVAL;
+	if (pb->label[index] != (const char *)GPIO_ID_NAME)
+		if (lab != pb->label[index])	/* label is const string */
+			return -EINVAL;
+
 	if (g_chip->set_strength)
 		g_chip->set_strength(pb, index, cfg);
 	return 0;
@@ -129,8 +132,9 @@ int mxs_set_voltage(unsigned int pin, enum pad_voltage cfg, const char *lab)
 
 	if (!test_bit(index, &pb->bitmap))
 		return -ENOLCK;
-	if (lab != pb->label[index])	/* label is const string */
-		return -EINVAL;
+	if (pb->label[index] != (const char *)GPIO_ID_NAME)
+		if (lab != pb->label[index])	/* label is const string */
+			return -EINVAL;
 	if (g_chip->set_voltage)
 		g_chip->set_voltage(pb, index, cfg);
 	return 0;
@@ -152,8 +156,9 @@ int mxs_set_pullup(unsigned int pin, int en, const char *lab)
 
 	if (!test_bit(index, &pb->bitmap))
 		return -ENOLCK;
-	if (lab != pb->label[index])	/* label is const string */
-		return -EINVAL;
+	if (pb->label[index] != (const char *)GPIO_ID_NAME)
+		if (lab != pb->label[index])	/* label is const string */
+			return -EINVAL;
 	if (g_chip->set_pullup)
 		g_chip->set_pullup(pb, index, en);
 	return 0;
@@ -175,8 +180,9 @@ void mxs_release_pin(unsigned int pin, const char *lab)
 
 	if (!test_bit(index, &pb->bitmap))
 		return;
-	if (lab != pb->label[index])	/* label is const string */
-		return;
+	if (pb->label[index] != (const char *)GPIO_ID_NAME)
+		if (lab != pb->label[index])	/* label is const string */
+			return;
 	pb->label[index] = NULL;
 
 	clear_bit(index, &pb->bitmap);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2014 Freescale Semiconductor, Inc.
  */
 
 /*
@@ -612,6 +612,7 @@ void ddi_power_Init4p2Params(void)
 			BM_POWER_5VCTRL_CHARGE_4P2_ILIMIT);
 	temp |= (4 << BP_POWER_5VCTRL_HEADROOM_ADJ);
 
+	__raw_writel(temp, REGS_POWER_BASE + HW_POWER_5VCTRL);
 }
 
 bool ddi_power_IsBattRdyForXfer(void)

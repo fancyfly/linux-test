@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #include "gc_hal_kernel_precomp.h"
@@ -1540,8 +1541,9 @@ gckKERNEL_QueryProcessDB(
     Type &= gcdDATABASE_TYPE_MASK;
 
     /* Find the database. */
-    gcmkONERROR(
-        gckKERNEL_FindDatabase(Kernel, ProcessID, LastProcessID, &database));
+    if(Type != gcvDB_IDLE)
+        gcmkONERROR(
+            gckKERNEL_FindDatabase(Kernel, ProcessID, LastProcessID, &database));
 
     /* Get pointer to counters. */
     switch (Type)

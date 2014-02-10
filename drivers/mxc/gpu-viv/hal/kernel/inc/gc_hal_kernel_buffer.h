@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #ifndef __gc_hal_kernel_buffer_h_
@@ -214,6 +215,18 @@ struct _gcoQUEUE
     /* Number of records currently in queue */
     gctUINT32                   recordCount;
 };
+
+
+#if gcdTEMP_CMD_BUFFER_SIZE
+
+struct _gcsTEMPCMDBUF
+{
+    gctUINT32 currentByteSize;
+    gctPOINTER buffer;
+    gctBOOL  inUse;
+};
+
+#endif
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #ifndef __gc_hal_kernel_h_
@@ -745,11 +746,13 @@ struct _gckEVENT
 #if gcdSMP
 #if gcdMULTI_GPU
     gctPOINTER                  pending3D[gcdMULTI_GPU];
+    gctPOINTER                  pendingMask;
 #endif
     gctPOINTER                  pending;
 #else
 #if gcdMULTI_GPU
     volatile gctUINT            pending3D[gcdMULTI_GPU];
+    volatile gctUINT            pendingMask;
 #endif
     volatile gctUINT            pending;
 #endif
@@ -770,6 +773,10 @@ struct _gckEVENT
     gctPOINTER                  eventListMutex;
 
     gctPOINTER                  submitTimer;
+
+#if gcdINTERRUPT_STATISTIC
+    gctPOINTER                  interruptCount;
+#endif
 };
 
 /* Free all events belonging to a process. */
@@ -862,6 +869,8 @@ typedef union _gcuVIDMEM_NODE
         /* Information for this node. */
         /* Contiguously allocated? */
         gctBOOL                 contiguous;
+        /* cacheable vidmem ? */
+        gctBOOL                 cacheable;
         /* mdl record pointer... a kmalloc address. Process agnostic. */
         gctPHYS_ADDR            physical;
         gctSIZE_T               bytes;
@@ -887,6 +896,13 @@ typedef union _gcuVIDMEM_NODE
 
         /* Process ID owning this memory. */
         gctUINT32               processID;
+
+        /* Surface type. */
+        gceSURF_TYPE            type;
+#if gcdENABLE_VG
+        gctPOINTER              kernelVirtual;
+#endif
+
     }
     Virtual;
 }
@@ -1097,6 +1113,7 @@ gckOS_CreateKernelVirtualMapping(
 
 gceSTATUS
 gckOS_DestroyKernelVirtualMapping(
+    IN gctPHYS_ADDR physical,
     IN gctPOINTER Logical,
     IN gctSIZE_T Bytes
     );
@@ -1190,6 +1207,14 @@ gckCONTEXT_Update(
     IN gckCONTEXT Context,
     IN gctUINT32 ProcessID,
     IN gcsSTATE_DELTA_PTR StateDelta
+    );
+
+gceSTATUS
+gckCONTEXT_MapBuffer(
+    IN gckCONTEXT Context,
+    OUT gctUINT32 *Physicals,
+    OUT gctUINT64 *Logicals,
+    OUT gctUINT32 *Bytes
     );
 
 #if gcdLINK_QUEUE_SIZE

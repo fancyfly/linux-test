@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #ifndef __gc_hal_engine_h_
@@ -331,8 +332,6 @@ gcoSURF_IsFormatRenderableAsRT(
     IN gcoSURF Surface
     );
 
-
-#if gcdSYNC
 gceSTATUS
 gcoSURF_GetFence(
     IN gcoSURF Surface
@@ -347,9 +346,35 @@ gceSTATUS
 gcoBUFOBJ_WaitFence(
     IN gcoBUFOBJ bufObj
     );
+
+gceSTATUS
+gcoBUFOBJ_IsFenceEnabled(
+    IN gcoBUFOBJ bufObj
+    );
+
 gceSTATUS
 gcoSURF_WaitFence(
     IN gcoSURF Surface
+    );
+
+gceSTATUS
+gcoSTREAM_GetFence(
+    IN gcoSTREAM stream
+    );
+
+gceSTATUS
+gcoSTREAM_WaitFence(
+    IN gcoSTREAM stream
+    );
+
+gceSTATUS
+gcoINDEX_GetFence(
+    IN gcoINDEX index
+    );
+
+gceSTATUS
+gcoINDEX_WaitFence(
+    IN gcoINDEX index
     );
 
 gceSTATUS
@@ -375,27 +400,6 @@ gcoSURF_3DBlitCopy(
     IN gctUINT32 Bytes
     );
 
-
-gceSTATUS
-gcoSTREAM_GetFence(
-    IN gcoSTREAM stream
-    );
-
-gceSTATUS
-gcoSTREAM_WaitFence(
-    IN gcoSTREAM stream
-    );
-
-gceSTATUS
-gcoINDEX_GetFence(
-    IN gcoINDEX index
-    );
-
-gceSTATUS
-gcoINDEX_WaitFence(
-    IN gcoINDEX index
-    );
-#endif
 
 /******************************************************************************\
 ******************************** gcoINDEX Object *******************************
@@ -1562,40 +1566,10 @@ gcoTEXTURE_Destroy(
 
 /* Upload data to an gcoTEXTURE object. */
 gceSTATUS
-gcoTEXTURE_UploadEx(
-    IN gcoTEXTURE Texture,
-    IN gceTEXTURE_FACE Face,
-    IN gctUINT Width,
-    IN gctUINT Height,
-    IN gctUINT Slice,
-    IN gctCONST_POINTER Memory,
-    IN gctINT Stride,
-    IN gceSURF_FORMAT Format,
-    IN gceSURF_COLOR_SPACE SrcColorSpace
-    );
-
-
-/* Upload data to an gcoTEXTURE object. */
-gceSTATUS
 gcoTEXTURE_Upload(
     IN gcoTEXTURE Texture,
+    IN gctINT MipMap,
     IN gceTEXTURE_FACE Face,
-    IN gctUINT Width,
-    IN gctUINT Height,
-    IN gctUINT Slice,
-    IN gctCONST_POINTER Memory,
-    IN gctINT Stride,
-    IN gceSURF_FORMAT Format
-    );
-
-/* Upload data to an gcoTEXTURE object. */
-gceSTATUS
-gcoTEXTURE_UploadSubEx(
-    IN gcoTEXTURE Texture,
-    IN gctUINT MipMap,
-    IN gceTEXTURE_FACE Face,
-    IN gctUINT X,
-    IN gctUINT Y,
     IN gctUINT Width,
     IN gctUINT Height,
     IN gctUINT Slice,
@@ -1604,13 +1578,12 @@ gcoTEXTURE_UploadSubEx(
     IN gceSURF_FORMAT Format,
     IN gceSURF_COLOR_SPACE SrcColorSpace
     );
-
 
 /* Upload data to an gcoTEXTURE object. */
 gceSTATUS
 gcoTEXTURE_UploadSub(
     IN gcoTEXTURE Texture,
-    IN gctUINT MipMap,
+    IN gctINT MipMap,
     IN gceTEXTURE_FACE Face,
     IN gctUINT X,
     IN gctUINT Y,
@@ -1619,8 +1592,11 @@ gcoTEXTURE_UploadSub(
     IN gctUINT Slice,
     IN gctCONST_POINTER Memory,
     IN gctINT Stride,
-    IN gceSURF_FORMAT Format
+    IN gceSURF_FORMAT Format,
+    IN gceSURF_COLOR_SPACE SrcColorSpace,
+    IN gctUINT32 PhysicalAddress
     );
+
 
 /* Upload YUV data to an gcoTEXTURE object. */
 gceSTATUS
@@ -1639,6 +1615,7 @@ gcoTEXTURE_UploadYUV(
 gceSTATUS
 gcoTEXTURE_UploadCompressed(
     IN gcoTEXTURE Texture,
+    IN gctINT MipMap,
     IN gceTEXTURE_FACE Face,
     IN gctUINT Width,
     IN gctUINT Height,
@@ -1651,7 +1628,7 @@ gcoTEXTURE_UploadCompressed(
 gceSTATUS
 gcoTEXTURE_UploadCompressedSub(
     IN gcoTEXTURE Texture,
-    IN gctUINT MipMap,
+    IN gctINT MipMap,
     IN gceTEXTURE_FACE Face,
     IN gctUINT XOffset,
     IN gctUINT YOffset,
@@ -2426,6 +2403,12 @@ gcoBUFOBJ_GetNode(
 gceSTATUS
 gcoBUFOBJ_GPUCacheOperation(
     gcoBUFOBJ BufObj
+    );
+
+/* Dump buffer. */
+void
+gcoBUFOBJ_Dump(
+    IN gcoBUFOBJ BufObj
     );
 
 #ifdef __cplusplus

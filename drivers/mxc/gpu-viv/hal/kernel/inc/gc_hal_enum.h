@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #ifndef __gc_hal_enum_h_
@@ -49,8 +50,11 @@ typedef enum _gceCHIPMODEL
     gcv2100 = 0x2100,
     gcv2200 = 0x2200,
     gcv2500 = 0x2500,
+    gcv3000 = 0x3000,
     gcv4000 = 0x4000,
+    gcv5000 = 0x5000,
     gcv5200 = 0x5200,
+    gcv6400 = 0x6400,
 }
 gceCHIPMODEL;
 
@@ -103,6 +107,7 @@ typedef enum _gceFEATURE
     gcvFEATURE_VG_DOUBLE_BUFFER,
     gcvFEATURE_MC20,
     gcvFEATURE_SUPER_TILED,
+    gcvFEATURE_FAST_CLEAR_FLUSH,
     gcvFEATURE_2D_FILTERBLIT_PLUS_ALPHABLEND,
     gcvFEATURE_2D_DITHER,
     gcvFEATURE_2D_A8_TARGET,
@@ -204,8 +209,31 @@ typedef enum _gceFEATURE
     gcvFEATURE_RTT,
     gcvFEATURE_GENERICS,
     gcvFEATURE_2D_ONE_PASS_FILTER,
+    gcvFEATURE_2D_ONE_PASS_FILTER_TAP,
     gcvFEATURE_2D_POST_FLIP,
     gcvFEATURE_2D_PIXEL_ALIGNMENT,
+    gcvFEATURE_CORRECT_AUTO_DISABLE_COUNT,
+    gcvFEATURE_CORRECT_AUTO_DISABLE_COUNT_WIDTH,
+
+    gcvFEATURE_HALTI3,
+    gcvFEATURE_EEZ,
+    gcvFEATURE_INTEGER_PIPE_FIX,
+    gcvFEATURE_PSOUTPUT_MAPPING,
+    gcvFEATURE_8K_RT_FIX,
+    gcvFEATURE_TX_TILE_STATUS_MAPPING,
+    gcvFEATURE_SRGB_RT_SUPPORT,
+    gcvFEATURE_UNIFORM_APERTURE,
+    gcvFEATURE_TEXTURE_16K,
+    gcvFEATURE_PA_FARZCLIPPING_FIX,
+    gcvFEATURE_PE_DITHER_COLORMASK_FIX,
+
+    gcvFEATURE_MULTI_PIXELPIPES,
+    gcvFEATURE_PIPE_CL,
+
+    gcvFEATURE_BUG_FIXES18,
+
+    gcvFEATURE_UNIFIED_SAMPLERS,
+    gcvFEATURE_CL_PS_WALKER,
 
     /* Insert features above this comment only. */
     gcvFEATURE_COUNT                /* Not a feature. */
@@ -223,6 +251,23 @@ typedef enum _gceSWWA
     gcvSWWA_COUNT                   /* Not a SWWA. */
 }
 gceSWWA;
+
+
+/* Option Set*/
+typedef enum _gceOPITON
+{
+    /* HW setting we takes PREFER */
+    gcvOPTION_PREFER_MULTIPIPE_RS = 0,
+
+
+
+    gcvOPTION_HW_NULL = 50,
+    gcvOPTION_PRINT_OPTION = 51,
+
+    /* Insert option above this comment only */
+    gcvOPTION_COUNT                     /* Not a OPTION*/
+}
+gceOPTION;
 
 /* Chip Power Status. */
 typedef enum _gceCHIPPOWERSTATE
@@ -947,6 +992,15 @@ typedef enum _gce2D_STATE
 }
 gce2D_STATE;
 
+typedef enum _gce2D_STATE_PROFILE
+{
+    gcv2D_STATE_PROFILE_NONE    = 0x0,
+    gcv2D_STATE_PROFILE_COMMAND = 0x1,
+    gcv2D_STATE_PROFILE_SURFACE = 0x2,
+    gcv2D_STATE_PROFILE_ALL     = 0xFFFF,
+}
+gce2D_STATE_PROFILE;
+
 /* Texture object types */
 typedef enum _gceTEXTURE_TYPE
 {
@@ -960,7 +1014,6 @@ typedef enum _gceTEXTURE_TYPE
     gcvTEXTURE_EXTERNAL
 }
 gceTEXTURE_TYPE;
-
 
 #ifndef VIVANTE_NO_3D
 /* Texture functions. */
@@ -1391,6 +1444,11 @@ gceMACHINECODE;
 
 typedef struct _gckCONTEXT          * gckCONTEXT;
 typedef struct _gcoCMDBUF           * gcoCMDBUF;
+
+#if gcdTEMP_CMD_BUFFER_SIZE
+typedef struct _gcsTEMPCMDBUF       * gcsTEMPCMDBUF;
+#endif
+
 typedef struct _gcsSTATE_DELTA      * gcsSTATE_DELTA_PTR;
 typedef struct _gcsQUEUE            * gcsQUEUE_PTR;
 typedef struct _gcoQUEUE            * gcoQUEUE;

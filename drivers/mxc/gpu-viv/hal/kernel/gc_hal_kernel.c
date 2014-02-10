@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #include "gc_hal_kernel_precomp.h"
@@ -564,6 +565,9 @@ gckKERNEL_Destroy(
 
         /* Destroy id-pointer database mutex. */
         gcmkVERIFY_OK(gckOS_DeleteMutex(Kernel->os, Kernel->db->pointerDatabaseMutex));
+
+        /* Destroy the database. */
+        gcmkVERIFY_OK(gcmkOS_SAFE_FREE(Kernel->os, Kernel->db));
     }
 
 #if gcdENABLE_VG
@@ -757,6 +761,7 @@ gckKERNEL_AllocateLinearMemory(
     gcuVIDMEM_NODE_PTR node = gcvNULL;
     gctBOOL tileStatusInVirtual;
     gctBOOL forceContiguous = gcvFALSE;
+    gctBOOL cacheable = gcvFALSE;
     gctSIZE_T bytes = Bytes;
     gctUINT32 handle = 0;
     gceDATABASE_TYPE type;
@@ -789,12 +794,14 @@ _AllocateMemory_Retry:
 
     case gcvPOOL_CONTIGUOUS:
         loopCount = (gctINT) gcvPOOL_NUMBER_OF_POOLS;
+        cacheable = gcvTRUE; /*For be compatiable with android usage*/
         break;
 
     case gcvPOOL_DEFAULT_FORCE_CONTIGUOUS_CACHEABLE:
         pool      = gcvPOOL_CONTIGUOUS;
         loopCount = 1;
         forceContiguous = gcvTRUE;
+        cacheable = gcvTRUE;
         break;
 
     default:
@@ -808,12 +815,13 @@ _AllocateMemory_Retry:
         {
             /* Create a gcuVIDMEM_NODE for virtual memory. */
             gcmkONERROR(
-                gckVIDMEM_ConstructVirtual(Kernel, gcvFALSE, Bytes, &node));
+                gckVIDMEM_ConstructVirtual(Kernel, gcvFALSE, Bytes, gcvTRUE, &node));
 
             if(node)
             {
                 bytes = node->Virtual.bytes;
             }
+            node->Virtual.type = Type;
 
             /* Success. */
             break;
@@ -831,7 +839,7 @@ _AllocateMemory_Retry:
 #endif
             {
                 /* Create a gcuVIDMEM_NODE from contiguous memory. */
-                status = gckVIDMEM_ConstructVirtual(Kernel, gcvTRUE, Bytes, &node);
+                status = gckVIDMEM_ConstructVirtual(Kernel, gcvTRUE, Bytes, cacheable, &node);
             }
 
             if (gcmIS_SUCCESS(status) || forceContiguous == gcvTRUE)
@@ -840,6 +848,7 @@ _AllocateMemory_Retry:
                 {
                     bytes = node->Virtual.bytes;
                 }
+                node->Virtual.type = Type;
 
                 /* Memory allocated. */
                 if(node && forceContiguous == gcvTRUE)
@@ -1117,7 +1126,7 @@ gckKERNEL_LockVideoMemory(
     )
 {
     gceSTATUS status;
-    gckVIDMEM_NODE nodeObject;
+    gckVIDMEM_NODE nodeObject = gcvNULL;
     gcuVIDMEM_NODE_PTR node = gcvNULL;
     gctBOOL locked = gcvFALSE;
     gctBOOL asynchronous;
@@ -1226,6 +1235,11 @@ OnError:
         }
     }
 
+    if (nodeObject != gcvNULL)
+    {
+        gckVIDMEM_NODE_Dereference(Kernel, nodeObject);
+    }
+
     gcmkFOOTER();
     return status;
 }
@@ -1308,20 +1322,6 @@ gckKERNEL_UnlockVideoMemory(
                     bytes));
     }
 #endif
-
-    if (Interface->u.UnlockVideoMemory.asynchroneous == gcvFALSE)
-    {
-        /* There isn't a event to unlock this node, remove record now */
-        gcmkONERROR(
-                gckKERNEL_RemoveProcessDB(Kernel,
-                    ProcessID, gcvDB_VIDEO_MEMORY_LOCKED,
-                    gcmUINT64_TO_PTR(Interface->u.UnlockVideoMemory.node)));
-
-        gckVIDMEM_HANDLE_Dereference(Kernel, ProcessID,
-                (gctUINT32) Interface->u.UnlockVideoMemory.node);
-
-        gckVIDMEM_NODE_Dereference(Kernel, nodeObject);
-    }
 
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
@@ -1712,13 +1712,56 @@ gckKERNEL_Dispatch(
 
     case gcvHAL_EVENT_COMMIT:
         /* Commit an event queue. */
+#if gcdMULTI_GPU
+        if (Interface->u.Event.gpuMode == gcvMULTI_GPU_MODE_INDEPENDENT)
+        {
+            gcmkONERROR(
+                gckEVENT_Commit(Kernel->eventObj,
+                                gcmUINT64_TO_PTR(Interface->u.Event.queue),
+                                Interface->u.Event.chipEnable));
+        }
+        else
+        {
+            gcmkONERROR(
+                gckEVENT_Commit(Kernel->eventObj,
+                                gcmUINT64_TO_PTR(Interface->u.Event.queue),
+                                gcvCORE_3D_ALL_MASK));
+        }
+#else
         gcmkONERROR(
             gckEVENT_Commit(Kernel->eventObj,
                             gcmUINT64_TO_PTR(Interface->u.Event.queue)));
+#endif
         break;
 
     case gcvHAL_COMMIT:
         /* Commit a command and context buffer. */
+#if gcdMULTI_GPU
+        if (Interface->u.Commit.gpuMode == gcvMULTI_GPU_MODE_INDEPENDENT)
+        {
+            gcmkONERROR(
+                gckCOMMAND_Commit(Kernel->command,
+                                  Interface->u.Commit.context ?
+                                      gcmNAME_TO_PTR(Interface->u.Commit.context) : gcvNULL,
+                                  gcmUINT64_TO_PTR(Interface->u.Commit.commandBuffer),
+                                  gcmUINT64_TO_PTR(Interface->u.Commit.delta),
+                                  gcmUINT64_TO_PTR(Interface->u.Commit.queue),
+                                  processID,
+                                  Interface->u.Commit.chipEnable));
+        }
+        else
+        {
+            gcmkONERROR(
+                gckCOMMAND_Commit(Kernel->command,
+                                  Interface->u.Commit.context ?
+                                      gcmNAME_TO_PTR(Interface->u.Commit.context) : gcvNULL,
+                                  gcmUINT64_TO_PTR(Interface->u.Commit.commandBuffer),
+                                  gcmUINT64_TO_PTR(Interface->u.Commit.delta),
+                                  gcmUINT64_TO_PTR(Interface->u.Commit.queue),
+                                  processID,
+                                  gcvCORE_3D_ALL_MASK));
+        }
+#else
         gcmkONERROR(
             gckCOMMAND_Commit(Kernel->command,
                               Interface->u.Commit.context ?
@@ -1727,11 +1770,17 @@ gckKERNEL_Dispatch(
                               gcmUINT64_TO_PTR(Interface->u.Commit.delta),
                               gcmUINT64_TO_PTR(Interface->u.Commit.queue),
                               processID));
+#endif
+
         break;
 
     case gcvHAL_STALL:
         /* Stall the command queue. */
+#if gcdMULTI_GPU
+        gcmkONERROR(gckCOMMAND_Stall(Kernel->command, gcvFALSE, gcvCORE_3D_ALL_MASK));
+#else
         gcmkONERROR(gckCOMMAND_Stall(Kernel->command, gcvFALSE));
+#endif
         break;
 
     case gcvHAL_MAP_USER_MEMORY:
@@ -2368,9 +2417,6 @@ gckKERNEL_Dispatch(
         /* Only if not support multi-core */
         Interface->u.ChipInfo.count = 1;
         Interface->u.ChipInfo.types[0] = Kernel->hardware->type;
-#if gcdMULTI_GPU
-        Interface->u.ChipInfo.gpuCoreCount = Kernel->hardware->identity.gpuCoreCount;
-#endif
         break;
 
     case gcvHAL_ATTACH:
@@ -2383,6 +2429,15 @@ gckKERNEL_Dispatch(
 
         Interface->u.Attach.stateCount = bytes;
         Interface->u.Attach.context = gcmPTR_TO_NAME(context);
+
+        if (Interface->u.Attach.map == gcvTRUE)
+        {
+            gcmkVERIFY_OK(
+                gckCONTEXT_MapBuffer(context,
+                                     Interface->u.Attach.physicals,
+                                     Interface->u.Attach.logicals,
+                                     &Interface->u.Attach.bytes));
+        }
 
         gcmkVERIFY_OK(
             gckKERNEL_AddProcessDB(Kernel,
@@ -2701,7 +2756,11 @@ gckKERNEL_AttachProcessEx(
         if (Kernel->vg == gcvNULL)
 #endif
         {
+#if gcdMULTI_GPU
+            status = gckEVENT_Submit(Kernel->eventObj, gcvTRUE, gcvFALSE, gcvCORE_3D_ALL_MASK);
+#else
             status = gckEVENT_Submit(Kernel->eventObj, gcvTRUE, gcvFALSE);
+#endif
 
             if (status == gcvSTATUS_INTERRUPTED && Kernel->eventObj->submitTimer)
             {
@@ -3385,7 +3444,21 @@ gckKERNEL_Recovery(
 
     /* Again in case more events got submitted. */
 #if gcdSMP
+#if gcdMULTI_GPU
+    if (Kernel->core == gcvCORE_MAJOR)
+    {
+        for (i = 0; i < gcdMULTI_GPU; i++)
+        {
+            gcmkONERROR(gckOS_AtomSet(Kernel->os, eventObj->pending3D[i], gcdEVENT_MASK));
+        }
+    }
+    else
+    {
+        gcmkONERROR(gckOS_AtomSet(Kernel->os, eventObj->pending, gcdEVENT_MASK));
+    }
+#else
     gcmkONERROR(gckOS_AtomSet(Kernel->os, eventObj->pending, gcdEVENT_MASK));
+#endif
 #else
 #if gcdMULTI_GPU
     if (Kernel->core == gcvCORE_MAJOR)
@@ -3766,7 +3839,7 @@ OnError:
     if (buffer->kernelLogical)
     {
         gcmkVERIFY_OK(
-            gckOS_DestroyKernelVirtualMapping(buffer->kernelLogical, bytes));
+            gckOS_DestroyKernelVirtualMapping(buffer->physical, buffer->kernelLogical, bytes));
     }
 
     if (buffer->physical)
@@ -3801,7 +3874,7 @@ gckKERNEL_DestroyVirtualCommandBuffer(
 
     if (!buffer->userLogical)
     {
-        gcmkVERIFY_OK(gckOS_DestroyKernelVirtualMapping(Logical, Bytes));
+        gcmkVERIFY_OK(gckOS_DestroyKernelVirtualMapping(buffer->physical, Logical, Bytes));
     }
 
 #if !gcdPROCESS_ADDRESS_SPACE

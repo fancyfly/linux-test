@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #include "gc_hal_kernel_linux.h"
@@ -55,6 +56,7 @@ _AllocateMemory(
     )
 {
     gceSTATUS status;
+    gckKERNEL kernel;
 
     gcmkHEADER_ARG("Device=0x%x Bytes=%lu", Device, Bytes);
 
@@ -67,7 +69,13 @@ _AllocateMemory(
         Device->os, gcvFALSE, &Bytes, Physical, Logical
         ));
 
-    *PhysAddr = ((PLINUX_MDL)*Physical)->dmaHandle - Device->baseAddress;
+    kernel = Device->kernels[gcvCORE_MAJOR] != gcvNULL ?
+                Device->kernels[gcvCORE_MAJOR] : Device->kernels[gcvCORE_2D];
+
+    if (kernel->hardware->mmuVersion == 0)
+        *PhysAddr = ((PLINUX_MDL)*Physical)->dmaHandle - Device->baseAddress;
+    else
+        *PhysAddr = ((PLINUX_MDL)*Physical)->dmaHandle;
 
     /* Success. */
     gcmkFOOTER_ARG(
@@ -2351,6 +2359,7 @@ gckGALDEVICE_Start(
     {
         /* Setup the ISR routine. */
         gcmkONERROR(gckGALDEVICE_Setup_ISR_VG(Device));
+
 #if gcdENABLE_VG	
         /* Switch to SUSPEND power state. */
         gcmkONERROR(gckVGHARDWARE_SetPowerManagementState(

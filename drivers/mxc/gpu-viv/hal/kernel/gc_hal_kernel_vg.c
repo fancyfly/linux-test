@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #include "gc_hal_kernel_precomp.h"
@@ -211,146 +212,6 @@ gceSTATUS gckVGKERNEL_Destroy(
     while (gcvFALSE);
 
     gcmkFOOTER();
-
-    /* Return status. */
-    return status;
-}
-
-/*******************************************************************************
-**
-**  gckKERNEL_AllocateLinearMemory
-**
-**  Function walks all required memory pools and allocates the requested
-**  amount of video memory.
-**
-**  INPUT:
-**
-**      gckKERNEL Kernel
-**          Pointer to an gckKERNEL object.
-**
-**      gcePOOL * Pool
-**          Pointer the desired memory pool.
-**
-**      gctSIZE_T Bytes
-**          Number of bytes to allocate.
-**
-**      gctSIZE_T Alignment
-**          Required buffer alignment.
-**
-**      gceSURF_TYPE Type
-**          Surface type.
-**
-**  OUTPUT:
-**
-**      gcePOOL * Pool
-**          Pointer to the actual pool where the memory was allocated.
-**
-**      gcuVIDMEM_NODE_PTR * Node
-**          Allocated node.
-*/
-gceSTATUS
-gckVGKERNEL_AllocateLinearMemory(
-    IN gckKERNEL Kernel,
-    IN OUT gcePOOL * Pool,
-    IN gctSIZE_T Bytes,
-    IN gctSIZE_T Alignment,
-    IN gceSURF_TYPE Type,
-    OUT gcuVIDMEM_NODE_PTR * Node
-    )
-{
-    gcePOOL pool;
-    gceSTATUS status;
-    gckVIDMEM videoMemory;
-
-    /* Get initial pool. */
-    switch (pool = *Pool)
-    {
-    case gcvPOOL_DEFAULT:
-    case gcvPOOL_LOCAL:
-        pool = gcvPOOL_LOCAL_INTERNAL;
-        break;
-
-    case gcvPOOL_UNIFIED:
-        pool = gcvPOOL_SYSTEM;
-        break;
-
-    default:
-        break;
-    }
-
-    do
-    {
-        /* Verify the number of bytes to allocate. */
-        if (Bytes == 0)
-        {
-            status = gcvSTATUS_INVALID_ARGUMENT;
-            break;
-        }
-
-        if (pool == gcvPOOL_VIRTUAL)
-        {
-            /* Create a gcuVIDMEM_NODE for virtual memory. */
-            gcmkERR_BREAK(gckVIDMEM_ConstructVirtual(Kernel, gcvFALSE, Bytes, Node));
-
-            /* Success. */
-            break;
-        }
-
-        else
-        {
-            /* Get pointer to gckVIDMEM object for pool. */
-            status = gckKERNEL_GetVideoMemoryPool(Kernel, pool, &videoMemory);
-
-            if (status == gcvSTATUS_OK)
-            {
-                /* Allocate memory. */
-                status = gckVIDMEM_AllocateLinear(Kernel,
-                                                  videoMemory,
-                                                  Bytes,
-                                                  Alignment,
-                                                  Type,
-                                                  Node);
-
-                if (status == gcvSTATUS_OK)
-                {
-                    /* Memory allocated. */
-                    break;
-                }
-            }
-        }
-
-        if (pool == gcvPOOL_LOCAL_INTERNAL)
-        {
-            /* Advance to external memory. */
-            pool = gcvPOOL_LOCAL_EXTERNAL;
-        }
-        else if (pool == gcvPOOL_LOCAL_EXTERNAL)
-        {
-            /* Advance to contiguous system memory. */
-            pool = gcvPOOL_SYSTEM;
-        }
-        else if (pool == gcvPOOL_SYSTEM)
-        {
-            /* Advance to virtual memory. */
-            pool = gcvPOOL_VIRTUAL;
-        }
-        else
-        {
-            /* Out of pools. */
-            break;
-        }
-    }
-    /* Loop only for multiple selection pools. */
-    while ((*Pool == gcvPOOL_DEFAULT)
-    ||     (*Pool == gcvPOOL_LOCAL)
-    ||     (*Pool == gcvPOOL_UNIFIED)
-    );
-
-    if (gcmIS_SUCCESS(status))
-    {
-        /* Return pool used for allocation. */
-        *Pool = pool;
-    }
 
     /* Return status. */
     return status;
@@ -564,6 +425,9 @@ gceSTATUS gckVGKERNEL_Dispatch(
             ));
 
         kernelInterface->u.MapUserMemory.info = gcmPTR_TO_NAME(info);
+
+        /* Clear temp storage. */
+        info = gcvNULL;
         break;
 
     case gcvHAL_UNMAP_USER_MEMORY:
@@ -576,6 +440,7 @@ gceSTATUS gckVGKERNEL_Dispatch(
             gcmNAME_TO_PTR(kernelInterface->u.UnmapUserMemory.info),
             kernelInterface->u.UnmapUserMemory.address
             ));
+
         gcmRELEASE_NAME(kernelInterface->u.UnmapUserMemory.info);
         break;
     case gcvHAL_LOCK_VIDEO_MEMORY:

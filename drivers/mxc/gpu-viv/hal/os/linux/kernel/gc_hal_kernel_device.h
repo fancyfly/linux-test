@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #ifndef __gc_hal_kernel_device_h_
@@ -127,6 +128,18 @@ typedef struct _gckGALDEVICE
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	struct contiguous_mem_pool *pool;
     struct reset_control *rstc[gcdMAX_GPU_COUNT];
+#endif
+
+#if DYNAMIC_MEMORY_RECORD
+    gctSIZE_T cachedsize;
+    gctSIZE_T nonpagedmemorysize;
+#if LINUX_CMA_FSL
+    gctSIZE_T cmasize;
+#endif
+    gctSIZE_T contiguouslowmemsize;
+    gctSIZE_T contiguoushighmemsize;
+    gctSIZE_T noncontiguouslowmemsize;
+    gctSIZE_T noncontiguoushighmemsize;
 #endif
 }
 * gckGALDEVICE;

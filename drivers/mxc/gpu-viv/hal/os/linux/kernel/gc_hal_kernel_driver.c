@@ -1,7 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
-*    Copyright (C) 2011-2013 Freescale Semiconductor, Inc.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -18,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #include <linux/device.h>
@@ -240,6 +240,140 @@ static struct file_operations driver_fops =
     .mmap       = drv_mmap,
 };
 
+static ssize_t show_meminfo(struct device_driver *dev, char *buf)
+{
+    gckKERNEL  kernel;
+    size_t size =0;
+
+    if(galDevice->kernels[gcvCORE_MAJOR])
+    {
+        kernel = galDevice->kernels[gcvCORE_MAJOR];
+    }
+    else if(galDevice->kernels[gcvCORE_VG])
+    {
+        kernel = galDevice->kernels[gcvCORE_VG];
+    }
+    else
+    {
+        kernel = galDevice->kernels[gcvCORE_2D];
+    }
+
+    size+= snprintf(buf+size, PAGE_SIZE-size,"Reseverd memory information:\n");
+    size+= snprintf(buf+size, PAGE_SIZE-size,"Type\r\tbaseaddress\r\t\t\tsize(bytes)\r\t\t\t\t\tused(bytes)\r\t\t\t\t\t\t\tfree(bytes)\n");
+    if(galDevice->internalVidMem)
+       size+= snprintf(buf+size, PAGE_SIZE-size,"Internal\r\t0x%x\r\t\t\t%lu\r\t\t\t\t\t%lu\r\t\t\t\t\t\t\t%lu\n",
+            galDevice->internalVidMem->baseAddress,galDevice->internalVidMem->bytes,
+            galDevice->internalVidMem->bytes-galDevice->internalVidMem->freeBytes,
+            galDevice->internalVidMem->freeBytes);
+    if(galDevice->externalVidMem)
+       size+= snprintf(buf+size, PAGE_SIZE-size,"External\r\t0x%x\r\t\t\t%lu\r\t\t\t\t\t%lu\r\t\t\t\t\t\t\t%lu\n",
+            galDevice->externalVidMem->baseAddress,galDevice->externalVidMem->bytes,
+            galDevice->externalVidMem->bytes-galDevice->externalVidMem->freeBytes,
+            galDevice->externalVidMem->freeBytes);
+    if(galDevice->contiguousVidMem)
+       size+= snprintf(buf+size, PAGE_SIZE-size,"System\r\t0x%x\r\t\t\t%lu\r\t\t\t\t\t%lu\r\t\t\t\t\t\t\t%lu\n",
+            galDevice->contiguousVidMem ->baseAddress,galDevice->contiguousVidMem->bytes,
+            galDevice->contiguousVidMem->bytes-galDevice->contiguousVidMem->freeBytes,
+            galDevice->contiguousVidMem->freeBytes);
+
+#if DYNAMIC_MEMORY_RECORD
+    size+= snprintf(buf+size, PAGE_SIZE-size,"Dynamic memory information:\n");
+
+    size+= snprintf(buf+size, PAGE_SIZE-size,"Type\r\t\t\t\t\tused size(bytes)\n");
+    size+= snprintf(buf+size, PAGE_SIZE-size,"Cached memory\r\t\t\t\t\t%lu\n",  galDevice->cachedsize);
+    size+= snprintf(buf+size, PAGE_SIZE-size,"Non paged memory\r\t\t\t\t\t%lu\n",  galDevice->nonpagedmemorysize);
+#if LINUX_CMA_FSL
+    size+= snprintf(buf+size, PAGE_SIZE-size,"CMA memory\r\t\t\t\t\t%lu\n",  galDevice->cmasize);
+#endif
+    size+= snprintf(buf+size, PAGE_SIZE-size,"Contiguous paged memory(low)\r\t\t\t\t\t%lu\n",  galDevice->contiguouslowmemsize);
+    size+= snprintf(buf+size, PAGE_SIZE-size,"Contiguous paged memory(high)\r\t\t\t\t\t%lu\n",  galDevice->contiguoushighmemsize);
+    size+= snprintf(buf+size, PAGE_SIZE-size,"NonContiguous paged memory(low)\r\t\t\t\t\t%lu\n",  galDevice->noncontiguouslowmemsize);
+    size+= snprintf(buf+size, PAGE_SIZE-size,"NonContiguous paged memory(high)\r\t\t\t\t\t%lu\n",  galDevice->noncontiguoushighmemsize);
+#endif
+    return strlen(buf);
+}
+
+static DRIVER_ATTR(meminfo, S_IRUGO | S_IWUSR, show_meminfo, NULL);
+
+static ssize_t show_pid(struct device_driver *dev, char *buf)
+{
+    gckKERNEL  kernel;
+    size_t size =0;
+    gcsDATABASE_PTR database;
+    gctINT i, pid;
+    gctUINT8 name[24];
+
+    if(galDevice->kernels[gcvCORE_MAJOR])
+    {
+        kernel = galDevice->kernels[gcvCORE_MAJOR];
+    }
+    else if(galDevice->kernels[gcvCORE_VG])
+    {
+        kernel = galDevice->kernels[gcvCORE_VG];
+    }
+    else
+    {
+        kernel = galDevice->kernels[gcvCORE_2D];
+    }
+
+    gckOS_AcquireMutex(kernel->os, kernel->db->dbMutex, gcvINFINITE);
+
+    size+= snprintf(buf+size, PAGE_SIZE-size, "**************************\n");
+    size+= snprintf(buf+size, PAGE_SIZE-size, "***  PROCESS DB DUMP   ***\n");
+    size+= snprintf(buf+size, PAGE_SIZE-size, "**************************\n");
+
+    size+= snprintf(buf+size, PAGE_SIZE-size, "%-8s%s\n", "PID", "NAME");
+    /* Walk the databases. */
+    for (i = 0; i < gcmCOUNTOF(kernel->db->db); ++i)
+    {
+        for (database = kernel->db->db[i];
+             database != gcvNULL;
+             database = database->next)
+        {
+            pid = database->processID;
+
+            gcmkVERIFY_OK(gckOS_GetProcessNameByPid(pid, gcmSIZEOF(name), name));
+
+            size+= snprintf(buf+size, PAGE_SIZE-size, "%-8d%s\n", pid, name);
+        }
+    }
+    gckOS_ReleaseMutex(kernel->os, kernel->db->dbMutex);
+    return size;
+}
+
+static DRIVER_ATTR(pid, S_IRUGO | S_IWUSR, show_pid, NULL);
+
+static ssize_t show_idletime(struct device_driver *dev, char *buf)
+{
+    gcuDATABASE_INFO info;
+    gckKERNEL  kernel;
+
+    memset(&info, 0, sizeof(info));
+
+    if(galDevice->kernels[gcvCORE_MAJOR])
+    {
+        kernel = galDevice->kernels[gcvCORE_MAJOR];
+    }
+    else if(galDevice->kernels[gcvCORE_VG])
+    {
+        kernel = galDevice->kernels[gcvCORE_VG];
+    }
+    else
+    {
+        kernel = galDevice->kernels[gcvCORE_2D];
+    }
+
+    if(gckKERNEL_QueryProcessDB(kernel,0,gcvFALSE,gcvDB_IDLE,&info)==gcvSTATUS_OK)
+        snprintf(buf, PAGE_SIZE, "GPU idle time since last query: %llu ns\n", info.time);
+
+    return strlen(buf);
+}
+
+
+static DRIVER_ATTR(idletime, S_IRUGO | S_IWUSR, show_idletime, gcvNULL);
+
+
+
 void
 gckOS_DumpParam(
     void
@@ -370,7 +504,7 @@ int drv_open(
     }
     attached = gcvTRUE;
 
-    if (!galDevice->contiguousMapped)
+    if ((!galDevice->contiguousMapped) && galDevice->contiguousSize)
     {
         gcmkONERROR(gckOS_MapMemory(
             galDevice->os,
@@ -466,7 +600,7 @@ int drv_release(
         gcmkONERROR(gcvSTATUS_INVALID_ARGUMENT);
     }
 
-    if (!device->contiguousMapped)
+    if ((!device->contiguousMapped) && galDevice->contiguousSize)
     {
         if (data->contiguousLogical != gcvNULL)
         {
@@ -1216,16 +1350,19 @@ static int __devinit gpu_probe(struct platform_device *pdev)
 	pool = devm_kzalloc(&pdev->dev, sizeof(*pool), GFP_KERNEL);
 	if (!pool)
 		return -ENOMEM;
-	pool->size = contiguousSize;
-	init_dma_attrs(&pool->attrs);
-	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &pool->attrs);
-	pool->virt = dma_alloc_attrs(&pdev->dev, pool->size, &pool->phys,
-				     GFP_KERNEL, &pool->attrs);
-	if (!pool->virt) {
-		dev_err(&pdev->dev, "Failed to allocate contiguous memory\n");
-		return -ENOMEM;
+	if(contiguousSize)
+	{
+		pool->size = contiguousSize;
+		init_dma_attrs(&pool->attrs);
+		dma_set_attr(DMA_ATTR_WRITE_COMBINE, &pool->attrs);
+		pool->virt = dma_alloc_attrs(&pdev->dev, pool->size, &pool->phys,
+					     GFP_KERNEL, &pool->attrs);
+		if (!pool->virt) {
+			dev_err(&pdev->dev, "Failed to allocate contiguous memory\n");
+			return -ENOMEM;
+		}
+		contiguousBase = pool->phys;
 	}
-	contiguousBase = pool->phys;
 	dev_set_drvdata(&pdev->dev, pool);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 	prop = of_get_property(dn, "contiguousbase", NULL);
@@ -1261,6 +1398,19 @@ static int __devinit gpu_probe(struct platform_device *pdev)
         if (galDevice->kernels[gcvCORE_MAJOR])
             REG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 #endif
+
+        ret = driver_create_file(pdev->dev.driver, &driver_attr_meminfo);
+        if(ret)
+            dev_err(&pdev->dev, "create meminfo attr failed (%d)\n", ret);
+
+        ret = driver_create_file(pdev->dev.driver, &driver_attr_pid);
+        if(ret)
+            dev_err(&pdev->dev, "create pid attr failed (%d)\n", ret);
+
+        ret = driver_create_file(pdev->dev.driver, &driver_attr_idletime);
+        if(ret)
+            dev_err(&pdev->dev, "create idletime attr failed (%d)\n", ret);
+
         gcmkFOOTER_NO();
         return ret;
     }
@@ -1291,9 +1441,15 @@ static int __devexit gpu_remove(struct platform_device *pdev)
     if(galDevice->kernels[gcvCORE_MAJOR])
         UNREG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 #endif
+
+    driver_remove_file(pdev->dev.driver, &driver_attr_meminfo);
+    driver_remove_file(pdev->dev.driver, &driver_attr_pid);
+    driver_remove_file(pdev->dev.driver, &driver_attr_idletime);
+
     drv_exit();
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
-    dma_free_attrs(&pdev->dev, pool->size, pool->virt, pool->phys,
+    if(pool->size)
+    	dma_free_attrs(&pdev->dev, pool->size, pool->virt, pool->phys,
                &pool->attrs);
 #endif
     gcmkFOOTER_NO();

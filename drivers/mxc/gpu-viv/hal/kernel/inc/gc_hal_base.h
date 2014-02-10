@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2013 by Vivante Corp.
+*    Copyright (C) 2005 - 2014 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 
 #ifndef __gc_hal_base_h_
@@ -121,10 +122,7 @@ typedef struct _gcsPLS
     /* Flag for calling module destructor. */
     gctBOOL                     exiting;
 
-#if gcdUSE_NPOT_PATCH
     gctBOOL                     bNeedSupportNP2Texture;
-#endif
-
 
     gctPLS_DESTRUCTOR           destructor;
     /* Mutex to guard PLS access. currently it's for EGL.
@@ -135,6 +133,31 @@ typedef struct _gcsPLS
 gcsPLS;
 
 extern gcsPLS gcPLS;
+
+#define gcPLS_INITIALIZER \
+{ \
+    gcvNULL,         /* gcoOS object.      */ \
+    gcvNULL,         /* gcoHAL object.     */ \
+    0,               /* internalSize       */ \
+    gcvNULL,         /* internalPhysical   */ \
+    gcvNULL,         /* internalLogical    */ \
+    0,               /* externalSize       */ \
+    gcvNULL,         /* externalPhysical   */ \
+    gcvNULL,         /* externalLogical    */ \
+    0,               /* contiguousSize     */ \
+    gcvNULL,         /* contiguousPhysical */ \
+    gcvNULL,         /* contiguousLogical  */ \
+    gcvNULL,         /* eglDisplayInfo     */ \
+    gcvNULL,         /* eglSurfaceInfo     */ \
+    gcvSURF_A8R8G8B8,/* eglConfigFormat    */ \
+    gcvNULL,         /* reference          */ \
+    0,               /* processID          */ \
+    0,               /* threadID           */ \
+    gcvFALSE,        /* exiting            */ \
+    gcvFALSE,        /* Special flag for NP2 texture. */ \
+    gcvNULL,         /* destructor        */ \
+    gcvNULL,         /* accessLock        */ \
+} \
 
 /******************************************************************************\
 ******************************* Thread local storage *************************
@@ -167,8 +190,10 @@ typedef struct _gcsTLS
 #endif
     gco2D                       engine2D;
 
+    /*thread data */
     gctPOINTER                  context;
-    gctPOINTER                  clientCtx;
+    /* ES(including es1 and es2) client driver context which is current state */
+    gctPOINTER                  esClientCtx;
     gctTLS_DESTRUCTOR           destructor;
 
     gctBOOL                     copied;
@@ -301,6 +326,10 @@ typedef enum _gcePATCH_ID
 {
     gcvPATCH_INVALID = 0,
 
+#if gcdDEBUG_OPTION
+    gcvPATCH_DEBUG,
+#endif
+
     gcvPATCH_GTFES30,
     gcvPATCH_CTGL11,
     gcvPATCH_CTGL20,
@@ -310,7 +339,8 @@ typedef enum _gcePATCH_ID
     gcvPATCH_GLBM27,
     gcvPATCH_GLBMGUI,
     gcvPATCH_GFXBENCH,
-    gcvPATCH_ANTUTU,
+    gcvPATCH_ANTUTU,        /* Antutu 3.x */
+    gcvPATCH_ANTUTU4X,      /* Antutu 4.x */
     gcvPATCH_QUADRANT,
     gcvPATCH_GPUBENCH,
     gcvPATCH_DUOKAN,
@@ -347,6 +377,18 @@ typedef enum _gcePATCH_ID
     gcvPATCH_BM3,
     gcvPATCH_BASEMARKX,
     gcvPATCH_DEQP,
+    gcvPATCH_SF4,
+    gcePATCH_MGOHEAVEN2,
+    gcePATCH_SILIBILI,
+    gcePATCH_ELEMENTSDEF,
+    gcePATCH_GLOFTKRHM,
+    gcvPATCH_OCLCTS,
+    gcvPATCH_A8HP,
+    gcvPATCH_WISTONESG,
+    gcvPATCH_SPEEDRACE,
+    gcvPATCH_FSBHAWAIIF,
+    gcvPATCH_GOOGLEMAP,
+    gcvPATCH_GOOGLEPLUS,
 
     gcvPATCH_COUNT
 } gcePATCH_ID;
@@ -466,6 +508,13 @@ gcoHAL_Destroy(
     IN gcoHAL Hal
     );
 
+/* Get HAL options */
+gceSTATUS
+gcoHAL_GetOption(
+     IN gcoHAL Hal,
+     IN gceOPTION Option
+     );
+
 /* Get pointer to gco2D object. */
 gceSTATUS
 gcoHAL_Get2DEngine(
@@ -525,11 +574,6 @@ gcoHAL_ImportVideoMemory(
     OUT gctUINT32 * Handle
     );
 
-gceSTATUS
-gcoHAL_ReleaseVideoMemory(
-    IN gctUINT32 Handle
-    );
-
 /* Verify whether the specified feature is available in hardware. */
 gceSTATUS
 gcoHAL_IsFeatureAvailable(
@@ -537,7 +581,7 @@ gcoHAL_IsFeatureAvailable(
     IN gceFEATURE Feature
     );
 
-/* Verify whether the specified sw workaround is needed in hardware. */
+
 gceSTATUS
 gcoHAL_IsSwwaNeeded(
     IN gcoHAL Hal,
@@ -641,6 +685,14 @@ gcoHAL_Commit(
     IN gcoHAL Hal,
     IN gctBOOL Stall
     );
+
+#ifndef VIVANTE_NO_3D
+/* Sencd fence command. */
+gceSTATUS
+gcoHAL_SendFence(
+    IN gcoHAL Hal
+    );
+#endif /* VIVANTE_NO_3D */
 
 /* Query the tile capabilities. */
 gceSTATUS
@@ -885,6 +937,28 @@ gcoOS_Free(
 
 /* Allocate memory. */
 gceSTATUS
+gcoOS_AllocateSharedMemory(
+    IN gcoOS Os,
+    IN gctSIZE_T Bytes,
+    OUT gctPOINTER * Memory
+    );
+
+/* Free memory. */
+gceSTATUS
+gcoOS_FreeSharedMemory(
+    IN gcoOS Os,
+    IN gctPOINTER Memory
+    );
+
+/* Schedule to free memory. */
+gceSTATUS
+gcoOS_ScheduleSharedMemory(
+    IN gcoOS Os,
+    IN gctPOINTER Memory
+    );
+
+/* Allocate memory. */
+gceSTATUS
 gcoOS_AllocateMemory(
     IN gcoOS Os,
     IN gctSIZE_T Bytes,
@@ -1010,6 +1084,10 @@ gcoOS_FreeNonPagedMemory(
 
 #define gcmOS_SAFE_FREE(os, mem) \
     gcoOS_Free(os, mem); \
+    mem = gcvNULL
+
+#define gcmOS_SAFE_FREE_SHARED_MEMORY(os, mem) \
+    gcoOS_FreeSharedMemory(os, mem); \
     mem = gcvNULL
 
 #define gcmkOS_SAFE_FREE(os, mem) \
@@ -2080,6 +2158,16 @@ gcoSURF_MapUserSurface(
     IN gctUINT32 Physical
     );
 
+/* Wrapp surface with known logical/GPU address */
+gceSTATUS
+gcoSURF_WrapSurface(
+    IN gcoSURF Surface,
+    IN gctUINT Alignment,
+    IN gctPOINTER Logical,
+    IN gctUINT32 Physical
+    );
+
+
 /* Query vid mem node info. */
 gceSTATUS
 gcoSURF_QueryVidMemNode(
@@ -2267,6 +2355,13 @@ gcoSURF_Unlock(
     IN gctPOINTER Memory
     );
 
+/*. Query surface flags.*/
+gceSTATUS
+gcoSURF_QueryFlags(
+    IN gcoSURF Surface,
+    IN gctUINT Flag
+    );
+
 /* Return pixel format parameters; Info is required to be a pointer to an
  * array of at least two items because some formats have up to two records
  * of description. */
@@ -2321,6 +2416,14 @@ gceSTATUS
 gcoSURF_ConstructWrapper(
     IN gcoHAL Hal,
     OUT gcoSURF * Surface
+    );
+
+/*. Query surface flags.*/
+gceSTATUS
+gcoSURF_SetFlags(
+    IN gcoSURF Surface,
+    IN gctUINT Flag,
+    IN gctBOOL Value
     );
 
 /* Set the underlying buffer for the surface wrapper. */
@@ -3729,9 +3832,10 @@ gceSTATUS gcfDump2DCommand(IN gctUINT32_PTR Command, IN gctUINT32 Size);
 **
 **  ARGUMENTS:
 **
+**      gctBOOL             Src.
 **      gctUINT32           Address.
 */
-gceSTATUS gcfDump2DSurface(IN gctUINT32 Address);
+gceSTATUS gcfDump2DSurface(IN gctBOOL Src, IN gctUINT32 Address);
 #if gcdDUMP_2D
 #   define gcmDUMP_2D_SURFACE       gcfDump2DSurface
 #elif gcdHAS_ELLIPSIS
@@ -3739,6 +3843,7 @@ gceSTATUS gcfDump2DSurface(IN gctUINT32 Address);
 #else
     gcmINLINE static void
     __dummy_dump_2d_surface(
+        IN gctBOOL Src,
         IN gctUINT32 Address
         )
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013-2014 Freescale Semiconductor, Inc.
  *
  * Based on imx-sgtl5000.c
  * Copyright (C) 2012 Freescale Semiconductor, Inc.
@@ -20,6 +20,7 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/clk.h>
+#include <linux/switch.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <sound/pcm_params.h>
@@ -50,6 +51,7 @@ struct imx_priv {
 	struct platform_device *pdev;
 	struct snd_pcm_substream *first_stream;
 	struct snd_pcm_substream *second_stream;
+	struct switch_dev sdev;
 };
 static struct imx_priv card_priv;
 
@@ -101,10 +103,12 @@ static int hpjack_status_check(void)
 
 	if (hp_status != priv->hp_active_low) {
 		snprintf(buf, 32, "STATE=%d", 2);
+		switch_set_state(&priv->sdev, 2);
 		snd_soc_dapm_disable_pin(&priv->codec->dapm, "Ext Spk");
 		ret = imx_hp_jack_gpio.report;
 	} else {
 		snprintf(buf, 32, "STATE=%d", 0);
+		switch_set_state(&priv->sdev, 0);
 		snd_soc_dapm_enable_pin(&priv->codec->dapm, "Ext Spk");
 		ret = 0;
 	}
@@ -502,6 +506,13 @@ static int imx_wm8962_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, &data->card);
 	snd_soc_card_set_drvdata(&data->card, data);
 
+	priv->sdev.name = "h2w";
+	ret = switch_dev_register(&priv->sdev);
+	if (ret < 0) {
+		ret = -EINVAL;
+		goto fail;
+	}
+
 	ret = snd_soc_register_card(&data->card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
@@ -542,11 +553,13 @@ fail:
 static int imx_wm8962_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct imx_priv *priv = &card_priv;
 
 	driver_remove_file(pdev->dev.driver, &driver_attr_microphone);
 	driver_remove_file(pdev->dev.driver, &driver_attr_headphone);
 
 	snd_soc_unregister_card(card);
+	switch_dev_unregister(&priv->sdev);
 
 	return 0;
 }

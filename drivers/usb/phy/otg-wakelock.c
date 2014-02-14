@@ -57,14 +57,14 @@ static struct otgwl_lock vbus_lock;
 static void otgwl_hold(struct otgwl_lock *lock)
 {
 	if (!lock->held) {
-		wake_lock(&lock->wakelock);
+		pm_wake_lock(&lock->wakelock);
 		lock->held = true;
 	}
 }
 
 static void otgwl_temporary_hold(struct otgwl_lock *lock)
 {
-	wake_lock_timeout(&lock->wakelock,
+	pm_wake_lock_timeout(&lock->wakelock,
 			  msecs_to_jiffies(TEMPORARY_HOLD_TIME));
 	lock->held = false;
 }
@@ -72,7 +72,7 @@ static void otgwl_temporary_hold(struct otgwl_lock *lock)
 static void otgwl_drop(struct otgwl_lock *lock)
 {
 	if (lock->held) {
-		wake_unlock(&lock->wakelock);
+		pm_wake_unlock(&lock->wakelock);
 		lock->held = false;
 	}
 }
@@ -151,7 +151,7 @@ static int __init otg_wakelock_init(void)
 
 	snprintf(vbus_lock.name, sizeof(vbus_lock.name), "vbus-%s",
 		 dev_name(otgwl_xceiv->dev));
-	wake_lock_init(&vbus_lock.wakelock, WAKE_LOCK_SUSPEND,
+	pm_wake_lock_init(&vbus_lock.wakelock, WAKE_LOCK_SUSPEND,
 		       vbus_lock.name);
 
 	otgwl_nb.notifier_call = otgwl_otg_notifications;
@@ -162,7 +162,7 @@ static int __init otg_wakelock_init(void)
 		       " failed\n", __func__,
 		       dev_name(otgwl_xceiv->dev));
 		otgwl_xceiv = NULL;
-		wake_lock_destroy(&vbus_lock.wakelock);
+		pm_wake_lock_destroy(&vbus_lock.wakelock);
 		return ret;
 	}
 

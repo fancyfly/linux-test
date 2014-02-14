@@ -29,7 +29,9 @@
 #include <linux/bitops.h>
 #include <linux/input/mt.h>
 #include <linux/of_gpio.h>
-
+#ifdef CONFIG_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
 /*
  * Mouse Mode: some panel may configure the controller to mouse mode,
  * which can only report one point at a given time.
@@ -303,7 +305,7 @@ static int egalax_ts_probe(struct i2c_client *client,
 		ts->es_handler.suspend = egalax_early_suspend;
 		ts->es_handler.resume = egalax_later_resume;
 		ts->es_handler.data = (void *)client;
-		register_early_suspend(&data->es_handler);
+		register_early_suspend(&ts->es_handler);
 	}
 #endif
 	return 0;
@@ -322,7 +324,7 @@ static int egalax_ts_remove(struct i2c_client *client)
 {
 	struct egalax_ts *ts = i2c_get_clientdata(client);
 #ifdef CONFIG_EARLYSUSPEND
-	unregister_early_suspend(&data->es_handler);
+	unregister_early_suspend(&ts->es_handler);
 #endif
 	free_irq(client->irq, ts);
 	input_free_device(ts->input_dev);

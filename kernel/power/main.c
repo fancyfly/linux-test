@@ -15,6 +15,9 @@
 #include <linux/workqueue.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/rtc.h>
+#include <linux/syscalls.h> /* sys_sync */
+#include <linux/list.h>
 
 #include "power.h"
 
@@ -313,7 +316,7 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 static suspend_state_t decode_state(const char *buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
-	suspend_state_t state = PM_SUSPEND_MIN;
+	suspend_state_t state = PM_SUSPEND_ON;
 	const char * const *s;
 #endif
 	char *p;
@@ -335,24 +338,170 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 	return PM_SUSPEND_ON;
 }
 
+#include <linux/wakelock.h>
+#include <linux/module.h>
+
+enum {
+	DEBUG_USER_STATE = 1U << 0,
+	DEBUG_SUSPEND = 1U << 2,
+	DEBUG_VERBOSE = 1U << 3,
+};
+static int debug_mask = DEBUG_USER_STATE;
+module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+extern struct workqueue_struct *suspend_work_queue;
+extern struct wake_lock main_wake_lock;
+extern suspend_state_t requested_suspend_state;
+
+static DEFINE_MUTEX(early_suspend_lock);
+static LIST_HEAD(early_suspend_handlers);
+static void early_suspend(struct work_struct *work);
+static void late_resume(struct work_struct *work);
+static DECLARE_WORK(early_suspend_work, early_suspend);
+static DECLARE_WORK(late_resume_work, late_resume);
+static DEFINE_SPINLOCK(state_lock);
+
+enum {
+	SUSPEND_REQUESTED = 0x1,
+	SUSPENDED = 0x2,
+	SUSPEND_REQUESTED_AND_SUSPENDED = SUSPEND_REQUESTED | SUSPENDED,
+};
+static int state;
+
+static void early_suspend(struct work_struct *work)
+{
+	struct early_suspend *pos;
+	unsigned long irqflags;
+	int abort = 0;
+
+	mutex_lock(&early_suspend_lock);
+	spin_lock_irqsave(&state_lock, irqflags);
+	if (state == SUSPEND_REQUESTED)
+		state |= SUSPENDED;
+	else
+		abort = 1;
+	spin_unlock_irqrestore(&state_lock, irqflags);
+
+	if (abort) {
+		if (debug_mask & DEBUG_SUSPEND)
+			pr_info("early_suspend: abort, state %d\n", state);
+		mutex_unlock(&early_suspend_lock);
+		goto abort;
+	}
+	if (debug_mask & DEBUG_SUSPEND)
+		pr_info("early_suspend: call handlers\n");
+	/* early suspend not enable */
+	#if 0
+	list_for_each_entry(pos, &early_suspend_handlers, link) {
+		if (pos->suspend != NULL) {
+			pr_info("early_suspend: calling %pf\n", pos->suspend);
+			pos->suspend(pos);
+		}
+	}
+	#endif
+	mutex_unlock(&early_suspend_lock);
+
+	if (debug_mask & DEBUG_SUSPEND)
+		pr_info("early_suspend: sync\n");
+
+	sys_sync();
+abort:
+	spin_lock_irqsave(&state_lock, irqflags);
+	if (state == SUSPEND_REQUESTED_AND_SUSPENDED)
+		wake_unlock(&main_wake_lock);
+	spin_unlock_irqrestore(&state_lock, irqflags);
+}
+
+static void late_resume(struct work_struct *work)
+{
+	struct early_suspend *pos;
+	unsigned long irqflags;
+	int abort = 0;
+
+	mutex_lock(&early_suspend_lock);
+	spin_lock_irqsave(&state_lock, irqflags);
+	if (state == SUSPENDED)
+		state &= ~SUSPENDED;
+	else
+		abort = 1;
+	spin_unlock_irqrestore(&state_lock, irqflags);
+
+	if (abort) {
+		if (debug_mask & DEBUG_SUSPEND)
+			pr_info("late_resume: abort, state %d\n", state);
+		goto abort;
+	}
+	/* early suspend not enable */
+	#if 0
+	if (debug_mask & DEBUG_SUSPEND)
+		pr_info("late_resume: call handlers\n");
+	list_for_each_entry_reverse(pos, &early_suspend_handlers, link) {
+		if (pos->resume != NULL) {
+			if (debug_mask & DEBUG_VERBOSE)
+				pr_info("late_resume: calling %pf\n", pos->resume);
+
+			pos->resume(pos);
+		}
+	}
+	pr_info("late_resume: done\n");
+	#endif
+abort:
+	mutex_unlock(&early_suspend_lock);
+}
+
+static void request_suspend_state(suspend_state_t new_state)
+{
+	unsigned long irqflags;
+	int old_sleep;
+
+	spin_lock_irqsave(&state_lock, irqflags);
+	old_sleep = state & SUSPEND_REQUESTED;
+	if (debug_mask & DEBUG_USER_STATE) {
+		struct timespec ts;
+		struct rtc_time tm;
+		getnstimeofday(&ts);
+		rtc_time_to_tm(ts.tv_sec, &tm);
+		pr_info("request_suspend_state: %s (%d->%d) at %lld "
+			"(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n",
+			new_state != PM_SUSPEND_ON ? "sleep" : "wakeup",
+			requested_suspend_state, new_state,
+			ktime_to_ns(ktime_get()),
+			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+			tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+	}
+	if (!old_sleep && new_state != PM_SUSPEND_ON) {
+		state |= SUSPEND_REQUESTED;
+		queue_work(suspend_work_queue, &early_suspend_work);
+	} else if (old_sleep && new_state == PM_SUSPEND_ON) {
+		state &= ~SUSPEND_REQUESTED;
+		wake_lock(&main_wake_lock);
+		queue_work(suspend_work_queue, &late_resume_work);
+	}
+	requested_suspend_state = new_state;
+	spin_unlock_irqrestore(&state_lock, irqflags);
+}
+
 static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 			   const char *buf, size_t n)
 {
 	suspend_state_t state;
 	int error;
-
 	error = pm_autosleep_lock();
-	if (error)
+	if (error) {
 		return error;
-
+	}
 	if (pm_autosleep_state() > PM_SUSPEND_ON) {
 		error = -EBUSY;
 		goto out;
 	}
-
 	state = decode_state(buf, n);
 	if (state < PM_SUSPEND_MAX)
-		error = pm_suspend(state);
+	{
+	   if (state == PM_SUSPEND_ON || valid_state(state)) {
+			error = 0;
+			request_suspend_state(state);
+		}
+	}
 	else if (state == PM_SUSPEND_MAX)
 		error = hibernate();
 	else
@@ -465,7 +614,6 @@ static ssize_t autosleep_store(struct kobject *kobj,
 	if (state == PM_SUSPEND_ON
 	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
 		return -EINVAL;
-
 	error = pm_autosleep_set_state(state);
 	return error ? error : n;
 }
@@ -474,6 +622,7 @@ power_attr(autosleep);
 #endif /* CONFIG_PM_AUTOSLEEP */
 
 #ifdef CONFIG_PM_WAKELOCKS
+#if 0
 static ssize_t wake_lock_show(struct kobject *kobj,
 			      struct kobj_attribute *attr,
 			      char *buf)
@@ -488,9 +637,15 @@ static ssize_t wake_lock_store(struct kobject *kobj,
 	int error = pm_wake_lock(buf);
 	return error ? error : n;
 }
-
+#endif
+extern ssize_t wake_lock_show(struct kobject *kobj,
+			      struct kobj_attribute *attr,
+			      char *buf);
+extern ssize_t wake_lock_store(struct kobject *kobj,
+			       struct kobj_attribute *attr,
+			       const char *buf, size_t n);
 power_attr(wake_lock);
-
+#if 0
 static ssize_t wake_unlock_show(struct kobject *kobj,
 				struct kobj_attribute *attr,
 				char *buf)
@@ -505,7 +660,13 @@ static ssize_t wake_unlock_store(struct kobject *kobj,
 	int error = pm_wake_unlock(buf);
 	return error ? error : n;
 }
-
+#endif
+extern ssize_t wake_unlock_show(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				char *buf);
+extern ssize_t wake_unlock_store(struct kobject *kobj,
+				 struct kobj_attribute *attr,
+				 const char *buf, size_t n);
 power_attr(wake_unlock);
 
 #endif /* CONFIG_PM_WAKELOCKS */

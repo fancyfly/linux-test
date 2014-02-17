@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright 2011-2014 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -263,6 +263,29 @@ static void __init imx6q_lvds_cabc_init(void)
 	}
 }
 
+/*
+ * Init GPIO PCIE_PWR_EN to keep power supply to miniPCIE 3G modem
+ *
+*/
+static void __init imx6q_mini_pcie_init(void)
+{
+	struct device_node *np = NULL;
+	int ret, power_on_gpio;
+	np = of_find_node_by_name(NULL, "minipcie_ctrl");
+	if (!np)
+		return;
+
+	power_on_gpio = of_get_named_gpio(np, "power-on-gpio", 0);
+	if (gpio_is_valid(power_on_gpio)) {
+		ret = gpio_request_one(power_on_gpio, GPIOF_OUT_INIT_HIGH,
+			"miniPCIE Power On");
+		pr_warn("!!request miniPCIE Power On gpio\n");
+		if (ret)
+			pr_warn("failed to request miniPCIE Power On gpio\n");
+	}
+}
+
+
 #define OCOTP_MACn(n)	(0x00000620 + (n) * 0x10)
 void __init imx6_enet_mac_init(const char *compatible)
 {
@@ -353,6 +376,7 @@ static void __init imx6q_init_machine(void)
 	imx6_pm_init();
 	imx6q_csi_mux_init();
 	imx6q_lvds_cabc_init();
+	imx6q_mini_pcie_init();
 }
 
 #define OCOTP_CFG3			0x440

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2012-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -991,6 +991,7 @@ static int ldb_probe(struct platform_device *pdev)
 	mxc_dispdrv_setdata(ldb->disp_ldb, ldb);
 
 	dev_set_drvdata(&pdev->dev, ldb);
+	mxc_dispdrv_setdev(ldb->disp_ldb, &pdev->dev);
 
 	dev_dbg(&pdev->dev, "%s exit\n", __func__);
 	return ret;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2011-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2816,6 +2816,8 @@ static int mxc_hdmi_probe(struct platform_device *pdev)
 	mxc_dispdrv_setdata(hdmi->disp_mxc_hdmi, hdmi);
 
 	platform_set_drvdata(pdev, hdmi);
+
+	mxc_dispdrv_setdev(hdmi->disp_mxc_hdmi, &pdev->dev);
 
 	return 0;
 edispdrv:

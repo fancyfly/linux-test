@@ -19,9 +19,6 @@
 #include <linux/slab.h>
 #include <linux/suspend.h>
 #include <linux/wakelock.h>
-#include <linux/rtc.h>
-#include <linux/syscalls.h>
-#include <linux/platform_device.h>
 
 static DEFINE_MUTEX(wakelocks_lock);
 
@@ -136,7 +133,6 @@ static inline void wakelocks_lru_add(struct wakelock *wl) {}
 static inline void wakelocks_lru_most_recent(struct wakelock *wl) {}
 static inline void wakelocks_gc(void) {}
 #endif /* !CONFIG_PM_WAKELOCKS_GC */
-#if 0
 static struct wakelock *wakelock_lookup_add(const char *name, size_t len,
 					    bool add_if_not_found)
 {
@@ -267,8 +263,24 @@ int pm_wake_unlock(const char *buf)
 	mutex_unlock(&wakelocks_lock);
 	return ret;
 }
-#else
+
+#ifdef CONFIG_ANDROID
+/* android wakelock */
 #include <linux/module.h>
+#include <linux/platform_device.h>
+#include <linux/rtc.h>
+#include <linux/syscalls.h>
+
+#define WAKE_LOCK_TYPE_MASK              (0x0f)
+#define WAKE_LOCK_INITIALIZED            (1U << 8)
+#define WAKE_LOCK_ACTIVE                 (1U << 9)
+#define WAKE_LOCK_AUTO_EXPIRE            (1U << 10)
+#define WAKE_LOCK_PREVENTING_SUSPEND     (1U << 11)
+
+#define SUSPEND_BACKOFF_THRESHOLD	10
+#define SUSPEND_BACKOFF_INTERVAL	10000
+
+
 enum {
 	DEBUG_FAILURE	= BIT(0),
 	DEBUG_ERROR	= BIT(1),
@@ -280,8 +292,20 @@ enum {
 	DEBUG_WAKE_LOCK    = BIT(7),
 	DEBUG_EXPIRE       = BIT(8)
 };
+
 static int debug_mask = DEBUG_FAILURE;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+static DEFINE_SPINLOCK(list_lock);
+static LIST_HEAD(inactive_locks);
+static struct list_head active_wake_locks[WAKE_LOCK_TYPE_COUNT];
+static int current_event_num;
+struct workqueue_struct *suspend_work_queue;
+struct wake_lock main_wake_lock;
+suspend_state_t requested_suspend_state = PM_SUSPEND_MEM;
+static struct wake_lock unknown_wakeup;
+static struct wake_lock suspend_backoff_lock;
+static unsigned suspend_short_count;
 
 static DEFINE_MUTEX(tree_lock);
 
@@ -367,7 +391,7 @@ static struct user_wake_lock *lookup_wake_lock_name(
 	memcpy(l->name, buf, name_len);
 	if (debug_mask & DEBUG_NEW)
 		pr_info("lookup_wake_lock_name: new wake lock %s\n", l->name);
-	wake_lock_init(&l->wake_lock, WAKE_LOCK_SUSPEND, l->name);
+	android_wake_lock_init(&l->wake_lock, WAKE_LOCK_SUSPEND, l->name);
 	rb_link_node(&l->node, parent, p);
 	rb_insert_color(&l->node, &user_wake_locks);
 	return l;
@@ -391,7 +415,7 @@ ssize_t wake_lock_show(
 
 	for (n = rb_first(&user_wake_locks); n != NULL; n = rb_next(n)) {
 		l = rb_entry(n, struct user_wake_lock, node);
-		if (wake_lock_active(&l->wake_lock))
+		if (android_wake_lock_active(&l->wake_lock))
 			s += scnprintf(s, end - s, "%s ", l->name);
 	}
 	s += scnprintf(s, end - s, "\n");
@@ -418,9 +442,9 @@ ssize_t wake_lock_store(
 		pr_info("wake_lock_store: %s, timeout %ld\n", l->name, timeout);
 
 	if (timeout)
-		wake_lock_timeout(&l->wake_lock, timeout);
+		android_wake_lock_timeout(&l->wake_lock, timeout);
 	else
-		wake_lock(&l->wake_lock);
+		android_wake_lock(&l->wake_lock);
 bad_name:
 	mutex_unlock(&tree_lock);
 	return n;
@@ -439,7 +463,7 @@ ssize_t wake_unlock_show(
 
 	for (n = rb_first(&user_wake_locks); n != NULL; n = rb_next(n)) {
 		l = rb_entry(n, struct user_wake_lock, node);
-		if (!wake_lock_active(&l->wake_lock))
+		if (!android_wake_lock_active(&l->wake_lock))
 			s += scnprintf(s, end - s, "%s ", l->name);
 	}
 	s += scnprintf(s, end - s, "\n");
@@ -464,33 +488,11 @@ ssize_t wake_unlock_store(
 	if (debug_mask & DEBUG_ACCESS)
 		pr_info("wake_unlock_store: %s\n", l->name);
 
-	wake_unlock(&l->wake_lock);
+	android_wake_unlock(&l->wake_lock);
 not_found:
 	mutex_unlock(&tree_lock);
 	return n;
 }
-
-
-#define WAKE_LOCK_TYPE_MASK              (0x0f)
-#define WAKE_LOCK_INITIALIZED            (1U << 8)
-#define WAKE_LOCK_ACTIVE                 (1U << 9)
-#define WAKE_LOCK_AUTO_EXPIRE            (1U << 10)
-#define WAKE_LOCK_PREVENTING_SUSPEND     (1U << 11)
-
-static DEFINE_SPINLOCK(list_lock);
-static LIST_HEAD(inactive_locks);
-static struct list_head active_wake_locks[WAKE_LOCK_TYPE_COUNT];
-static int current_event_num;
-struct workqueue_struct *suspend_work_queue;
-struct wake_lock main_wake_lock;
-suspend_state_t requested_suspend_state = PM_SUSPEND_MEM;
-static struct wake_lock unknown_wakeup;
-static struct wake_lock suspend_backoff_lock;
-
-#define SUSPEND_BACKOFF_THRESHOLD	10
-#define SUSPEND_BACKOFF_INTERVAL	10000
-
-static unsigned suspend_short_count;
 
 static void expire_wake_lock(struct wake_lock *lock)
 {
@@ -543,7 +545,7 @@ static long has_wake_lock_locked(int type)
 	return max_timeout;
 }
 
-long has_wake_lock(int type)
+static long has_wake_lock(int type)
 {
 	long ret;
 	unsigned long irqflags;
@@ -558,7 +560,7 @@ long has_wake_lock(int type)
 static void suspend_backoff(void)
 {
 	pr_info("suspend: too many immediate wakeups, back off\n");
-	wake_lock_timeout(&suspend_backoff_lock,
+	android_wake_lock_timeout(&suspend_backoff_lock,
 			  msecs_to_jiffies(SUSPEND_BACKOFF_INTERVAL));
 }
 
@@ -605,7 +607,7 @@ static void suspend(struct work_struct *work)
 	if (current_event_num == entry_event_num) {
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_info("suspend: pm_suspend returned with no event\n");
-		wake_lock_timeout(&unknown_wakeup, HZ / 2);
+		android_wake_lock_timeout(&unknown_wakeup, HZ / 2);
 	}
 }
 
@@ -631,7 +633,7 @@ static void expire_wake_locks(unsigned long data)
 
 static DEFINE_TIMER(expire_timer, expire_wake_locks, 0, 0);
 
-void wake_lock_init(struct wake_lock *lock, int type, const char *name)
+void android_wake_lock_init(struct wake_lock *lock, int type, const char *name)
 {
 	unsigned long irqflags = 0;
 
@@ -649,9 +651,9 @@ void wake_lock_init(struct wake_lock *lock, int type, const char *name)
 	list_add(&lock->link, &inactive_locks);
 	spin_unlock_irqrestore(&list_lock, irqflags);
 }
-EXPORT_SYMBOL(wake_lock_init);
+EXPORT_SYMBOL(android_wake_lock_init);
 
-void wake_lock_destroy(struct wake_lock *lock)
+void android_wake_lock_destroy(struct wake_lock *lock)
 {
 	unsigned long irqflags;
 
@@ -662,9 +664,9 @@ void wake_lock_destroy(struct wake_lock *lock)
 	list_del(&lock->link);
 	spin_unlock_irqrestore(&list_lock, irqflags);
 }
-EXPORT_SYMBOL(wake_lock_destroy);
+EXPORT_SYMBOL(android_wake_lock_destroy);
 
-static void wake_lock_internal(
+static void android_wake_lock_internal(
 	struct wake_lock *lock, long timeout, int has_timeout)
 {
 	int type;
@@ -718,19 +720,19 @@ static void wake_lock_internal(
 	spin_unlock_irqrestore(&list_lock, irqflags);
 }
 
-void wake_lock(struct wake_lock *lock)
+void android_wake_lock(struct wake_lock *lock)
 {
-	wake_lock_internal(lock, 0, 0);
+	android_wake_lock_internal(lock, 0, 0);
 }
-EXPORT_SYMBOL(wake_lock);
+EXPORT_SYMBOL(android_wake_lock);
 
-void wake_lock_timeout(struct wake_lock *lock, long timeout)
+void android_wake_lock_timeout(struct wake_lock *lock, long timeout)
 {
-	wake_lock_internal(lock, timeout, 1);
+	android_wake_lock_internal(lock, timeout, 1);
 }
-EXPORT_SYMBOL(wake_lock_timeout);
+EXPORT_SYMBOL(android_wake_lock_timeout);
 
-void wake_unlock(struct wake_lock *lock)
+void android_wake_unlock(struct wake_lock *lock)
 {
 	int type;
 	unsigned long irqflags;
@@ -764,13 +766,13 @@ void wake_unlock(struct wake_lock *lock)
 	}
 	spin_unlock_irqrestore(&list_lock, irqflags);
 }
-EXPORT_SYMBOL(wake_unlock);
+EXPORT_SYMBOL(android_wake_unlock);
 
-int wake_lock_active(struct wake_lock *lock)
+int android_wake_lock_active(struct wake_lock *lock)
 {
 	return !!(lock->flags & WAKE_LOCK_ACTIVE);
 }
-EXPORT_SYMBOL(wake_lock_active);
+EXPORT_SYMBOL(android_wake_lock_active);
 
 static int power_suspend_late(struct device *dev)
 {
@@ -798,10 +800,10 @@ static int __init wakelocks_init(void)
 	for (i = 0; i < ARRAY_SIZE(active_wake_locks); i++)
 		INIT_LIST_HEAD(&active_wake_locks[i]);
 
-	wake_lock_init(&main_wake_lock, WAKE_LOCK_SUSPEND, "main");
-	wake_lock(&main_wake_lock);
-	wake_lock_init(&unknown_wakeup, WAKE_LOCK_SUSPEND, "unknown_wakeups");
-	wake_lock_init(&suspend_backoff_lock, WAKE_LOCK_SUSPEND,
+	android_wake_lock_init(&main_wake_lock, WAKE_LOCK_SUSPEND, "main");
+	android_wake_lock(&main_wake_lock);
+	android_wake_lock_init(&unknown_wakeup, WAKE_LOCK_SUSPEND, "unknown_wakeups");
+	android_wake_lock_init(&suspend_backoff_lock, WAKE_LOCK_SUSPEND,
 		       "suspend_backoff");
 
 	ret = platform_driver_register(&power_driver);
@@ -821,9 +823,9 @@ static int __init wakelocks_init(void)
 err_suspend_work_queue:
 	platform_driver_unregister(&power_driver);
 err_platform_driver_register:
-	wake_lock_destroy(&suspend_backoff_lock);
-	wake_lock_destroy(&unknown_wakeup);
-	wake_lock_destroy(&main_wake_lock);
+	android_wake_lock_destroy(&suspend_backoff_lock);
+	android_wake_lock_destroy(&unknown_wakeup);
+	android_wake_lock_destroy(&main_wake_lock);
 	return ret;
 }
 
@@ -831,12 +833,10 @@ static void  __exit wakelocks_exit(void)
 {
 	destroy_workqueue(suspend_work_queue);
 	platform_driver_unregister(&power_driver);
-	wake_lock_destroy(&suspend_backoff_lock);
-	wake_lock_destroy(&unknown_wakeup);
-	wake_lock_destroy(&main_wake_lock);
+	android_wake_lock_destroy(&suspend_backoff_lock);
+	android_wake_lock_destroy(&unknown_wakeup);
+	android_wake_lock_destroy(&main_wake_lock);
 }
-
-
 core_initcall(wakelocks_init);
 module_exit(wakelocks_exit);
 #endif

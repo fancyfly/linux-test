@@ -391,14 +391,6 @@ static void early_suspend(struct work_struct *work)
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("early_suspend: call handlers\n");
 	/* early suspend not enable */
-	#if 0
-	list_for_each_entry(pos, &early_suspend_handlers, link) {
-		if (pos->suspend != NULL) {
-			pr_info("early_suspend: calling %pf\n", pos->suspend);
-			pos->suspend(pos);
-		}
-	}
-	#endif
 	mutex_unlock(&early_suspend_lock);
 
 	if (debug_mask & DEBUG_SUSPEND)
@@ -408,7 +400,7 @@ static void early_suspend(struct work_struct *work)
 abort:
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == SUSPEND_REQUESTED_AND_SUSPENDED)
-		wake_unlock(&main_wake_lock);
+		android_wake_unlock(&main_wake_lock);
 	spin_unlock_irqrestore(&state_lock, irqflags);
 }
 
@@ -432,19 +424,6 @@ static void late_resume(struct work_struct *work)
 		goto abort;
 	}
 	/* early suspend not enable */
-	#if 0
-	if (debug_mask & DEBUG_SUSPEND)
-		pr_info("late_resume: call handlers\n");
-	list_for_each_entry_reverse(pos, &early_suspend_handlers, link) {
-		if (pos->resume != NULL) {
-			if (debug_mask & DEBUG_VERBOSE)
-				pr_info("late_resume: calling %pf\n", pos->resume);
-
-			pos->resume(pos);
-		}
-	}
-	pr_info("late_resume: done\n");
-	#endif
 abort:
 	mutex_unlock(&early_suspend_lock);
 }
@@ -474,7 +453,7 @@ static void request_suspend_state(suspend_state_t new_state)
 		queue_work(suspend_work_queue, &early_suspend_work);
 	} else if (old_sleep && new_state == PM_SUSPEND_ON) {
 		state &= ~SUSPEND_REQUESTED;
-		wake_lock(&main_wake_lock);
+		android_wake_lock(&main_wake_lock);
 		queue_work(suspend_work_queue, &late_resume_work);
 	}
 	requested_suspend_state = new_state;
@@ -622,22 +601,6 @@ power_attr(autosleep);
 #endif /* CONFIG_PM_AUTOSLEEP */
 
 #ifdef CONFIG_PM_WAKELOCKS
-#if 0
-static ssize_t wake_lock_show(struct kobject *kobj,
-			      struct kobj_attribute *attr,
-			      char *buf)
-{
-	return pm_show_wakelocks(buf, true);
-}
-
-static ssize_t wake_lock_store(struct kobject *kobj,
-			       struct kobj_attribute *attr,
-			       const char *buf, size_t n)
-{
-	int error = pm_wake_lock(buf);
-	return error ? error : n;
-}
-#endif
 extern ssize_t wake_lock_show(struct kobject *kobj,
 			      struct kobj_attribute *attr,
 			      char *buf);
@@ -645,22 +608,6 @@ extern ssize_t wake_lock_store(struct kobject *kobj,
 			       struct kobj_attribute *attr,
 			       const char *buf, size_t n);
 power_attr(wake_lock);
-#if 0
-static ssize_t wake_unlock_show(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				char *buf)
-{
-	return pm_show_wakelocks(buf, false);
-}
-
-static ssize_t wake_unlock_store(struct kobject *kobj,
-				 struct kobj_attribute *attr,
-				 const char *buf, size_t n)
-{
-	int error = pm_wake_unlock(buf);
-	return error ? error : n;
-}
-#endif
 extern ssize_t wake_unlock_show(struct kobject *kobj,
 				struct kobj_attribute *attr,
 				char *buf);

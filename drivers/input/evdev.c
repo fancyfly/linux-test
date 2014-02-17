@@ -76,13 +76,13 @@ static void __pass_event(struct evdev_client *client,
 
 		client->packet_head = client->tail;
 		if (client->use_wake_lock)
-			pm_wake_unlock(&client->wake_lock);
+			wake_unlock(&client->wake_lock);
 	}
 
 	if (event->type == EV_SYN && event->code == SYN_REPORT) {
 		client->packet_head = client->head;
 		if (client->use_wake_lock)
-			pm_wake_lock(&client->wake_lock);
+			wake_lock(&client->wake_lock);
 		kill_fasync(&client->fasync, SIGIO, POLL_IN);
 	}
 }
@@ -298,7 +298,7 @@ static int evdev_release(struct inode *inode, struct file *file)
 
 	evdev_detach_client(evdev, client);
 	if (client->use_wake_lock)
-		pm_wake_lock_destroy(&client->wake_lock);
+		wake_lock_destroy(&client->wake_lock);
 	kfree(client);
 
 	evdev_close_device(evdev);
@@ -400,7 +400,7 @@ static int evdev_fetch_next_event(struct evdev_client *client,
 		client->tail &= client->bufsize - 1;
 		if (client->use_wake_lock &&
 		    client->packet_head == client->tail)
-			pm_wake_unlock(&client->wake_lock);
+			wake_unlock(&client->wake_lock);
 	}
 
 	spin_unlock_irq(&client->buffer_lock);
@@ -696,10 +696,10 @@ static int evdev_enable_suspend_block(struct evdev *evdev,
 		return 0;
 
 	spin_lock_irq(&client->buffer_lock);
-	pm_wake_lock_init(&client->wake_lock, WAKE_LOCK_SUSPEND, client->name);
+	wake_lock_init(&client->wake_lock, WAKE_LOCK_SUSPEND, client->name);
 	client->use_wake_lock = true;
 	if (client->packet_head != client->tail)
-		pm_wake_lock(&client->wake_lock);
+		wake_lock(&client->wake_lock);
 	spin_unlock_irq(&client->buffer_lock);
 	return 0;
 }
@@ -712,7 +712,7 @@ static int evdev_disable_suspend_block(struct evdev *evdev,
 
 	spin_lock_irq(&client->buffer_lock);
 	client->use_wake_lock = false;
-	pm_wake_lock_destroy(&client->wake_lock);
+	wake_lock_destroy(&client->wake_lock);
 	spin_unlock_irq(&client->buffer_lock);
 
 	return 0;

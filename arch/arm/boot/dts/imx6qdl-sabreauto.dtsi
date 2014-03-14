@@ -30,7 +30,7 @@
 	};
 
 	clocks {
-		codec_osc: codec_osc {
+		codec_osc: anaclk2 {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
 			clock-frequency = <24576000>;
@@ -73,6 +73,14 @@
 			gpios = <&gpio5 14 1>;
 			linux,code = <114>; /* KEY_VOLUMEDOWN */
 			gpio-key,wakeup;
+		};
+	};
+
+	hannstar_cabc {
+		compatible = "hannstar,cabc";
+
+		lvds_share {
+			gpios = <&max7310_a 0 GPIO_ACTIVE_HIGH>;
 		};
 	};
 

@@ -58,6 +58,8 @@
 #include <video/videomode.h>
 #include <linux/uaccess.h>
 
+#include "mxc/mxc_dispdrv.h"
+
 #define REG_SET	4
 #define REG_CLR	8
 
@@ -114,6 +116,8 @@
 #define CTRL1_UNDERFLOW_IRQ				(1 << 10)
 #define CTRL1_CUR_FRAME_DONE_IRQ		(1 << 9)
 #define CTRL1_VSYNC_EDGE_IRQ			(1 << 8)
+
+#define CTRL2_OUTSTANDING_REQS__REQ_16		(3 << 21)
 
 #define TRANSFER_COUNT_SET_VCOUNT(x)	(((x) & 0xffff) << 16)
 #define TRANSFER_COUNT_GET_VCOUNT(x)	(((x) >> 16) & 0xffff)
@@ -188,7 +192,9 @@ struct mxsfb_info {
 	struct platform_device *pdev;
 	struct clk *clk_pix;
 	struct clk *clk_axi;
+	struct clk *clk_disp_axi;
 	bool clk_axi_enabled;
+	bool clk_disp_axi_enabled;
 	void __iomem *base;	/* registers */
 	unsigned allocated_size;
 	int enabled;
@@ -202,6 +208,8 @@ struct mxsfb_info {
 	struct semaphore flip_sem;
 	int cur_blank;
 	int restore_blank;
+	char disp_dev[32];
+	struct mxc_dispdrv_handle *dispdrv;
 };
 
 #define mxsfb_is_v3(host) (host->devdata->ipversion == 3)
@@ -236,8 +244,7 @@ static int mxsfb_unmap_videomem(struct fb_info *info);
 /* enable lcdif axi clock */
 static inline void clk_enable_axi(struct mxsfb_info *host)
 {
-	if (!host->clk_axi_enabled && host &&
-		host->clk_axi && !IS_ERR(host->clk_axi)) {
+	if (!host->clk_axi_enabled && (host->clk_axi != NULL)) {
 		clk_prepare_enable(host->clk_axi);
 		host->clk_axi_enabled = true;
 	}
@@ -246,10 +253,27 @@ static inline void clk_enable_axi(struct mxsfb_info *host)
 /* disable lcdif axi clock */
 static inline void clk_disable_axi(struct mxsfb_info *host)
 {
-	if (host->clk_axi_enabled && host &&
-		host->clk_axi && !IS_ERR(host->clk_axi)) {
+	if (host->clk_axi_enabled && (host->clk_axi != NULL)) {
 		clk_disable_unprepare(host->clk_axi);
 		host->clk_axi_enabled = false;
+	}
+}
+
+/* enable DISP axi clock */
+static inline void clk_enable_disp_axi(struct mxsfb_info *host)
+{
+	if (!host->clk_disp_axi_enabled && (host->clk_disp_axi != NULL)) {
+		clk_prepare_enable(host->clk_disp_axi);
+		host->clk_disp_axi_enabled = true;
+	}
+}
+
+/* disable DISP axi clock */
+static inline void clk_disable_disp_axi(struct mxsfb_info *host)
+{
+	if (host->clk_disp_axi_enabled && (host->clk_disp_axi != NULL)) {
+		clk_disable_unprepare(host->clk_disp_axi);
+		host->clk_disp_axi_enabled = false;
 	}
 }
 
@@ -421,6 +445,15 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 
 	dev_dbg(&host->pdev->dev, "%s\n", __func__);
 
+	if (host->dispdrv && host->dispdrv->drv->setup) {
+		ret = host->dispdrv->drv->setup(host->dispdrv, fb_info);
+		if (ret < 0) {
+			dev_err(&host->pdev->dev, "failed to setup"
+				"dispdrv:%s\n", host->dispdrv->drv->name);
+			return;
+		}
+	}
+
 	if (host->reg_lcd) {
 		ret = regulator_enable(host->reg_lcd);
 		if (ret) {
@@ -433,12 +466,16 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 	pm_runtime_get_sync(&host->pdev->dev);
 
 	clk_enable_axi(host);
+	clk_enable_disp_axi(host);
 
 	clk_prepare_enable(host->clk_pix);
 	clk_set_rate(host->clk_pix, PICOS2KHZ(fb_info->var.pixclock) * 1000U);
 
 	/* Clean soft reset and clock gate bit if it was enabled  */
 	writel(CTRL_SFTRST | CTRL_CLKGATE, host->base + LCDC_CTRL + REG_CLR);
+
+	writel(CTRL2_OUTSTANDING_REQS__REQ_16,
+		host->base + LCDC_V4_CTRL2 + REG_SET);
 
 	/* if it was disabled, re-enable the mode again */
 	writel(CTRL_DOTCLK_MODE, host->base + LCDC_CTRL + REG_SET);
@@ -455,6 +492,13 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 	writel(CTRL1_RECOVERY_ON_UNDERFLOW, host->base + LCDC_CTRL1 + REG_SET);
 
 	host->enabled = 1;
+
+	if (host->dispdrv && host->dispdrv->drv->enable) {
+		ret = host->dispdrv->drv->enable(host->dispdrv, fb_info);
+		if (ret < 0)
+			dev_err(&host->pdev->dev, "failed to enable "
+				"dispdrv:%s\n", host->dispdrv->drv->name);
+	}
 }
 
 static void mxsfb_disable_controller(struct fb_info *fb_info)
@@ -466,7 +510,11 @@ static void mxsfb_disable_controller(struct fb_info *fb_info)
 
 	dev_dbg(&host->pdev->dev, "%s\n", __func__);
 
+	if (host->dispdrv && host->dispdrv->drv->disable)
+		host->dispdrv->drv->disable(host->dispdrv, fb_info);
+
 	clk_enable_axi(host);
+	clk_enable_disp_axi(host);
 	/*
 	 * Even if we disable the controller here, it will still continue
 	 * until its FIFOs are running out of data
@@ -508,6 +556,7 @@ static int mxsfb_set_par(struct fb_info *fb_info)
 	int reenable = 0;
 
 	clk_enable_axi(host);
+	clk_enable_disp_axi(host);
 
 	dev_dbg(&host->pdev->dev, "%s\n", __func__);
 	/*
@@ -738,6 +787,7 @@ static int mxsfb_blank(int blank, struct fb_info *fb_info)
 		if (host->enabled)
 			mxsfb_disable_controller(fb_info);
 
+		clk_disable_disp_axi(host);
 		clk_disable_axi(host);
 		break;
 
@@ -773,6 +823,7 @@ static int mxsfb_pan_display(struct fb_var_screeninfo *var,
 	}
 
 	clk_enable_axi(host);
+	clk_enable_disp_axi(host);
 
 	offset = fb_info->fix.line_length * var->yoffset;
 
@@ -846,6 +897,7 @@ static int mxsfb_restore_mode(struct mxsfb_info *host)
 	struct fb_videomode vmode;
 
 	clk_enable_axi(host);
+	clk_enable_disp_axi(host);
 
 	/* Only restore the mode when the controller is running */
 	ctrl = readl(host->base + LCDC_CTRL);
@@ -937,6 +989,7 @@ static int mxsfb_init_fbinfo_dt(struct mxsfb_info *host)
 	struct device_node *display_np;
 	struct device_node *timings_np;
 	struct display_timings *timings;
+	const char *disp_dev;
 	u32 width;
 	int i;
 	int ret = 0;
@@ -976,6 +1029,13 @@ static int mxsfb_init_fbinfo_dt(struct mxsfb_info *host)
 				   &var->bits_per_pixel);
 	if (ret < 0) {
 		dev_err(dev, "failed to get property bits-per-pixel\n");
+		goto put_display_node;
+	}
+
+	ret = of_property_read_string(np, "disp-dev", &disp_dev);
+	if (!ret) {
+		memcpy(host->disp_dev, disp_dev, strlen(disp_dev));
+		/* Timing is from encoder driver */
 		goto put_display_node;
 	}
 
@@ -1062,6 +1122,29 @@ static int mxsfb_init_fbinfo(struct mxsfb_info *host)
 		memset((char *)fb_info->screen_base, 0, fb_info->fix.smem_len);
 
 	return 0;
+}
+
+static void mxsfb_dispdrv_init(struct platform_device *pdev,
+			      struct fb_info *fbi)
+{
+	struct mxsfb_info *host = to_imxfb_host(fbi);
+	struct mxc_dispdrv_setting setting;
+	struct device *dev = &pdev->dev;
+	char disp_dev[32];
+
+	setting.fbi = fbi;
+	memcpy(disp_dev, host->disp_dev, strlen(host->disp_dev));
+	disp_dev[strlen(host->disp_dev)] = '\0';
+
+	host->dispdrv = mxc_dispdrv_gethandle(disp_dev, &setting);
+	if (IS_ERR(host->dispdrv)) {
+		host->dispdrv = NULL;
+		dev_info(dev, "failed to find mxc display driver %s\n",
+			 disp_dev);
+	} else {
+		dev_info(dev, "registered mxc display driver %s\n",
+			 disp_dev);
+	}
 }
 
 static void mxsfb_free_videomem(struct mxsfb_info *host)
@@ -1194,21 +1277,24 @@ static int mxsfb_probe(struct platform_device *pdev)
 
 	host->devdata = &mxsfb_devdata[pdev->id_entry->driver_data];
 
-	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
-	if (IS_ERR(pinctrl)) {
-		ret = PTR_ERR(pinctrl);
-		goto fb_release;
-	}
-
 	host->clk_pix = devm_clk_get(&host->pdev->dev, "pix");
 	if (IS_ERR(host->clk_pix)) {
+		host->clk_pix = NULL;
 		ret = PTR_ERR(host->clk_pix);
 		goto fb_release;
 	}
 
 	host->clk_axi = devm_clk_get(&host->pdev->dev, "axi");
 	if (IS_ERR(host->clk_axi)) {
+		host->clk_axi = NULL;
 		ret = PTR_ERR(host->clk_axi);
+		goto fb_release;
+	}
+
+	host->clk_disp_axi = devm_clk_get(&host->pdev->dev, "disp_axi");
+	if (IS_ERR(host->clk_disp_axi)) {
+		host->clk_disp_axi = NULL;
+		ret = PTR_ERR(host->clk_disp_axi);
 		goto fb_release;
 	}
 
@@ -1230,6 +1316,16 @@ static int mxsfb_probe(struct platform_device *pdev)
 	ret = mxsfb_init_fbinfo(host);
 	if (ret != 0)
 		goto fb_pm_runtime_disable;
+
+	mxsfb_dispdrv_init(pdev, fb_info);
+
+	if (!host->dispdrv) {
+		pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
+		if (IS_ERR(pinctrl)) {
+			ret = PTR_ERR(pinctrl);
+			goto fb_pm_runtime_disable;
+		}
+	}
 
 	platform_set_drvdata(pdev, fb_info);
 
@@ -1286,12 +1382,14 @@ static void mxsfb_shutdown(struct platform_device *pdev)
 	struct mxsfb_info *host = to_imxfb_host(fb_info);
 
 	clk_enable_axi(host);
+	clk_enable_disp_axi(host);
 	/*
 	 * Force stop the LCD controller as keeping it running during reboot
 	 * might interfere with the BootROM's boot mode pads sampling.
 	 */
 	writel(CTRL_RUN, host->base + LCDC_CTRL + REG_CLR);
 	writel(CTRL_MASTER, host->base + LCDC_CTRL + REG_CLR);
+	clk_disable_disp_axi(host);
 	clk_disable_axi(host);
 }
 

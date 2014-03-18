@@ -91,11 +91,22 @@ static inline struct clk *imx_clk_gate(const char *name, const char *parent,
 static inline struct clk *imx_clk_mux(const char *name, void __iomem *reg,
 		u8 shift, u8 width, const char **parents, int num_parents)
 {
-	return clk_register_mux(NULL, name, parents, num_parents, 0, reg, shift,
+	return clk_register_mux(NULL, name, parents, num_parents,
+			CLK_SET_RATE_NO_REPARENT, reg, shift,
 			width, 0, &imx_ccm_lock);
 }
 
 static inline struct clk *imx_clk_mux_flags(const char *name,
+		void __iomem *reg, u8 shift, u8 width, const char **parents,
+		int num_parents, unsigned long flags)
+{
+	return clk_register_mux(NULL, name, parents, num_parents,
+			flags | CLK_SET_RATE_NO_REPARENT, reg, shift, width, 0,
+			&imx_ccm_lock);
+}
+
+/* we can use this helper to register the clock which needs the re-parent. */
+static inline struct clk *imx_clk_mux_flags_reparent(const char *name,
 		void __iomem *reg, u8 shift, u8 width, const char **parents,
 		int num_parents, unsigned long flags)
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -374,8 +374,27 @@
 #define IMX6Q_GPR13_SATA_MPLL_CLK_EN		BIT(1)
 #define IMX6Q_GPR13_SATA_TX_EDGE_RATE		BIT(0)
 
+/* For imx6dl iomux gpr register field definitions */
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_MASK		(0x3 << 8)
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_IPU1_DI0	(0x0 << 8)
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_IPU1_DI1	(0x1 << 8)
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_LCDIF		(0x2 << 8)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_MASK		(0x3 << 6)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_IPU1_DI0	(0x0 << 6)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_IPU1_DI1	(0x1 << 6)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_LCDIF		(0x2 << 6)
+
 /* For imx6sl iomux gpr register field define */
 #define IMX6SL_GPR1_FEC_CLOCK_MUX1_SEL_MASK    (0x3 << 17)
 #define IMX6SL_GPR1_FEC_CLOCK_MUX2_SEL_MASK    (0x1 << 14)
+
+/* For imx6sx iomux gpr register field define */
+#define IMX6SX_GPR1_FEC_CLOCK_MUX_SEL_MASK      (0x3 << 13)
+#define IMX6SX_GPR1_FEC_CLOCK_PAD_DIR_MASK      (0x3 << 17)
+#define IMX6SX_GPR1_FEC_CLOCK_MUX_SEL_EXT       (0x3 << 13)
+
+#define IMX6SX_GPR5_DISP_MUX_LDB_CTRL_MASK	(0x1 << 3)
+#define IMX6SX_GPR5_DISP_MUX_LDB_CTRL_LCDIF1	(0x0 << 3)
+#define IMX6SX_GPR5_DISP_MUX_LDB_CTRL_LCDIF2	(0x1 << 3)
 
 #endif /* __LINUX_IMX6Q_IOMUXC_GPR_H */

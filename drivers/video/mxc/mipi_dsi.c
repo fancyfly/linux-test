@@ -38,7 +38,6 @@
 #include <linux/delay.h>
 #include <video/mipi_display.h>
 
-#include "mxc_dispdrv.h"
 #include "mipi_dsi.h"
 
 #define DISPDRV_MIPI			"mipi_dsi"
@@ -623,7 +622,8 @@ static int mipi_dsi_lcd_init(struct mipi_dsi_info *mipi_dsi,
 	return 0;
 }
 
-int mipi_dsi_enable(struct mxc_dispdrv_handle *disp)
+static int mipi_dsi_enable(struct mxc_dispdrv_handle *disp,
+			   struct fb_info *fbi)
 {
 	int err;
 	struct mipi_dsi_info *mipi_dsi = mxc_dispdrv_getdata(disp);
@@ -653,6 +653,14 @@ int mipi_dsi_enable(struct mxc_dispdrv_handle *disp)
 	return 0;
 }
 
+static void mipi_dsi_disable(struct mxc_dispdrv_handle *disp,
+			    struct fb_info *fbi)
+{
+	struct mipi_dsi_info *mipi_dsi = mxc_dispdrv_getdata(disp);
+
+	mipi_dsi_power_off(mipi_dsi->disp_mipi);
+}
+
 static int mipi_dsi_disp_init(struct mxc_dispdrv_handle *disp,
 	struct mxc_dispdrv_setting *setting)
 {
@@ -666,8 +674,10 @@ static int mipi_dsi_disp_init(struct mxc_dispdrv_handle *disp,
 		setting->if_fmt = IPU_PIX_FMT_RGB24;
 	}
 
-	setting->dev_id = mipi_dsi->dev_id;
-	setting->disp_id = mipi_dsi->disp_id;
+	ret = ipu_di_to_crtc(dev, mipi_dsi->dev_id,
+			     mipi_dsi->disp_id, &setting->crtc);
+	if (ret < 0)
+		return ret;
 
 	ret = mipi_dsi_lcd_init(mipi_dsi, setting);
 	if (ret) {
@@ -695,7 +705,7 @@ static struct mxc_dispdrv_driver mipi_dsi_drv = {
 	.init	= mipi_dsi_disp_init,
 	.deinit	= mipi_dsi_disp_deinit,
 	.enable	= mipi_dsi_enable,
-	.disable = mipi_dsi_power_off,
+	.disable = mipi_dsi_disable,
 };
 
 static int imx6q_mipi_dsi_get_mux(int dev_id, int disp_id)
@@ -880,7 +890,6 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 
 	mxc_dispdrv_setdata(mipi_dsi->disp_mipi, mipi_dsi);
 	dev_set_drvdata(&pdev->dev, mipi_dsi);
-	mxc_dispdrv_setdev(mipi_dsi->disp_mipi, &pdev->dev);
 
 	dev_info(&pdev->dev, "i.MX MIPI DSI driver probed\n");
 	return ret;

@@ -1,7 +1,7 @@
 /*
  * Fast Ethernet Controller (ENET) PTP driver for MX6x.
  *
- * Copyright (C) 2012-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -220,6 +220,8 @@ void fec_ptp_stop(struct net_device *ndev)
 
 	writel(0, priv->hwp + FEC_ATIME_CTRL);
 	writel(FEC_T_CTRL_RESTART, priv->hwp + FEC_ATIME_CTRL);
+
+	del_timer_sync(&priv->time_keep);
 }
 
 static void fec_get_curr_cnt(struct fec_enet_private *priv,
@@ -227,6 +229,8 @@ static void fec_get_curr_cnt(struct fec_enet_private *priv,
 {
 	u32 tempval, old_sec;
 	u32 timeout_event, timeout_ts = 0;
+	const struct platform_device_id *id_entry =
+			platform_get_device_id(priv->pdev);
 
 	do {
 		old_sec = priv->prtc;
@@ -235,7 +239,8 @@ static void fec_get_curr_cnt(struct fec_enet_private *priv,
 		tempval = readl(priv->hwp + FEC_ATIME_CTRL);
 		tempval |= FEC_T_CTRL_CAPTURE;
 		writel(tempval, priv->hwp + FEC_ATIME_CTRL);
-
+		if (id_entry->driver_data & FEC_QUIRK_TKT210590)
+			udelay(1);
 		curr_time->rtc_time.nsec = readl(priv->hwp + FEC_ATIME);
 
 		while (readl(priv->hwp + FEC_IEVENT) & FEC_ENET_TS_TIMER) {
@@ -518,7 +523,7 @@ static void fec_handle_ptpdrift(struct fec_enet_private *priv,
 }
 
 static void fec_set_drift(struct fec_enet_private *priv,
-			  struct ptp_set_comp *comp)
+			struct ptp_set_comp *comp)
 {
 	struct ptp_time_correct	tc;
 	u32 tmp, corr_ns;
@@ -553,12 +558,15 @@ static cycle_t fec_ptp_read(const struct cyclecounter *cc)
 {
 	struct fec_enet_private *fep =
 		container_of(cc, struct fec_enet_private, cc);
+	const struct platform_device_id *id_entry =
+			platform_get_device_id(fep->pdev);
 	u32 tempval;
 
 	tempval = readl(fep->hwp + FEC_ATIME_CTRL);
 	tempval |= FEC_T_CTRL_CAPTURE;
 	writel(tempval, fep->hwp + FEC_ATIME_CTRL);
-
+	if (id_entry->driver_data & FEC_QUIRK_TKT210590)
+		udelay(1);
 	return readl(fep->hwp + FEC_ATIME);
 }
 
@@ -606,6 +614,9 @@ void fec_ptp_start_cyclecounter(struct net_device *ndev)
 	timecounter_init(&fep->tc, &fep->cc, ktime_to_ns(ktime_get_real()));
 
 	spin_unlock_irqrestore(&fep->tmreg_lock, flags);
+
+	if (!timer_pending(&fep->time_keep) && fep->opened)
+		add_timer(&fep->time_keep);
 }
 
 /**
@@ -943,7 +954,6 @@ void fec_ptp_init(struct platform_device *pdev)
 	fep->time_keep.data = (unsigned long)fep;
 	fep->time_keep.function = fec_time_keep;
 	fep->time_keep.expires = jiffies + HZ;
-	add_timer(&fep->time_keep);
 
 	fep->ptp_clock = ptp_clock_register(&fep->ptp_caps, &pdev->dev);
 	if (IS_ERR(fep->ptp_clock)) {

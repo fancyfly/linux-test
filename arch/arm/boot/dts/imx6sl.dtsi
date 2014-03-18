@@ -667,8 +667,8 @@
 				compatible = "fsl,imx6sl-pxp-dma", "fsl,imx6dl-pxp-dma";
 				reg = <0x020f0000 0x4000>;
 				interrupts = <0 98 0x04>;
-				clocks = <&clks 111>;
-				clock-names = "pxp-axi";
+				clocks = <&clks IMX6SL_CLK_PXP_AXI>, <&clks IMX6SL_CLK_DUMMY>;
+				clock-names = "pxp-axi", "disp-axi";
 				status = "disabled";
 			};
 
@@ -686,8 +686,9 @@
 				reg = <0x020f8000 0x4000>;
 				interrupts = <0 39 0x04>;
 				clocks = <&clks IMX6SL_CLK_LCDIF_PIX>,
-					 <&clks IMX6SL_CLK_LCDIF_AXI>;
-				clock-names = "pix", "axi";
+					 <&clks IMX6SL_CLK_LCDIF_AXI>,
+					 <&clks IMX6SL_CLK_DUMMY>;
+				clock-names = "pix", "axi", "disp_axi";
 				status = "disabled";
 			};
 

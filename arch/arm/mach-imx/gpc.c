@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright 2011-2014 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -46,6 +46,7 @@
 #define GPC_PGC_CPU_SW2ISO_SHIFT	8
 #define GPC_PGC_CPU_SW2ISO_MASK		0x3f
 #define GPC_CNTR		0x0
+#define GPC_CNTR_IPS_SHIFT	0x7
 #define GPC_CNTR_PU_UP_REQ_SHIFT	0x1
 #define GPC_CNTR_PU_DOWN_REQ_SHIFT	0x0
 
@@ -59,8 +60,9 @@ static struct clk *lcd_axi_clk, *lcd_pix_clk, *epdc_axi_clk, *epdc_pix_clk;
 static struct clk *pxp_axi_clk;
 static struct clk *openvg_axi_clk, *vpu_clk, *ipg_clk;
 static struct device *gpc_dev;
-struct regulator *pu_reg;
-struct notifier_block nb;
+static struct regulator *pu_reg;
+static struct notifier_block nb;
+static struct notifier_block nb_pcie;
 static struct regulator_dev *pu_dummy_regulator_rdev;
 static struct regulator_init_data pu_dummy_initdata = {
 	.constraints = {
@@ -225,6 +227,8 @@ static void imx_pu_clk(bool enable)
 		if (cpu_is_imx6sl()) {
 			clk_prepare_enable(gpu2d_clk);
 			clk_prepare_enable(openvg_axi_clk);
+		} else if (cpu_is_imx6sx()) {
+			clk_prepare_enable(gpu3d_clk);
 		} else {
 			clk_prepare_enable(gpu3d_clk);
 			clk_prepare_enable(gpu3d_shader_clk);
@@ -237,6 +241,8 @@ static void imx_pu_clk(bool enable)
 		if (cpu_is_imx6sl()) {
 			clk_disable_unprepare(gpu2d_clk);
 			clk_disable_unprepare(openvg_axi_clk);
+		} else if (cpu_is_imx6sx()) {
+			clk_disable_unprepare(gpu3d_clk);
 		} else {
 			clk_disable_unprepare(gpu3d_clk);
 			clk_disable_unprepare(gpu3d_shader_clk);
@@ -317,6 +323,23 @@ static int imx_gpc_regulator_notify(struct notifier_block *nb,
 		break;
 	case REGULATOR_EVENT_ENABLE:
 		imx_gpc_pu_enable(true);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static int imx_pcie_regulator_notify(struct notifier_block *nb,
+					unsigned long event,
+					void *ignored)
+{
+	switch (event) {
+	case REGULATOR_EVENT_VOLTAGE_CHANGE:
+	case REGULATOR_EVENT_ENABLE:
+		writel_relaxed(1 << GPC_CNTR_IPS_SHIFT,
+			gpc_base + GPC_CNTR);
 		break;
 	default:
 		break;
@@ -475,6 +498,25 @@ static int imx_gpc_probe(struct platform_device *pdev)
 	}
 	nb.notifier_call = &imx_gpc_regulator_notify;
 
+	if (cpu_is_imx6sx()) {
+		struct regulator *pcie_reg;
+
+		pcie_reg = devm_regulator_get(gpc_dev, "pcie");
+		if (IS_ERR(pcie_reg)) {
+			ret = PTR_ERR(pcie_reg);
+			dev_info(gpc_dev, "pcie regulator not ready.\n");
+			return ret;
+		}
+		nb_pcie.notifier_call = &imx_pcie_regulator_notify;
+
+		ret = regulator_register_notifier(pcie_reg, &nb_pcie);
+		if (ret) {
+			dev_err(gpc_dev,
+				"pcie regulator notifier request failed\n");
+			return ret;
+		}
+	}
+
 	/* Get gpu&vpu clk for power up PU by GPC */
 	if (cpu_is_imx6sl()) {
 		gpu2d_clk = devm_clk_get(gpc_dev, "gpu2d_podf");
@@ -489,6 +531,13 @@ static int imx_gpc_probe(struct platform_device *pdev)
 			|| IS_ERR(ipg_clk) || IS_ERR(lcd_axi_clk)
 			|| IS_ERR(lcd_pix_clk) || IS_ERR(epdc_axi_clk)
 			|| IS_ERR(epdc_pix_clk) || IS_ERR(pxp_axi_clk)) {
+			dev_err(gpc_dev, "failed to get clk!\n");
+			return -ENOENT;
+		}
+	} else if (cpu_is_imx6sx()) {
+		gpu3d_clk = devm_clk_get(gpc_dev, "gpu3d_core");
+		ipg_clk = devm_clk_get(gpc_dev, "ipg");
+		if (IS_ERR(gpu3d_clk) || IS_ERR(ipg_clk)) {
 			dev_err(gpc_dev, "failed to get clk!\n");
 			return -ENOENT;
 		}
@@ -532,9 +581,18 @@ static struct platform_driver imx_gpc_platdrv = {
 	},
 	.probe		= imx_gpc_probe,
 };
-module_platform_driver(imx_gpc_platdrv);
 
-module_platform_driver(pu_dummy_driver);
+static int __init imx6_gpc_init(void)
+{
+	return platform_driver_probe(&imx_gpc_platdrv, imx_gpc_probe);
+}
+fs_initcall(imx6_gpc_init);
+
+static int __init imx6_pudummy_init(void)
+{
+	return platform_driver_probe(&pu_dummy_driver, pu_dummy_probe);
+}
+fs_initcall(imx6_pudummy_init);
 
 MODULE_AUTHOR("Anson Huang <b20788@freescale.com>");
 MODULE_DESCRIPTION("Freescale i.MX GPC driver");

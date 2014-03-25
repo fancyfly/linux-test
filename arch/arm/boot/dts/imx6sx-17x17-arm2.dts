@@ -120,13 +120,30 @@
        status = "okay";
 };
 
+&ecspi4 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = <&gpio7 4 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi4_1 &pinctrl_ecspi4_cs_1>;
+	status = "disabled"; /* pin conflict with USDHC3 */
+
+	flash: m25p80@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "st,m25p32";
+		spi-max-frequency = <20000000>;
+		reg = <0>;
+	};
+};
+
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1_1>;
 	phy-mode = "rgmii";
+	phy-id = <1>;
 	fsl,num_tx_queues=<3>;
 	fsl,num_rx_queues=<3>;
-	pinctrl-assert-gpios = <&max7322 0 GPIO_ACTIVE_HIGH>;
+	pinctrl-assert-gpios = <&max7322_1 0 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
@@ -134,9 +151,11 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet2_1>;
 	phy-mode = "rgmii";
+	phy-id = <0>;
 	fsl,num_tx_queues=<3>;
 	fsl,num_rx_queues=<3>;
-	status = "disabled";
+	pinctrl-assert-gpios = <&max7322_2 0 GPIO_ACTIVE_HIGH>;
+	status = "okay";
 };
 
 &flexcan1 {
@@ -163,6 +182,12 @@
 	fsl,cpu_pdnscr_iso2sw = <0x1>;
 	fsl,cpu_pdnscr_iso = <0x1>;
 	fsl,wdog-reset = <1>; /* watchdog select of reset source */
+};
+
+&gpmi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_gpmi_nand_1>;
+	status = "disabled"; /* pin conflict with qspi*/
 };
 
 &i2c1 {
@@ -278,9 +303,17 @@
         pinctrl-0 = <&pinctrl_i2c2_1>;
         status = "okay";
 
-	max7322: gpio@68 {
+	max7322_1: gpio@68 {
 		compatible = "maxim,max7322";
 		reg = <0x68>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		resets = <&max7322_reset>;
+	};
+
+	max7322_2: gpio@69 {
+		compatible = "maxim,max7322";
+		reg = <0x69>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		resets = <&max7322_reset>;
@@ -419,6 +452,15 @@
 &uart2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2_1>;
+	status = "okay";
+};
+
+&usbh {
+	pinctrl-names = "idle", "active";
+	pinctrl-0 = <&pinctrl_usbh_1>;
+	pinctrl-1 = <&pinctrl_usbh_2>;
+	osc-clkgate-delay = <0x3>;
+	pad-supply = <&vgen1_reg>;
 	status = "okay";
 };
 

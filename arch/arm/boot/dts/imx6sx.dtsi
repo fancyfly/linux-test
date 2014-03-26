@@ -24,6 +24,8 @@
 		gpio4 = &gpio5;
 		gpio5 = &gpio6;
 		gpio6 = &gpio7;
+		lcdif0 = &lcdif1;
+		lcdif1 = &lcdif2;
 		serial0 = &uart1;
 		serial1 = &uart2;
 		usbphy0 = &usbphy1;
@@ -872,6 +874,28 @@
 				reg = <0x02240000 0x40000>;
 				ranges;
 
+				csi1: csi@02214000 {
+					compatible = "fsl,imx6sx-csi", "fsl,imx6sl-csi";
+					reg = <0x02214000 0x4000>;
+					interrupts = <0 7 0x04>;
+					clocks = <&clks IMX6SX_CLK_DISPLAY_AXI>,
+						<&clks IMX6SX_CLK_CSI>,
+						<&clks IMX6SX_CLK_DCIC1>;
+					clock-names = "disp-axi", "csi_mclk", "dcic";
+					status = "disabled";
+				};
+
+				csi2: csi@0221c000 {
+					compatible = "fsl,imx6sx-csi", "fsl,imx6sl-csi";
+					reg = <0x0221c000 0x4000>;
+					interrupts = <0 41 0x04>;
+					clocks = <&clks IMX6SX_CLK_DISPLAY_AXI>,
+						<&clks IMX6SX_CLK_CSI>,
+						<&clks IMX6SX_CLK_DCIC2>;
+					clock-names = "disp-axi", "csi_mclk", "dcic";
+					status = "disabled";
+				};
+
 				lcdif1: lcdif@02220000 {
 					compatible = "fsl,imx6sx-lcdif", "fsl,imx28-lcdif";
 					reg = <0x02220000 0x4000>;
@@ -988,6 +1012,29 @@
 				MX6SX_PAD_SD3_DATA3__ECSPI4_MISO 0x100b1
 				MX6SX_PAD_SD3_CMD__ECSPI4_MOSI   0x100b1
 				MX6SX_PAD_SD3_CLK__ECSPI4_SCLK   0x100b1
+			>;
+		};
+	};
+
+	csi {
+		pinctrl_csi_0: csigrp-0 {
+			fsl,pins = <
+				MX6SX_PAD_LCD1_DATA07__CSI1_MCLK	0x110b0
+				MX6SX_PAD_LCD1_DATA06__CSI1_PIXCLK	0x110b0
+				MX6SX_PAD_LCD1_DATA04__CSI1_VSYNC	0x110b0
+				MX6SX_PAD_LCD1_DATA05__CSI1_HSYNC	0x110b0
+				MX6SX_PAD_LCD1_DATA17__CSI1_DATA_0	0x110b0
+				MX6SX_PAD_LCD1_DATA16__CSI1_DATA_1	0x110b0
+				MX6SX_PAD_LCD1_DATA15__CSI1_DATA_2	0x110b0
+				MX6SX_PAD_LCD1_DATA14__CSI1_DATA_3	0x110b0
+				MX6SX_PAD_LCD1_DATA13__CSI1_DATA_4	0x110b0
+				MX6SX_PAD_LCD1_DATA12__CSI1_DATA_5	0x110b0
+				MX6SX_PAD_LCD1_DATA11__CSI1_DATA_6	0x110b0
+				MX6SX_PAD_LCD1_DATA10__CSI1_DATA_7	0x110b0
+				MX6SX_PAD_LCD1_DATA09__CSI1_DATA_8	0x110b0
+				MX6SX_PAD_LCD1_DATA08__CSI1_DATA_9	0x110b0
+				MX6SX_PAD_LCD1_ENABLE__GPIO3_IO_25	0x80000000
+				MX6SX_PAD_LCD1_HSYNC__GPIO3_IO_26	0x80000000
 			>;
 		};
 	};
@@ -1190,6 +1237,14 @@
 		pinctrl_pwm3_1: pwm3grp-1 {
 			fsl,pins = <
 				MX6SX_PAD_SD1_DATA2__PWM3_OUT 0x110b0
+			>;
+		};
+	};
+
+	pwm4 {
+		pinctrl_pwm4_0: pwm4grp-0 {
+			fsl,pins = <
+				MX6SX_PAD_SD1_DATA1__PWM4_OUT 0x110b0
 			>;
 		};
 	};

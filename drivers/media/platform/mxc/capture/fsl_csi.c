@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2009-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -38,6 +38,25 @@ EXPORT_SYMBOL(csi_regbase);
 static int irq_nr;
 static csi_irq_callback_t g_callback;
 static void *g_callback_data;
+static struct clk *disp_axi_clk;
+static struct clk *dcic_clk;
+static struct clk *csi_clk;
+
+void csi_clk_enable(void)
+{
+	clk_prepare_enable(disp_axi_clk);
+	clk_prepare_enable(dcic_clk);
+	clk_prepare_enable(csi_clk);
+}
+EXPORT_SYMBOL(csi_clk_enable);
+
+void csi_clk_disable(void)
+{
+	clk_disable_unprepare(csi_clk);
+	clk_disable_unprepare(dcic_clk);
+	clk_disable_unprepare(disp_axi_clk);
+}
+EXPORT_SYMBOL(csi_clk_disable);
 
 static irqreturn_t csi_irq_handler(int irq, void *data)
 {
@@ -195,6 +214,18 @@ void csi_disable_int(void)
 }
 EXPORT_SYMBOL(csi_disable_int);
 
+void csi_enable(int arg)
+{
+	unsigned long cr = __raw_readl(CSI_CSICR18);
+
+	if (arg == 1)
+		cr |= BIT_CSI_ENABLE;
+	else
+		cr &= ~BIT_CSI_ENABLE;
+	__raw_writel(cr, CSI_CSICR18);
+}
+EXPORT_SYMBOL(csi_enable);
+
 void csi_set_16bit_imagpara(int width, int height)
 {
 	int imag_para = 0;
@@ -273,9 +304,28 @@ static int csi_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	disp_axi_clk = devm_clk_get(&pdev->dev, "disp-axi");
+	if (IS_ERR(disp_axi_clk)) {
+		dev_err(&pdev->dev, "get csi clock failed\n");
+		return PTR_ERR(disp_axi_clk);
+	}
+	csi_clk = devm_clk_get(&pdev->dev, "csi_mclk");
+	if (IS_ERR(csi_clk)) {
+		dev_err(&pdev->dev, "get csi mclk failed\n");
+		return PTR_ERR(csi_clk);
+	}
+
+	dcic_clk = devm_clk_get(&pdev->dev, "dcic");
+	if (IS_ERR(dcic_clk)) {
+		dev_err(&pdev->dev, "get dcic clk failed\n");
+		return PTR_ERR(dcic_clk);
+	}
+
+	csi_clk_enable();
 	csihw_reset();
 	csi_init_interface();
 	csi_dmareq_rff_disable();
+	csi_clk_disable();
 
 err:
 	return ret;

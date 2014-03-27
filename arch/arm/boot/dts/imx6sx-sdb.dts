@@ -14,7 +14,7 @@
 	model = "Freescale i.MX6 SoloX SDB Board";
 	compatible = "fsl,imx6sx-sdb", "fsl,imx6sx";
 
-	backlight1 {
+	pwm-backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm3 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
@@ -28,6 +28,18 @@
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <6>;
 		fb-names = "mxs-lcdif1";
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		power {
+			label = "Power Button";
+			gpios = <&gpio1 18 1>;
+			linux,code = <116>; /* KEY_POWER */
+			gpio-key,wakeup;
+			debounce-interval = <1>;
+		};
+
 	};
 
 	hannstar_cabc {
@@ -80,6 +92,22 @@
 			regulator-max-microvolt = <5000000>;
 			regulator-boot-on;
 		};
+		reg_usb_otg1_vbus: usb_otg1_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 9 0>;
+			enable-active-high;
+		};
+		reg_usb_otg2_vbus: usb_otg2_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg2_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 12 0>;
+			enable-active-high;
+		};
 	};
 
 	sound {
@@ -97,6 +125,7 @@
 			"IN3R", "AMIC";
 		mux-int-port = <2>;
 		mux-ext-port = <6>;
+		hp-det-gpios = <&gpio1 17 1>;
 	};
 
 	csi1_v4l2_cap {
@@ -356,6 +385,8 @@
 				MX6SX_PAD_QSPI1B_DATA1__GPIO4_IO_25 0x17059
 				MX6SX_PAD_QSPI1B_DATA2__GPIO4_IO_26 0x17059
 				MX6SX_PAD_QSPI1B_DATA3__GPIO4_IO_27 0x17059
+				MX6SX_PAD_CSI_DATA04__GPIO1_IO_18 0x80000000
+				MX6SX_PAD_CSI_DATA05__GPIO1_IO_19 0x80000000
 			>;
 		};
 	};
@@ -423,10 +454,10 @@
 		     &pinctrl_lcdif_ctrl_0>;
 	lcd-supply = <&reg_lcd_3v3>;
 	display = <&display0>;
-	status = "disabled";
+	status = "okay";
 
 	display0: display {
-		bits-per-pixel = <16>;
+		bits-per-pixel = <32>;
 		bus-width = <24>;
 
 		display-timings {
@@ -523,4 +554,24 @@
 		spi-max-frequency = <66000000>;
 		reg = <1>;
 	};
+};
+&usbotg1 {
+	vbus-supply = <&reg_usb_otg1_vbus>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg1_1>;
+	disable-over-current;
+	status = "okay";
+};
+&usbotg2 {
+	/*
+	 * Pin conflict with others, need to switch R580 & R579
+	 * to B and disable pwm3 to enable it.
+	 */
+	vbus-supply = <&reg_usb_otg2_vbus>;
+	dr_mode = "host";
+	disable-over-current;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg2_1>;
+	disable-over-current;
+	status = "okay";
 };

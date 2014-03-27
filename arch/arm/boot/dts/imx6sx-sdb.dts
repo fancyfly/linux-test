@@ -448,7 +448,7 @@
 &usdhc4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc4_2>;
-	bus-width = <8>;
+	bus-width = <4>;
 	cd-gpios = <&gpio6 21 0>;
 	wp-gpios = <&gpio6 20 0>;
 	no-1-8-v;

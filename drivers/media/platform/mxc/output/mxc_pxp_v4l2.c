@@ -450,6 +450,7 @@ static int pxp_s_output(struct file *file, void *fh,
 		if (ret < 0)
 			return ret;
 	}
+	memset(pxp->outbuf.vaddr, 0x0, pxp->outbuf.size);
 
 	pxp->pxp_conf.out_param.width = fmt->width;
 	pxp->pxp_conf.out_param.height = fmt->height;
@@ -643,9 +644,17 @@ static int pxp_reqbufs(struct file *file, void *priv,
 static int pxp_querybuf(struct file *file, void *priv,
 			struct v4l2_buffer *b)
 {
+	int ret;
 	struct pxps *pxp = video_get_drvdata(video_devdata(file));
 
-	return videobuf_querybuf(&pxp->s0_vbq, b);
+	ret = videobuf_querybuf(&pxp->s0_vbq, b);
+	if (!ret) {
+		struct videobuf_buffer *vb = pxp->s0_vbq.bufs[b->index];
+		if (b->flags & V4L2_BUF_FLAG_MAPPED)
+			b->m.offset = videobuf_to_dma_contig(vb);
+	}
+
+	return ret;
 }
 
 static int pxp_qbuf(struct file *file, void *priv,
@@ -803,17 +812,14 @@ static int pxp_buf_prepare(struct videobuf_queue *q,
 					&pxp_conf->s0_param,
 					sizeof(struct pxp_layer_param));
 			} else if (i == 1) { /* Output */
-				if (proc_data->rotate % 180) {
-					pxp_conf->out_param.width =
-						pxp->fb.fmt.height;
-					pxp_conf->out_param.height =
-						pxp->fb.fmt.width;
-				} else {
-					pxp_conf->out_param.width =
-						pxp->fb.fmt.width;
-					pxp_conf->out_param.height =
-						pxp->fb.fmt.height;
-				}
+				/* we should always pass the output
+				 * width and height which is the value
+				 * after been rotated.
+				 */
+				pxp_conf->out_param.width =
+					pxp->fb.fmt.width;
+				pxp_conf->out_param.height =
+					pxp->fb.fmt.height;
 
 				pxp_conf->out_param.paddr = pxp->outbuf.paddr;
 				memcpy(&desc->layer_param.out_param,
@@ -1028,6 +1034,8 @@ static int pxp_s_crop(struct file *file, void *fh,
 	pxp->pxp_conf.proc_data.drect.width = w;
 	pxp->pxp_conf.proc_data.drect.height = h;
 
+	memset(pxp->outbuf.vaddr, 0x0, pxp->outbuf.size);
+
 	return 0;
 }
 
@@ -1072,6 +1080,8 @@ static int pxp_s_ctrl(struct file *file, void *priv,
 				return -ERANGE;
 			return pxp_set_cstate(pxp, vc);
 		}
+
+	memset(pxp->outbuf.vaddr, 0x0, pxp->outbuf.size);
 
 	return -EINVAL;
 }

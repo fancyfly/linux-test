@@ -22,6 +22,98 @@
 #include <sound/pcm_params.h>
 
 #include "fsl_sai.h"
+#include "imx-pcm.h"
+
+#define FSL_SAI_FLAGS (FSL_SAI_CSR_SEIE |\
+		       FSL_SAI_CSR_FEIE)
+
+static irqreturn_t fsl_sai_isr(int irq, void *devid)
+{
+	struct fsl_sai *sai = (struct fsl_sai *)devid;
+	struct device *dev = &sai->pdev->dev;
+	u32 flags, xcsr, mask;
+	bool irq_none = true;
+
+	/*
+	 * Both IRQ status bits and IRQ mask bits are in the xCSR but
+	 * different shifts. And we here create a mask only for those
+	 * IRQs that we activated.
+	 */
+	mask = (FSL_SAI_FLAGS >> FSL_SAI_CSR_xIE_SHIFT) << FSL_SAI_CSR_xF_SHIFT;
+
+	/* Tx IRQ */
+	regmap_read(sai->regmap, FSL_SAI_TCSR, &xcsr);
+	flags = xcsr & mask;
+
+	if (flags)
+		irq_none = false;
+	else
+		goto irq_rx;
+
+	if (flags & FSL_SAI_CSR_WSF)
+		dev_dbg(dev, "isr: Start of Tx word detected\n");
+
+	if (flags & FSL_SAI_CSR_SEF)
+		dev_warn(dev, "isr: Tx Frame sync error detected\n");
+
+	if (flags & FSL_SAI_CSR_FEF) {
+		dev_warn(dev, "isr: Transmit underrun detected\n");
+		/* FIFO reset for safety */
+		xcsr |= FSL_SAI_CSR_FR;
+	}
+
+	if (flags & FSL_SAI_CSR_FWF)
+		dev_dbg(dev, "isr: Enabled transmit FIFO is empty\n");
+
+	if (flags & FSL_SAI_CSR_FRF)
+		dev_dbg(dev, "isr: Transmit FIFO watermark has been reached\n");
+
+	flags &= FSL_SAI_CSR_xF_W_MASK;
+	xcsr &= ~FSL_SAI_CSR_xF_MASK;
+
+	if (flags)
+		regmap_write(sai->regmap, FSL_SAI_TCSR, flags | xcsr);
+
+irq_rx:
+	/* Rx IRQ */
+	regmap_read(sai->regmap, FSL_SAI_RCSR, &xcsr);
+	flags = xcsr & mask;
+
+	if (flags)
+		irq_none = false;
+	else
+		goto out;
+
+	if (flags & FSL_SAI_CSR_WSF)
+		dev_dbg(dev, "isr: Start of Rx word detected\n");
+
+	if (flags & FSL_SAI_CSR_SEF)
+		dev_warn(dev, "isr: Rx Frame sync error detected\n");
+
+	if (flags & FSL_SAI_CSR_FEF) {
+		dev_warn(dev, "isr: Receive overflow detected\n");
+		/* FIFO reset for safety */
+		xcsr |= FSL_SAI_CSR_FR;
+	}
+
+	if (flags & FSL_SAI_CSR_FWF)
+		dev_dbg(dev, "isr: Enabled receive FIFO is full\n");
+
+	if (flags & FSL_SAI_CSR_FRF)
+		dev_dbg(dev, "isr: Receive FIFO watermark has been reached\n");
+
+	flags &= FSL_SAI_CSR_xF_W_MASK;
+	xcsr &= ~FSL_SAI_CSR_xF_MASK;
+
+	if (flags)
+		regmap_write(sai->regmap, FSL_SAI_TCSR, flags | xcsr);
+
+out:
+	if (irq_none)
+		return IRQ_NONE;
+	else
+		return IRQ_HANDLED;
+}
 
 static int fsl_sai_set_dai_sysclk_tr(struct snd_soc_dai *cpu_dai,
 		int clk_id, unsigned int freq, int fsl_dir)
@@ -274,6 +366,7 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 		struct snd_soc_dai *cpu_dai)
 {
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 	u32 tcsr, rcsr;
 
 	/*
@@ -288,14 +381,6 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 	regmap_read(sai->regmap, FSL_SAI_TCSR, &tcsr);
 	regmap_read(sai->regmap, FSL_SAI_RCSR, &rcsr);
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		tcsr |= FSL_SAI_CSR_FRDE;
-		rcsr &= ~FSL_SAI_CSR_FRDE;
-	} else {
-		rcsr |= FSL_SAI_CSR_FRDE;
-		tcsr &= ~FSL_SAI_CSR_FRDE;
-	}
-
 	/*
 	 * It is recommended that the transmitter is the last enabled
 	 * and the first disabled.
@@ -304,22 +389,32 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		tcsr |= FSL_SAI_CSR_TERE;
-		rcsr |= FSL_SAI_CSR_TERE;
+		if (!(tcsr & FSL_SAI_CSR_FRDE || rcsr & FSL_SAI_CSR_FRDE)) {
+			regmap_update_bits(sai->regmap, FSL_SAI_RCSR,
+					   FSL_SAI_CSR_TERE, FSL_SAI_CSR_TERE);
+			regmap_update_bits(sai->regmap, FSL_SAI_TCSR,
+					   FSL_SAI_CSR_TERE, FSL_SAI_CSR_TERE);
+		}
 
-		regmap_write(sai->regmap, FSL_SAI_RCSR, rcsr);
-		regmap_write(sai->regmap, FSL_SAI_TCSR, tcsr);
+		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx),
+				   FSL_SAI_CSR_xIE_MASK, FSL_SAI_FLAGS);
+		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx),
+				   FSL_SAI_CSR_FRDE, FSL_SAI_CSR_FRDE);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		if (!(cpu_dai->playback_active || cpu_dai->capture_active)) {
-			tcsr &= ~FSL_SAI_CSR_TERE;
-			rcsr &= ~FSL_SAI_CSR_TERE;
-		}
+		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx),
+				   FSL_SAI_CSR_FRDE, 0);
+		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx),
+				   FSL_SAI_CSR_xIE_MASK, 0);
 
-		regmap_write(sai->regmap, FSL_SAI_TCSR, tcsr);
-		regmap_write(sai->regmap, FSL_SAI_RCSR, rcsr);
+		if (!(tcsr & FSL_SAI_CSR_FRDE || rcsr & FSL_SAI_CSR_FRDE)) {
+			regmap_update_bits(sai->regmap, FSL_SAI_TCSR,
+					   FSL_SAI_CSR_TERE, 0);
+			regmap_update_bits(sai->regmap, FSL_SAI_RCSR,
+					   FSL_SAI_CSR_TERE, 0);
+		}
 		break;
 	default:
 		return -EINVAL;
@@ -490,11 +585,16 @@ static int fsl_sai_probe(struct platform_device *pdev)
 	struct fsl_sai *sai;
 	struct resource *res;
 	void __iomem *base;
-	int ret;
+	int irq, ret;
 
 	sai = devm_kzalloc(&pdev->dev, sizeof(*sai), GFP_KERNEL);
 	if (!sai)
 		return -ENOMEM;
+
+	sai->pdev = pdev;
+
+	if (of_device_is_compatible(pdev->dev.of_node, "fsl,imx6sx-sai"))
+		sai->sai_on_imx = true;
 
 	sai->big_endian_regs = of_property_read_bool(np, "big-endian-regs");
 	if (sai->big_endian_regs)
@@ -514,6 +614,18 @@ static int fsl_sai_probe(struct platform_device *pdev)
 		return PTR_ERR(sai->regmap);
 	}
 
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0) {
+		dev_err(&pdev->dev, "no irq for node %s\n", np->full_name);
+		return irq;
+	}
+
+	ret = devm_request_irq(&pdev->dev, irq, fsl_sai_isr, 0, np->name, sai);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to claim irq %u\n", irq);
+		return ret;
+	}
+
 	sai->dma_params_rx.addr = res->start + FSL_SAI_RDR;
 	sai->dma_params_tx.addr = res->start + FSL_SAI_TDR;
 	sai->dma_params_rx.maxburst = FSL_SAI_MAXBURST_RX;
@@ -526,12 +638,17 @@ static int fsl_sai_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	return devm_snd_dmaengine_pcm_register(&pdev->dev, NULL,
-			SND_DMAENGINE_PCM_FLAG_NO_RESIDUE);
+	if (sai->sai_on_imx)
+		return imx_pcm_dma_init(pdev, SND_DMAENGINE_PCM_FLAG_NO_RESIDUE,
+				IMX_SSI_DMABUF_SIZE);
+	else
+		return devm_snd_dmaengine_pcm_register(&pdev->dev, NULL,
+				SND_DMAENGINE_PCM_FLAG_NO_RESIDUE);
 }
 
 static const struct of_device_id fsl_sai_ids[] = {
 	{ .compatible = "fsl,vf610-sai", },
+	{ .compatible = "fsl,imx6sx-sai", },
 	{ /* sentinel */ }
 };
 

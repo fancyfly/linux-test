@@ -23,6 +23,7 @@
 #include <linux/switch.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
+#include <sound/control.h>
 #include <sound/pcm_params.h>
 #include <sound/soc-dapm.h>
 #include <linux/pinctrl/consumer.h>
@@ -51,7 +52,8 @@ struct imx_priv {
 	struct platform_device *pdev;
 	struct snd_pcm_substream *first_stream;
 	struct snd_pcm_substream *second_stream;
-	struct switch_dev sdev;
+	struct snd_kcontrol *headphone_kctl;
+	struct snd_card *snd_card;
 };
 static struct imx_priv card_priv;
 
@@ -106,11 +108,13 @@ static int hpjack_status_check(void)
 		switch_set_state(&priv->sdev, 2);
 		snd_soc_dapm_disable_pin(&priv->codec->dapm, "Ext Spk");
 		ret = imx_hp_jack_gpio.report;
+		snd_kctl_jack_report(priv->snd_card, priv->headphone_kctl, 1);
 	} else {
 		snprintf(buf, 32, "STATE=%d", 0);
 		switch_set_state(&priv->sdev, 0);
 		snd_soc_dapm_enable_pin(&priv->codec->dapm, "Ext Spk");
 		ret = 0;
+		snd_kctl_jack_report(priv->snd_card, priv->headphone_kctl, 0);
 	}
 
 	envp[0] = "NAME=headphone";
@@ -282,9 +286,10 @@ static struct snd_soc_ops imx_hifi_ops = {
 	.hw_free = imx_hifi_hw_free,
 };
 
-static int imx_wm8962_gpio_init(struct snd_soc_pcm_runtime *rtd)
+static int imx_wm8962_gpio_init(struct snd_soc_card *card)
 {
-	struct snd_soc_codec *codec = rtd->codec;
+	struct snd_soc_dai *codec_dai = card->rtd[0].codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
 	struct imx_priv *priv = &card_priv;
 
 	priv->codec = codec;
@@ -485,7 +490,6 @@ static int imx_wm8962_probe(struct platform_device *pdev)
 	data->dai.cpu_dai_name = dev_name(&ssi_pdev->dev);
 	data->dai.platform_of_node = ssi_np;
 	data->dai.ops = &imx_hifi_ops;
-	data->dai.init = &imx_wm8962_gpio_init;
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
 
@@ -518,6 +522,14 @@ static int imx_wm8962_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
 		goto fail;
 	}
+
+	priv->snd_card = data->card.snd_card;
+	priv->headphone_kctl = snd_kctl_jack_new("Headphone", 0, NULL);
+	ret = snd_ctl_add(data->card.snd_card, priv->headphone_kctl);
+	if (ret)
+		goto fail;
+
+	imx_wm8962_gpio_init(&data->card);
 
 	if (gpio_is_valid(priv->hp_gpio)) {
 		ret = driver_create_file(pdev->dev.driver, &driver_attr_headphone);

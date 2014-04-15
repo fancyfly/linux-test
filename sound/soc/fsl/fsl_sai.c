@@ -1,7 +1,7 @@
 /*
  * Freescale ALSA SoC Digital Audio Interface (SAI) driver.
  *
- * Copyright 2012-2013 Freescale Semiconductor, Inc.
+ * Copyright 2012-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software, you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -119,16 +119,8 @@ static int fsl_sai_set_dai_sysclk_tr(struct snd_soc_dai *cpu_dai,
 		int clk_id, unsigned int freq, int fsl_dir)
 {
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
-	u32 val_cr2, reg_cr2;
-
-	if (fsl_dir == FSL_FMT_TRANSMITTER)
-		reg_cr2 = FSL_SAI_TCR2;
-	else
-		reg_cr2 = FSL_SAI_RCR2;
-
-	regmap_read(sai->regmap, reg_cr2, &val_cr2);
-
-	val_cr2 &= ~FSL_SAI_CR2_MSEL_MASK;
+	bool tx = fsl_dir == FSL_FMT_TRANSMITTER;
+	u32 val_cr2 = 0;
 
 	switch (clk_id) {
 	case FSL_SAI_CLK_BUS:
@@ -147,7 +139,8 @@ static int fsl_sai_set_dai_sysclk_tr(struct snd_soc_dai *cpu_dai,
 		return -EINVAL;
 	}
 
-	regmap_write(sai->regmap, reg_cr2, val_cr2);
+	regmap_update_bits(sai->regmap, FSL_SAI_xCR2(tx),
+			   FSL_SAI_CR2_MSEL_MASK, val_cr2);
 
 	return 0;
 }
@@ -179,22 +172,10 @@ static int fsl_sai_set_dai_fmt_tr(struct snd_soc_dai *cpu_dai,
 				unsigned int fmt, int fsl_dir)
 {
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
-	u32 val_cr2, val_cr4, reg_cr2, reg_cr4;
+	bool tx = fsl_dir == FSL_FMT_TRANSMITTER;
+	u32 val_cr2 = 0, val_cr4 = 0;
 
-	if (fsl_dir == FSL_FMT_TRANSMITTER) {
-		reg_cr2 = FSL_SAI_TCR2;
-		reg_cr4 = FSL_SAI_TCR4;
-	} else {
-		reg_cr2 = FSL_SAI_RCR2;
-		reg_cr4 = FSL_SAI_RCR4;
-	}
-
-	regmap_read(sai->regmap, reg_cr2, &val_cr2);
-	regmap_read(sai->regmap, reg_cr4, &val_cr4);
-
-	if (sai->big_endian_data)
-		val_cr4 &= ~FSL_SAI_CR4_MF;
-	else
+	if (!sai->big_endian_data)
 		val_cr4 |= FSL_SAI_CR4_MF;
 
 	/* DAI mode */
@@ -215,7 +196,6 @@ static int fsl_sai_set_dai_fmt_tr(struct snd_soc_dai *cpu_dai,
 		 * frame sync asserts with the first bit of the frame.
 		 */
 		val_cr2 |= FSL_SAI_CR2_BCP;
-		val_cr4 &= ~(FSL_SAI_CR4_FSE | FSL_SAI_CR4_FSP);
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
 		/*
@@ -225,7 +205,6 @@ static int fsl_sai_set_dai_fmt_tr(struct snd_soc_dai *cpu_dai,
 		 * data word.
 		 */
 		val_cr2 |= FSL_SAI_CR2_BCP;
-		val_cr4 &= ~FSL_SAI_CR4_FSP;
 		val_cr4 |= FSL_SAI_CR4_FSE;
 		sai->is_dsp_mode = true;
 		break;
@@ -235,7 +214,6 @@ static int fsl_sai_set_dai_fmt_tr(struct snd_soc_dai *cpu_dai,
 		 * frame sync asserts with the first bit of the frame.
 		 */
 		val_cr2 |= FSL_SAI_CR2_BCP;
-		val_cr4 &= ~(FSL_SAI_CR4_FSE | FSL_SAI_CR4_FSP);
 		sai->is_dsp_mode = true;
 		break;
 	case SND_SOC_DAIFMT_RIGHT_J:
@@ -273,23 +251,22 @@ static int fsl_sai_set_dai_fmt_tr(struct snd_soc_dai *cpu_dai,
 		val_cr4 |= FSL_SAI_CR4_FSD_MSTR;
 		break;
 	case SND_SOC_DAIFMT_CBM_CFM:
-		val_cr2 &= ~FSL_SAI_CR2_BCD_MSTR;
-		val_cr4 &= ~FSL_SAI_CR4_FSD_MSTR;
 		break;
 	case SND_SOC_DAIFMT_CBS_CFM:
 		val_cr2 |= FSL_SAI_CR2_BCD_MSTR;
-		val_cr4 &= ~FSL_SAI_CR4_FSD_MSTR;
 		break;
 	case SND_SOC_DAIFMT_CBM_CFS:
-		val_cr2 &= ~FSL_SAI_CR2_BCD_MSTR;
 		val_cr4 |= FSL_SAI_CR4_FSD_MSTR;
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	regmap_write(sai->regmap, reg_cr2, val_cr2);
-	regmap_write(sai->regmap, reg_cr4, val_cr4);
+	regmap_update_bits(sai->regmap, FSL_SAI_xCR2(tx),
+			   FSL_SAI_CR2_BCP | FSL_SAI_CR2_BCD_MSTR, val_cr2);
+	regmap_update_bits(sai->regmap, FSL_SAI_xCR4(tx),
+			   FSL_SAI_CR4_MF | FSL_SAI_CR4_FSE |
+			   FSL_SAI_CR4_FSP | FSL_SAI_CR4_FSD_MSTR, val_cr4);
 
 	return 0;
 }
@@ -316,29 +293,10 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *cpu_dai)
 {
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
-	u32 val_cr4, val_cr5, val_mr, reg_cr4, reg_cr5, reg_mr;
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 	unsigned int channels = params_channels(params);
 	u32 word_width = snd_pcm_format_width(params_format(params));
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		reg_cr4 = FSL_SAI_TCR4;
-		reg_cr5 = FSL_SAI_TCR5;
-		reg_mr = FSL_SAI_TMR;
-	} else {
-		reg_cr4 = FSL_SAI_RCR4;
-		reg_cr5 = FSL_SAI_RCR5;
-		reg_mr = FSL_SAI_RMR;
-	}
-
-	regmap_read(sai->regmap, reg_cr4, &val_cr4);
-	regmap_read(sai->regmap, reg_cr4, &val_cr5);
-
-	val_cr4 &= ~FSL_SAI_CR4_SYWD_MASK;
-	val_cr4 &= ~FSL_SAI_CR4_FRSZ_MASK;
-
-	val_cr5 &= ~FSL_SAI_CR5_WNW_MASK;
-	val_cr5 &= ~FSL_SAI_CR5_W0W_MASK;
-	val_cr5 &= ~FSL_SAI_CR5_FBT_MASK;
+	u32 val_cr4 = 0, val_cr5 = 0;
 
 	if (!sai->is_dsp_mode)
 		val_cr4 |= FSL_SAI_CR4_SYWD(word_width);
@@ -346,18 +304,20 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 	val_cr5 |= FSL_SAI_CR5_WNW(word_width);
 	val_cr5 |= FSL_SAI_CR5_W0W(word_width);
 
-	val_cr5 &= ~FSL_SAI_CR5_FBT_MASK;
 	if (sai->big_endian_data)
 		val_cr5 |= FSL_SAI_CR5_FBT(0);
 	else
 		val_cr5 |= FSL_SAI_CR5_FBT(word_width - 1);
 
 	val_cr4 |= FSL_SAI_CR4_FRSZ(channels);
-	val_mr = ~0UL - ((1 << channels) - 1);
 
-	regmap_write(sai->regmap, reg_cr4, val_cr4);
-	regmap_write(sai->regmap, reg_cr5, val_cr5);
-	regmap_write(sai->regmap, reg_mr, val_mr);
+	regmap_update_bits(sai->regmap, FSL_SAI_xCR4(tx),
+			   FSL_SAI_CR4_SYWD_MASK | FSL_SAI_CR4_FRSZ_MASK,
+			   val_cr4);
+	regmap_update_bits(sai->regmap, FSL_SAI_xCR5(tx),
+			   FSL_SAI_CR5_WNW_MASK | FSL_SAI_CR5_W0W_MASK |
+			   FSL_SAI_CR5_FBT_MASK, val_cr5);
+	regmap_write(sai->regmap, FSL_SAI_xMR(tx), ~0UL - ((1 << channels) - 1));
 
 	return 0;
 }
@@ -409,7 +369,8 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx),
 				   FSL_SAI_CSR_xIE_MASK, 0);
 
-		if (!(tcsr & FSL_SAI_CSR_FRDE || rcsr & FSL_SAI_CSR_FRDE)) {
+		/* Check if the opposite FRDE is also disabled */
+		if (!(tx ? rcsr & FSL_SAI_CSR_FRDE : tcsr & FSL_SAI_CSR_FRDE)) {
 			regmap_update_bits(sai->regmap, FSL_SAI_TCSR,
 					   FSL_SAI_CSR_TERE, 0);
 			regmap_update_bits(sai->regmap, FSL_SAI_RCSR,
@@ -427,14 +388,17 @@ static int fsl_sai_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *cpu_dai)
 {
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
-	u32 reg;
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	struct device *dev = &sai->pdev->dev;
+	int ret;
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		reg = FSL_SAI_TCR3;
-	else
-		reg = FSL_SAI_RCR3;
+	ret = clk_prepare_enable(sai->bus_clk);
+	if (ret) {
+		dev_err(dev, "failed to enable bus clock: %d\n", ret);
+		return ret;
+	}
 
-	regmap_update_bits(sai->regmap, reg, FSL_SAI_CR3_TRCE,
+	regmap_update_bits(sai->regmap, FSL_SAI_xCR3(tx), FSL_SAI_CR3_TRCE,
 			   FSL_SAI_CR3_TRCE);
 
 	return 0;
@@ -444,15 +408,11 @@ static void fsl_sai_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *cpu_dai)
 {
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
-	u32 reg;
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		reg = FSL_SAI_TCR3;
-	else
-		reg = FSL_SAI_RCR3;
+	regmap_update_bits(sai->regmap, FSL_SAI_xCR3(tx), FSL_SAI_CR3_TRCE, 0);
 
-	regmap_update_bits(sai->regmap, reg, FSL_SAI_CR3_TRCE,
-			   ~FSL_SAI_CR3_TRCE);
+	clk_disable_unprepare(sai->bus_clk);
 }
 
 static const struct snd_soc_dai_ops fsl_sai_pcm_dai_ops = {
@@ -585,7 +545,8 @@ static int fsl_sai_probe(struct platform_device *pdev)
 	struct fsl_sai *sai;
 	struct resource *res;
 	void __iomem *base;
-	int irq, ret;
+	char tmp[8];
+	int irq, ret, i;
 
 	sai = devm_kzalloc(&pdev->dev, sizeof(*sai), GFP_KERNEL);
 	if (!sai)
@@ -608,10 +569,33 @@ static int fsl_sai_probe(struct platform_device *pdev)
 		return PTR_ERR(base);
 
 	sai->regmap = devm_regmap_init_mmio_clk(&pdev->dev,
-			"sai", base, &fsl_sai_regmap_config);
+			"bus", base, &fsl_sai_regmap_config);
+
+	/* Compatible with old DTB cases */
+	if (IS_ERR(sai->regmap))
+		sai->regmap = devm_regmap_init_mmio_clk(&pdev->dev,
+				"sai", base, &fsl_sai_regmap_config);
 	if (IS_ERR(sai->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		return PTR_ERR(sai->regmap);
+	}
+
+	/* No error out for old DTB cases but only mark the clock NULL */
+	sai->bus_clk = devm_clk_get(&pdev->dev, "bus");
+	if (IS_ERR(sai->bus_clk)) {
+		dev_err(&pdev->dev, "failed to get bus clock: %ld\n",
+				PTR_ERR(sai->bus_clk));
+		sai->bus_clk = NULL;
+	}
+
+	for (i = 0; i < FSL_SAI_MCLK_MAX; i++) {
+		sprintf(tmp, "mclk%d", i + 1);
+		sai->mclk_clk[i] = devm_clk_get(&pdev->dev, tmp);
+		if (IS_ERR(sai->mclk_clk[i])) {
+			dev_err(&pdev->dev, "failed to get mclk%d clock: %ld\n",
+					i + 1, PTR_ERR(sai->mclk_clk[i]));
+			sai->mclk_clk[i] = NULL;
+		}
 	}
 
 	irq = platform_get_irq(pdev, 0);
@@ -640,7 +624,7 @@ static int fsl_sai_probe(struct platform_device *pdev)
 
 	if (sai->sai_on_imx)
 		return imx_pcm_dma_init(pdev, SND_DMAENGINE_PCM_FLAG_NO_RESIDUE,
-				IMX_SSI_DMABUF_SIZE);
+				IMX_SAI_DMABUF_SIZE);
 	else
 		return devm_snd_dmaengine_pcm_register(&pdev->dev, NULL,
 				SND_DMAENGINE_PCM_FLAG_NO_RESIDUE);

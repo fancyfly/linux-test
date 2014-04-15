@@ -124,7 +124,7 @@
 		compatible = "fsl,imx6q-sabresd-wm8962",
 			   "fsl,imx-audio-wm8962";
 		model = "wm8962-audio";
-		ssi-controller = <&ssi2>;
+		cpu-dai = <&ssi2>;
 		audio-codec = <&codec>;
 		audio-routing =
 			"Headphone Jack", "HPOUTL",
@@ -431,6 +431,12 @@
 	power-on-gpio = <&gpio2 0 0>;
 	reset-gpio = <&gpio2 1 0>;
 	status = "okay";
+};
+
+&sai1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai1_2>;
+	status = "disabled";
 };
 
 &ssi2 {

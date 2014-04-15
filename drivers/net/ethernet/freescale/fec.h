@@ -251,6 +251,11 @@ struct bufdesc_ex {
 #define BD_ENET_TX_PINS         0x10000000
 #define BD_ENET_TX_IINS         0x08000000
 
+#if defined(CONFIG_ARM)
+#define FEC_ALIGNMENT   0x3f
+#else
+#define FEC_ALIGNMENT   0x3
+#endif
 
 /* This device has up to three irqs on some platforms */
 #define FEC_IRQ_NUM		3
@@ -270,10 +275,8 @@ struct bufdesc_ex {
  * the skbuffer directly.
  */
 
-#define FEC_ENET_RX_PAGES	256
-#define FEC_ENET_RX_FRSIZE	2048
-#define FEC_ENET_RX_FRPPG	(PAGE_SIZE / FEC_ENET_RX_FRSIZE)
-#define RX_RING_SIZE		(FEC_ENET_RX_FRPPG * FEC_ENET_RX_PAGES)
+#define FEC_ENET_RX_FRSIZE	(1522 + FEC_ALIGNMENT)
+#define RX_RING_SIZE		256
 #define FEC_ENET_TX_FRSIZE	2048
 #define FEC_ENET_TX_FRPPG	(PAGE_SIZE / FEC_ENET_TX_FRSIZE)
 #define TX_RING_SIZE		512	/* Must be power of two */
@@ -310,7 +313,7 @@ struct bufdesc_ex {
 #define FEC_ENET_TS_TIMER       ((uint)0x00008000)
 
 #define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII | FEC_ENET_TS_TIMER)
-#define FEC_RX_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~FEC_ENET_RXF))
+#define FEC_RX_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~(FEC_ENET_RXF | FEC_ENET_TXF)))
 
 /* ENET AVB related macros define */
 #define FEC_R_DES_START(X)	((X == 1) ? FEC_R_DES_START_1 : \

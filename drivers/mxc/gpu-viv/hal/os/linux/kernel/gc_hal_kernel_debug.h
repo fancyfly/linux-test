@@ -48,13 +48,14 @@ typedef va_list gctARGUMENTS;
     va_arg(Arguments, Type)
 
 #define gcmkDECLARE_LOCK(__spinLock__) \
-    static DEFINE_SPINLOCK(__spinLock__);
+    static DEFINE_SPINLOCK(__spinLock__); \
+    unsigned long __spinLock__##flags = 0;
 
 #define gcmkLOCKSECTION(__spinLock__) \
-    spin_lock(&__spinLock__)
+    spin_lock_irqsave(&__spinLock__, __spinLock__##flags)
 
 #define gcmkUNLOCKSECTION(__spinLock__) \
-    spin_unlock(&__spinLock__)
+    spin_unlock_irqrestore(&__spinLock__, __spinLock__##flags)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24)
 #   define gcmkGETPROCESSID() \
@@ -91,7 +92,7 @@ typedef va_list gctARGUMENTS;
     snprintf(Destination, Size, Message, Value1, Value2, Value3)
 
 #define gcmkVSPRINTF(Destination, Size, Message, Arguments) \
-    vsnprintf(Destination, Size, Message, *(va_list *) &Arguments)
+    vsnprintf(Destination, Size, Message, *((va_list*)Arguments))
 
 #define gcmkSTRCAT(Destination, Size, String) \
     strncat(Destination, String, Size)

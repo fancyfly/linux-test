@@ -42,7 +42,6 @@
  * - Not Supported: 15 & 16 (ISO)
  *
  * TODO List
- * - OTG
  * - Interrupt Traffic
  * - GET_STATUS(device) - always reports 0
  * - Gadget API (majority of optional features)
@@ -74,6 +73,7 @@
 #include "host.h"
 #include "debug.h"
 #include "otg.h"
+#include "otg_fsm.h"
 
 /* Controller register map */
 static uintptr_t ci_regs_nolpm[] = {
@@ -144,6 +144,26 @@ static int hw_alloc_regmap(struct ci_hdrc *ci, bool is_lpm)
 			 : ci_regs_nolpm[OP_ENDPTCTRL]);
 
 	return 0;
+}
+
+/**
+ * hw_read_intr_enable: returns interrupt enable register
+ *
+ * This function returns register data
+ */
+u32 hw_read_intr_enable(struct ci_hdrc *ci)
+{
+	return hw_read(ci, OP_USBINTR, ~0);
+}
+
+/**
+ * hw_read_intr_status: returns interrupt status register
+ *
+ * This function returns register data
+ */
+u32 hw_read_intr_status(struct ci_hdrc *ci)
+{
+	return hw_read(ci, OP_USBSTS, ~0);
 }
 
 /**
@@ -415,8 +435,14 @@ static irqreturn_t ci_irq(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 
-	if (ci->is_otg)
-		otgsc = hw_read(ci, OP_OTGSC, ~0);
+	if (ci->is_otg) {
+		otgsc = hw_read_otgsc(ci, ~0);
+		if (ci_otg_is_fsm_mode(ci)) {
+			ret = ci_otg_fsm_irq(ci);
+			if (ret == IRQ_HANDLED)
+				return ret;
+		}
+	}
 
 	/*
 	 * Handle id change interrupt, it indicates device/host function
@@ -424,9 +450,9 @@ static irqreturn_t ci_irq(int irq, void *data)
 	 */
 	if (ci->is_otg && (otgsc & OTGSC_IDIE) && (otgsc & OTGSC_IDIS)) {
 		ci->id_event = true;
-		ci_clear_otg_interrupt(ci, OTGSC_IDIS);
+		hw_write_otgsc(ci, OTGSC_IDIS, OTGSC_IDIS);
 		disable_irq_nosync(ci->irq);
-		wake_up(&ci->otg_wait);
+		queue_work(ci->wq, &ci->work);
 		return IRQ_HANDLED;
 	}
 
@@ -436,9 +462,9 @@ static irqreturn_t ci_irq(int irq, void *data)
 	 */
 	if (ci->is_otg && (otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
 		ci->b_sess_valid_event = true;
-		ci_clear_otg_interrupt(ci, OTGSC_BSVIS);
+		hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
 		disable_irq_nosync(ci->irq);
-		wake_up(&ci->otg_wait);
+		queue_work(ci->wq, &ci->work);
 		return IRQ_HANDLED;
 	}
 
@@ -585,8 +611,8 @@ static void ci_get_otg_capable(struct ci_hdrc *ci)
 					== (DCCPARAMS_DC | DCCPARAMS_HC));
 	if (ci->is_otg) {
 		dev_dbg(ci->dev, "It is OTG capable controller\n");
-		ci_disable_otg_interrupt(ci, OTGSC_INT_EN_BITS);
-		ci_clear_otg_interrupt(ci, OTGSC_INT_STATUS_BITS);
+		hw_write_otgsc(ci, OTGSC_INT_EN_BITS | OTGSC_INT_STATUS_BITS,
+							OTGSC_INT_STATUS_BITS);
 	}
 }
 
@@ -697,7 +723,7 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	if (ci->roles[CI_ROLE_HOST] && ci->roles[CI_ROLE_GADGET]) {
 		if (ci->is_otg) {
 			ci->role = ci_otg_role(ci);
-			ci_enable_otg_interrupt(ci, OTGSC_IDIE);
+			hw_write_otgsc(ci, OTGSC_IDIE, OTGSC_IDIE);
 		} else {
 			/*
 			 * If the controller is not OTG capable, but support
@@ -716,10 +742,13 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	if (ci->role == CI_ROLE_GADGET)
 		ci_handle_vbus_connected(ci);
 
-	ret = ci_role_start(ci, ci->role);
-	if (ret) {
-		dev_err(dev, "can't start %s role\n", ci_role(ci)->name);
-		goto stop;
+	if (!ci_otg_is_fsm_mode(ci)) {
+		ret = ci_role_start(ci, ci->role);
+		if (ret) {
+			dev_err(dev, "can't start %s role\n",
+						ci_role(ci)->name);
+			goto stop;
+		}
 	}
 
 	platform_set_drvdata(pdev, ci);
@@ -734,6 +763,9 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 		pm_runtime_set_active(&pdev->dev);
 		pm_runtime_enable(&pdev->dev);
 	}
+
+	if (ci_otg_is_fsm_mode(ci))
+		ci_hdrc_otg_fsm_start(ci);
 
 	setup_timer(&ci->timer, delay_runtime_pm_put_timer,
 			(unsigned long)ci);
@@ -770,6 +802,38 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+/* Prepare wakeup by SRP before suspend */
+static void ci_otg_fsm_suspend_for_srp(struct ci_hdrc *ci)
+{
+	if ((ci->transceiver->state == OTG_STATE_A_IDLE) &&
+				!hw_read_otgsc(ci, OTGSC_ID)) {
+		hw_write(ci, OP_PORTSC, PORTSC_W1C_BITS | PORTSC_PP,
+								PORTSC_PP);
+		hw_write(ci, OP_PORTSC, PORTSC_W1C_BITS | PORTSC_WKCN,
+								PORTSC_WKCN);
+	}
+}
+
+/* Handle SRP when wakeup by data pulse */
+static void ci_otg_fsm_wakeup_by_srp(struct ci_hdrc *ci)
+{
+	/*
+	 * if a_idle wakeup by data pulse,
+	 * handle it like normal SRP
+	 */
+	if ((ci->transceiver->state == OTG_STATE_A_IDLE) &&
+		(ci->fsm.a_bus_drop == 1) && (ci->fsm.a_bus_req == 0)) {
+		if (!hw_read_otgsc(ci, OTGSC_ID)) {
+			ci->fsm.a_srp_det = 1;
+			ci->fsm.a_bus_drop = 0;
+			disable_irq_nosync(ci->irq);
+			queue_work(ci->wq, &ci->work);
+		} else {
+			ci->fsm.id = 1;
+		}
+	}
+}
+
 static int ci_controller_suspend(struct device *dev)
 {
 	struct ci_hdrc *ci = dev_get_drvdata(dev);
@@ -778,6 +842,9 @@ static int ci_controller_suspend(struct device *dev)
 
 	if (ci->in_lpm)
 		return 0;
+
+	if (ci_otg_is_fsm_mode(ci))
+		ci_otg_fsm_suspend_for_srp(ci);
 
 	disable_irq(ci->irq);
 
@@ -820,6 +887,9 @@ static int ci_controller_resume(struct device *dev)
 		enable_irq(ci->irq);
 		mod_timer(&ci->timer, jiffies + msecs_to_jiffies(2000));
 	}
+
+	if (ci_otg_is_fsm_mode(ci))
+		ci_otg_fsm_wakeup_by_srp(ci);
 
 	return 0;
 }

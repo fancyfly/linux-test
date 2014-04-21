@@ -1,0 +1,15 @@
+#
+# imx mcc
+#
+
+config IMX_SEMA4
+	bool "IMX SEMA4 driver"
+	depends on SOC_IMX6SX
+	help
+	  Support for IMX SEMA4 driver, most people should say N here.
+
+config IMX_MCC_DEMO
+	bool "IMX MCC demo driver"
+	depends on SOC_IMX6SX && IMX_SEMA4
+	help
+	  Support for IMX MCC DEMO, most people should say N here.

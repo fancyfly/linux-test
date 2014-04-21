@@ -27,6 +27,7 @@
 #include "bits.h"
 #include "debug.h"
 #include "otg.h"
+#include "otg_fsm.h"
 
 /* control endpoint description */
 static const struct usb_endpoint_descriptor
@@ -252,26 +253,6 @@ static int hw_port_is_high_speed(struct ci_hdrc *ci)
 {
 	return ci->hw_bank.lpm ? hw_read(ci, OP_DEVLC, DEVLC_PSPD) :
 		hw_read(ci, OP_PORTSC, PORTSC_HSP);
-}
-
-/**
- * hw_read_intr_enable: returns interrupt enable register
- *
- * This function returns register data
- */
-static u32 hw_read_intr_enable(struct ci_hdrc *ci)
-{
-	return hw_read(ci, OP_USBINTR, ~0);
-}
-
-/**
- * hw_read_intr_status: returns interrupt status register
- *
- * This function returns register data
- */
-static u32 hw_read_intr_status(struct ci_hdrc *ci)
-{
-	return hw_read(ci, OP_USBSTS, ~0);
 }
 
 /**
@@ -1115,6 +1096,14 @@ __acquires(ci->lock)
 					default:
 						break;
 					}
+					break;
+				case USB_DEVICE_B_HNP_ENABLE:
+					if (ci_otg_is_fsm_mode(ci)) {
+						ci->gadget.b_hnp_enable = 1;
+						err = isr_setup_status_phase(
+									ci);
+					}
+					break;
 				default:
 					goto delegate;
 				}
@@ -1474,6 +1463,17 @@ static const struct usb_ep_ops usb_ep_ops = {
 /******************************************************************************
  * GADGET block
  *****************************************************************************/
+static bool ci_otg_fsm_charger_conn(struct ci_hdrc *ci)
+{
+	/*
+	 * OTG port is in fsm mode
+	 * only do charger notify for b sess valid event, or
+	 * when power up.
+	 */
+	return !ci_otg_is_fsm_mode(ci) || ci->fsm.power_up ||
+					ci->b_sess_valid_event;
+}
+
 static int ci_udc_vbus_session(struct usb_gadget *_gadget, int is_active)
 {
 	struct ci_hdrc *ci = container_of(_gadget, struct ci_hdrc, gadget);
@@ -1488,7 +1488,7 @@ static int ci_udc_vbus_session(struct usb_gadget *_gadget, int is_active)
 	spin_unlock_irqrestore(&ci->lock, flags);
 
 	/* Charger Detection */
-	if (ci->platdata->notify_event) {
+	if (ci->platdata->notify_event && ci_otg_fsm_charger_conn(ci)) {
 		/*
 		 * Keep controller active when the cable is connected,
 		 * It can make disconnect interrupt (BSV 1->0) occur when
@@ -1513,6 +1513,9 @@ static int ci_udc_vbus_session(struct usb_gadget *_gadget, int is_active)
 			hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 		}
 	}
+
+	if (ci_otg_is_fsm_mode(ci) && ci->b_sess_valid_event)
+		ci->b_sess_valid_event = false;
 
 	if (gadget_ready) {
 		if (is_active) {
@@ -1701,6 +1704,12 @@ static int ci_udc_start(struct usb_gadget *gadget,
 		return retval;
 
 	ci->driver = driver;
+	/* Start otg fsm for B-device */
+	if (ci_otg_is_fsm_mode(ci) && ci->fsm.id) {
+		ci_hdrc_otg_fsm_start(ci);
+		return retval;
+	}
+
 	pm_runtime_get_sync(&ci->gadget.dev);
 	if (ci->vbus_active) {
 		spin_lock_irqsave(&ci->lock, flags);
@@ -1825,7 +1834,7 @@ static int udc_start(struct ci_hdrc *ci)
 	ci->gadget.ops          = &usb_gadget_ops;
 	ci->gadget.speed        = USB_SPEED_UNKNOWN;
 	ci->gadget.max_speed    = USB_SPEED_HIGH;
-	ci->gadget.is_otg       = 0;
+	ci->gadget.is_otg       = ci->is_otg ? 1 : 0;
 	ci->gadget.name         = ci->platdata->name;
 
 	INIT_LIST_HEAD(&ci->gadget.ep_list);
@@ -1889,21 +1898,18 @@ void ci_hdrc_gadget_destroy(struct ci_hdrc *ci)
 
 static int udc_id_switch_for_device(struct ci_hdrc *ci)
 {
-	if (ci->is_otg) {
-		ci_clear_otg_interrupt(ci, OTGSC_BSVIS);
-		ci_enable_otg_interrupt(ci, OTGSC_BSVIE);
-	}
+	if (ci->is_otg)
+		hw_write_otgsc(ci, OTGSC_BSVIS | OTGSC_BSVIE,
+					OTGSC_BSVIS | OTGSC_BSVIE);
 
 	return 0;
 }
 
 static void udc_id_switch_for_host(struct ci_hdrc *ci)
 {
-	if (ci->is_otg) {
+	if (ci->is_otg)
 		/* host doesn't care B_SESSION_VALID event */
-		ci_clear_otg_interrupt(ci, OTGSC_BSVIS);
-		ci_disable_otg_interrupt(ci, OTGSC_BSVIE);
-	}
+		hw_write_otgsc(ci, OTGSC_BSVIE | OTGSC_BSVIS, OTGSC_BSVIS);
 }
 
 /**

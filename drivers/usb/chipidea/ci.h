@@ -17,6 +17,7 @@
 #include <linux/irqreturn.h>
 #include <linux/usb.h>
 #include <linux/usb/gadget.h>
+#include <linux/usb/otg-fsm.h>
 
 /******************************************************************************
  * DEFINE
@@ -110,8 +111,10 @@ struct hw_bank {
  * @roles: array of supported roles for this controller
  * @role: current role
  * @is_otg: if the device is otg-capable
- * @otg_task: the thread for handling otg task
- * @otg_wait: the otg event waitqueue head
+ * @fsm: otg finite state machine
+ * @fsm_timer: pointer to timer list of otg fsm
+ * @work: work for role changing
+ * @wq: workqueue thread
  * @qh_pool: allocation pool for queue heads
  * @td_pool: allocation pool for transfer descriptors
  * @gadget: device side representation for peripheral controller
@@ -149,8 +152,10 @@ struct ci_hdrc {
 	struct ci_role_driver		*roles[CI_ROLE_END];
 	enum ci_role			role;
 	bool				is_otg;
-	struct task_struct		*otg_task;
-	wait_queue_head_t		otg_wait;
+	struct otg_fsm			fsm;
+	struct ci_otg_fsm_timer_list	*fsm_timer;
+	struct work_struct		work;
+	struct workqueue_struct		*wq;
 
 	struct dma_pool			*qh_pool;
 	struct dma_pool			*td_pool;
@@ -330,6 +335,24 @@ static inline u32 hw_test_and_write(struct ci_hdrc *ci, enum ci_hw_regs reg,
 	hw_write(ci, reg, mask, data);
 	return (val & mask) >> __ffs(mask);
 }
+
+/**
+ * ci_otg_is_fsm_mode: runtime check if otg controller
+ * is in otg fsm mode.
+ */
+static inline bool ci_otg_is_fsm_mode(struct ci_hdrc *ci)
+{
+#ifdef CONFIG_USB_OTG_FSM
+	return ci->is_otg && ci->roles[CI_ROLE_HOST] &&
+					ci->roles[CI_ROLE_GADGET];
+#else
+	return false;
+#endif
+}
+
+u32 hw_read_intr_enable(struct ci_hdrc *ci);
+
+u32 hw_read_intr_status(struct ci_hdrc *ci);
 
 int hw_device_reset(struct ci_hdrc *ci, u32 mode);
 

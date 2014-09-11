@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013-2015 Freescale Semiconductor, Inc.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -77,7 +77,7 @@ static inline void imx_anatop_disconnect_high_snvs(bool enable)
 
 void imx_anatop_pre_suspend(void)
 {
-	if (cpu_is_imx6sl()) {
+	if (cpu_is_imx6sl() || cpu_is_imx6sx()) {
 		imx_anatop_enable_2p5_pulldown(true);
 		imx_anatop_disconnect_high_snvs(true);
 	} else {
@@ -90,7 +90,7 @@ void imx_anatop_pre_suspend(void)
 void imx_anatop_post_resume(void)
 {
 	imx_anatop_enable_fet_odrive(false);
-	if (cpu_is_imx6sl()) {
+	if (cpu_is_imx6sl() || cpu_is_imx6sx()) {
 		imx_anatop_enable_2p5_pulldown(false);
 		imx_anatop_disconnect_high_snvs(false);
 	} else {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,49 +94,65 @@
 	ldr	r7, [r8, #0x620] /* GPR_B3DS */
 	stmfd	r10!, {r4-r7}
 
+	ldr	r4, [r8, #0x324] /* DRAM_SDCKE0 */
+	ldr	r5, [r8, #0x328] /* DRAM_SDCKE1 */
+	ldr	r6, [r8, #0x340] /* DRAM_RESET */
+	stmfd	r10!, {r4-r6}
+
 	.endm
 
 	.macro	imx6sx_mmdc_save
 
-	ldr	r4, [r8, #0x800]
-	ldr	r5, [r8, #0x80c]
-	ldr	r6, [r8, #0x810]
+	ldr	r4, [r8, #0x85c]
+	ldr	r5, [r8, #0x800]
+	ldr	r6, [r8, #0x890]
+	ldr	r7, [r8, #0x8b8]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x81c]
+	ldr	r5, [r8, #0x820]
+	ldr	r6, [r8, #0x824]
+	ldr	r7, [r8, #0x828]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x82c]
+	ldr	r5, [r8, #0x830]
+	ldr	r6, [r8, #0x834]
+	ldr	r7, [r8, #0x838]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x848]
+	ldr	r5, [r8, #0x850]
+	ldr	r6, [r8, #0x8c0]
 	ldr	r7, [r8, #0x83c]
 	stmfd	r10!, {r4-r7}
 
 	ldr	r4, [r8, #0x840]
-	ldr	r5, [r8, #0x848]
-	ldr	r6, [r8, #0x850]
-	ldr	r7, [r8, #0x81c]
-	stmfd	r10!, {r4-r7}
-
-	ldr	r4, [r8, #0x820]
-	ldr	r5, [r8, #0x824]
-	ldr	r6, [r8, #0x828]
-	ldr	r7, [r8, #0x8b8]
-	stmfd	r10!, {r4-r7}
-
-	ldr	r4, [r8, #0x004]
-	ldr	r5, [r8, #0x008]
+	ldr	r5, [r8, #0x8b8]
 	ldr	r6, [r8, #0x00c]
-	ldr	r7, [r8, #0x010]
+	ldr	r7, [r8, #0x004]
 	stmfd	r10!, {r4-r7}
 
-	ldr	r4, [r8, #0x014]
-	ldr	r5, [r8, #0x018]
-	ldr	r6, [r8, #0x01c]
+	ldr	r4, [r8, #0x010]
+	ldr	r5, [r8, #0x014]
+	ldr	r6, [r8, #0x018]
 	ldr	r7, [r8, #0x02c]
 	stmfd	r10!, {r4-r7}
 
 	ldr	r4, [r8, #0x030]
-	ldr	r5, [r8, #0x040]
-	ldr	r6, [r8, #0x000]
-	ldr	r7, [r8, #0x020]
+	ldr	r5, [r8, #0x038]
+	ldr	r6, [r8, #0x008]
+	ldr	r7, [r8, #0x040]
 	stmfd	r10!, {r4-r7}
 
-	ldr	r4, [r8, #0x818]
-	ldr	r5, [r8, #0x01c]
-	stmfd	r10!, {r4-r5}
+	ldr	r4, [r8, #0x000]
+	ldr	r5, [r8, #0x020]
+	ldr	r6, [r8, #0x818]
+	ldr	r7, [r8, #0x800]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x004]
+	stmfd	r10!, {r4}
 
 	.endm
 
@@ -172,6 +188,11 @@
 	str	r6, [r8, #0x61c] /* GPR_B2DS */
 	str	r7, [r8, #0x620] /* GPR_B3DS */
 
+	ldmea	r10!, {r4-r6}
+	str	r4, [r8, #0x324] /* DRAM_SDCKE0 */
+	str	r5, [r8, #0x328] /* DRAM_SDCKE1 */
+	str	r6, [r8, #0x340] /* DRAM_RESET */
+
 	.endm
 
 	.macro	imx6sx_mmdc_restore
@@ -190,52 +211,64 @@
 
 	.macro	imx6sx_mmdc_restore_dsm
 
-	ldmea	r10!, {r4-r7}
-	str	r4, [r8, #0x800]
-	str	r5, [r8, #0x80c]
-	str	r6, [r8, #0x810]
+	ldr	r4, =0x8000
+	str	r4, [r8, #0x01c]
+
+	ldmea   r10!, {r4-r7}
+	str	r4, [r8, #0x85c]
+	str	r5, [r8, #0x800]
+	str	r6, [r8, #0x890]
+	ldr	r7, =0x800
+	str	r7, [r8, #0x8b8]
+
+	ldmea   r10!, {r4-r7}
+	str	r4, [r8, #0x81c]
+	str	r5, [r8, #0x820]
+	str	r6, [r8, #0x824]
+	str	r7, [r8, #0x828]
+
+	ldmea   r10!, {r4-r7}
+	str	r4, [r8, #0x82c]
+	str	r5, [r8, #0x830]
+	str	r6, [r8, #0x834]
+	str	r7, [r8, #0x838]
+
+	ldmea   r10!, {r4-r7}
+	str	r4, [r8, #0x848]
+	str	r5, [r8, #0x850]
+	str	r6, [r8, #0x8c0]
 	str	r7, [r8, #0x83c]
 
 	ldmea   r10!, {r4-r7}
 	str	r4, [r8, #0x840]
-	str	r5, [r8, #0x848]
-	str	r6, [r8, #0x850]
-	str	r7, [r8, #0x81c]
-
-	ldmea   r10!, {r4-r7}
-	str	r4, [r8, #0x820]
-	str	r5, [r8, #0x824]
-	str	r6, [r8, #0x828]
-	str	r7, [r8, #0x8b8]
-
-	ldmea   r10!, {r4-r7}
-	str	r4, [r8, #0x004]
-	str	r5, [r8, #0x008]
+	ldr	r5, =0x800
+	str	r5, [r8, #0x8b8]
 	str	r6, [r8, #0x00c]
-	str	r7, [r8, #0x010]
+	str	r7, [r8, #0x004]
 
 	ldmea   r10!, {r4-r7}
-	str	r4, [r8, #0x014]
-	str	r5, [r8, #0x018]
-	str	r6, [r8, #0x01c]
+	str	r4, [r8, #0x010]
+	str	r5, [r8, #0x014]
+	str	r6, [r8, #0x018]
 	str	r7, [r8, #0x02c]
 
 	ldmea   r10!, {r4-r7}
-	bic	r4, #0xff00
-	bic	r4, #0xff
-	orr	r4, #0x0200
-	orr	r4, #0x02
 	str	r4, [r8, #0x030]
-	str	r5, [r8, #0x040]
-	str	r6, [r8, #0x000]
-	/* make sure MMDC is ready */
-	ldr	r4, =0x8033
-	str	r4, [r8, #0x01c]
-	str	r7, [r8, #0x020]
+	str	r5, [r8, #0x038]
+	str	r6, [r8, #0x008]
+	str	r7, [r8, #0x040]
 
-	ldmea   r10!, {r4-r5}
-	str	r4, [r8, #0x818]
-	str	r5, [r8, #0x01c]
+	ldmea   r10!, {r4-r7}
+	str	r4, [r8, #0x000]
+	str	r5, [r8, #0x020]
+	str	r6, [r8, #0x818]
+	str	r7, [r8, #0x800]
+
+	ldmea   r10!, {r4}
+	str	r4, [r8, #0x004]
+
+	ldr	r4, =0x0
+	str	r4, [r8, #0x01c]
 
 	/* make the DDR explicitly enter self-refresh. */
 	ldr	r7, [r8, #MX6Q_MMDC_MAPSR]
@@ -298,6 +331,12 @@
 	str	r10, [r8, #0x610] /* GPR_B1DS */
 	str	r10, [r8, #0x61c] /* GPR_B2DS */
 	str	r10, [r8, #0x620] /* GPR_B3DS */
+
+	mov	r10, #0x80000
+	str	r10, [r8, #0x340] /* DRAM_RESET */
+	mov	r10, #0x1000
+	str	r10, [r8, #0x324] /* DRAM_SDCKE0 */
+	str	r10, [r8, #0x328] /* DRAM_SDCKE1 */
 
 	.endm
 
@@ -745,6 +784,31 @@
 #endif
 	.endm
 
+	.macro	reset_read_fifo
+
+	/* reset read FIFO, RST_RD_FIFO */
+	ldr	r7, =MX6Q_MMDC_MPDGCTRL0
+	ldr	r6, [r8, r7]
+	orr     r6, r6, #(1 << 31)
+	str	r6, [r8, r7]
+2:
+	ldr	r6, [r8, r7]
+	and	r6, r6, #(1 << 31)
+	cmp	r6, #0
+	bne	2b
+
+	/* reset FIFO a second time */
+	ldr	r6, [r8, r7]
+	orr     r6, r6, #(1 << 31)
+	str	r6, [r8, r7]
+3:
+	ldr	r6, [r8, r7]
+	and	r6, r6, #(1 << 31)
+	cmp	r6, #0
+	bne	3b
+
+	.endm
+
 ENTRY(imx6_suspend)
 imx6_suspend_start:
 	push {r4-r12}
@@ -1094,6 +1158,8 @@ sl_io_restore:
 sx_io_restore:
 	ldr	r8, =IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR)
 	imx6sx_ddr_io_restore
+	ldr	r8, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
+	reset_fifo
 	imx6sx_mmdc_restore
 ddr_io_restore_done:
 
@@ -1238,6 +1304,8 @@ sx_io_dsm_restore:
 	bne	mega_fast_off
 	ldr     r8, =MX6Q_IOMUXC_BASE_ADDR
 	imx6sx_mmdc_restore
+	ldr	r8, =MX6Q_MMDC_P0_BASE_ADDR
+	reset_fifo
 	b	ddr_io_restore_dsm_done
 mega_fast_off:
 	ldr     r8, =MX6Q_MMDC_P0_BASE_ADDR

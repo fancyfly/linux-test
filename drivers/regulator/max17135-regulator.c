@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/mfd/max17135.h>
 #include <linux/gpio.h>
+#include <linux/pmic_status.h>
 
 /*
  * Regulator definitions
@@ -75,6 +76,8 @@
 #define MAX17135_VPOS_STEP_uV   1000000
 #define MAX17135_VPOS_MIN_VAL         0
 #define MAX17135_VPOS_MAX_VAL         1
+
+#define MAX17135_EXT_TEMP_DEFAULT	25
 
 struct max17135_vcom_programming_data {
 	int vcom_min_uV;
@@ -384,6 +387,35 @@ static int max17135_v3p3_is_enabled(struct regulator_dev *reg)
 		return 1;
 }
 
+static int max17135_tmst_get_temperature(struct regulator_dev *reg)
+{
+    struct max17135 *max17135 = rdev_get_drvdata(reg);
+	unsigned int reg_val;
+	int retry, temp;
+
+	for (retry = 0; retry < 50; retry++) {
+		/* max 500ms after VIN> VIN_UVLO and VDD>VDD_UVLO */
+		if (max17135_reg_read(REG_MAX17135_EXT_TEMP, &reg_val) ==
+				PMIC_SUCCESS) {
+			reg_val >>= 8;
+			if (reg_val&0x80) {
+				reg_val = ((~reg_val)&0xFF)+1;
+				temp = (0 - (int)reg_val);
+			} else {
+				temp = (int)reg_val;
+			}
+			dev_dbg(max17135->dev, "EXT temperature = %d after waiting %d ms\n",
+				temp, retry*10);
+			return temp;
+		}
+		msleep(10);
+	}
+	dev_dbg(max17135->dev, "Unable to read temperature, use default=%d\n",
+		MAX17135_EXT_TEMP_DEFAULT);
+
+	return MAX17135_EXT_TEMP_DEFAULT;
+}
+
 /*
  * Regulator operations
  */
@@ -428,6 +460,10 @@ static struct regulator_ops max17135_v3p3_ops = {
 	.enable = max17135_v3p3_enable,
 	.disable = max17135_v3p3_disable,
 	.is_enabled = max17135_v3p3_is_enabled,
+};
+
+static struct regulator_ops max17135_tmst_ops = {
+	.get_voltage = max17135_tmst_get_temperature,
 };
 
 
@@ -495,6 +531,13 @@ static struct regulator_desc max17135_reg[MAX17135_NUM_REGULATORS] = {
 	.name = "V3P3",
 	.id = MAX17135_V3P3,
 	.ops = &max17135_v3p3_ops,
+	.type = REGULATOR_VOLTAGE,
+	.owner = THIS_MODULE,
+},
+{
+	.name = "TMST",
+	.id = MAX17135_TMST,
+	.ops = &max17135_tmst_ops,
 	.type = REGULATOR_VOLTAGE,
 	.owner = THIS_MODULE,
 },

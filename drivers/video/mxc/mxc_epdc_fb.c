@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,6 +76,7 @@
 
 #define DEFAULT_TEMP_INDEX	0
 #define DEFAULT_TEMP		20 /* room temp in deg Celsius */
+#define DEFAULT_TEMP_AUTO_UPDATE_PERIOD	60 /* 60 seconds */
 
 #define INIT_UPDATE_MARKER	0x12345678
 #define PAN_UPDATE_MARKER	0x12345679
@@ -149,6 +150,7 @@ struct mxc_epdc_fb_data {
 	struct regulator *display_regulator;
 	struct regulator *vcom_regulator;
 	struct regulator *v3p3_regulator;
+	struct regulator *tmst_regulator;
 	bool fw_default_load;
 	int rev;
 
@@ -168,6 +170,8 @@ struct mxc_epdc_fb_data {
 	struct update_data_list *cur_update;
 	struct mutex queue_mutex;
 	int trt_entries;
+	int temp_auto_update_period;
+	unsigned long last_time_temp_auto_update;
 	int temp_index;
 	u8 *temp_range_bounds;
 	struct mxcfb_waveform_modes wv_modes;
@@ -1106,7 +1110,6 @@ static void epdc_powerup(struct mxc_epdc_fb_data *fb_data)
 		mutex_unlock(&fb_data->power_mutex);
 		return;
 	}
-
 	fb_data->power_state = POWER_STATE_ON;
 
 	mutex_unlock(&fb_data->power_mutex);
@@ -1742,14 +1745,43 @@ static int mxc_epdc_fb_get_temp_index(struct mxc_epdc_fb_data *fb_data, int temp
 	}
 
 	if (index < 0) {
-		dev_err(fb_data->dev,
-			"No TRT index match...using default temp index\n");
+		if (temp < fb_data->temp_range_bounds[0]) {
+			dev_dbg(fb_data->dev, "temperature < minimum range\n");
+			return 0;
+		}
+		if (temp >= fb_data->temp_range_bounds[fb_data->trt_entries-1]) {
+			dev_dbg(fb_data->dev, "temperature >= maximum range\n");
+			return fb_data->trt_entries-1;
+		}
 		return DEFAULT_TEMP_INDEX;
 	}
 
 	dev_dbg(fb_data->dev, "Using temperature index %d\n", index);
 
 	return index;
+}
+
+int mxc_epdc_fb_read_temperature(struct mxc_epdc_fb_data *fb_data)
+{
+	unsigned long now;
+	int temperature;
+
+	/* Check if we need to auto update the temperature in regulate basis */
+	if (!IS_ERR(fb_data->tmst_regulator) &&
+		fb_data->temp_auto_update_period != FB_TEMP_AUTO_UPDATE_DISABLE) {
+		now = get_seconds();
+		if ((now - fb_data->last_time_temp_auto_update) >
+				fb_data->temp_auto_update_period) {
+			temperature = regulator_get_voltage(fb_data->tmst_regulator);
+			dev_dbg(fb_data->dev, "auto temperature reading = %d\n", temperature);
+
+			if (temperature != 0xFF) {
+				fb_data->last_time_temp_auto_update = now;
+				fb_data->temp_index = mxc_epdc_fb_get_temp_index(fb_data, temperature);
+			}
+		}
+	}
+	return 0;
 }
 
 int mxc_epdc_fb_set_temperature(int temperature, struct fb_info *info)
@@ -1765,6 +1797,16 @@ int mxc_epdc_fb_set_temperature(int temperature, struct fb_info *info)
 	return 0;
 }
 EXPORT_SYMBOL(mxc_epdc_fb_set_temperature);
+
+int mxc_epdc_fb_set_temp_auto_update_period(int period, struct fb_info *info)
+{
+	struct mxc_epdc_fb_data *fb_data = info ?
+		(struct mxc_epdc_fb_data *)info:g_fb_data;
+
+	fb_data->temp_auto_update_period = period;
+
+	return 0;
+}
 
 int mxc_epdc_fb_set_auto_update(u32 auto_mode, struct fb_info *info)
 {
@@ -2479,6 +2521,9 @@ static void epdc_submit_work_func(struct work_struct *work)
 				+ upd_data_list->update_desc->epdc_offs;
 	}
 
+	/* Check if auto temperature update is needed */
+	mxc_epdc_fb_read_temperature(fb_data);
+
 	/* Get rotation-adjusted coordinates */
 	adjust_coordinates(fb_data->epdc_fb_var.xres,
 		fb_data->epdc_fb_var.yres, fb_data->epdc_fb_var.rotate,
@@ -2863,6 +2908,9 @@ static int mxc_epdc_fb_send_single_update(struct mxcfb_update_data *upd_data,
 		return ret;
 	}
 
+	/* Check if auto temperature update is needed */
+	mxc_epdc_fb_read_temperature(fb_data);
+
 	/* Pass selected waveform mode back to user */
 	upd_data->waveform_mode = upd_desc->upd_data.waveform_mode;
 
@@ -3115,6 +3163,14 @@ static int mxc_epdc_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			int temperature;
 			if (!get_user(temperature, (int32_t __user *) arg))
 				ret = mxc_epdc_fb_set_temperature(temperature,
+					info);
+			break;
+		}
+	case MXCFB_SET_TEMP_AUTO_UPDATE_PERIOD:
+		{
+			int period;
+			if (!get_user(period, (int32_t __user *) arg))
+				ret = mxc_epdc_fb_set_temp_auto_update_period(period,
 					info);
 			break;
 		}
@@ -4157,6 +4213,9 @@ static void mxc_epdc_fb_fw_handler(const struct firmware *fw,
 	/* Set default temperature index using TRT and room temp */
 	fb_data->temp_index = mxc_epdc_fb_get_temp_index(fb_data, DEFAULT_TEMP);
 
+	/* Set default temperature auto update period */
+	fb_data->temp_auto_update_period = DEFAULT_TEMP_AUTO_UPDATE_PERIOD;
+
 	/* Get offset and size for waveform data */
 	wv_data_offs = sizeof(wv_file->wdh) + fb_data->trt_entries + 1;
 	fb_data->waveform_buffer_size = fw->size - wv_data_offs;
@@ -4753,6 +4812,11 @@ int __devinit mxc_epdc_fb_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto out_regulator2;
 	}
+	fb_data->tmst_regulator = regulator_get(NULL, "TMST");
+	if (IS_ERR(fb_data->tmst_regulator)) {
+		dev_info(&pdev->dev, "Unable to get TMST regulator."
+			"err = 0x%x\n", (int)fb_data->tmst_regulator);
+	}
 
 	if (device_create_file(info->dev, &fb_attrs[0]))
 		dev_err(&pdev->dev, "Unable to create file from fb_attrs\n");
@@ -4890,6 +4954,8 @@ int __devinit mxc_epdc_fb_probe(struct platform_device *pdev)
 out_lutmap:
 	kfree(fb_data->pxp_conf.proc_data.lut_map);
 out_regulator3:
+	if (!IS_ERR(fb_data->tmst_regulator))
+		regulator_put(fb_data->tmst_regulator);
 	regulator_put(fb_data->v3p3_regulator);
 out_regulator2:
 	regulator_put(fb_data->vcom_regulator);
@@ -4945,6 +5011,8 @@ static int mxc_epdc_fb_remove(struct platform_device *pdev)
 	flush_workqueue(fb_data->epdc_submit_workqueue);
 	destroy_workqueue(fb_data->epdc_submit_workqueue);
 
+	if (!IS_ERR(fb_data->tmst_regulator))
+		regulator_put(fb_data->tmst_regulator);
 	regulator_put(fb_data->display_regulator);
 	regulator_put(fb_data->vcom_regulator);
 	regulator_put(fb_data->v3p3_regulator);

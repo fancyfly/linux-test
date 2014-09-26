@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2012-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -279,6 +279,12 @@ static struct platform_device evk_vmmc_reg_devices = {
 	},
 };
 
+static struct regulator_consumer_supply tmst_consumers[] = {
+	{
+		.supply = "TMST",
+	},
+};
+
 static struct regulator_consumer_supply display_consumers[] = {
 	{
 		/* MAX17135 */
@@ -361,6 +367,14 @@ static struct regulator_init_data max17135_init_data[] = {
 		},
 		.num_consumer_supplies = ARRAY_SIZE(v3p3_consumers),
 		.consumer_supplies = v3p3_consumers,
+	}, {
+		.constraints = {
+			.name = "TMST",
+			.min_uV = -127,
+			.max_uV = 127,
+		},
+		.num_consumer_supplies = ARRAY_SIZE(tmst_consumers),
+		.consumer_supplies = tmst_consumers,
 	},
 };
 

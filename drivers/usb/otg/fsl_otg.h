@@ -1,4 +1,4 @@
-/* Copyright (C) 2005-2011 Freescale Semiconductor, Inc. All Rights Reserved.
+/* Copyright (C) 2005-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -237,7 +237,7 @@
 /* OTG interrupt status bit masks */
 #define  OTGSC_INTERRUPT_STATUS_BITS_MASK  \
 	(OTGSC_INTSTS_USB_ID          |    \
-	OTGSC_INTR_1MS_TIMER_EN       |    \
+	OTGSC_INTSTS_1MS              |    \
 	OTGSC_INTSTS_A_VBUS_VALID     |    \
 	OTGSC_INTSTS_A_SESSION_VALID  |    \
 	OTGSC_INTSTS_B_SESSION_VALID  |    \

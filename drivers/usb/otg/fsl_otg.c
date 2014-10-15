@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2005-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * Author: Li Yang <LeoLi@freescale.com>
  *         Jerry Huang <Chang-Ming.Huang@freescale.com>
@@ -1142,7 +1142,6 @@ int usb_otg_start(struct platform_device *pdev)
 	temp = readl(&p_otg->dr_mem_map->otgsc);
 	if (!pdata->id_gpio)
 		temp |= OTGSC_INTR_USB_ID_EN;
-	temp &= ~OTGSC_INTR_1MS_TIMER_EN;
 	if (pdata->need_discharge_vbus)
 		temp &= ~OTGSC_CTRL_VBUS_DISCHARGE;
 

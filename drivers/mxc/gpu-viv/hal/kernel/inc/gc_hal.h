@@ -393,10 +393,15 @@ gckOS_MapPagesEx(
     IN gceCORE Core,
     IN gctPHYS_ADDR Physical,
     IN gctSIZE_T PageCount,
-#if gcdPROCESS_ADDRESS_SPACE
     IN gctUINT32 Address,
-#endif
     IN gctPOINTER PageTable
+    );
+
+gceSTATUS
+gckOS_UnmapPages(
+    IN gckOS Os,
+    IN gctSIZE_T PageCount,
+    IN gctUINT32 Address
     );
 
 /* Unlock pages. */
@@ -1339,6 +1344,13 @@ gckOS_GPUPhysicalToCPUPhysical(
     IN gckOS Os,
     IN gctUINT32 GPUPhysical,
     IN gctUINT32_PTR CPUPhysical
+    );
+
+gceSTATUS
+gckOS_QueryOption(
+    IN gckOS Os,
+    IN gctCONST_STRING Option,
+    OUT gctUINT32 * Value
     );
 
 /******************************************************************************\
@@ -2725,14 +2737,6 @@ gckMMU_Construct(
 gceSTATUS
 gckMMU_Destroy(
     IN gckMMU Mmu
-    );
-
-/* Enable the MMU. */
-gceSTATUS
-gckMMU_Enable(
-    IN gckMMU Mmu,
-    IN gctUINT32 PhysBaseAddr,
-    IN gctUINT32 PhysSize
     );
 
 /* Allocate pages inside the MMU. */

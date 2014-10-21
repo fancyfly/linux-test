@@ -1454,7 +1454,7 @@ gckKERNEL_DestroyProcessDB(
                            gcmPTR2INT32(record->data), status);
             break;
 
-#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
+#if gcdANDROID_NATIVE_FENCE_SYNC
         case gcvDB_SYNC_POINT:
             /* Free the user signal. */
             status = gckOS_DestroySyncPoint(Kernel->os,

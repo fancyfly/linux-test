@@ -91,6 +91,11 @@ struct _gckHARDWARE
 
     gctUINT32                   mmuVersion;
 
+    /* Whether use new MMU. It is meaningless
+    ** for old MMU since old MMU is always enabled.
+    */
+    gctBOOL                     enableMMU;
+
     /* Type */
     gceHARDWARE_TYPE            type;
 

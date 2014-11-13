@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -406,7 +406,9 @@ static struct fsl_usb2_platform_data usbh1_config = {
 	.platform_phy_power_on = usbh1_platform_phy_power_on,
 	.transceiver = "utmi",
 	.phy_regs = USB_PHY1_BASE_ADDR,
+	.change_ahb_burst  = 0x1,
 };
+
 static struct fsl_usb2_wakeup_platform_data usbh1_wakeup_config = {
 		.name = "USBH1 wakeup",
 		.usb_clock_for_pm  = usbh1_clock_gate,

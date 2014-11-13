@@ -1,4 +1,4 @@
-/* Copyright (C) 2005-2013 Freescale Semiconductor, Inc.
+/* Copyright (C) 2005-2014 Freescale Semiconductor, Inc.
  * Copyright (c) 2005 MontaVista Software
  *
  * This program is free software; you can redistribute  it and/or modify it
@@ -37,6 +37,8 @@
 #define USBMODE_CM_HOST		(3 << 0)	/* controller mode: host */
 #define USBMODE_ES		(1 << 2)	/* (Big) Endian Select */
 #define CI_USBMODE_SDIS		(1 << 4)	/* Chipidea Stream Disable bit */
+#define SBUSCFG_AHBBRST		(7 << 0)	/* SBUSCFG AHBBRST bits */
+#define BURST_BITS		0xffff	/* Programmable Burst Size bits */
 
 #define FSL_SOC_USB_USBGENCTRL	0x200
 #define USBGENCTRL_PPP		(1 << 3)

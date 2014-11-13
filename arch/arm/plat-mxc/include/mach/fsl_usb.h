@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -68,18 +68,11 @@ fsl_platform_set_vbus_power(struct fsl_usb2_platform_data *pdata, int on)
 		pdata->xcvr_ops->set_vbus_power(pdata->xcvr_ops, pdata, on);
 }
 
-/* Set USB AHB burst length for host */
-static inline void fsl_platform_set_ahb_burst(struct usb_hcd *hcd)
+/* Set USB fifo tuning for host */
+static inline void fsl_platform_set_fifo_tuning(struct usb_hcd *hcd)
 {
 	struct fsl_usb2_platform_data *pdata;
 	unsigned int temp;
-
-	pdata = hcd->self.controller->platform_data;
-	if (pdata->change_ahb_burst) {
-		temp = readl(hcd->regs + FSL_SOC_USB_SBUSCFG);
-		writel((temp & (~(0x7))) | pdata->ahb_burst_mode,
-			hcd->regs + FSL_SOC_USB_SBUSCFG);
-	}
 
 	/* Increase TX fifo threshold for USB+ATA for i.mx35 2.0 */
 	if (cpu_is_mx35() && (imx_cpu_ver() >= IMX_CHIP_REVISION_2_0)) {
@@ -103,5 +96,37 @@ static inline void fsl_platform_set_ahb_burst(struct usb_hcd *hcd)
 		/* Change TX FIFO threshold to be 0x08 */
 		writel((temp & (~(0x3f << 16))) | (0x08 << 16),
 				hcd->regs + FSL_SOC_USB_TXFILLTUNING);
+	}
+}
+
+/*
+ * fsl_platform_set_ahb_burst: override default AHB burst configuration
+ * @hcd: the controller
+ */
+static inline void fsl_platform_set_ahb_burst(struct usb_hcd *hcd)
+{
+	struct fsl_usb2_platform_data *pdata;
+	unsigned int temp;
+	u8 ahb_burst;
+
+	pdata = hcd->self.controller->platform_data;
+	/* Change ahb burst mode */
+	if (pdata->change_ahb_burst) {
+		temp = readl(hcd->regs + FSL_SOC_USB_SBUSCFG);
+		temp &= ~SBUSCFG_AHBBRST;
+		temp |= pdata->ahb_burst_mode & SBUSCFG_AHBBRST;
+		writel(temp, hcd->regs + FSL_SOC_USB_SBUSCFG);
+	}
+
+	/* Change RX/TX burst length(defualt 64 Bytes) for mx6 */
+	if (cpu_is_mx6()) {
+		ahb_burst = readl(hcd->regs + FSL_SOC_USB_SBUSCFG) \
+			& SBUSCFG_AHBBRST;
+		if (ahb_burst == 0) {
+			temp = readl(hcd->regs + FSL_SOC_USB_BURSTSIZE);
+			temp &= ~BURST_BITS;
+			temp |= 0x1010 & BURST_BITS;
+			writel(temp, hcd->regs + FSL_SOC_USB_BURSTSIZE);
+		}
 	}
 }

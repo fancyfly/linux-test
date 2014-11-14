@@ -289,7 +289,7 @@ int usb_hcd_fsl_probe(const struct hc_driver *driver,
 	if (retval != 0)
 		goto err6;
 
-	fsl_platform_set_ahb_burst(hcd);
+	fsl_platform_set_fifo_tuning(hcd);
 	ehci_testmode_init(hcd_to_ehci(hcd));
 	/*
 	 * Only for HSIC host controller, let HSCI controller
@@ -433,6 +433,7 @@ static int ehci_fsl_reinit(struct ehci_hcd *ehci)
 	fsl_platform_usb_setup(ehci);
 	ehci_port_power(ehci, 0);
 	ehci_fsl_stream_disable(ehci);
+	fsl_platform_set_ahb_burst(ehci_to_hcd(ehci));
 
 	return 0;
 }
@@ -866,6 +867,7 @@ static int ehci_fsl_drv_resume(struct platform_device *pdev)
 
 	ehci_fsl_stream_disable(ehci);
 
+	fsl_platform_set_ahb_burst(hcd);
 	tmp = ehci_readl(ehci, &ehci->regs->command);
 	tmp |= CMD_RUN;
 	ehci_writel(ehci, tmp, &ehci->regs->command);

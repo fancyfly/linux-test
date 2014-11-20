@@ -19,7 +19,7 @@
  * Copyright (c) 2004-2006 Macq Electronique SA.
  *
  * Support for FEC IEEE 1588.
- * Copyright (C) 2010-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2014 Freescale Semiconductor, Inc.
  */
 
 #include <linux/module.h>
@@ -1006,7 +1006,10 @@ static struct mii_bus *fec_enet_mii_init(struct platform_device *pdev)
 	fep->phy_speed = DIV_ROUND_UP(clk_get_rate(fep->clk), 5000000) << 1;
 #ifdef CONFIG_ARCH_MXS
 	/* Can't get phy(8720) ID when set to 2.5M on MX28, lower it*/
-	fep->phy_speed <<= 2;
+	fep->phy_speed = (DIV_ROUND_UP(clk_get_rate(clk_get(&pdev->dev, "h")),
+			  5000000) - 1) << 1;
+#else
+	fep->phy_speed = DIV_ROUND_UP(clk_get_rate(fep->clk), 5000000) << 1;
 #endif
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
 

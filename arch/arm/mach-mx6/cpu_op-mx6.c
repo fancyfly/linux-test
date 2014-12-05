@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -53,7 +53,7 @@ static struct cpu_op mx6q_cpu_op_1_2G[] = {
 	 .pu_voltage = 1175000,
 	 .soc_voltage = 1175000,
 #endif
-	 .cpu_voltage = 1150000,},
+	 .cpu_voltage = 1175000,},
 #ifdef CONFIG_MX6_VPU_352M
 	/*pll2_pfd_400M will be fix on 352M,to avoid modify other code
 	which assume ARM clock sourcing from pll2_pfd_400M, change cpu
@@ -97,7 +97,7 @@ static struct cpu_op mx6q_cpu_op_1G[] = {
 	 .pu_voltage = 1175000,
 	 .soc_voltage = 1175000,
 #endif
-	 .cpu_voltage = 1150000,},
+	 .cpu_voltage = 1175000,},
 #ifdef CONFIG_MX6_VPU_352M
 	/*pll2_pfd_400M will be fix on 352M,to avoid modify other code
 	which assume ARM clock sourcing from pll2_pfd_400M, change cpu
@@ -133,7 +133,7 @@ static struct cpu_op mx6q_cpu_op[] = {
 	 .pu_voltage = 1175000,
 	 .soc_voltage = 1175000,
 #endif
-	 .cpu_voltage = 1150000,},
+	 .cpu_voltage = 1175000,},
 #ifdef CONFIG_MX6_VPU_352M
 	/*pll2_pfd_400M will be fix on 352M,to avoid modify other code
 	which assume ARM clock sourcing from pll2_pfd_400M, change cpu

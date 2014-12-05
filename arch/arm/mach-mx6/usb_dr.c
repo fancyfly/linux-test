@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ static struct fsl_usb2_platform_data dr_utmi_config = {
 	.phy_regs = USB_PHY0_BASE_ADDR,
 	.dr_discharge_line = _dr_discharge_line,
 	.lowpower	   = true, /* Default driver low power is true */
+	.change_ahb_burst =	0x1,
 };
 
 /* Platform data for wakeup operation */

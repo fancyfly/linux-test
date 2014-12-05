@@ -1,7 +1,7 @@
 /*
  * Freescale USBPHY Register Definitions
  *
- * Copyright 2008-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -464,7 +464,7 @@
 #define UCTRL_PM		(1 << 9)	/* OTG Power Mask */
 #define UCTRL_OVER_CUR_POL	(1 << 8)	/* OTG Polarity of Overcurrent */
 #define UCTRL_OVER_CUR_DIS	(1 << 7)	/* Disable OTG Overcurrent Detection */
-/* bit 0 - bit 6 is reserved at mx6q */
+#define UCTRL_UNBURST_SETTING	(1 << 1)	/* Set for AHB unburst transfer */
 
 /* Host2/3 HSIC Ctrl */
 #define CLK_VLD		(1 << 31)	/* Indicating whether HSIC clock is valid */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -569,6 +569,7 @@ int fsl_usb_host_init(struct platform_device *pdev)
 			else if (machine_is_mx6q_sabrelite())
 				USB_H1_CTRL |= UCTRL_OVER_CUR_POL;
 			USB_H1_CTRL |= UCTRL_OVER_CUR_DIS;
+			USB_H1_CTRL |= UCTRL_UNBURST_SETTING;
 		}
 #endif
 	}
@@ -880,6 +881,7 @@ int usbotg_init(struct platform_device *pdev)
 			else if (machine_is_mx6q_sabrelite())
 				USB_OTG_CTRL |= UCTRL_OVER_CUR_POL;
 			USB_OTG_CTRL |= UCTRL_OVER_CUR_DIS;
+			USB_OTG_CTRL |= UCTRL_UNBURST_SETTING;
 #endif
 		}
 	}

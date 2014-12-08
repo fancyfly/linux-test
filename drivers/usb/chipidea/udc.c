@@ -1971,17 +1971,10 @@ int ci_usb_charger_connect(struct ci_hdrc *ci, int is_active)
 	int ret = 0;
 
 	if (ci->platdata->notify_event) {
-		/*
-		 * Keep controller active when the cable is connected,
-		 * It can make disconnect interrupt (BSV 1->0) occur when
-		 * the cable is disconnected.
-		 */
-		if (is_active) {
-			pm_runtime_get_sync(&ci->gadget.dev);
+		pm_runtime_get_sync(&ci->gadget.dev);
+
+		if (is_active)
 			hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
-		} else {
-			pm_runtime_put_sync(&ci->gadget.dev);
-		}
 
 		ret = ci->platdata->notify_event
 			(ci, CI_HDRC_CONTROLLER_VBUS_EVENT);
@@ -1994,6 +1987,8 @@ int ci_usb_charger_connect(struct ci_hdrc *ci, int is_active)
 			/* Pull down dp */
 			hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 		}
+
+		pm_runtime_put_sync(&ci->gadget.dev);
 	}
 	return ret;
 }

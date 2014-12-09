@@ -1593,10 +1593,12 @@ static int ci_udc_pullup(struct usb_gadget *_gadget, int is_on)
 	if (!ci->vbus_active)
 		return -EOPNOTSUPP;
 
+	pm_runtime_get_sync(&ci->gadget.dev);
 	if (is_on)
 		hw_write(ci, OP_USBCMD, USBCMD_RS, USBCMD_RS);
 	else
 		hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
+	pm_runtime_put_sync(&ci->gadget.dev);
 
 	return 0;
 }

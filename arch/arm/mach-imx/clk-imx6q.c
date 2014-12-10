@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 Freescale Semiconductor, Inc.
+ * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -751,6 +751,9 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 
 	/* Set pll4_audio to a value that can derive 5K-88.2KHz and 8K-96KHz */
 	imx_clk_set_rate(clk[pll4_audio_div], 541900800);
+
+	/*Set enet_ref clock to 125M to supply for RGMII tx_clk */
+	clk_set_rate(clk[enet_ref], 125000000);
 
 #ifdef CONFIG_MX6_VPU_352M
 	/*

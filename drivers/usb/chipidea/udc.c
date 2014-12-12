@@ -1731,6 +1731,22 @@ static int ci_udc_start(struct usb_gadget *gadget,
 	return retval;
 }
 
+static void ci_udc_stop_for_otg_fsm(struct ci_hdrc *ci)
+{
+	if (!ci_otg_is_fsm_mode(ci))
+		return;
+
+	mutex_lock(&ci->fsm.lock);
+	if (ci->transceiver->state == OTG_STATE_A_PERIPHERAL) {
+		ci->fsm.a_bidl_adis_tmout = 1;
+		ci_hdrc_otg_fsm_start(ci);
+	} else if (ci->transceiver->state == OTG_STATE_B_PERIPHERAL) {
+		ci->fsm.protocol = PROTO_UNDEF;
+		ci->transceiver->state = OTG_STATE_UNDEFINED;
+	}
+	mutex_unlock(&ci->fsm.lock);
+}
+
 /**
  * ci_udc_stop: unregister a gadget driver
  */
@@ -1756,6 +1772,7 @@ static int ci_udc_stop(struct usb_gadget *gadget,
 	ci->driver = NULL;
 	spin_unlock_irqrestore(&ci->lock, flags);
 
+	ci_udc_stop_for_otg_fsm(ci);
 	return 0;
 }
 

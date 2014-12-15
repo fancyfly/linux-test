@@ -52,7 +52,9 @@
 
 #include <linux/console.h>
 #include <linux/types.h>
+#ifdef CONFIG_SWITCH
 #include <linux/switch.h>
+#endif
 
 #include "edid.h"
 #include <mach/mxc_edid.h>
@@ -190,8 +192,10 @@ struct mxc_hdmi {
 	bool requesting_vga_for_initialization;
 
 	struct hdmi_phy_reg_config phy_config;
+#ifdef CONFIG_SWITCH
 	struct switch_dev sdev_audio;
 	struct switch_dev sdev_display;
+#endif
 };
 
 static int hdmi_major;
@@ -2034,15 +2038,19 @@ static void hotplug_worker(struct work_struct *work)
 #endif
 			hdmi_set_cable_state(1);
 
+#ifdef CONFIG_SWITCH
 			if (!hdmi->hdmi_data.video_mode.mDVI)
 				switch_set_state(&hdmi->sdev_audio, 1);
 			switch_set_state(&hdmi->sdev_display, 1);
+#endif
 
 		} else if (!(phy_int_pol & HDMI_PHY_HPD)) {
 			/* Plugout event */
 			dev_dbg(&hdmi->pdev->dev, "EVENT=plugout\n");
+#ifdef CONFIG_SWITCH
 			switch_set_state(&hdmi->sdev_audio, 0);
 			switch_set_state(&hdmi->sdev_display, 0);
+#endif
 
 			hdmi_set_cable_state(0);
 			mxc_hdmi_abort_stream();
@@ -2741,10 +2749,12 @@ static int __devinit mxc_hdmi_probe(struct platform_device *pdev)
 		goto edispdrv;
 	}
 
+#ifdef CONFIG_SWITCH
 	hdmi->sdev_audio.name = "hdmi_audio";
 	hdmi->sdev_display.name = "hdmi";
 	switch_dev_register(&hdmi->sdev_audio);
 	switch_dev_register(&hdmi->sdev_display);
+#endif
 
 	mxc_dispdrv_setdata(hdmi->disp_mxc_hdmi, hdmi);
 
@@ -2773,8 +2783,10 @@ static int mxc_hdmi_remove(struct platform_device *pdev)
 
 	fb_unregister_client(&hdmi->nb);
 
+#ifdef CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->sdev_audio);
 	switch_dev_unregister(&hdmi->sdev_display);
+#endif
 
 	mxc_dispdrv_puthandle(hdmi->disp_mxc_hdmi);
 	mxc_dispdrv_unregister(hdmi->disp_mxc_hdmi);

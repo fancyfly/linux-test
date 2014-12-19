@@ -332,6 +332,8 @@ int otg_statemachine(struct otg_fsm *fsm)
 			otg_set_state(fsm, OTG_STATE_A_HOST);
 		else if (fsm->id | fsm->a_bus_drop | fsm->a_wait_bcon_tmout)
 			otg_set_state(fsm, OTG_STATE_A_WAIT_VFALL);
+		else if (!fsm->a_bus_req)
+			otg_set_state(fsm, OTG_STATE_A_PERIPHERAL);
 		break;
 	case OTG_STATE_A_HOST:
 		if (fsm->id || fsm->a_bus_drop)

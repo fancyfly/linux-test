@@ -3384,7 +3384,7 @@ fec_resume(struct device *dev)
 		fec_restart(ndev, fep->full_duplex);
 		phy_start(fep->phy_dev);
 		netif_device_attach(ndev);
-	} else if (fep->mii_bus_share) {
+	} else if (fep->mii_bus_share && !fep->phy_dev) {
 		pinctrl_pm_select_default_state(&fep->pdev->dev);
 		fec_restore_mii_bus(ndev);
 	}

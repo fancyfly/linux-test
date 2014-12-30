@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -157,6 +157,9 @@ int __init imx6sx_cpuidle_init(void)
 	int i;
 	const u32 *mmdc_offset_array;
 	u32 wfi_code_size, val;
+
+	if (total_suspend_size % 8 != 0)
+		total_suspend_size = (total_suspend_size / 8 + 1) * 8;
 
 	wfi_iram_base_phys = (void *)(iram_tlb_phys_addr + total_suspend_size);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -216,7 +216,7 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	WARN_ON(!base);
 
 	/*                                              type               name             parent_name   base         div_mask always_on */
-	clks[IMX6SX_CLK_PLL1_SYS]       = imx_clk_pllv3(IMX_PLLV3_SYS,     "pll1_sys",      "osc",        base,        0x7f,    false);
+	clks[IMX6SX_CLK_PLL1_SYS]       = imx_clk_pllv3(IMX_PLLV3_SYS,     "pll1_sys",      "osc",        base,        0x7f,    true);
 	clks[IMX6SX_CLK_PLL2_BUS]       = imx_clk_pllv3(IMX_PLLV3_GENERIC, "pll2_bus",      "osc",        base + 0x30, 0x1,     false);
 	clks[IMX6SX_CLK_PLL3_USB_OTG]   = imx_clk_pllv3(IMX_PLLV3_USB,     "pll3_usb_otg",  "osc",        base + 0x10, 0x3,     false);
 	clks[IMX6SX_CLK_PLL4_AUDIO]     = imx_clk_pllv3(IMX_PLLV3_AV,      "pll4_audio",    "pll4_sel",   base + 0x70, 0x7f,    false);

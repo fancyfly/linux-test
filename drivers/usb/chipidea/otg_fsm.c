@@ -1,7 +1,7 @@
 /*
  * otg_fsm.c - ChipIdea USB IP core OTG FSM driver
  *
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * Author: Jun Li
  *
@@ -693,9 +693,16 @@ static int ci_otg_start_host(struct otg_fsm *fsm, int on)
 static int ci_otg_start_gadget(struct otg_fsm *fsm, int on)
 {
 	struct ci_hdrc	*ci = container_of(fsm, struct ci_hdrc, fsm);
+	unsigned long flags;
+	int gadget_ready = 0;
 
 	mutex_unlock(&fsm->lock);
+	spin_lock_irqsave(&ci->lock, flags);
+	ci->vbus_active = on;
 	if (ci->driver)
+		gadget_ready = 1;
+	spin_unlock_irqrestore(&ci->lock, flags);
+	if (gadget_ready)
 		ci_gadget_connect(&ci->gadget, on);
 	mutex_lock(&fsm->lock);
 

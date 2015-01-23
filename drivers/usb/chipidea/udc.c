@@ -2028,7 +2028,8 @@ void ci_gadget_connect(struct usb_gadget *_gadget, int is_active)
 		hw_device_state(ci, ci->ep0out->qh.dma);
 		usb_gadget_set_state(_gadget, USB_STATE_POWERED);
 	} else {
-		ci->driver->disconnect(_gadget);
+		if (ci->driver)
+			ci->driver->disconnect(_gadget);
 		hw_device_state(ci, 0);
 		if (ci->platdata->notify_event)
 			ci->platdata->notify_event(ci,

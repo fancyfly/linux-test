@@ -1,7 +1,7 @@
 /*
  * Freescale Asynchronous Sample Rate Converter (ASRC) driver
  *
- * Copyright 2008-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program  is licensed "as is" without any warranty of any
@@ -38,21 +38,21 @@ DEFINE_SPINLOCK(data_lock);
 DEFINE_SPINLOCK(pair_lock);
 
 /* Sample rates are aligned with that defined in pcm.h file */
-static const unsigned char asrc_process_table[][8][2] = {
-	/* 32kHz 44.1kHz 48kHz   64kHz   88.2kHz 96kHz   176kHz  192kHz */
-	{{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 5512Hz */
-	{{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 8kHz */
-	{{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 11025Hz */
-	{{0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 16kHz */
-	{{0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 22050Hz */
-	{{0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0}, {0, 0},},	/* 32kHz */
-	{{0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0},},	/* 44.1kHz */
-	{{0, 2}, {0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0},},	/* 48kHz */
-	{{1, 2}, {0, 2}, {0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0},},	/* 64kHz */
-	{{1, 2}, {1, 2}, {1, 2}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1},},	/* 88.2kHz */
-	{{1, 2}, {1, 2}, {1, 2}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1},},	/* 96kHz */
-	{{2, 2}, {2, 2}, {2, 2}, {2, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1},},	/* 176kHz */
-	{{2, 2}, {2, 2}, {2, 2}, {2, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1},},	/* 192kHz */
+static const unsigned char asrc_process_table[][12][2] = {
+	/* 8kHz 11.025kHz 16kHz 22.05kHz 32kHz 44.1kHz 48kHz   64kHz   88.2kHz 96kHz   176kHz  192kHz */
+	{{0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 5512Hz */
+	{{0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 8kHz */
+	{{0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 11025Hz */
+	{{1, 2}, {0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 16kHz */
+	{{1, 2}, {1, 2}, {0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},},	/* 22050Hz */
+	{{1, 2}, {2, 1}, {2, 1}, {0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0}, {0, 0},},	/* 32kHz */
+	{{2, 2}, {2, 2}, {2, 1}, {2, 1}, {0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0},},	/* 44.1kHz */
+	{{2, 2}, {2, 2}, {2, 1}, {2, 1}, {0, 2}, {0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0}, {0, 0},},	/* 48kHz */
+	{{2, 2}, {2, 2}, {2, 2}, {2, 1}, {1, 2}, {0, 2}, {0, 2}, {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 0},},	/* 64kHz */
+	{{2, 2}, {2, 2}, {2, 2}, {2, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1},},	/* 88.2kHz */
+	{{2, 2}, {2, 2}, {2, 2}, {2, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1},},	/* 96kHz */
+	{{2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1},},	/* 176kHz */
+	{{2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 2}, {2, 1}, {2, 1}, {2, 1}, {2, 1}, {2, 1},},	/* 192kHz */
 };
 
 static struct asrc_data *asrc;
@@ -210,41 +210,9 @@ static int supported_input_rate[] = {
 };
 
 static int supported_output_rate[] = {
-	32000, 44100, 48000, 64000, 88200, 96000, 176400, 192000,
+	8000, 11025, 16000, 22050, 32000, 44100, 48000, 64000, 88200, 96000,
+	176400, 192000,
 };
-
-static int asrc_set_process_configuration(enum asrc_pair_index index,
-					int inrate, int outrate)
-{
-	int in, out;
-
-	for (in = 0; in < ARRAY_SIZE(supported_input_rate); in++) {
-		if (inrate == supported_input_rate[in])
-			break;
-	}
-
-	if (in == ARRAY_SIZE(supported_input_rate)) {
-		dev_err(asrc->dev, "unsupported input sample rate: %d\n", in);
-		return -EINVAL;
-	}
-
-	for (out = 0; out < ARRAY_SIZE(supported_output_rate); out++) {
-		if (outrate == supported_output_rate[out])
-			break;
-	}
-
-	if (out == ARRAY_SIZE(supported_output_rate)) {
-		dev_err(asrc->dev, "unsupported output sample rate: %d\n", out);
-		return -EINVAL;
-	}
-
-	regmap_update_bits(asrc->regmap, REG_ASRCFG,
-			ASRCFG_PREMODx_MASK(index) | ASRCFG_POSTMODx_MASK(index),
-			ASRCFG_PREMOD(index, asrc_process_table[in][out][0]) |
-			ASRCFG_POSTMOD(index, asrc_process_table[in][out][1]));
-
-	return 0;
-}
 
 static int asrc_get_asrck_clock_divider(int samplerate)
 {
@@ -350,11 +318,38 @@ int asrc_config_pair(struct asrc_config *config)
 	u32 outrate = config->output_sample_rate, outdiv;
 	int ret, channels, index = config->pair;
 	unsigned long lock_flags;
+	int in, out;
 
 	/* Set the channel number */
 	spin_lock_irqsave(&data_lock, lock_flags);
 	asrc->asrc_pair[index].chn_num = config->channel_num;
 	spin_unlock_irqrestore(&data_lock, lock_flags);
+
+	for (in = 0; in < ARRAY_SIZE(supported_input_rate); in++) {
+		if (inrate == supported_input_rate[in])
+			break;
+	}
+
+	if (in == ARRAY_SIZE(supported_input_rate)) {
+		dev_err(asrc->dev, "unsupported input sample rate: %d\n", in);
+		return -EINVAL;
+	}
+
+	for (out = 0; out < ARRAY_SIZE(supported_output_rate); out++) {
+		if (outrate == supported_output_rate[out])
+			break;
+	}
+
+	if (out == ARRAY_SIZE(supported_output_rate)) {
+		dev_err(asrc->dev, "unsupported output sample rate: %d\n", out);
+		return -EINVAL;
+	}
+
+	if (outrate/inrate > 24 || inrate/outrate > 8) {
+		dev_err(asrc->dev, "unsupported ratio [1/24, 8], \
+				inrate %d, outrate %d\n", inrate, outrate);
+		return -EINVAL;
+	}
 
 	if (asrc->channel_bits > 3)
 		channels = config->channel_num;
@@ -455,9 +450,10 @@ int asrc_config_pair(struct asrc_config *config)
 		if (ret)
 			return ret;
 
-		ret = asrc_set_process_configuration(index, inrate, outrate);
-		if (ret)
-			return ret;
+		regmap_update_bits(asrc->regmap, REG_ASRCFG,
+			ASRCFG_PREMODx_MASK(index) | ASRCFG_POSTMODx_MASK(index),
+			ASRCFG_PREMOD(index, asrc_process_table[in][out][0]) |
+			ASRCFG_POSTMOD(index, asrc_process_table[in][out][1]));
 
 		break;
 	case INCLK_ASRCK1_CLK:

@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -367,7 +367,7 @@ struct asrc_p2p_ops {
 	int (*asrc_p2p_get_dma_request)(enum asrc_pair_index, bool);
 	u32 (*asrc_p2p_per_addr)(enum asrc_pair_index, bool);
 	int (*asrc_p2p_req_pair)(int, enum asrc_pair_index *index);
-	int (*asrc_p2p_config_pair)(struct asrc_config *config);
+	int (*asrc_p2p_config_pair)(struct asrc_config *config, bool, bool);
 	void (*asrc_p2p_release_pair)(enum asrc_pair_index);
 	void (*asrc_p2p_finish_conv)(enum asrc_pair_index);
 };
@@ -376,7 +376,7 @@ extern void asrc_p2p_hook(struct asrc_p2p_ops *asrc_p2p_ct);
 
 extern int asrc_req_pair(int chn_num, enum asrc_pair_index *index);
 extern void asrc_release_pair(enum asrc_pair_index index);
-extern int asrc_config_pair(struct asrc_config *config);
+extern int asrc_config_pair(struct asrc_config *config, bool p2p_in, bool p2p_out);
 extern void asrc_get_status(struct asrc_status_flags *flags);
 extern void asrc_start_conv(enum asrc_pair_index index);
 extern void asrc_stop_conv(enum asrc_pair_index index);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -308,41 +308,33 @@ static int config_asrc(struct snd_pcm_substream *substream,
 	config.pair               = p2p_params->asrc_index;
 	config.channel_num        = channel;
 	config.inclk              = INCLK_NONE;
+	config.outclk             = OUTCLK_ASRCK1_CLK;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		config.input_word_width   = word_width;
 		config.output_word_width  = p2p_word_width;
 		config.input_sample_rate  = rate;
 		config.output_sample_rate = asrc_p2p->p2p_rate;
-		switch (asrc_p2p->per_dev) {
-		case SSI1:
-			config.outclk    = OUTCLK_SSI1_TX;
-			break;
-		case SSI2:
-			config.outclk    = OUTCLK_SSI2_TX;
-			break;
-		case SSI3:
-			config.outclk    = OUTCLK_SSI3_TX;
-			break;
-		case ESAI:
-			config.outclk    = OUTCLK_ESAI_TX;
-			break;
-		default:
-			dev_err(cpu_dai->dev, "peripheral device is not correct\n");
-			return -EINVAL;
+
+		ret = asrc_p2p->asrc_ops.asrc_p2p_config_pair(&config, false, true);
+		if (ret < 0) {
+			dev_err(cpu_dai->dev, "Fail to config asrc\n");
+			return ret;
 		}
+
+
+
 	} else {
 		config.input_word_width   = p2p_word_width;
 		config.output_word_width  = word_width;
 		config.input_sample_rate  = asrc_p2p->p2p_rate;
 		config.output_sample_rate = rate;
-		config.outclk             = OUTCLK_ASRCK1_CLK;
-	}
 
-	ret = asrc_p2p->asrc_ops.asrc_p2p_config_pair(&config);
-	if (ret < 0) {
-		dev_err(cpu_dai->dev, "Fail to config asrc\n");
-		return ret;
+		ret = asrc_p2p->asrc_ops.asrc_p2p_config_pair(&config, true, false);
+		if (ret < 0) {
+			dev_err(cpu_dai->dev, "Fail to config asrc\n");
+			return ret;
+		}
 	}
 
 	return 0;

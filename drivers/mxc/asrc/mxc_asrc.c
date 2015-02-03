@@ -312,7 +312,7 @@ void asrc_release_pair(enum asrc_pair_index index)
 }
 EXPORT_SYMBOL(asrc_release_pair);
 
-int asrc_config_pair(struct asrc_config *config)
+int asrc_config_pair(struct asrc_config *config, bool p2p_in, bool p2p_out)
 {
 	u32 inrate = config->input_sample_rate, indiv;
 	u32 outrate = config->output_sample_rate, outdiv;
@@ -408,7 +408,7 @@ int asrc_config_pair(struct asrc_config *config)
 		outdiv = ASRC_PRESCALER_SPDIF_TX;
 		break;
 	case OUTCLK_ASRCK1_CLK:
-		if ((config->inclk & ASRCSR_AxCSx_MASK) == INCLK_NONE)
+		if ((config->inclk & ASRCSR_AxCSx_MASK) == INCLK_NONE && !p2p_out)
 			outdiv = ASRC_PRESCALER_IDEAL_RATIO;
 		else
 			outdiv = asrc_get_asrck_clock_divider(outrate);
@@ -1203,7 +1203,7 @@ static long asrc_ioctl_config_pair(struct asrc_pair_params *params,
 
 	index = config.pair;
 
-	ret = asrc_config_pair(&config);
+	ret = asrc_config_pair(&config, false, false);
 	if (ret) {
 		pair_err("failed to config pair: %ld\n", ret);
 		return ret;

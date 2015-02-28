@@ -656,6 +656,9 @@ config SOC_LS1021A
 	help
 	  This enables support for Freescale LS1021A processor.
 
+config MXC_REBOOT_ANDROID_CMD
+    bool "Android reboot setting"
+
 endif
 
 source "arch/arm/mach-imx/devices/Kconfig"

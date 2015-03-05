@@ -216,7 +216,7 @@ static int supported_output_rate[] = {
 
 static int asrc_get_asrck_clock_divider(int samplerate)
 {
-	unsigned int prescaler, divider, ratio, ra, i;
+	unsigned int prescaler, ratio, ra, i;
 	unsigned long bitclk;
 
 	if (samplerate == 0) {
@@ -225,6 +225,11 @@ static int asrc_get_asrck_clock_divider(int samplerate)
 	}
 
 	bitclk = clk_get_rate(asrc->asrck_clk);
+
+	if (bitclk < samplerate) {
+		dev_err(asrc->dev, "invalid clock source\n");
+		return -EINVAL;
+	}
 
 	ra = bitclk / samplerate;
 	ratio = ra;
@@ -235,11 +240,8 @@ static int asrc_get_asrck_clock_divider(int samplerate)
 
 	prescaler = i;
 
-	/* Calculate the divider */
-	divider = i ? (((ra + (1 << (i - 1)) - 1) >> i) - 1) : (ra - 1);
-
 	/* The totally divider is (2 ^ prescaler) * divider */
-	return (divider << ASRCDRx_AxCPx_WIDTH) + prescaler;
+	return ((ratio - 1) << ASRCDRx_AxCPx_WIDTH) + prescaler;
 }
 
 int asrc_req_pair(int chn_num, enum asrc_pair_index *index)

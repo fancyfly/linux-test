@@ -15,6 +15,14 @@
 	model = "Freescale i.MX7 LPDDR3 12x12 ARM2 Board";
 	compatible = "fsl,imx7d-12x12-arm2", "fsl,imx7d";
 
+	backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm1 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <6>;
+		status = "okay";
+	};
+
 	gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
@@ -31,6 +39,11 @@
 			gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEDOWN>;
 		};
+	};
+
+	pxp_v4l2_out {
+		compatible = "fsl,imx7d-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
+		status = "okay";
 	};
 
 	regulators {
@@ -93,6 +106,22 @@
 			gpio = <&gpio1 7 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};
+
+		reg_can1_3v3: can1-3v3 {
+			compatible = "regulator-fixed";
+			regulator-name = "can1-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio1 10 GPIO_ACTIVE_LOW>;
+		};
+
+		reg_can2_3v3: can2-3v3 {
+			compatible = "regulator-fixed";
+			regulator-name = "can2-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio1 11 GPIO_ACTIVE_LOW>;
+		};
 	};
 
 	memory {
@@ -124,6 +153,15 @@
 		spi-max-frequency = <20000000>;
 		reg = <0>;
 	};
+};
+
+&epdc {
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_epdc_0>;
+        V3P3-supply = <&V3P3_reg>;
+        VCOM-supply = <&VCOM_reg>;
+        DISPLAY-supply = <&DISPLAY_reg>;
+        status = "okay";
 };
 
 &fec1 {
@@ -160,6 +198,20 @@
 	status = "disabled";
 };
 
+&flexcan1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan1>;
+	xceiver-supply = <&reg_can1_3v3>;
+	status = "disabled";
+};
+
+&flexcan2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan2>;
+	xceiver-supply = <&reg_can2_3v3>;
+	status = "disabled";
+};
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog_1>;
@@ -167,12 +219,13 @@
 	hog {
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
-				MX7D_PAD_I2C4_SCL__GPIO4_IO14	0x80000000
-				MX7D_PAD_EPDC_PWR_STAT__GPIO2_IO31 0x80000000
-				MX7D_PAD_ECSPI2_SCLK__GPIO4_IO20  0x80000000
-				MX7D_PAD_ECSPI2_MOSI__GPIO4_IO21  0x80000000
-				MX7D_PAD_ECSPI2_MISO__GPIO4_IO22  0x80000000
-				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23	  0x80000000
+				MX7D_PAD_EPDC_PWR_STAT__GPIO2_IO31 0x80000000 /* pwrgood */
+				MX7D_PAD_I2C4_SCL__GPIO4_IO14     0x80000000  /* vcom_ctrl */
+				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23	  0x80000000  /* wakeup */
+				MX7D_PAD_ECSPI2_SCLK__GPIO4_IO20  0x80000000  /* v3p3 */
+				MX7D_PAD_ECSPI1_MISO__GPIO4_IO18  0x80000000  /* pwr int */
+				MX7D_PAD_ECSPI2_MOSI__GPIO4_IO21  0x80000000  /* pwrctrl1 */
+				MX7D_PAD_ECSPI2_MISO__GPIO4_IO22  0x80000000  /* pwrctrl2 */
 				MX7D_PAD_ECSPI1_MOSI__GPIO4_IO17  0x80000000
 				MX7D_PAD_SD1_RESET_B__GPIO5_IO2   0x59
 				MX7D_PAD_SD1_CD_B__GPIO5_IO0      0x59
@@ -184,6 +237,85 @@
 			>;
 		};
 	};
+
+	lcdif {
+		pinctrl_lcdif_dat: lcdifdatgrp {
+			fsl,pins = <
+				MX7D_PAD_LCD_DATA00__LCD_DATA0	0x4001b0b0
+				MX7D_PAD_LCD_DATA01__LCD_DATA1	0x4001b0b0
+				MX7D_PAD_LCD_DATA02__LCD_DATA2	0x4001b0b0
+				MX7D_PAD_LCD_DATA03__LCD_DATA3	0x4001b0b0
+				MX7D_PAD_LCD_DATA04__LCD_DATA4	0x4001b0b0
+				MX7D_PAD_LCD_DATA05__LCD_DATA5	0x4001b0b0
+				MX7D_PAD_LCD_DATA06__LCD_DATA6	0x4001b0b0
+				MX7D_PAD_LCD_DATA07__LCD_DATA7	0x4001b0b0
+				MX7D_PAD_LCD_DATA08__LCD_DATA8	0x4001b0b0
+				MX7D_PAD_LCD_DATA09__LCD_DATA9	0x4001b0b0
+				MX7D_PAD_LCD_DATA10__LCD_DATA10	0x4001b0b0
+				MX7D_PAD_LCD_DATA11__LCD_DATA11	0x4001b0b0
+				MX7D_PAD_LCD_DATA12__LCD_DATA12	0x4001b0b0
+				MX7D_PAD_LCD_DATA13__LCD_DATA13	0x4001b0b0
+				MX7D_PAD_LCD_DATA14__LCD_DATA14	0x4001b0b0
+				MX7D_PAD_LCD_DATA15__LCD_DATA15	0x4001b0b0
+				MX7D_PAD_LCD_DATA16__LCD_DATA16	0x4001b0b0
+				MX7D_PAD_LCD_DATA17__LCD_DATA17	0x4001b0b0
+				MX7D_PAD_LCD_DATA18__LCD_DATA18	0x4001b0b0
+				MX7D_PAD_LCD_DATA19__LCD_DATA19	0x4001b0b0
+				MX7D_PAD_LCD_DATA20__LCD_DATA20	0x4001b0b0
+				MX7D_PAD_LCD_DATA21__LCD_DATA21	0x4001b0b0
+				MX7D_PAD_LCD_DATA22__LCD_DATA22	0x4001b0b0
+				MX7D_PAD_LCD_DATA23__LCD_DATA23	0x4001b0b0
+			>;
+		};
+
+		pinctrl_lcdif_ctrl: lcdifctrlgrp {
+			fsl,pins = <
+				MX7D_PAD_LCD_CLK__LCD_CLK	0x4001b0b0
+				MX7D_PAD_LCD_ENABLE__LCD_ENABLE	0x4001b0b0
+				MX7D_PAD_LCD_VSYNC__LCD_VSYNC	0x4001b0b0
+				MX7D_PAD_LCD_HSYNC__LCD_HSYNC	0x4001b0b0
+			>;
+		};
+	};
+
+};
+
+&lcdif {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lcdif_dat
+		     &pinctrl_lcdif_ctrl>;
+	display = <&display0>;
+	status = "okay";
+
+	display0: display {
+		bits-per-pixel = <16>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <33500000>;
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <89>;
+				hfront-porch = <164>;
+				vback-porch = <23>;
+				vfront-porch = <10>;
+				hsync-len = <10>;
+				vsync-len = <10>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+				pixelclk-active = <0>;
+			};
+		};
+	};
+};
+
+&pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm1>;
+	status = "okay";
 };
 
 &uart1 {
@@ -214,9 +346,7 @@
 			>;
 		};
 	};
-};
 
-&iomuxc_lpsr {
 	pwm1 {
 		pinctrl_pwm1: pwm1grp {
 			fsl,pins = <
@@ -335,38 +465,58 @@
 	epdc {
                 pinctrl_epdc_0: epdcgrp-0 {
                         fsl,pins = <
-				MX7D_PAD_EPDC_DATA00__EPDC_DATA0 0x80000000
-				MX7D_PAD_EPDC_DATA01__EPDC_DATA1 0x80000000
-				MX7D_PAD_EPDC_DATA02__EPDC_DATA2 0x80000000
-				MX7D_PAD_EPDC_DATA03__EPDC_DATA3 0x80000000
-				MX7D_PAD_EPDC_DATA04__EPDC_DATA4 0x80000000
-				MX7D_PAD_EPDC_DATA05__EPDC_DATA5 0x80000000
-				MX7D_PAD_EPDC_DATA06__EPDC_DATA6 0x80000000
-				MX7D_PAD_EPDC_DATA07__EPDC_DATA7 0x80000000
-				MX7D_PAD_EPDC_DATA08__EPDC_DATA8 0x80000000
-				MX7D_PAD_EPDC_DATA09__EPDC_DATA9 0x80000000
-				MX7D_PAD_EPDC_DATA10__EPDC_DATA10 0x80000000
-				MX7D_PAD_EPDC_DATA11__EPDC_DATA11 0x80000000
-				MX7D_PAD_EPDC_DATA12__EPDC_DATA12 0x80000000
-				MX7D_PAD_EPDC_DATA13__EPDC_DATA13 0x80000000
-				MX7D_PAD_EPDC_DATA14__EPDC_DATA14 0x80000000
-				MX7D_PAD_EPDC_DATA15__EPDC_DATA15 0x80000000
-				MX7D_PAD_EPDC_SDCLK__EPDC_SDCLK 0x80000000
-				MX7D_PAD_EPDC_SDLE__EPDC_SDLE 0x80000000
-				MX7D_PAD_EPDC_SDOE__EPDC_SDOE 0x80000000
-				MX7D_PAD_EPDC_SDSHR__EPDC_SDSHR 0x80000000
-				MX7D_PAD_EPDC_SDCE0__EPDC_SDCE0 0x80000000
-				MX7D_PAD_EPDC_SDCE1__EPDC_SDCE1 0x80000000
-				MX7D_PAD_EPDC_SDCE2__EPDC_SDCE2 0x80000000
-				MX7D_PAD_EPDC_SDCE3__EPDC_SDCE3 0x80000000
-				MX7D_PAD_EPDC_GDCLK__EPDC_GDCLK 0x80000000
-				MX7D_PAD_EPDC_GDOE__EPDC_GDOE 0x80000000
-				MX7D_PAD_EPDC_GDRL__EPDC_GDRL 0x80000000
-				MX7D_PAD_EPDC_GDSP__EPDC_GDSP 0x80000000
-				MX7D_PAD_EPDC_BDR0__EPDC_BDR0 0x80000000
-				MX7D_PAD_EPDC_BDR1__EPDC_BDR1 0x80000000
+				MX7D_PAD_EPDC_DATA00__EPDC_DATA0  0x2
+				MX7D_PAD_EPDC_DATA01__EPDC_DATA1  0x2
+				MX7D_PAD_EPDC_DATA02__EPDC_DATA2  0x2
+				MX7D_PAD_EPDC_DATA03__EPDC_DATA3  0x2
+				MX7D_PAD_EPDC_DATA04__EPDC_DATA4  0x2
+				MX7D_PAD_EPDC_DATA05__EPDC_DATA5  0x2
+				MX7D_PAD_EPDC_DATA06__EPDC_DATA6  0x2
+				MX7D_PAD_EPDC_DATA07__EPDC_DATA7  0x2
+				MX7D_PAD_EPDC_DATA08__EPDC_DATA8  0x2
+				MX7D_PAD_EPDC_DATA09__EPDC_DATA9  0x2
+				MX7D_PAD_EPDC_DATA10__EPDC_DATA10 0x2
+				MX7D_PAD_EPDC_DATA11__EPDC_DATA11 0x2
+				MX7D_PAD_EPDC_DATA12__EPDC_DATA12 0x2
+				MX7D_PAD_EPDC_DATA13__EPDC_DATA13 0x2
+				MX7D_PAD_EPDC_DATA14__EPDC_DATA14 0x2
+				MX7D_PAD_EPDC_DATA15__EPDC_DATA15 0x2
+				MX7D_PAD_EPDC_SDCLK__EPDC_SDCLK   0x2
+				MX7D_PAD_EPDC_SDLE__EPDC_SDLE     0x2
+				MX7D_PAD_EPDC_SDOE__EPDC_SDOE     0x2
+				MX7D_PAD_EPDC_SDSHR__EPDC_SDSHR   0x2
+				MX7D_PAD_EPDC_SDCE0__EPDC_SDCE0   0x2
+				MX7D_PAD_EPDC_SDCE1__EPDC_SDCE1   0x2
+				MX7D_PAD_EPDC_SDCE2__EPDC_SDCE2   0x2
+				MX7D_PAD_EPDC_SDCE3__EPDC_SDCE3   0x2
+				MX7D_PAD_EPDC_GDCLK__EPDC_GDCLK   0x2
+				MX7D_PAD_EPDC_GDOE__EPDC_GDOE     0x2
+				MX7D_PAD_EPDC_GDRL__EPDC_GDRL     0x2
+				MX7D_PAD_EPDC_GDSP__EPDC_GDSP     0x2
+				MX7D_PAD_EPDC_BDR0__EPDC_BDR0     0x2
+				MX7D_PAD_EPDC_BDR1__EPDC_BDR1     0x2
                         >;
                 };
+	};
+
+	flexcan1 {
+		pinctrl_flexcan1: flexcan1grp {
+			fsl,pins = <
+				MX7D_PAD_SAI1_RX_DATA__FLEXCAN1_RX	0x59
+				MX7D_PAD_SAI1_TX_BCLK__FLEXCAN1_TX	0x59
+				MX7D_PAD_GPIO1_IO10__GPIO1_IO10		0x59 /* STBY */
+			>;
+		};
+	};
+
+	flexcan2 {
+		pinctrl_flexcan2: flexcan2grp {
+			fsl,pins = <
+				MX7D_PAD_SAI1_TX_SYNC__FLEXCAN2_RX	0x59
+				MX7D_PAD_SAI1_TX_DATA__FLEXCAN2_TX	0x59
+				MX7D_PAD_GPIO1_IO11__GPIO1_IO11		0x59  /* STBY */
+			>;
+		};
 	};
 
 	gpio_keys {
@@ -572,7 +722,7 @@
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
-	status = "okay";
+	status = "disabled";
 };
 
 &sai2 {
@@ -709,11 +859,11 @@
 		vpos_pwrdn = <2>;
 		gvee_pwrdn = <8>;
 		vneg_pwrdn = <10>;
-		gpio_pmic_pwrgood = <&gpio2 13 0>;
-		gpio_pmic_vcom_ctrl = <&gpio2 3 0>;
-		gpio_pmic_wakeup = <&gpio2 14 0>;
-		gpio_pmic_v3p3 = <&gpio2 7 0>;
-		gpio_pmic_intr = <&gpio2 12 0>;
+		gpio_pmic_pwrgood = <&gpio2 31 0>;
+		gpio_pmic_vcom_ctrl = <&gpio4 14 0>;
+		gpio_pmic_wakeup = <&gpio4 23 0>;
+		gpio_pmic_v3p3 = <&gpio4 20 0>;
+		gpio_pmic_intr = <&gpio4 18 0>;
 
 		regulators {
 			DISPLAY_reg: DISPLAY {
@@ -767,7 +917,7 @@
 	codec: wm8958@1a {
 		compatible = "wlf,wm8958";
 		reg = <0x1a>;
-		clocks = <&clks IMX7D_SAI1_ROOT_CLK>,
+		clocks = <&clks IMX7D_AUDIO_MCLK_ROOT_CLK>,
 		         <&clks IMX7D_CLK_DUMMY>;
 		clock-names = "mclk1", "mclk2";
 

@@ -4,6 +4,8 @@
  * Copyright (C) 2008 Google, Inc.
  * Author: Mike Lockwood <lockwood@android.com>
  *
+ * Copyright (C) 2015 Freescale Semiconductor, Inc.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -185,7 +187,36 @@ static void android_work(struct work_struct *data)
 	}
 }
 
+static void android_enable(struct android_dev *dev)
+{
+	struct usb_composite_dev *cdev = dev->cdev;
+	unsigned long flags;
 
+	usb_add_config(cdev, &android_config_driver, android_bind_config);
+	spin_lock_irqsave(&cdev->lock, flags);
+	if (dev->connected) {
+		usb_gadget_disconnect(cdev->gadget);
+		mdelay(10);
+		usb_gadget_connect(cdev->gadget);
+		usb_gadget_vbus_connect(cdev->gadget);
+	}
+	spin_unlock_irqrestore(&cdev->lock, flags);
+}
+
+static void android_disable(struct android_dev *dev)
+{
+	struct usb_composite_dev *cdev = dev->cdev;
+	unsigned long flags;
+
+	spin_lock_irqsave(&cdev->lock, flags);
+	if (dev->connected) {
+		/* Cancel pending control requests */
+		usb_gadget_disconnect(cdev->gadget);
+		usb_ep_dequeue(cdev->gadget->ep0, cdev->req);
+	}
+	spin_unlock_irqrestore(&cdev->lock, flags);
+	usb_remove_config(cdev, &android_config_driver);
+}
 /*-------------------------------------------------------------------------*/
 /* Supported functions initialization */
 
@@ -198,6 +229,29 @@ static void adb_function_cleanup(struct android_usb_function *f)
 {
 	adb_cleanup();
 }
+
+static void adb_ready_callback(void)
+{
+	struct android_dev *dev = _android_dev;
+
+	mutex_lock(&dev->mutex);
+
+	android_enable(dev);
+
+	mutex_unlock(&dev->mutex);
+}
+
+static void adb_closed_callback(void)
+{
+	struct android_dev *dev = _android_dev;
+
+	mutex_lock(&dev->mutex);
+
+	android_disable(dev);
+
+	mutex_unlock(&dev->mutex);
+}
+
 
 static int adb_function_bind_config(struct android_usb_function *f, struct usb_configuration *c)
 {

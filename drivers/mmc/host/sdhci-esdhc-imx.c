@@ -948,7 +948,8 @@ static int esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs)
 				ESDHC_MIX_CTRL_DDREN | ESDHC_MIX_CTRL_HS400_EN,
 				host->ioaddr + ESDHC_MIX_CTRL);
 		imx_data->is_ddr = 1;
-		esdhc_set_strobe_dll(host);
+		if (host->clock == 200000000)
+			esdhc_set_strobe_dll(host);
 		break;
 	}
 
@@ -1121,7 +1122,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	 * to something insane.  Change it back here.
 	 */
 	if (esdhc_is_usdhc(imx_data)) {
-		writel(0x08100810, host->ioaddr + ESDHC_WTMK_LVL);
+		writel(0x10401040, host->ioaddr + ESDHC_WTMK_LVL);
 		host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
 					SDHCI_QUIRK2_NOSTD_TIMEOUT_COUNTER;
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;

@@ -35,6 +35,7 @@ struct imx_wm8960_data {
 	struct clk *codec_clk;
 	unsigned int clk_frequency;
 	bool is_codec_master;
+	bool stream[2];
 };
 
 struct imx_priv {
@@ -42,6 +43,7 @@ struct imx_priv {
 	struct platform_device *pdev;
 	struct snd_card *snd_card;
 };
+
 static struct imx_priv card_priv;
 
 /* -1 for reserved value */
@@ -64,6 +66,7 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_card *card = codec_dai->codec->card;
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 	struct device *dev = card->dev;
 	unsigned int sample_rate = params_rate(params);
 	unsigned int sysclk, pll_out;
@@ -72,6 +75,11 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 
 	if (params_channels(params) == 1)
 		bclk *= 2;
+
+	data->stream[tx] = true;
+
+	if (data->stream[tx] && data->stream[!tx])
+		return 0;
 
 	/* set cpu DAI configuration */
 	ret = snd_soc_dai_set_fmt(cpu_dai, data->dai.dai_fmt);
@@ -174,9 +182,12 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_card *card = codec_dai->codec->card;
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+
+	data->stream[tx] = false;
 
 	/* Power down PLL to save power*/
-	if (data->is_codec_master)
+	if (data->is_codec_master && !data->stream[tx] && !data->stream[!tx])
 		snd_soc_dai_set_pll(codec_dai, 0, 0, 0, 0);
 
 	return 0;
@@ -185,6 +196,10 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 static struct snd_soc_ops imx_hifi_ops = {
 	.hw_params = imx_hifi_hw_params,
 	.hw_free = imx_hifi_hw_free,
+};
+
+static const struct snd_soc_dapm_route imx_wm8960_dapm_route[] = {
+	{ "LINPUT1", NULL, "MICB" },
 };
 
 static int imx_wm8960_probe(struct platform_device *pdev)
@@ -260,6 +275,8 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		goto fail;
 	data->card.num_links = 1;
 	data->card.dai_link = &data->dai;
+	data->card.dapm_routes = imx_wm8960_dapm_route;
+	data->card.num_dapm_routes = ARRAY_SIZE(imx_wm8960_dapm_route);
 
 	platform_set_drvdata(pdev, &data->card);
 	snd_soc_card_set_drvdata(&data->card, data);

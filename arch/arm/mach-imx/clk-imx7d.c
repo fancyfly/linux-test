@@ -374,6 +374,10 @@ static int const clks_init_on[] __initconst = {
 
 static struct clk_onecell_data clk_data;
 
+static u32 share_count_sai1;
+static u32 share_count_sai2;
+static u32 share_count_sai3;
+
 static void __init imx7d_clocks_init(struct device_node *ccm_node)
 {
 	struct device_node *np;
@@ -754,6 +758,7 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	clks[IMX7D_WRCLK_ROOT_DIV] = imx_clk_divider("wrclk_post_div", "wrclk_pre_div", base + 0xbd00, 0, 6);
 	clks[IMX7D_CLKO1_ROOT_DIV] = imx_clk_divider("clko1_post_div", "clko1_pre_div", base + 0xbd80, 0, 6);
 	clks[IMX7D_CLKO2_ROOT_DIV] = imx_clk_divider("clko2_post_div", "clko2_pre_div", base + 0xbe00, 0, 6);
+	clks[IMX7D_IPG_ROOT_CLK] = imx_clk_divider("ipg_root_clk", "ahb_root_clk", base + 0x9080, 0, 2);
 
 	clks[IMX7D_ARM_A7_ROOT_CLK] = imx_clk_gate2("arm_a7_root_clk", "arm_a7_div", base + 0x4000, 0);
 	clks[IMX7D_ARM_M4_ROOT_CLK] = imx_clk_gate2("arm_m4_root_clk", "arm_m4_div", base + 0x4010, 0);
@@ -778,9 +783,12 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	clks[IMX7D_MIPI_DSI_ROOT_CLK] = imx_clk_gate2("mipi_dsi_root_clk", "mipi_dsi_post_div", base + 0x4650, 0);
 	clks[IMX7D_MIPI_CSI_ROOT_CLK] = imx_clk_gate2("mipi_csi_root_clk", "mipi_csi_post_div", base + 0x4640, 0);
 	clks[IMX7D_MIPI_DPHY_ROOT_CLK] = imx_clk_gate2("mipi_dphy_root_clk", "mipi_dphy_post_div", base + 0x4660, 0);
-	clks[IMX7D_SAI1_ROOT_CLK] = imx_clk_gate2("sai1_root_clk", "sai1_post_div", base + 0x48c0, 0);
-	clks[IMX7D_SAI2_ROOT_CLK] = imx_clk_gate2("sai2_root_clk", "sai2_post_div", base + 0x48d0, 0);
-	clks[IMX7D_SAI3_ROOT_CLK] = imx_clk_gate2("sai3_root_clk", "sai3_post_div", base + 0x48e0, 0);
+	clks[IMX7D_SAI1_ROOT_CLK] = imx_clk_gate2_shared("sai1_root_clk", "sai1_post_div", base + 0x48c0, 0, &share_count_sai1);
+	clks[IMX7D_SAI1_IPG_CLK]  = imx_clk_gate2_shared("sai1_ipg_clk",  "ipg_root_clk",  base + 0x48c0, 0, &share_count_sai1);
+	clks[IMX7D_SAI2_ROOT_CLK] = imx_clk_gate2_shared("sai2_root_clk", "sai2_post_div", base + 0x48d0, 0, &share_count_sai2);
+	clks[IMX7D_SAI2_IPG_CLK]  = imx_clk_gate2_shared("sai2_ipg_clk",  "ipg_root_clk",  base + 0x48d0, 0, &share_count_sai2);
+	clks[IMX7D_SAI3_ROOT_CLK] = imx_clk_gate2_shared("sai3_root_clk", "sai3_post_div", base + 0x48e0, 0, &share_count_sai3);
+	clks[IMX7D_SAI3_IPG_CLK]  = imx_clk_gate2_shared("sai3_ipg_clk",  "ipg_root_clk",  base + 0x48e0, 0, &share_count_sai3);
 	clks[IMX7D_SPDIF_ROOT_CLK] = imx_clk_gate2("spdif_root_clk", "spdif_post_div", base + 0x44d0, 0);
 	clks[IMX7D_ENET1_REF_ROOT_CLK] = imx_clk_gate2("enet1_ref_root_clk", "enet1_ref_post_div", base + 0x44e0, 0);
 	clks[IMX7D_ENET1_TIME_ROOT_CLK] = imx_clk_gate2("enet1_time_root_clk", "enet1_time_post_div", base + 0x44f0, 0);
@@ -875,6 +883,10 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX7D_UART6_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
 	imx_clk_set_parent(clks[IMX7D_UART7_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
 
+	/* set pcie root's parent clk source */
+	imx_clk_set_parent(clks[IMX7D_PCIE_CTRL_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_250M_CLK]);
+	imx_clk_set_parent(clks[IMX7D_PCIE_PHY_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_100M_CLK]);
+
 	/* Set clock rate for USBPHY, the USB_PLL at CCM is from USBOTG2 */
 	clks[IMX7D_USB1_MAIN_480M_CLK] = imx_clk_fixed_factor("pll_usb1_main_clk", "osc", 20, 1);
 	clks[IMX7D_USB_MAIN_480M_CLK] = imx_clk_fixed_factor("pll_usb_main_clk", "osc", 20, 1);
@@ -884,6 +896,9 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 
 	/* set lcdif pixel root clock source to get the required 33Mhz clock */
 	imx_clk_set_parent(clks[IMX7D_LCDIF_PIXEL_ROOT_SRC], clks[IMX7D_PLL_SYS_PFD5_CLK]);
+
+	/* set usdhc3 root clock to 400MHz, to support HS400 mode */
+	imx_clk_set_rate(clks[IMX7D_USDHC3_ROOT_CLK], 400000000);
 
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clks[clks_init_on[i]]);

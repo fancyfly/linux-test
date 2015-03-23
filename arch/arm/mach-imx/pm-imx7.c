@@ -21,6 +21,7 @@
 #include <linux/suspend.h>
 #include <linux/genalloc.h>
 #include <linux/mfd/syscon.h>
+#include <linux/mfd/syscon/imx7-iomuxc-gpr.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_fdt.h>
@@ -38,15 +39,31 @@
 #include "hardware.h"
 
 #define MX7_SUSPEND_OCRAM_SIZE		0x1000
-#define MX7_MAX_DDRC_IO_NUM		33
-#define MX7_MAX_DDRC_NUM		34
+#define MX7_MAX_DDRC_NUM		32
+#define MX7_MAX_DDRC_PHY_NUM		16
 
 #define MX7_SUSPEND_IRAM_ADDR_OFFSET	0
+
+#define UART_UCR1	0x80
+#define UART_UCR2	0x84
+#define UART_UCR3	0x88
+#define UART_UCR4	0x8c
+#define UART_UFCR	0x90
+#define UART_UESC	0x9c
+#define UART_UTIM	0xa0
+#define UART_UBIR	0xa4
+#define UART_UBMR	0xa8
+#define UART_UBRC	0xac
+#define UART_UTS	0xb4
 
 unsigned long imx7_iram_tlb_base_addr;
 unsigned long imx7_iram_tlb_phys_addr;
 
+static unsigned int *ocram_saved_in_ddr;
+static void __iomem *ocram_base;
+static unsigned int ocram_size;
 static void __iomem *ccm_base;
+static void __iomem *console_base;
 static void __iomem *suspend_ocram_base;
 static void (*imx7_suspend_in_ocram_fn)(void __iomem *ocram_vbase);
 /*
@@ -74,27 +91,71 @@ struct imx7_pm_socdata {
 	const char *src_compat;
 	const char *iomuxc_compat;
 	const char *gpc_compat;
-	const u32 ddrc_io_num;
-	const u32 *ddrc_io_offset;
 	const u32 ddrc_num;
-	const u32 *ddrc_offset;
+	const u32 (*ddrc_offset)[2];
+	const u32 ddrc_phy_num;
+	const u32 (*ddrc_phy_offset)[2];
 };
 
-static const u32 imx7d_ddrc_io_offset[] __initconst = {
+static const u32 imx7d_ddrc_reg_setting[][2] __initconst = {
+	{ 0x0, 0x03040008 },
+	{ 0x1a0, 0x80400003 },
+	{ 0x1a4, 0x00100020 },
+	{ 0x1a8, 0x80100004 },
+	{ 0x64, 0x00200038 },
+	{ 0xd0, 0xc0350001 },
+	{ 0xdc, 0x00c3000a },
+	{ 0xe0, 0x00010000 },
+	{ 0xe4, 0x00110006 },
+	{ 0xf4, 0x0000033f },
+	{ 0x100, 0x0a0e110b },
+	{ 0x104, 0x00020211 },
+	{ 0x108, 0x03060707 },
+	{ 0x10c, 0x00a0500c },
+	{ 0x110, 0x05020307 },
+	{ 0x114, 0x02020404 },
+	{ 0x118, 0x02020003 },
+	{ 0x11c, 0x00000202 },
+	{ 0x180, 0x00600018 },
+	{ 0x184, 0x00e00100 },
+	{ 0x190, 0x02098205 },
+	{ 0x194, 0x00060303 },
+	{ 0x200, 0x00000016 },
+	{ 0x204, 0x00171717 },
+	{ 0x214, 0x05050505 },
+	{ 0x218, 0x0f0f0505 },
+	{ 0x240, 0x06000601 },
+	{ 0x244, 0x00000000 },
 };
 
-static const u32 imx7d_ddrc_offset[] __initconst = {
+static const u32 imx7d_ddrc_phy_reg_setting[][2] __initconst = {
+	{ 0x0, 0x17421e40 },
+	{ 0x4, 0x10210100 },
+	{ 0x8, 0x00010000 },
+	{ 0x10, 0x0007080c },
+	{ 0x1c, 0x01010000 },
+	{ 0x9c, 0x00000d6e },
+	{ 0x20, 0x0a0c0a0a },
+	{ 0x30, 0x06060606 },
+	{ 0x50, 0x01000008 },
+	{ 0x50, 0x00000008 },
+	{ 0xc0, 0x0e407304 },
+	{ 0xc0, 0x0e447304 },
+	{ 0xc0, 0x0e447306 },
+	{ 0xc0, 0x0e4c7304 },
+	{ 0xc0, 0x0e487306 },
 };
+
 
 static const struct imx7_pm_socdata imx7d_pm_data __initconst = {
 	.ddrc_compat = "fsl,imx7d-ddrc",
 	.src_compat = "fsl,imx7d-src",
 	.iomuxc_compat = "fsl,imx7d-iomuxc",
 	.gpc_compat = "fsl,imx7d-gpc",
-	.ddrc_io_num = ARRAY_SIZE(imx7d_ddrc_io_offset),
-	.ddrc_io_offset = imx7d_ddrc_io_offset,
-	.ddrc_num = 0,
-	.ddrc_offset = NULL,
+	.ddrc_num = ARRAY_SIZE(imx7d_ddrc_reg_setting),
+	.ddrc_offset = imx7d_ddrc_reg_setting,
+	.ddrc_phy_num = ARRAY_SIZE(imx7d_ddrc_phy_reg_setting),
+	.ddrc_phy_offset = imx7d_ddrc_phy_reg_setting,
 };
 
 /*
@@ -105,22 +166,26 @@ static const struct imx7_pm_socdata imx7d_pm_data __initconst = {
  * otherwise, the suspend to ocram function will be broken!
  */
 struct imx7_cpu_pm_info {
+	u32 m4_reserve0;
+	u32 m4_reserve1;
+	u32 m4_reserve2;
 	phys_addr_t pbase; /* The physical address of pm_info. */
 	phys_addr_t resume_addr; /* The physical resume address for asm code */
 	u32 ddr_type;
 	u32 pm_info_size; /* Size of pm_info. */
 	struct imx7_pm_base ddrc_base;
+	struct imx7_pm_base ddrc_phy_base;
 	struct imx7_pm_base src_base;
-	struct imx7_pm_base iomuxc_base;
+	struct imx7_pm_base iomuxc_gpr_base;
 	struct imx7_pm_base ccm_base;
 	struct imx7_pm_base gpc_base;
 	struct imx7_pm_base l2_base;
 	struct imx7_pm_base anatop_base;
 	u32 ttbr1; /* Store TTBR1 */
-	u32 ddrc_io_num; /* Number of DDRC IOs which need saved/restored. */
-	u32 ddrc_io_val[MX7_MAX_DDRC_IO_NUM][2]; /* To save offset and value */
-	u32 ddrc_num; /* Number of DDRC registers which need saved/restored. */
+	u32 ddrc_num; /* Number of DDRC which need saved/restored. */
 	u32 ddrc_val[MX7_MAX_DDRC_NUM][2]; /* To save offset and value */
+	u32 ddrc_phy_num; /* Number of DDRC which need saved/restored. */
+	u32 ddrc_phy_val[MX7_MAX_DDRC_NUM][2]; /* To save offset and value */
 } __aligned(8);
 
 static struct map_desc imx7_pm_io_desc[] __initdata = {
@@ -133,6 +198,40 @@ static const char * const low_power_ocram_match[] __initconst = {
 	"fsl,lpm-sram",
 	NULL
 };
+
+static void imx7_console_save(unsigned int *regs)
+{
+	if (!console_base)
+		return;
+
+	regs[0] = readl_relaxed(console_base + UART_UCR1);
+	regs[1] = readl_relaxed(console_base + UART_UCR2);
+	regs[2] = readl_relaxed(console_base + UART_UCR3);
+	regs[3] = readl_relaxed(console_base + UART_UCR4);
+	regs[4] = readl_relaxed(console_base + UART_UFCR);
+	regs[5] = readl_relaxed(console_base + UART_UESC);
+	regs[6] = readl_relaxed(console_base + UART_UTIM);
+	regs[7] = readl_relaxed(console_base + UART_UBIR);
+	regs[8] = readl_relaxed(console_base + UART_UBMR);
+	regs[9] = readl_relaxed(console_base + UART_UTS);
+}
+
+static void imx7_console_restore(unsigned int *regs)
+{
+	if (!console_base)
+		return;
+
+	writel_relaxed(regs[4], console_base + UART_UFCR);
+	writel_relaxed(regs[5], console_base + UART_UESC);
+	writel_relaxed(regs[6], console_base + UART_UTIM);
+	writel_relaxed(regs[7], console_base + UART_UBIR);
+	writel_relaxed(regs[8], console_base + UART_UBMR);
+	writel_relaxed(regs[9], console_base + UART_UTS);
+	writel_relaxed(regs[0], console_base + UART_UCR1);
+	writel_relaxed(regs[1] | 0x1, console_base + UART_UCR2);
+	writel_relaxed(regs[2], console_base + UART_UCR3);
+	writel_relaxed(regs[3], console_base + UART_UCR4);
+}
 
 static int imx7_suspend_finish(unsigned long val)
 {
@@ -152,6 +251,7 @@ static int imx7_suspend_finish(unsigned long val)
 
 static int imx7_pm_enter(suspend_state_t state)
 {
+	unsigned int console_saved_reg[10] = {0};
 
 	if (!imx7_iram_tlb_base_addr) {
 		pr_warn("No IRAM/OCRAM memory allocated for suspend/resume \
@@ -170,10 +270,18 @@ static int imx7_pm_enter(suspend_state_t state)
 	case PM_SUSPEND_MEM:
 		imx_anatop_pre_suspend();
 		imx_gpcv2_pre_suspend(true);
+		if (imx_gpcv2_is_mf_mix_off()) {
+			imx7_console_save(console_saved_reg);
+			memcpy(ocram_saved_in_ddr, ocram_base, ocram_size);
+		}
 
 		/* Zzz ... */
 		cpu_suspend(0, imx7_suspend_finish);
 
+		if (imx_gpcv2_is_mf_mix_off()) {
+			memcpy(ocram_base, ocram_saved_in_ddr, ocram_size);
+			imx7_console_restore(console_saved_reg);
+		}
 		imx_anatop_post_resume();
 		imx_gpcv2_post_resume();
 		break;
@@ -300,8 +408,8 @@ static int __init imx7_suspend_init(const struct imx7_pm_socdata *socdata)
 	struct device_node *node;
 	struct imx7_cpu_pm_info *pm_info;
 	int i, ret = 0;
-	const u32 *ddrc_io_offset_array;
-	const u32 *ddrc_offset_array;
+	const u32 (*ddrc_offset_array)[2];
+	const u32 (*ddrc_phy_offset_array)[2];
 	unsigned long iram_paddr;
 
 	suspend_set_ops(&imx7_pm_ops);
@@ -345,13 +453,17 @@ static int __init imx7_suspend_init(const struct imx7_pm_socdata *socdata)
 	pm_info->ddrc_base.vbase = (void __iomem *)
 				    IMX_IO_P2V(MX7D_DDRC_BASE_ADDR);
 
+	pm_info->ddrc_phy_base.pbase = MX7D_DDRC_PHY_BASE_ADDR;
+	pm_info->ddrc_phy_base.vbase = (void __iomem *)
+				    IMX_IO_P2V(MX7D_DDRC_PHY_BASE_ADDR);
+
 	pm_info->src_base.pbase = MX7D_SRC_BASE_ADDR;
 	pm_info->src_base.vbase = (void __iomem *)
 				   IMX_IO_P2V(MX7D_SRC_BASE_ADDR);
 
-	pm_info->iomuxc_base.pbase = MX7D_IOMUXC_BASE_ADDR;
-	pm_info->iomuxc_base.vbase = (void __iomem *)
-				      IMX_IO_P2V(MX7D_IOMUXC_BASE_ADDR);
+	pm_info->iomuxc_gpr_base.pbase = MX7D_IOMUXC_GPR_BASE_ADDR;
+	pm_info->iomuxc_gpr_base.vbase = (void __iomem *)
+				      IMX_IO_P2V(MX7D_IOMUXC_GPR_BASE_ADDR);
 
 	pm_info->gpc_base.pbase = MX7D_GPC_BASE_ADDR;
 	pm_info->gpc_base.vbase = (void __iomem *)
@@ -361,26 +473,23 @@ static int __init imx7_suspend_init(const struct imx7_pm_socdata *socdata)
 	pm_info->anatop_base.vbase = (void __iomem *)
 				  IMX_IO_P2V(MX7D_ANATOP_BASE_ADDR);
 
-	pm_info->ddrc_io_num = socdata->ddrc_io_num;
-	ddrc_io_offset_array = socdata->ddrc_io_offset;
 	pm_info->ddrc_num = socdata->ddrc_num;
 	ddrc_offset_array = socdata->ddrc_offset;
+	pm_info->ddrc_phy_num = socdata->ddrc_phy_num;
+	ddrc_phy_offset_array = socdata->ddrc_phy_offset;
 
-	/* initialize DDRC IO settings */
-	for (i = 0; i < pm_info->ddrc_io_num; i++) {
-		pm_info->ddrc_io_val[i][0] =
-			ddrc_io_offset_array[i];
-		pm_info->ddrc_io_val[i][1] =
-			readl_relaxed(pm_info->iomuxc_base.vbase +
-			ddrc_io_offset_array[i]);
-	}
 	/* initialize DDRC settings */
 	for (i = 0; i < pm_info->ddrc_num; i++) {
-		pm_info->ddrc_val[i][0] =
-			ddrc_offset_array[i];
-		pm_info->ddrc_val[i][1] =
-			readl_relaxed(pm_info->ddrc_base.vbase +
-			ddrc_offset_array[i]);
+		pm_info->ddrc_val[i][0] = ddrc_offset_array[i][0];
+		pm_info->ddrc_val[i][1] = ddrc_offset_array[i][1];
+	}
+
+	/* initialize DDRC PHY settings */
+	for (i = 0; i < pm_info->ddrc_phy_num; i++) {
+		pm_info->ddrc_phy_val[i][0] =
+			ddrc_phy_offset_array[i][0];
+		pm_info->ddrc_phy_val[i][1] =
+			ddrc_phy_offset_array[i][1];
 	}
 
 	imx7_suspend_in_ocram_fn = fncpy(
@@ -399,6 +508,7 @@ put_node:
 static void __init imx7_pm_common_init(const struct imx7_pm_socdata
 					*socdata)
 {
+	struct regmap *gpr;
 	int ret;
 
 	if (IS_ENABLED(CONFIG_SUSPEND)) {
@@ -407,9 +517,35 @@ static void __init imx7_pm_common_init(const struct imx7_pm_socdata
 			pr_warn("%s: No DDR LPM support with suspend %d!\n",
 				__func__, ret);
 	}
+
+	/*
+	 * Force IOMUXC irq pending, so that the interrupt to GPC can be
+	 * used to deassert dsm_request signal when the signal gets
+	 * asserted unexpectedly.
+	 */
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx7d-iomuxc-gpr");
+	if (!IS_ERR(gpr))
+		regmap_update_bits(gpr, IOMUXC_GPR1, IMX7D_GPR1_IRQ_MASK,
+				   IMX7D_GPR1_IRQ_MASK);
 }
 
 void __init imx7d_pm_init(void)
 {
+	struct device_node *np;
+	struct resource res;
+
 	imx7_pm_common_init(&imx7d_pm_data);
+
+	np = of_find_compatible_node(NULL, NULL, "mmio-sram");
+	ocram_base = of_iomap(np, 0);
+	WARN_ON(!ocram_base);
+	WARN_ON(of_address_to_resource(np, 0, &res));
+	ocram_size = resource_size(&res);
+	ocram_saved_in_ddr = kzalloc(ocram_size, GFP_KERNEL);
+	WARN_ON(!ocram_saved_in_ddr);
+
+	np = of_find_node_by_path(
+		"/soc/aips-bus@30800000/serial@30860000");
+	if (np)
+		console_base = of_iomap(np, 0);
 }

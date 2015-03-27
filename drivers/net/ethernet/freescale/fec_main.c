@@ -1229,8 +1229,7 @@ fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
 			skb = txq->tx_skbuff[index];
 			bdnum++;
 		}
-		if (skb_shinfo(skb)->nr_frags &&
-		    (status = bdp_t->cbd_sc) & BD_ENET_TX_READY)
+		if ((status = bdp_t->cbd_sc) & BD_ENET_TX_READY)
 			break;
 
 		for (i = 0; i < bdnum; i++) {
@@ -2851,7 +2850,6 @@ fec_enet_close(struct net_device *ndev)
 	}
 
 	phy_disconnect(fep->phy_dev);
-	fep->phy_dev = NULL;
 
 	fec_enet_clk_enable(ndev, false);
 	pm_qos_remove_request(&ndev->pm_qos_req);

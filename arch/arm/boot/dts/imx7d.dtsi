@@ -49,6 +49,15 @@
 			compatible = "arm,cortex-a7";
 			device_type = "cpu";
 			reg = <0>;
+			operating-points = <
+				/* KHz	uV */
+				996000	1075000
+				792000	975000
+			>;
+			clock-latency = <61036>; /* two CLK32 periods */
+			clocks = <&clks IMX7D_ARM_A7_ROOT_CLK>, <&clks IMX7D_ARM_A7_ROOT_SRC>,
+				 <&clks IMX7D_PLL_ARM_MAIN_CLK>, <&clks IMX7D_PLL_SYS_MAIN_CLK>;
+			clock-names = "arm", "arm_root_src", "pll_arm", "pll_sys_main";
 		};
 
 		cpu1: cpu@1 {
@@ -615,7 +624,7 @@
 			ranges;
 
 			adc1: adc@30610000 {
-				compatible = "fsl,imx7d-adc", "fsl,vf610-adc";
+				compatible = "fsl,imx7d-adc";
 				reg = <0x30610000 0x10000>;
 				interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_CLK_DUMMY>;
@@ -625,7 +634,7 @@
 			};
 
 			adc2: adc@30620000 {
-				compatible = "fsl,imx7d-adc", "fsl,vf610-adc";
+				compatible = "fsl,imx7d-adc";
 				reg = <0x30620000 0x10000>;
 				interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_CLK_DUMMY>;
@@ -637,7 +646,7 @@
 			ecspi4: ecspi@30630000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
-				compatible = "fsl,imx7d-ecspi", "fsl,imx51-ecspi";
+				compatible = "fsl,imx7d-ecspi", "fsl,imx6sx-ecspi", "fsl,imx51-ecspi";
 				reg = <0x30630000 0x10000>;
 				interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_ECSPI4_ROOT_CLK>,
@@ -776,6 +785,11 @@
 				reg = <0x30760000 0x10000>;
 				status = "disabled";
 			};
+
+			ddrc: ddrc@307a0000 {
+				compatible = "fsl,imx7-ddrc";
+				reg = <0x307a0000 0x10000>;
+			};
 		};
 
 		aips3: aips-bus@30800000 {
@@ -788,7 +802,7 @@
 			ecspi1: ecspi@30820000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
-				compatible = "fsl,imx7d-ecspi", "fsl,imx51-ecspi";
+				compatible = "fsl,imx7d-ecspi", "fsl,imx6sx-ecspi", "fsl,imx51-ecspi";
 				reg = <0x30820000 0x10000>;
 				interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_ECSPI1_ROOT_CLK>,
@@ -802,7 +816,7 @@
 			ecspi2: ecspi@30830000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
-				compatible = "fsl,imx7d-ecspi", "fsl,imx51-ecspi";
+				compatible = "fsl,imx7d-ecspi", "fsl,imx6sx-ecspi", "fsl,imx51-ecspi";
 				reg = <0x30830000 0x10000>;
 				interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_ECSPI2_ROOT_CLK>,
@@ -816,7 +830,7 @@
 			ecspi3: ecspi@30840000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
-				compatible = "fsl,imx7d-ecspi", "fsl,imx51-ecspi";
+				compatible = "fsl,imx7d-ecspi", "fsl,imx6sx-ecspi", "fsl,imx51-ecspi";
 				reg = <0x30840000 0x10000>;
 				interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_ECSPI3_ROOT_CLK>,
@@ -1158,7 +1172,7 @@
 			};
 
 			weim: weim@30bc0000 {
-				compatible = "fsl,imx7d-weim", "fsl,imx6q-weim";
+				compatible = "fsl,imx7d-weim", "fsl,imx6sx-weim", "fsl,imx6q-weim";
 				reg = <0x30bc0000 0x10000>;
 				interrupts = <GIC_SPI 13 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_EIM_ROOT_CLK>;

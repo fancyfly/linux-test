@@ -27,6 +27,10 @@
 		status = "okay";
 	};
 
+	pxp_v4l2_out {
+		compatible = "fsl,imx7d-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
+		status = "okay";
+	};
 
 	regulators {
 		compatible = "simple-bus";
@@ -97,7 +101,7 @@
 			#gpio-cells = <2>;
 			reg = <0>;
 			registers-number = <1>;
-			registers-default = /bits/ 8 <0x40>; /* Enable PERI_3V3 */
+			registers-default = /bits/ 8 <0x44>; /* Enable PERI_3V3 and HDMI_RST*/
 			spi-max-frequency = <100000>;
 		};
 	};
@@ -356,6 +360,16 @@
 			};
 		};
 	};
+
+	sii902x@39 {
+		compatible = "SiI,sii902x";
+		interrupt-parent = <&gpio2>;
+		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;
+		mode_str ="1280x720M@60";
+		bits-per-pixel = <16>;
+		reg = <0x39>;
+		status = "okay";
+	};
 };
 
 &i2c4 {
@@ -427,6 +441,7 @@
 				MX7D_PAD_EPDC_PWR_COM__GPIO2_IO30  0x80000000  /* v3p3 */
 				MX7D_PAD_EPDC_SDCE2__GPIO2_IO22  0x80000000  /* pwr int */
 				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23	 0x80000000  /* bt reg on */
+				MX7D_PAD_EPDC_DATA13__GPIO2_IO13 0x59
 			>;
 		};
 		pinctrl_gpio_keys: gpio_keysgrp {

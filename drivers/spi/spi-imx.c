@@ -53,6 +53,7 @@
 /* generic defines to abstract from the different register layouts */
 #define MXC_INT_RR	(1 << 0) /* Receive data ready interrupt */
 #define MXC_INT_TE	(1 << 1) /* Transmit FIFO empty interrupt */
+#define MXC_INT_TCEN    (1 << 7)   /* Transfer complete */
 
 /* The maximum  bytes that a sdma BD can transfer.*/
 #define MAX_SDMA_BD_BYTES  (1 << 15)
@@ -112,6 +113,8 @@ struct spi_imx_data {
 	u32 rxt_wml;
 	struct completion dma_rx_completion;
 	struct completion dma_tx_completion;
+	struct dma_slave_config rx_config;
+	struct dma_slave_config tx_config;
 
 	const struct spi_imx_devtype_data *devtype_data;
 	int chipselect[0];
@@ -231,6 +234,7 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 #define MX51_ECSPI_INT		0x10
 #define MX51_ECSPI_INT_TEEN		(1 <<  0)
 #define MX51_ECSPI_INT_RREN		(1 <<  3)
+#define MX51_ECSPI_INT_TCEN             (1 << 7)
 
 #define MX51_ECSPI_DMA      0x14
 #define MX51_ECSPI_DMA_TX_WML_OFFSET	0
@@ -294,6 +298,9 @@ static void __maybe_unused mx51_ecspi_intctrl(struct spi_imx_data *spi_imx, int 
 
 	if (enable & MXC_INT_RR)
 		val |= MX51_ECSPI_INT_RREN;
+
+	if (enable & MXC_INT_TCEN)
+		val |= MX51_ECSPI_INT_TCEN;
 
 	writel(val, spi_imx->base + MX51_ECSPI_INT);
 }
@@ -762,6 +769,7 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	struct spi_imx_config config;
+	int ret;
 
 	config.bpw = t ? t->bits_per_word : spi->bits_per_word;
 	config.speed_hz  = t ? t->speed_hz : spi->max_speed_hz;
@@ -777,12 +785,35 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 	if (config.bpw <= 8) {
 		spi_imx->rx = spi_imx_buf_rx_u8;
 		spi_imx->tx = spi_imx_buf_tx_u8;
+		spi_imx->tx_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+		spi_imx->rx_config.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
 	} else if (config.bpw <= 16) {
 		spi_imx->rx = spi_imx_buf_rx_u16;
 		spi_imx->tx = spi_imx_buf_tx_u16;
+		spi_imx->tx_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+		spi_imx->rx_config.src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	} else {
 		spi_imx->rx = spi_imx_buf_rx_u32;
 		spi_imx->tx = spi_imx_buf_tx_u32;
+		spi_imx->tx_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		spi_imx->rx_config.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	}
+
+	if (spi_imx->bitbang.master->can_dma &&
+	    spi_imx_can_dma(spi_imx->bitbang.master, spi, t)) {
+		ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_tx,
+						&spi_imx->tx_config);
+		if (ret) {
+			dev_err(&spi->dev, "error in TX dma configuration.\n");
+			return ret;
+		}
+
+		ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_rx,
+						&spi_imx->rx_config);
+		if (ret) {
+			dev_err(&spi->dev, "error in RX dma configuration.\n");
+			return ret;
+		}
 	}
 
 	spi_imx->devtype_data->config(spi_imx, &config);
@@ -811,7 +842,6 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 			     struct spi_master *master,
 			     const struct resource *res)
 {
-	struct dma_slave_config slave_config = {};
 	int ret;
 
 	/* Prepare for TX DMA: */
@@ -822,11 +852,11 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 		goto err;
 	}
 
-	slave_config.direction = DMA_MEM_TO_DEV;
-	slave_config.dst_addr = res->start + MXC_CSPITXDATA;
-	slave_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
-	slave_config.dst_maxburst = spi_imx_get_fifosize(spi_imx) / 4;
-	ret = dmaengine_slave_config(master->dma_tx, &slave_config);
+	spi_imx->tx_config.direction = DMA_MEM_TO_DEV;
+	spi_imx->tx_config.dst_addr = res->start + MXC_CSPITXDATA;
+	spi_imx->tx_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	spi_imx->tx_config.dst_maxburst = spi_imx_get_fifosize(spi_imx) / 4;
+	ret = dmaengine_slave_config(master->dma_tx, &spi_imx->tx_config);
 	if (ret) {
 		dev_err(dev, "error in TX dma configuration.\n");
 		goto err;
@@ -840,11 +870,11 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 		goto err;
 	}
 
-	slave_config.direction = DMA_DEV_TO_MEM;
-	slave_config.src_addr = res->start + MXC_CSPIRXDATA;
-	slave_config.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
-	slave_config.src_maxburst = spi_imx_get_fifosize(spi_imx) / 2;
-	ret = dmaengine_slave_config(master->dma_rx, &slave_config);
+	spi_imx->rx_config.direction = DMA_DEV_TO_MEM;
+	spi_imx->rx_config.src_addr = res->start + MXC_CSPIRXDATA;
+	spi_imx->rx_config.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	spi_imx->rx_config.src_maxburst = spi_imx_get_fifosize(spi_imx) / 2;
+	ret = dmaengine_slave_config(master->dma_rx, &spi_imx->rx_config);
 	if (ret) {
 		dev_err(dev, "error in RX dma configuration.\n");
 		goto err;
@@ -876,6 +906,27 @@ static void spi_imx_dma_tx_callback(void *cookie)
 	struct spi_imx_data *spi_imx = (struct spi_imx_data *)cookie;
 
 	complete(&spi_imx->dma_tx_completion);
+}
+
+static void spi_imx_tail_pio_set(struct spi_imx_data *spi_imx, int left)
+{
+
+	switch (spi_imx->rx_config.src_addr_width) {
+	case DMA_SLAVE_BUSWIDTH_1_BYTE:
+		spi_imx->rx = spi_imx_buf_rx_u8;
+		break;
+	case DMA_SLAVE_BUSWIDTH_2_BYTES:
+		spi_imx->rx = spi_imx_buf_rx_u16;
+		break;
+	case DMA_SLAVE_BUSWIDTH_4_BYTES:
+		spi_imx->rx = spi_imx_buf_rx_u32;
+		break;
+	default:
+		spi_imx->rx = spi_imx_buf_rx_u8;
+		break;
+	}
+
+	spi_imx->txfifo = left / spi_imx->tx_config.dst_addr_width;
 }
 
 static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
@@ -950,12 +1001,22 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 			dmaengine_terminate_all(master->dma_rx);
 		} else if (left) {
 			/* read the tail data by PIO */
-			void *tmpbuf = transfer->rx_buf + transfer->len - left;
+			dma_sync_sg_for_cpu(master->dma_rx->device->dev,
+					    &rx->sgl[rx->nents - 1], 1,
+					    DMA_FROM_DEVICE);
+			spi_imx->rx_buf = transfer->rx_buf
+						+ (transfer->len - left);
+			spi_imx_tail_pio_set(spi_imx, left);
+			reinit_completion(&spi_imx->xfer_done);
 
-			while (readl(spi_imx->base + MX51_ECSPI_STAT) & 0x8) {
-				*(char *)tmpbuf =
-					readl(spi_imx->base + MXC_CSPIRXDATA);
-				tmpbuf++;
+			spi_imx->devtype_data->intctrl(spi_imx, MXC_INT_TCEN);
+
+			ret = wait_for_completion_timeout(&spi_imx->xfer_done,
+						IMX_DMA_TIMEOUT(transfer->len));
+			if (!ret) {
+				pr_warn("%s %s: I/O Error in RX tail\n",
+					dev_driver_string(&master->dev),
+					dev_name(&master->dev));
 			}
 		}
 	}
@@ -1005,6 +1066,7 @@ static int spi_imx_transfer(struct spi_device *spi,
 	    spi_imx_can_dma(spi_imx->bitbang.master, spi, transfer)) {
 		spi_imx->usedma = true;
 		ret = spi_imx_dma_transfer(spi_imx, transfer);
+		spi_imx->usedma = false; /* clear the dma flag */
 		if (ret != -EAGAIN)
 			return ret;
 	}

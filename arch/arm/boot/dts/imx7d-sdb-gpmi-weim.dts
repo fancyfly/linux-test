@@ -8,18 +8,18 @@
 
 #include "imx7d-sdb.dts"
 
-&fec1 {
+&sai1{
 	status = "disabled";
 };
 
-&fec2 {
+&usdhc3{
 	status = "disabled";
 };
 
-&epdc {
-        status = "okay";
+&uart5{
+	status = "disabled";
 };
 
-&max17135 {
-        status = "okay";
+&gpmi{
+	status = "okay";
 };

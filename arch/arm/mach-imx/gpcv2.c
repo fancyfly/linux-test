@@ -100,6 +100,7 @@ static void __iomem *gpc_base;
 static u32 gpcv2_wake_irqs[IMR_NUM];
 static u32 gpcv2_saved_imrs[IMR_NUM];
 static u32 gpcv2_mf_irqs[IMR_NUM];
+static u32 gpcv2_mf_request_on[IMR_NUM];
 static DEFINE_SPINLOCK(gpcv2_lock);
 static struct notifier_block nb_pcie;
 
@@ -315,12 +316,28 @@ static void imx_gpcv2_mf_mix_off(void)
 	int i;
 
 	for (i = 0; i < IMR_NUM; i++)
-		if ((gpcv2_wake_irqs[i] & gpcv2_mf_irqs[i]) != 0)
+		if (((gpcv2_wake_irqs[i] | gpcv2_mf_request_on[i]) &
+						gpcv2_mf_irqs[i]) != 0)
 			return;
 
 	pr_info("Turn off Mega/Fast mix in DSM\n");
 	imx_gpcv2_set_mix_phy_gate_by_lpm(1, 5);
 	imx_gpcv2_set_m_core_pgc(true, GPC_PGC_FM);
+}
+
+int imx_gpcv2_mf_power_on(unsigned int irq, unsigned int on)
+{
+	unsigned int idx = irq / 32 - 1;
+	unsigned long flags;
+	u32 mask;
+
+	mask = 1 << (irq % 32);
+	spin_lock_irqsave(&gpcv2_lock, flags);
+	gpcv2_mf_request_on[idx] = on ? gpcv2_mf_request_on[idx] | mask :
+				  gpcv2_mf_request_on[idx] & ~mask;
+	spin_unlock_irqrestore(&gpcv2_lock, flags);
+
+	return 0;
 }
 
 void imx_gpcv2_pre_suspend(bool arm_power_off)
@@ -495,7 +512,7 @@ void __init imx_gpcv2_init(void)
 	}
 
 	/* only external IRQs to wake up LPM and core 0/1 */
-	writel_relaxed(BM_LPCR_A7_BSC_IRQ_SRC_A7_WAKEUP,
+	writel_relaxed(0x3 << BP_LPCR_A7_BSC_IRQ_SRC,
 		gpc_base + GPC_LPCR_A7_BSC);
 	/* mask m4 dsm trigger */
 	writel_relaxed(readl_relaxed(gpc_base + GPC_LPCR_M4) |

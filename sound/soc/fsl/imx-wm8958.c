@@ -130,8 +130,21 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	struct device *dev = card->dev;
 	struct imx_wm8958_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	unsigned int sample_rate = params_rate(params);
 	unsigned int pll_out;
 	int ret;
+
+	if (tx && params_width(params) == 24) {
+		if (sample_rate == 88200 || sample_rate == 96000) {
+			dev_err(dev, "Can't support sample rate %dHZ\n", sample_rate);
+			return -EINVAL;
+		}
+	} else if (!tx && params_width(params) == 24) {
+		if (sample_rate == 44100 || sample_rate == 48000) {
+			dev_err(dev, "Can't support sample rate %dHZ\n", sample_rate);
+			return -EINVAL;
+		}
+	}
 
 	ret = snd_soc_dai_set_fmt(codec_dai, data->dai.dai_fmt);
 	if (ret) {
@@ -161,9 +174,12 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 			return ret;
 		}
 	} else {
-		data->sr_stream[tx] = params_rate(params);
+		data->sr_stream[tx] = sample_rate;
 
-		pll_out = data->sr_stream[tx] * 256;
+		if (params_width(params) == 24)
+			pll_out = data->sr_stream[tx] * 384;
+		else
+			pll_out = data->sr_stream[tx] * 256;
 
 		ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL1,
 					  WM8994_FLL_SRC_MCLK1,
@@ -193,6 +209,12 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	 * LRCLK from DACLRCK1.
 	 */
 	snd_soc_update_bits(codec, WM8994_GPIO_1, 0x1f, 0x2);
+
+	/*
+	 * Clear ADC_OSR128 bit to support slower SYSCLK, and support ADC sample
+	 * rate 8K, 11.025K and 12K.
+	 */
+	snd_soc_update_bits(codec, WM8994_OVERSAMPLING, 1<<1, 0);
 	return 0;
 }
 
@@ -223,12 +245,32 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
+static u32 imx_wm8958_adc_rates[] = {
+	8000, 11025, 12000, 16000, 22050,
+	24000, 32000, 44100, 48000
+};
+
+static u32 imx_wm8958_dac_rates[] = {
+	8000, 11025, 12000, 16000, 22050,
+	24000, 32000, 44100, 48000, 88200, 96000
+};
+
+static struct snd_pcm_hw_constraint_list imx_wm8958_adc_rate_constraints = {
+	.count = ARRAY_SIZE(imx_wm8958_adc_rates),
+	.list = imx_wm8958_adc_rates,
+};
+
+static struct snd_pcm_hw_constraint_list imx_wm8958_dac_rate_constraints = {
+	.count = ARRAY_SIZE(imx_wm8958_dac_rates),
+	.list = imx_wm8958_dac_rates,
+};
+
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct imx_wm8958_data *data = snd_soc_card_get_drvdata(card);
-	int ret;
+	int ret = 0;
 
 	if (!IS_ERR(data->mclk)) {
 		ret = clk_prepare_enable(data->mclk);
@@ -238,7 +280,13 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 		}
 	}
 
-	return 0;
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
+			SNDRV_PCM_HW_PARAM_RATE, &imx_wm8958_adc_rate_constraints);
+	else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
+			SNDRV_PCM_HW_PARAM_RATE, &imx_wm8958_dac_rate_constraints);
+	return ret;
 }
 
 static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
@@ -379,6 +427,7 @@ static int imx_wm8958_probe(struct platform_device *pdev)
 	data->dai.cpu_dai_name = dev_name(&cpu_pdev->dev);
 	data->dai.platform_of_node = cpu_np;
 	data->dai.ops = &imx_hifi_ops;
+	data->dai.ignore_pmdown_time = 1;
 	data->dai.dai_fmt |= SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF;
 
 	data->card.dev = &pdev->dev;

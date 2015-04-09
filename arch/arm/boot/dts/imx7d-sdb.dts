@@ -83,6 +83,14 @@
 		codec-master;
 	};
 
+	sound-hdmi {
+		compatible = "fsl,imx7d-sdb-sii902x",
+			   "fsl,imx-audio-sii902x";
+		model = "sii902x-audio";
+		cpu-dai = <&sai1>;
+		hdmi-controler = <&sii902x>;
+	};
+
 	spi4 {
 		compatible = "spi-gpio";
 		pinctrl-names = "default";
@@ -183,6 +191,13 @@
 	pinctrl-0 = <&pinctrl_flexcan2>;
 	xceiver-supply = <&reg_can2_3v3>;
 	status = "okay";
+};
+
+&gpmi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_gpmi_nand_1>;
+	status = "disabled";
+	nand-on-flash-bbt;
 };
 
 &i2c1 {
@@ -295,9 +310,13 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-	max17135@48 {
+	max17135: max17135@48 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_max17135>;
 		compatible = "maxim,max17135";
 		reg = <0x48>;
+		status = "disabled";
+
 		vneg_pwrup = <1>;
 		gvee_pwrup = <2>;
 		vpos_pwrup = <10>;
@@ -361,8 +380,10 @@
 		};
 	};
 
-	sii902x@39 {
+	sii902x: sii902x@39 {
 		compatible = "SiI,sii902x";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sii902x>;
 		interrupt-parent = <&gpio2>;
 		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;
 		mode_str ="1280x720M@60";
@@ -435,13 +456,7 @@
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
 				MX7D_PAD_UART3_CTS_B__GPIO4_IO7	0x14
-				MX7D_PAD_EPDC_PWR_STAT__GPIO2_IO31 0x80000000 /* pwrgood */
-				MX7D_PAD_I2C4_SCL__GPIO4_IO14     0x80000000  /* vcom_ctrl */
-				MX7D_PAD_EPDC_SDCE3__GPIO2_IO23	  0x80000000  /* wakeup */
-				MX7D_PAD_EPDC_PWR_COM__GPIO2_IO30  0x80000000  /* v3p3 */
-				MX7D_PAD_EPDC_SDCE2__GPIO2_IO22  0x80000000  /* pwr int */
 				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23	 0x80000000  /* bt reg on */
-				MX7D_PAD_EPDC_DATA13__GPIO2_IO13 0x59
 			>;
 		};
 		pinctrl_gpio_keys: gpio_keysgrp {
@@ -527,6 +542,28 @@
 			>;
 		};
 
+		pinctrl_gpmi_nand_1: gpmi-nand-1 {
+			fsl,pins = <
+				MX7D_PAD_SD3_CLK__NAND_CLE			0x71
+				MX7D_PAD_SD3_CMD__NAND_ALE			0x71
+				MX7D_PAD_SAI1_MCLK__NAND_WP_B		0x71
+				MX7D_PAD_SAI1_TX_BCLK__NAND_CE0_B	0x71
+				MX7D_PAD_SAI1_RX_DATA__NAND_CE1_B	0x71
+				MX7D_PAD_SAI1_TX_DATA__NAND_READY_B	0x74
+				MX7D_PAD_SD3_STROBE__NAND_RE_B		0x71
+				MX7D_PAD_SD3_RESET_B__NAND_WE_B		0x71
+				MX7D_PAD_SD3_DATA0__NAND_DATA00		0x71
+				MX7D_PAD_SD3_DATA1__NAND_DATA01		0x71
+				MX7D_PAD_SD3_DATA2__NAND_DATA02		0x71
+				MX7D_PAD_SD3_DATA3__NAND_DATA03		0x71
+				MX7D_PAD_SD3_DATA4__NAND_DATA04		0x71
+				MX7D_PAD_SD3_DATA5__NAND_DATA05		0x71
+				MX7D_PAD_SD3_DATA6__NAND_DATA06		0x71
+				MX7D_PAD_SD3_DATA7__NAND_DATA07		0x71
+
+			>;
+		};
+
 		pinctrl_i2c1: i2c1grp {
 			fsl,pins = <
 				MX7D_PAD_I2C1_SDA__I2C1_SDA	0x4000007f
@@ -591,6 +628,22 @@
 				MX7D_PAD_LCD_VSYNC__LCD_VSYNC	0x4001b0b0
 				MX7D_PAD_LCD_HSYNC__LCD_HSYNC	0x4001b0b0
 				MX7D_PAD_LCD_RESET__LCD_RESET	0x4001b0b0
+			>;
+		};
+
+		pinctrl_max17135: max17135grp-1 {
+			fsl,pins = <
+				MX7D_PAD_EPDC_PWR_STAT__GPIO2_IO31	0x80000000  /* pwrgood */
+				MX7D_PAD_I2C4_SCL__GPIO4_IO14		0x80000000  /* vcom_ctrl */
+				MX7D_PAD_EPDC_SDCE3__GPIO2_IO23		0x80000000  /* wakeup */
+				MX7D_PAD_EPDC_PWR_COM__GPIO2_IO30	0x80000000  /* v3p3 */
+				MX7D_PAD_EPDC_SDCE2__GPIO2_IO22		0x80000000  /* pwr int */
+			>;
+		};
+
+		pinctrl_sii902x: hdmigrp-1 {
+			fsl,pins = <
+				MX7D_PAD_EPDC_DATA13__GPIO2_IO13 0x59
 			>;
 		};
 
@@ -684,10 +737,10 @@
 		pinctrl_sai1: sai1grp {
 			fsl,pins = <
 				MX7D_PAD_SAI1_MCLK__SAI1_MCLK           0x1f
-				MX7D_PAD_ENET1_RX_CLK__SAI1_TX_BCLK     0X1f
-				MX7D_PAD_ENET1_CRS__SAI1_TX_SYNC	0X1f
-				MX7D_PAD_ENET1_COL__SAI1_TX_DATA0	0X1f
-				MX7D_PAD_ENET1_TX_CLK__SAI1_RX_DATA0	0X1f
+				MX7D_PAD_ENET1_RX_CLK__SAI1_TX_BCLK     0x1f
+				MX7D_PAD_ENET1_CRS__SAI1_TX_SYNC	0x1f
+				MX7D_PAD_ENET1_COL__SAI1_TX_DATA0	0
+				MX7D_PAD_ENET1_TX_CLK__SAI1_RX_DATA0	0x1f
 			>;
 		};
 
@@ -695,7 +748,7 @@
 			fsl,pins = <
 				MX7D_PAD_SAI2_TX_BCLK__SAI2_TX_BCLK     0x1f
 				MX7D_PAD_SAI2_TX_SYNC__SAI2_TX_SYNC     0x1f
-				MX7D_PAD_SAI2_TX_DATA__SAI2_TX_DATA0    0x1f
+				MX7D_PAD_SAI2_TX_DATA__SAI2_TX_DATA0    0
 				MX7D_PAD_SAI2_RX_DATA__SAI2_RX_DATA0    0x1f
 			>;
 		};
@@ -735,9 +788,18 @@
 	status = "okay";
 };
 
+&clks {
+	assigned-clocks = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
+	assigned-clock-rates = <884736000>;
+};
+
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
+	assigned-clocks = <&clks IMX7D_SAI1_ROOT_SRC>,
+			  <&clks IMX7D_SAI1_ROOT_CLK>;
+	assigned-clock-parents = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
+	assigned-clock-rates = <0>, <18432000>;
 	status = "okay";
 };
 

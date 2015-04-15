@@ -6,11 +6,20 @@
  * published by the Free Software Foundation.
  */
 
-#include "imx7d-19x19-arm2.dts"
+#include "imx7d-12x12-lpddr3-arm2.dts"
 
-&i2c2 {
-	ov5640: ov5640@3c {
-		status = "okay";
-	};
+&sai1 {
+	status = "disabled";
 };
 
+&fec1 {
+	status = "disabled";
+};
+
+&flexcan1 {
+	status = "okay";
+};
+
+&flexcan2 {
+	status = "okay";
+};

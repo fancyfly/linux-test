@@ -8,22 +8,13 @@
 
 #include "imx7d-sdb.dts"
 
-&fec1 {
-	status = "disabled";
+/ {
+	sound {
+		status = "okay";
+	};
+
+	sound-hdmi {
+		status = "disabled";
+	};
 };
 
-&fec2 {
-	status = "disabled";
-};
-
-&epdc {
-        status = "okay";
-};
-
-&max17135 {
-        status = "okay";
-};
-
-&sii902x {
-	status = "disabled";
-};

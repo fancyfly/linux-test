@@ -6,12 +6,15 @@
  * published by the Free Software Foundation.
  */
 
-#include "imx7d-12x12-arm2.dts"
+#include "imx7d-sdb.dts"
 
-&epdc {
-        status = "disabled";
+/ {
+	sound {
+		status = "disabled";
+	};
+
+	sound-hdmi {
+		status = "okay";
+	};
 };
 
-&fec2 {
-	status = "okay";
-};

@@ -6,24 +6,11 @@
  * published by the Free Software Foundation.
  */
 
-#include "imx7d-sdb.dts"
+#include "imx7d-19x19-ddr3-arm2.dts"
 
-&fec1 {
-	status = "disabled";
+&i2c2 {
+	ov5640: ov5640@3c {
+		status = "okay";
+	};
 };
 
-&fec2 {
-	status = "disabled";
-};
-
-&epdc {
-        status = "okay";
-};
-
-&max17135 {
-        status = "okay";
-};
-
-&sii902x {
-	status = "disabled";
-};

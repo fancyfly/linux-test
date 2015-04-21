@@ -60,6 +60,8 @@
 
 #include "mxc/mxc_dispdrv.h"
 
+#include "mxc/mxc_dispdrv.h"
+
 #define REG_SET	4
 #define REG_CLR	8
 

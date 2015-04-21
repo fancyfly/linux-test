@@ -369,7 +369,7 @@ static int const clks_init_on[] __initconst = {
 	IMX7D_PLL_SYS_PFD4_CLK, IMX7D_PLL_SYS_PFD5_CLK, IMX7D_PLL_SYS_PFD6_CLK,
 	IMX7D_PLL_SYS_PFD7_CLK, IMX7D_DRAM_PHYM_ROOT_CLK, IMX7D_DRAM_ROOT_CLK,
 	IMX7D_DRAM_PHYM_ALT_ROOT_CLK, IMX7D_DRAM_ALT_ROOT_CLK,
-	IMX7D_AHB_CHANNEL_ROOT_CLK, IMX7D_NAND_USDHC_BUS_ROOT_CLK, IMX7D_PLL_VIDEO_POST_DIV,
+	IMX7D_AHB_CHANNEL_ROOT_CLK, IMX7D_NAND_USDHC_BUS_ROOT_CLK,
 	};
 
 static struct clk_onecell_data clk_data;
@@ -919,6 +919,9 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 
 	/* set lcdif pixel root clock source to get the required 33Mhz clock */
 	imx_clk_set_parent(clks[IMX7D_LCDIF_PIXEL_ROOT_SRC], clks[IMX7D_PLL_VIDEO_POST_DIV]);
+
+	/* set parent of SIM1 root clock */
+	imx_clk_set_parent(clks[IMX7D_SIM1_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_120M_CLK]);
 
 	mxc_timer_init_dt(of_find_compatible_node(NULL, NULL, "fsl,imx7d-gpt"));
 }

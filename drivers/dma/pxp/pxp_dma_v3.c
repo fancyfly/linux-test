@@ -364,6 +364,7 @@ static bool is_yuv(u32 pix_fmt)
 	    (pix_fmt == PXP_PIX_FMT_Y41P) |
 	    (pix_fmt == PXP_PIX_FMT_VUY444) |
 	    (pix_fmt == PXP_PIX_FMT_NV12) |
+	    (pix_fmt == PXP_PIX_FMT_NV21) |
 	    (pix_fmt == PXP_PIX_FMT_NV16) |
 	    (pix_fmt == PXP_PIX_FMT_NV61) |
 	    (pix_fmt == PXP_PIX_FMT_GREY) |
@@ -543,6 +544,18 @@ static void pxp_set_outbuf(struct pxps *pxp)
 	struct pxp_proc_data *proc_data = &pxp_conf->proc_data;
 
 	__raw_writel(out_params->paddr, pxp->base + HW_PXP_OUT_BUF);
+
+	if ((out_params->pixel_fmt == PXP_PIX_FMT_NV12) ||
+		(out_params->pixel_fmt == PXP_PIX_FMT_NV21) ||
+		(out_params->pixel_fmt == PXP_PIX_FMT_NV16) ||
+		(out_params->pixel_fmt == PXP_PIX_FMT_NV61)) {
+		dma_addr_t Y, U;
+
+		Y = out_params->paddr;
+		U = Y + (out_params->width * out_params->height);
+
+		__raw_writel(U, pxp->base + HW_PXP_OUT_BUF2);
+	}
 
 	if (proc_data->rotate == 90 || proc_data->rotate == 270)
 		__raw_writel(BF_PXP_OUT_LRC_X(out_params->height - 1) |

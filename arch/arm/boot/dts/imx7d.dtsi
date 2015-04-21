@@ -96,13 +96,13 @@
 		};
 
 	};
+
 	gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
 
-
-                /* map vol up and vol down key in Android*/
+        /* map vol up and vol down key in Android*/
 		volume-up {
 			label = "Volume Up";
 			gpios = <&gpio5 11 1>;
@@ -630,7 +630,7 @@
 				compatible = "fsl,imx7d-gpc";
 				reg = <0x303a0000 0x10000>;
 				interrupts = <GIC_SPI 87 IRQ_TYPE_LEVEL_HIGH>;
-				fsl,mf-mix-wakeup-irq = <0x4000000 0xc00 0x0 0x0>;
+				fsl,mf-mix-wakeup-irq = <0x54010000 0xc00 0x0 0x400010>;
 				#power-domain-cells = <1>;
 				pcie-phy-supply = <&reg_1p0d>;
 			};
@@ -1190,6 +1190,8 @@
 				compatible = "fsl,imx7d-sim";
 				reg = <0x30b90000 0x10000>;
 				interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX7D_SIM1_ROOT_CLK>;
+				clock-names = "sim";
 				status = "disabled";
 			};
 

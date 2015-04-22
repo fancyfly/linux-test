@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -37,6 +37,13 @@
 
 #include "imx-esai.h"
 #include "imx-pcm.h"
+
+static inline void write_esai_mask(u32 __iomem *addr, u32 clear, u32 set)
+{
+	u32 val = readl(addr);
+	val = (val & ~clear) | set;
+	writel(val, addr);
+}
 
 static struct imx_esai *local_esai;
 
@@ -296,6 +303,8 @@ static int imx_esai_startup(struct snd_pcm_substream *substream,
 	else
 		local_esai->imx_esai_txrx_state |= IMX_DAI_ESAI_RX;
 
+	esai->substream[substream->stream] = substream;
+
 	ESAI_DUMP();
 	return 0;
 }
@@ -464,6 +473,8 @@ static void imx_esai_shutdown(struct snd_pcm_substream *substream,
 	else
 		local_esai->imx_esai_txrx_state &= ~IMX_DAI_ESAI_RX;
 
+	esai->substream[substream->stream] = NULL;
+
 	if (!(local_esai->imx_esai_txrx_state & IMX_DAI_ESAI_TXRX))
 		/* close easi clock */
 		clk_disable(esai->clk);
@@ -593,6 +604,142 @@ static struct snd_soc_dai_driver imx_esai_dai = {
 	 .ops = &imx_esai_dai_ops,
 };
 
+
+static bool fsl_esai_check_xrun(void *substream)
+{
+	struct snd_soc_pcm_runtime *rtd;
+	struct snd_soc_dai *cpu_dai;
+	struct imx_esai *esai;
+	   u32 saisr;
+
+	rtd = ((struct snd_pcm_substream *)substream)->private_data;
+	cpu_dai = rtd->cpu_dai;
+	esai = snd_soc_dai_get_drvdata(cpu_dai);
+	saisr = readl(esai->base + ESAI_SAISR);
+
+	return saisr & (ESAI_SAISR_TUE | ESAI_SAISR_ROE);
+}
+
+static int store_reg(struct snd_soc_dai *cpu_dai)
+{
+	struct imx_esai *esai = snd_soc_dai_get_drvdata(cpu_dai);
+
+	esai->reg_cache[0] = readl(esai->base + ESAI_ECR);
+	esai->reg_cache[2] = readl(esai->base + ESAI_TFCR);
+	esai->reg_cache[4] = readl(esai->base + ESAI_RFCR);
+	esai->reg_cache[8] = readl(esai->base + ESAI_SAICR);
+	esai->reg_cache[9] = readl(esai->base + ESAI_TCR);
+	esai->reg_cache[10] = readl(esai->base + ESAI_TCCR);
+	esai->reg_cache[11] = readl(esai->base + ESAI_RCR);
+	esai->reg_cache[12] = readl(esai->base + ESAI_RCCR);
+	esai->reg_cache[13] = readl(esai->base + ESAI_TSMA);
+	esai->reg_cache[14] = readl(esai->base + ESAI_TSMB);
+	esai->reg_cache[15] = readl(esai->base + ESAI_RSMA);
+	esai->reg_cache[16] = readl(esai->base + ESAI_RSMB);
+	return 0;
+}
+
+static int restore_reg(struct snd_soc_dai *cpu_dai)
+{
+	struct imx_esai *esai = snd_soc_dai_get_drvdata(cpu_dai);
+
+	writel(esai->reg_cache[0], esai->base + ESAI_ECR);
+	writel(esai->reg_cache[2] & ~ESAI_TFCR_TFEN, esai->base + ESAI_TFCR);
+	writel(esai->reg_cache[4] & ~ESAI_RFCR_RFEN, esai->base + ESAI_RFCR);
+	writel(esai->reg_cache[8], esai->base + ESAI_SAICR);
+	writel(esai->reg_cache[9] & ~ESAI_TCR_TE(12), esai->base + ESAI_TCR);
+	writel(esai->reg_cache[10], esai->base + ESAI_TCCR);
+	writel(esai->reg_cache[11] & ~ESAI_RCR_RE(8), esai->base + ESAI_RCR);
+	writel(esai->reg_cache[12], esai->base + ESAI_RCCR);
+	writel(esai->reg_cache[13], esai->base + ESAI_TSMA);
+	writel(esai->reg_cache[14], esai->base + ESAI_TSMB);
+	writel(esai->reg_cache[15], esai->base + ESAI_RSMA);
+	writel(esai->reg_cache[16], esai->base + ESAI_RSMB);
+	return 0;
+}
+
+static int stop_lock_stream(struct snd_pcm_substream *substream)
+{
+	snd_pcm_state_t state;
+	int cmd = SNDRV_PCM_TRIGGER_STOP;
+	if (substream) {
+		snd_pcm_stream_lock(substream);
+		state = substream->runtime->status->state;
+		if ((state == SNDRV_PCM_STATE_RUNNING) && (substream->ops))
+			substream->ops->trigger(substream, cmd);
+	}
+	return 0;
+}
+
+static int start_unlock_stream(struct snd_pcm_substream *substream)
+{
+	snd_pcm_state_t state;
+	int cmd = SNDRV_PCM_TRIGGER_START;
+	if (substream) {
+		state = substream->runtime->status->state;
+		if ((state == SNDRV_PCM_STATE_RUNNING) && (substream->ops))
+			substream->ops->trigger(substream, cmd);
+		snd_pcm_stream_unlock(substream);
+	}
+	return 0;
+}
+
+/*
+ *Here is ESAI underrun reset step:
+ *1. Read "TUE" and got TUE=1
+ *2. stop DMA.
+ *3. stop ESAI TX section.
+ *4. Set the transmitter section individual reset "TPR=1"
+ *5. Reset the ESAI Transmit FIFO (set ESAI_TFCR[1]=1).
+ *6. Config the ESAI_TCCR and ESAI_TCR,config Transmit FIFO register.
+ *7. clear "TPR"
+ *8. read "TUE"
+ *9. Prefill ESAI TX FIFO.
+ *10.Start DMA.
+ *11 Enable the ESAI
+ */
+static void fsl_esai_reset(void  *substream, bool stop)
+{
+	struct snd_soc_pcm_runtime *rtd;
+	struct snd_soc_dai *cpu_dai;
+	struct imx_esai *esai;
+
+	rtd = ((struct snd_pcm_substream *)substream)->private_data;
+	cpu_dai = rtd->cpu_dai;
+	esai = snd_soc_dai_get_drvdata(cpu_dai);
+	ESAI_DUMP();
+
+	if (stop) {
+		stop_lock_stream(esai->substream[0]);
+		stop_lock_stream(esai->substream[1]);
+	}
+
+	store_reg(cpu_dai);
+
+	writel(ESAI_ECR_ESAIEN | ESAI_ECR_ERST, esai->base + ESAI_ECR);
+	writel(ESAI_ECR_ESAIEN, esai->base + ESAI_ECR);
+
+	write_esai_mask(esai->base+ESAI_TCR, 0, ESAI_TCR_TPR);
+	write_esai_mask(esai->base+ESAI_RCR, 0, ESAI_RCR_RPR);
+
+	restore_reg(cpu_dai);
+
+	write_esai_mask(esai->base+ESAI_TCR, ESAI_TCR_TPR, 0);
+	write_esai_mask(esai->base+ESAI_RCR, ESAI_RCR_RPR, 0);
+
+	writel(ESAI_GPIO_ESAI, esai->base + ESAI_PRRC);
+	writel(ESAI_GPIO_ESAI, esai->base + ESAI_PCRC);
+
+	/* read "TUE" flag.*/
+	readl(esai->base + ESAI_SAISR);
+
+	if (stop) {
+		start_unlock_stream(esai->substream[1]);
+		start_unlock_stream(esai->substream[0]);
+	}
+	ESAI_DUMP();
+}
+
 static int imx_esai_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -643,6 +790,12 @@ static int imx_esai_probe(struct platform_device *pdev)
 
 	esai->dma_params_tx.peripheral_type = IMX_DMATYPE_ESAI;
 	esai->dma_params_rx.peripheral_type = IMX_DMATYPE_ESAI;
+
+	esai->dma_params_tx.check_xrun = fsl_esai_check_xrun;
+	esai->dma_params_rx.check_xrun = fsl_esai_check_xrun;
+
+	esai->dma_params_tx.device_reset = fsl_esai_reset;
+	esai->dma_params_rx.device_reset = fsl_esai_reset;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_DMA, "tx");
 	if (res)

@@ -49,11 +49,17 @@ static void audio_dma_irq(void *data)
 	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)data;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct imx_pcm_runtime_data *iprtd = runtime->private_data;
+	struct imx_pcm_dma_params *dma_data;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 
 	iprtd->offset += iprtd->period_bytes;
 	iprtd->offset %= iprtd->period_bytes * iprtd->periods;
 
 	snd_pcm_period_elapsed(substream);
+
+	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+	if (dma_data->check_xrun && dma_data->check_xrun(substream))
+		dma_data->device_reset(substream, 1);
 }
 
 static bool filter(struct dma_chan *chan, void *param)

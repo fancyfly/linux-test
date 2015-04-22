@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2004-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -67,6 +67,8 @@ struct imx_pcm_dma_params {
 	int dma;
 	unsigned long dma_addr;
 	int burstsize;
+	bool (*check_xrun)(void *substream);
+	void (*device_reset)(void *substream, bool stop);
 };
 
 static inline int imx_dma_is_ipu(struct dma_chan *chan)

@@ -57,9 +57,9 @@ static const char *nand_usdhc_bus_sel[] = { "osc", "pll_sys_pfd2_270m_clk",
 	"pll_sys_pfd2_135m_clk", "pll_sys_pfd6_clk", "pll_enet_250m_clk",
 	"pll_audio_post_div", };
 
-static const char *ahb_channel_sel[] = { "osc", "pll_sys_pfd2_135m_clk",
+static const char *ahb_channel_sel[] = { "osc", "pll_sys_pfd2_270m_clk",
 	"pll_dram_533m_clk", "pll_sys_pfd0_392m_clk",
-	"pll_enet_125m_clk", "pll_usb_main_clk", "pll_audio_post_div",
+	"pll_enet_250m_clk", "pll_usb_main_clk", "pll_audio_post_div",
 	"pll_video_post_div", };
 
 static const char *dram_phym_sel[] = { "pll_dram_main_clk",
@@ -899,8 +899,6 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX7D_ENET_AXI_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_250M_CLK]);
 	imx_clk_set_rate(clks[IMX7D_ENET_AXI_ROOT_CLK], 267000000);
 	imx_clk_set_parent(clks[IMX7D_ENET_PHY_REF_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_25M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_ENET1_TIME_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_100M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_ENET2_TIME_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_100M_CLK]);
 
 	/* set uart module clock's parent clock source that must be great then 80Mhz */
 	if (uart_from_osc)

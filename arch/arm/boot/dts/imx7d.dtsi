@@ -1297,5 +1297,9 @@
 			pcie-phy-supply = <&reg_1p0d>;
 			status = "disabled";
 		};
+		imx_ion {
+			compatible = "fsl,mxc-ion";
+			fsl,heap-id = <0>;
+		};
 	};
 };

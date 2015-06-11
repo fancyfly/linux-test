@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,6 +57,11 @@
 static int video_nr = -1;	/* -1 ==> auto assign */
 static struct pxp_data_format pxp_s0_formats[] = {
 	{
+		.name = "32-bit RGB",
+		.bpp = 4,
+		.fourcc = V4L2_PIX_FMT_RGB32,
+		.colorspace = V4L2_COLORSPACE_SRGB,
+	}, {
 		.name = "24-bit RGB",
 		.bpp = 4,
 		.fourcc = V4L2_PIX_FMT_RGB24,
@@ -98,7 +103,9 @@ static unsigned int v4l2_fmt_to_pxp_fmt(u32 v4l2_pix_fmt)
 {
 	u32 pxp_fmt = 0;
 
-	if (v4l2_pix_fmt == V4L2_PIX_FMT_RGB24)
+	if (v4l2_pix_fmt == V4L2_PIX_FMT_RGB32)
+		pxp_fmt = PXP_PIX_FMT_RGB32;
+	else if (v4l2_pix_fmt == V4L2_PIX_FMT_RGB24)
 		pxp_fmt = PXP_PIX_FMT_RGB24;
 	else if (v4l2_pix_fmt == V4L2_PIX_FMT_RGB565)
 		pxp_fmt = PXP_PIX_FMT_RGB565;
@@ -443,8 +450,9 @@ static int pxp_s_output(struct file *file, void *fh,
 		return -EINVAL;
 
 	/* Output buffer is same format as fbdev */
-	if (fmt->pixelformat == V4L2_PIX_FMT_RGB24  ||
-		fmt->pixelformat == V4L2_PIX_FMT_YUV444)
+	if (fmt->pixelformat == V4L2_PIX_FMT_RGB32  ||
+		fmt->pixelformat == V4L2_PIX_FMT_RGB24  ||
+		fmt->pixelformat == V4L2_PIX_FMT_YUV32)
 		bpp = 4;
 	else
 		bpp = 2;
@@ -462,7 +470,9 @@ static int pxp_s_output(struct file *file, void *fh,
 
 	pxp->pxp_conf.out_param.width = fmt->width;
 	pxp->pxp_conf.out_param.height = fmt->height;
-	if (fmt->pixelformat == V4L2_PIX_FMT_RGB24)
+	if (fmt->pixelformat == V4L2_PIX_FMT_RGB32)
+		pxp->pxp_conf.out_param.pixel_fmt = PXP_PIX_FMT_RGB32;
+	else if (fmt->pixelformat == V4L2_PIX_FMT_RGB24)
 		pxp->pxp_conf.out_param.pixel_fmt = PXP_PIX_FMT_RGB24;
 	else
 		pxp->pxp_conf.out_param.pixel_fmt = PXP_PIX_FMT_RGB565;

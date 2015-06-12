@@ -2031,6 +2031,21 @@ gckOS_AllocateNonPagedMemory(
                 &mdl->dmaHandle,
                 GFP_KERNEL | gcdNOWARN);
     }
+#if gcdUSE_NON_PAGED_MEMORY_CACHE
+    if(addr == gcvNULL)
+    {
+            MEMORY_UNLOCK(Os);
+            locked = gcvFALSE;
+            /*Free all cache and try again*/
+            _FreeAllNonPagedMemoryCache(Os);
+            MEMORY_LOCK(Os);
+            locked = gcvTRUE;
+            addr = dma_alloc_coherent(gcvNULL,
+                mdl->numPages * PAGE_SIZE,
+                &mdl->dmaHandle,
+                GFP_KERNEL | gcdNOWARN);
+    }
+#endif
 #else
     size    = mdl->numPages * PAGE_SIZE;
     order   = get_order(size);

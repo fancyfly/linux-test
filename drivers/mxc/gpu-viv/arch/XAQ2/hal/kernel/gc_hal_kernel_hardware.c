@@ -1372,7 +1372,7 @@ gckHARDWARE_InitializeHardware(
     }
 
     if (Hardware->identity.chip2DControl & 0xFF)
-     {
+    {
 		gctUINT32 data;
 
         gcmkONERROR(
@@ -1380,7 +1380,6 @@ gckHARDWARE_InitializeHardware(
                                  Hardware->core,
                                  0x00414,
                                  &data));
-
         data = ((((gctUINT32) (data)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 7:0) - (0 ? 7:0) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 7:0) - (0 ? 7:0) + 1))))))) << (0 ? 7:0))) | (((gctUINT32) ((gctUINT32) (Hardware->identity.chip2DControl & 0xFF) & ((gctUINT32) ((((1 ? 7:0) - (0 ? 7:0) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 7:0) - (0 ? 7:0) + 1))))))) << (0 ? 7:0)));
 
         gcmkONERROR(
@@ -1388,7 +1387,7 @@ gckHARDWARE_InitializeHardware(
                                   Hardware->core,
                                   0x00414,
                                   data));
-     }
+    }
 
     /* Update GPU AXI cache atttribute. */
     gcmkONERROR(gckOS_WriteRegisterEx(Hardware->os,
@@ -6582,6 +6581,17 @@ gckHARDWARE_DumpGPUState(
     dmaState1   = dmaState2   =
     dmaAddress1 = dmaAddress2 =
     dmaLow      = dmaHigh     = 0;
+
+    gckOS_Delay(gcvNULL, gcdPOWEROFF_TIMEOUT);
+
+    if (Hardware->chipPowerState != gcvPOWER_ON
+     && Hardware->chipPowerState != gcvPOWER_IDLE
+    )
+    {
+        gcmkPRINT("[galcore]: Can't dump when GPU is power off or clock off.");
+        gcmkFOOTER_NO();
+        return gcvSTATUS_OK;
+    }
 
     /* Verify whether DMA is running. */
     gcmkONERROR(_VerifyDMA(

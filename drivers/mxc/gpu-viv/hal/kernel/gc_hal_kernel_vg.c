@@ -305,6 +305,8 @@ gckKERNEL_AllocateLinearMemory(
 
             if (status == gcvSTATUS_OK)
             {
+                if(*Pool == gcvPOOL_SYSTEM)
+                    Type |= gcvSURF_VG;
                 /* Allocate memory. */
                 status = gckVIDMEM_AllocateLinear(Kernel,
                                                   videoMemory,
@@ -571,42 +573,6 @@ gceSTATUS gckVGKERNEL_Dispatch(
             &node
             ));
 
-        if (node->VidMem.memory->object.type == gcvOBJ_VIDMEM)
-        {
-            bytes = node->VidMem.bytes;
-
-            gcmkONERROR(
-                gckKERNEL_AddProcessDB(Kernel,
-                                   processID, gcvDB_VIDEO_MEMORY_RESERVED,
-                                   node,
-                                   gcvNULL,
-                                   bytes));
-        }
-        else
-        {
-            bytes = node->Virtual.bytes;
-
-            if(node->Virtual.contiguous)
-            {
-                gcmkONERROR(
-                    gckKERNEL_AddProcessDB(Kernel,
-                                   processID, gcvDB_VIDEO_MEMORY_CONTIGUOUS,
-                                   node,
-                                   gcvNULL,
-                                   bytes));
-            }
-            else
-            {
-                gcmkONERROR(
-                    gckKERNEL_AddProcessDB(Kernel,
-                                   processID, gcvDB_VIDEO_MEMORY_VIRTUAL,
-                                   node,
-                                   gcvNULL,
-                                   bytes));
-            }
-
-        }
-
         gcmkERR_BREAK(gckKERNEL_AddProcessDB(Kernel,
            processID, gcvDB_VIDEO_MEMORY,
            node,
@@ -632,28 +598,6 @@ gceSTATUS gckVGKERNEL_Dispatch(
             node->VidMem.logical = gcvNULL;
         }
 #endif /* __QNXNTO__ */
-
-        if (node->VidMem.memory->object.type == gcvOBJ_VIDMEM)
-        {
-           gcmkONERROR(
-                gckKERNEL_RemoveProcessDB(Kernel,
-                                      processID, gcvDB_VIDEO_MEMORY_RESERVED,
-                                      node));
-        }
-        else if(node->Virtual.contiguous)
-        {
-            gcmkONERROR(
-                gckKERNEL_RemoveProcessDB(Kernel,
-                                      processID, gcvDB_VIDEO_MEMORY_CONTIGUOUS,
-                                      node));
-        }
-        else
-        {
-            gcmkONERROR(
-                gckKERNEL_RemoveProcessDB(Kernel,
-                                      processID, gcvDB_VIDEO_MEMORY_VIRTUAL,
-                                      node));
-        }
 
         /* Free video memory. */
         gcmkERR_BREAK(gckVIDMEM_Free(Kernel,

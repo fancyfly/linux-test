@@ -770,6 +770,9 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	pr_info("VPU 352M is enabled!\n");
 #endif
 
+	/* set eim_slow to 132Mhz */
+	imx_clk_set_rate(clk[eim_slow], 132000000);
+
 	/*
 	 * Enable clocks only after both parent and rate are all initialized
 	 * as needed

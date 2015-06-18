@@ -2038,10 +2038,14 @@ static int sdma_resume(struct device *dev)
 
 	return 0;
 }
+#else
+#define sdma_suspend	NULL
+#define sdma_resume	NULL
 #endif
 
 static const struct dev_pm_ops sdma_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(sdma_suspend, sdma_resume)
+	.suspend_late = sdma_suspend,
+	.resume_early = sdma_resume,
 };
 
 static struct platform_driver sdma_driver = {

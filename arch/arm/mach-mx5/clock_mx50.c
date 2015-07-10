@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -136,6 +136,38 @@ static void __calc_pre_post_dividers(u32 div, u32 *pre, u32 *post)
 		}
 		*post = (div + *pre - 1) / *pre;
 	} else if (div < 8) {
+		*pre = div;
+		*post = 1;
+	}
+}
+
+static void __calc_pixel_pre_post_dividers(u32 div, u32 min_pre,
+					   u32 *pre, u32 *post)
+{
+	u32 temp_pre, old_err, err;
+
+	if (div >= ((1 << 12) - 1)*3) {
+		*pre = 3;
+		*post = (1 << 12) - 1;
+	} else if (div >= 3) {
+		u32 max_post = (1 << 12) - 1;
+		if (((div - 1) / max_post + 1) > min_pre)
+			min_pre = (div - 1) / max_post + 1;
+		old_err = 3;
+		for (temp_pre = 3; temp_pre >= min_pre; temp_pre--) {
+			err = div % temp_pre;
+			if (err == 0) {
+				*pre = temp_pre;
+				break;
+			}
+			err = temp_pre - err;
+			if (err < old_err) {
+				old_err = err;
+				*pre = temp_pre;
+			}
+		}
+		*post = (div + *pre - 1) / *pre;
+	} else if (div < 3) {
 		*pre = div;
 		*post = 1;
 	}
@@ -2898,19 +2930,6 @@ static struct clk elcdif_axi_clk = {
 	.flags = AHB_MED_SET_POINT | CPU_FREQ_TRIG_UPDATE,
 };
 
-static int _clk_elcdif_pix_set_parent(struct clk *clk, struct clk *parent)
-{
-	u32 reg, mux;
-
-	reg = __raw_readl(MXC_CCM_CLKSEQ_BYPASS);
-	mux = _get_mux(parent, &osc_clk, &pfd6_clk, &pll1_sw_clk, &ckih_clk);
-	reg = (reg & ~MXC_CCM_CLKSEQ_BYPASS_BYPASS_ELCDIF_PIX_CLK_SEL_MASK) |
-	    (mux << MXC_CCM_CLKSEQ_BYPASS_BYPASS_ELCDIF_PIX_CLK_SEL_OFFSET);
-	__raw_writel(reg, MXC_CCM_CLKSEQ_BYPASS);
-
-	return 0;
-}
-
 static unsigned long _clk_elcdif_pix_get_rate(struct clk *clk)
 {
 	u32 reg, prediv, podf;
@@ -2927,25 +2946,69 @@ static unsigned long _clk_elcdif_pix_get_rate(struct clk *clk)
 static unsigned long _clk_elcdif_pix_round_rate(struct clk *clk,
 						unsigned long rate)
 {
-	u32 max_div = (2 << 12) - 1;
+	u32 max_div = ((1 << 12) - 1)*3;
 	return _clk_round_rate_div(clk, rate, max_div, NULL);
 }
 
 static int _clk_elcdif_pix_set_rate(struct clk *clk, unsigned long rate)
 {
+	u32 reg, pre, post;
 	u32 new_div, max_div;
-	u32 reg;
 
-	max_div = (2 << 12) - 1;
+	max_div = ((1 << 12) - 1)*3;
 	_clk_round_rate_div(clk, rate, max_div, &new_div);
+	/* The maximum handling frequency in post-divider is 480MHz */
+	__calc_pixel_pre_post_dividers(new_div,
+				       clk_get_rate(clk->parent)
+				       >= 480 ? 2 : 1,
+				       &pre, &post);
 
+	/* The clock gate is on/off betweeen pre- and post dividers
+	   setup to avoid transient state being cpatured */
 	reg = __raw_readl(MXC_CCM_ELCDIFPIX);
-	/* Pre-divider set to 1 - only use PODF for clk dividing */
+
 	reg &= ~MXC_CCM_ELCDIFPIX_CLK_PRED_MASK;
-	reg |= 1 << MXC_CCM_ELCDIFPIX_CLK_PRED_OFFSET;
-	reg &= ~MXC_CCM_ELCDIFPIX_CLK_PODF_MASK;
-	reg |= new_div << MXC_CCM_ELCDIFPIX_CLK_PODF_OFFSET;
+	reg |= pre << MXC_CCM_ELCDIFPIX_CLK_PRED_OFFSET;
 	__raw_writel(reg, MXC_CCM_ELCDIFPIX);
+
+	while (__raw_readl(MXC_CCM_CSR2) & MXC_CCM_CSR2_ELCDIF_PIX_BUSY)
+		;
+
+	reg &= ~MXC_CCM_ELCDIFPIX_CLKGATE_MASK;
+	__raw_writel(reg, MXC_CCM_ELCDIFPIX);
+	reg |= 0x3 << MXC_CCM_ELCDIFPIX_CLKGATE_OFFSET;
+	__raw_writel(reg, MXC_CCM_ELCDIFPIX);
+
+	reg &= ~MXC_CCM_ELCDIFPIX_CLK_PODF_MASK;
+	reg |= post << MXC_CCM_ELCDIFPIX_CLK_PODF_OFFSET;
+	__raw_writel(reg, MXC_CCM_ELCDIFPIX);
+
+	while (__raw_readl(MXC_CCM_CSR2) & MXC_CCM_CSR2_ELCDIF_PIX_BUSY)
+		;
+
+	return 0;
+}
+
+static int _clk_elcdif_pix_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 reg, mux;
+	unsigned long rate;
+
+	/* obtain the current clock rate */
+	rate = _clk_elcdif_pix_get_rate(clk);
+	/* Change the parent in the clk structure first in order to
+	   get set_rate() to work correctly */
+	clk->parent = parent;
+	/* Change the dividers before we change the clock parent through
+	   registers. Otherwise, the new frequency will violate the
+	   frequency limitation of post divider */
+	_clk_elcdif_pix_set_rate(clk, rate);
+
+	reg = __raw_readl(MXC_CCM_CLKSEQ_BYPASS);
+	mux = _get_mux(parent, &osc_clk, &pfd6_clk, &pll1_sw_clk, &ckih_clk);
+	reg = (reg & ~MXC_CCM_CLKSEQ_BYPASS_BYPASS_ELCDIF_PIX_CLK_SEL_MASK) |
+	    (mux << MXC_CCM_CLKSEQ_BYPASS_BYPASS_ELCDIF_PIX_CLK_SEL_OFFSET);
+	__raw_writel(reg, MXC_CCM_CLKSEQ_BYPASS);
 
 	return 0;
 }
@@ -3131,20 +3194,25 @@ static unsigned long _clk_epdc_pix_get_rate(struct clk *clk)
 static unsigned long _clk_epdc_pix_round_rate(struct clk *clk,
 						unsigned long rate)
 {
-	u32 max_div = (2 << 12) - 1;
+	u32 max_div = ((1 << 12) - 1)*3;
 	return _clk_round_rate_div(clk, rate, max_div, NULL);
 }
 
 static int _clk_epdc_pix_set_rate(struct clk *clk, unsigned long rate)
 {
+	u32 reg, pre, post;
 	u32 new_div, max_div;
-	u32 reg;
 
-	max_div = (2 << 12) - 1;
+	max_div = ((1 << 12) - 1)*3;
 	_clk_round_rate_div(clk, rate, max_div, &new_div);
+	/* The maximum handling frequency in post-divider is 480MHz */
+	__calc_pixel_pre_post_dividers(new_div,
+				       clk_get_rate(clk->parent) >=
+				       480 ? 2 : 1,
+				       &pre, &post);
 
 	reg = __raw_readl(MXC_CCM_EPDCPIX);
-	/* Pre-divider set to 1 - only use PODF for clk dividing */
+
 	reg &= ~MXC_CCM_EPDC_PIX_CLK_PRED_MASK;
 	reg |= 1 << MXC_CCM_EPDC_PIX_CLK_PRED_OFFSET;
 	reg &= ~MXC_CCM_EPDC_PIX_CLK_PODF_MASK;

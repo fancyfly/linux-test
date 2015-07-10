@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2015 Freescale Semiconductor, Inc.
  */
 
 /*
@@ -1375,6 +1375,10 @@ static int mxc_elcdif_fb_probe(struct platform_device *pdev)
 	 * Set an appropriate pixel clk rate first, so that we can
 	 * access ELCDIF registers.
 	 */
+	if (!g_elcdif_pix_clk_enable) {
+		clk_enable(g_elcdif_pix_clk);
+		g_elcdif_pix_clk_enable = true;
+	}
 	clk_set_rate(g_elcdif_pix_clk, 25000000);
 
 	fbi->var.activate |= FB_ACTIVATE_FORCE;

@@ -473,7 +473,6 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		pm_runtime_get_sync(cpu_dai->dev);
 		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx),
 				   FSL_SAI_CSR_FRDE, FSL_SAI_CSR_FRDE);
 
@@ -525,7 +524,6 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 			regmap_write(sai->regmap, FSL_SAI_TCSR, 0);
 			regmap_write(sai->regmap, FSL_SAI_RCSR, 0);
 		}
-		pm_runtime_put_sync(cpu_dai->dev);
 		break;
 	default:
 		return -EINVAL;
@@ -541,6 +539,8 @@ static int fsl_sai_startup(struct snd_pcm_substream *substream,
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 	struct device *dev = &sai->pdev->dev;
 	int ret;
+
+	pm_runtime_get_sync(cpu_dai->dev);
 
 	ret = clk_prepare_enable(sai->bus_clk);
 	if (ret) {
@@ -569,6 +569,8 @@ static void fsl_sai_shutdown(struct snd_pcm_substream *substream,
 	regmap_update_bits(sai->regmap, FSL_SAI_xCR3(tx), FSL_SAI_CR3_TRCE, 0);
 
 	clk_disable_unprepare(sai->bus_clk);
+
+	pm_runtime_put_sync(cpu_dai->dev);
 }
 
 static const struct snd_soc_dai_ops fsl_sai_pcm_dai_ops = {

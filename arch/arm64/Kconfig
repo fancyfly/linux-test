@@ -185,6 +185,11 @@ config ARCH_FSL_LS2085A
 	help
 	  This enables support for Freescale LS2085A SOC.
 
+config ARCH_FSL_IMX8DV
+	bool "Freescale i.MX8dv SOC"
+	help
+	  This enables support for Freescale i.MX8dv SOC.
+
 config ARCH_MEDIATEK
 	bool "Mediatek MT65xx & MT81xx ARMv8 SoC"
 	select ARM_GIC

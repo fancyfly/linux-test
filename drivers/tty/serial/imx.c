@@ -201,8 +201,9 @@ struct imx_port {
 	unsigned int		irda_inv_rx:1;
 	unsigned int		irda_inv_tx:1;
 	unsigned short		trcv_delay; /* transceiver delay */
-	struct clk		*clk_ipg;
+/*	struct clk		*clk_ipg;
 	struct clk		*clk_per;
+*/
 	const struct imx_uart_data *devdata;
 
 	/* DMA fields */
@@ -1097,9 +1098,10 @@ static void imx_disable_dma(struct imx_port *sport)
 static int imx_startup(struct uart_port *port)
 {
 	struct imx_port *sport = (struct imx_port *)port;
-	int retval, i;
+	int /*retval,*/ i;
 	unsigned long flags, temp;
 
+#if 0
 	retval = clk_prepare_enable(sport->clk_per);
 	if (retval)
 		return retval;
@@ -1108,6 +1110,7 @@ static int imx_startup(struct uart_port *port)
 		clk_disable_unprepare(sport->clk_per);
 		return retval;
 	}
+#endif
 
 	imx_setup_ufcr(sport, 0);
 
@@ -1157,7 +1160,7 @@ static int imx_startup(struct uart_port *port)
 
 	if (!is_imx1_uart(sport)) {
 		temp = readl(sport->port.membase + UCR3);
-		temp |= IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP;
+		temp |= UCR3_ADNIMP;
 		writel(temp, sport->port.membase + UCR3);
 	}
 
@@ -1218,8 +1221,10 @@ static void imx_shutdown(struct uart_port *port)
 	writel(temp, sport->port.membase + UCR1);
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 
+#if 0
 	clk_disable_unprepare(sport->clk_per);
 	clk_disable_unprepare(sport->clk_ipg);
+#endif
 }
 
 static void imx_flush_buffer(struct uart_port *port)
@@ -1414,11 +1419,11 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 	ufcr = (ufcr & (~UFCR_RFDIV)) | UFCR_RFDIV_REG(div);
 	if (sport->dte_mode)
 		ufcr |= UFCR_DCEDTE;
-	writel(ufcr, sport->port.membase + UFCR);
+/*	writel(ufcr, sport->port.membase + UFCR);
 
 	writel(num, sport->port.membase + UBIR);
 	writel(denom, sport->port.membase + UBMR);
-
+*/
 	if (!is_imx1_uart(sport))
 		writel(sport->port.uartclk / div / 1000,
 				sport->port.membase + IMX21_ONEMS);
@@ -1491,12 +1496,14 @@ static int imx_poll_init(struct uart_port *port)
 	unsigned long temp;
 	int retval;
 
+#if 0
 	retval = clk_prepare_enable(sport->clk_ipg);
 	if (retval)
 		return retval;
 	retval = clk_prepare_enable(sport->clk_per);
 	if (retval)
 		clk_disable_unprepare(sport->clk_ipg);
+#endif
 
 	imx_setup_ufcr(sport, 0);
 
@@ -1613,6 +1620,33 @@ static void imx_console_putchar(struct uart_port *port, int ch)
 	writel(ch, sport->port.membase + URTX0);
 }
 
+static void __init
+imx_early_write(struct console *con, const char *s, unsigned n)
+{
+	struct earlycon_device *dev = con->data;
+	struct uart_port *port = &dev->port;
+
+	while(n--) {
+		while (readl(port->membase + IMX21_UTS) & UTS_TXFULL)
+			barrier();
+
+		writel((int)*(s++), port->membase + URTX0);
+	}
+}
+
+static int __init
+imx_early_console_setup(struct earlycon_device *device, const char *opt)
+{
+	if (!device->port.membase)
+		return -ENODEV;
+
+	device->con->write = imx_early_write;
+	return 0;
+}
+EARLYCON_DECLARE(imxuart, imx_early_console_setup);
+OF_EARLYCON_DECLARE(imxuart, "fsl,imxcon",
+		    imx_early_console_setup);
+
 /*
  * Interrupts are disabled on entering
  */
@@ -1624,8 +1658,9 @@ imx_console_write(struct console *co, const char *s, unsigned int count)
 	unsigned int ucr1;
 	unsigned long flags = 0;
 	int locked = 1;
-	int retval;
+	/*int retval;*/
 
+#if 0
 	retval = clk_enable(sport->clk_per);
 	if (retval)
 		return;
@@ -1634,6 +1669,7 @@ imx_console_write(struct console *co, const char *s, unsigned int count)
 		clk_disable(sport->clk_per);
 		return;
 	}
+#endif
 
 	if (sport->port.sysrq)
 		locked = 0;
@@ -1670,8 +1706,10 @@ imx_console_write(struct console *co, const char *s, unsigned int count)
 	if (locked)
 		spin_unlock_irqrestore(&sport->port.lock, flags);
 
+#if 0
 	clk_disable(sport->clk_ipg);
 	clk_disable(sport->clk_per);
+#endif
 }
 
 /*
@@ -1713,7 +1751,7 @@ imx_console_get_options(struct imx_port *sport, int *baud,
 		else
 			ucfr_rfdiv = 6 - ucfr_rfdiv;
 
-		uartclk = clk_get_rate(sport->clk_per);
+		uartclk = 80000000; //clk_get_rate(sport->clk_per);
 		uartclk /= ucfr_rfdiv;
 
 		{	/*
@@ -1758,10 +1796,12 @@ imx_console_setup(struct console *co, char *options)
 	if (sport == NULL)
 		return -ENODEV;
 
+#if 0
 	/* For setting the registers, we only need to enable the ipg clock. */
 	retval = clk_prepare_enable(sport->clk_ipg);
 	if (retval)
 		goto error_console;
+#endif
 
 	if (options)
 		uart_parse_options(options, &baud, &parity, &bits, &flow);
@@ -1772,6 +1812,7 @@ imx_console_setup(struct console *co, char *options)
 
 	retval = uart_set_options(&sport->port, co, baud, parity, bits, flow);
 
+#if 0
 	clk_disable(sport->clk_ipg);
 	if (retval) {
 		clk_unprepare(sport->clk_ipg);
@@ -1781,8 +1822,9 @@ imx_console_setup(struct console *co, char *options)
 	retval = clk_prepare(sport->clk_per);
 	if (retval)
 		clk_disable_unprepare(sport->clk_ipg);
+#endif
 
-error_console:
+/*error_console:*/
 	return retval;
 }
 
@@ -1912,8 +1954,10 @@ static int serial_imx_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	ret = serial_imx_probe_dt(sport, pdev);
-	if (ret > 0)
+	if (ret > 0) {
+		printk(KERN_INFO "serial_imx_probe_dt returned = %d\n", ret);
 		serial_imx_probe_pdata(sport, pdev);
+	}
 	else if (ret < 0)
 		return ret;
 
@@ -1942,6 +1986,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 	sport->timer.function = imx_timeout;
 	sport->timer.data     = (unsigned long)sport;
 
+#if 0
 	sport->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
 	if (IS_ERR(sport->clk_ipg)) {
 		ret = PTR_ERR(sport->clk_ipg);
@@ -1955,8 +2000,8 @@ static int serial_imx_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get per clk: %d\n", ret);
 		return ret;
 	}
-
-	sport->port.uartclk = clk_get_rate(sport->clk_per);
+#endif
+	sport->port.uartclk = 80000000; //clk_get_rate(sport->clk_per);
 
 	/*
 	 * Allocate the IRQ(s) i.MX1 has three interrupts whereas later

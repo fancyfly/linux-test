@@ -130,6 +130,17 @@
 		interrupts = <1 9 0x4>;
 	};
 
+	mu: mu@5e1b0000 {
+		compatible = "fsl,imx8dv-mu","fsl,imx7d-mu", "fsl,imx6sx-mu";
+		reg = <0x0 0x5e1b0000 0x0 0x10000>;
+		fsl,scu_ap_mu_id = <0>;
+		status = "okay";
+	};
+
+	clk {
+		compatible = "fsl,imx8dv-clk";
+	};
+
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <1 13 0x8>, /* Physical Secure PPI, active-low */

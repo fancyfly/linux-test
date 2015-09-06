@@ -319,7 +319,8 @@
 				};
 
 				uart1: serial@02020000 {
-					compatible = "fsl,imx6sx-uart", "fsl,imx21-uart";
+					compatible = "fsl,imx6sx-uart",
+						     "fsl,imx6q-uart", "fsl,imx21-uart";
 					reg = <0x02020000 0x4000>;
 					interrupts = <GIC_SPI 26 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX6SX_CLK_UART_IPG>,
@@ -876,11 +877,14 @@
                         };
 
 			mlb: mlb@0218c000 {
+				compatible = "fsl,imx6sx-mlb50";
 				reg = <0x0218c000 0x4000>;
 				interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>,
 					     <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>,
 					     <GIC_SPI 126 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_MLB>;
+				clock-names = "mlb";
+				iram = <&ocram>;
 				status = "disabled";
 			};
 
@@ -979,6 +983,8 @@
 					 <&clks IMX6SX_CLK_ENET_PTP>;
 				clock-names = "ipg", "ahb", "ptp",
 					      "enet_clk_ref", "enet_out";
+				fsl,num-tx-queues=<3>;
+				fsl,num-rx-queues=<3>;
 				status = "disabled";
 			};
 
@@ -1004,7 +1010,7 @@
 					 <&clks 0>, <&clks 0>;
 				clock-names = "bus", "mclk1", "mclk2", "mclk3";
 				dma-names = "rx", "tx";
-				dmas = <&sdma 31 23 0>, <&sdma 32 23 0>;
+				dmas = <&sdma 31 24 0>, <&sdma 32 24 0>;
 				dma-source = <&gpr 0 15 0 16>;
 				status = "disabled";
 			};
@@ -1056,7 +1062,8 @@
 			};
 
 			uart2: serial@021e8000 {
-				compatible = "fsl,imx6sx-uart", "fsl,imx21-uart";
+				compatible = "fsl,imx6sx-uart",
+					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x021e8000 0x4000>;
 				interrupts = <GIC_SPI 27 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_UART_IPG>,
@@ -1068,7 +1075,8 @@
 			};
 
 			uart3: serial@021ec000 {
-				compatible = "fsl,imx6sx-uart", "fsl,imx21-uart";
+				compatible = "fsl,imx6sx-uart",
+					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x021ec000 0x4000>;
 				interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_UART_IPG>,
@@ -1080,7 +1088,8 @@
 			};
 
 			uart4: serial@021f0000 {
-				compatible = "fsl,imx6sx-uart", "fsl,imx21-uart";
+				compatible = "fsl,imx6sx-uart",
+					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x021f0000 0x4000>;
 				interrupts = <GIC_SPI 29 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_UART_IPG>,
@@ -1092,7 +1101,8 @@
 			};
 
 			uart5: serial@021f4000 {
-				compatible = "fsl,imx6sx-uart", "fsl,imx21-uart";
+				compatible = "fsl,imx6sx-uart",
+					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x021f4000 0x4000>;
 				interrupts = <GIC_SPI 30 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_UART_IPG>,
@@ -1194,6 +1204,7 @@
 				reg = <0x02280000 0x4000>;
 				interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_IPG>;
+				num-channels = <4>;
 				clock-names = "adc";
 				status = "disabled";
                         };
@@ -1203,6 +1214,7 @@
 				reg = <0x02284000 0x4000>;
 				interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_IPG>;
+				num-channels = <4>;
 				clock-names = "adc";
 				status = "disabled";
                         };
@@ -1228,7 +1240,8 @@
 			};
 
 			uart6: serial@022a0000 {
-				compatible = "fsl,imx6sx-uart", "fsl,imx21-uart";
+				compatible = "fsl,imx6sx-uart",
+					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x022a0000 0x4000>;
 				interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_UART_IPG>,

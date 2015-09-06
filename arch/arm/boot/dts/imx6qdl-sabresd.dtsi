@@ -69,6 +69,17 @@
 			regulator-always-on;
 			enable-active-high;
 		};
+
+		reg_sensor: regulator@4 {
+			compatible = "regulator-fixed";
+			reg = <4>;
+			regulator-name = "sensor-supply";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio2 31 0>;
+			startup-delay-us = <500>;
+			enable-active-high;
+		};
 	};
 
 	gpio-keys {
@@ -102,7 +113,7 @@
 		compatible = "fsl,imx6q-sabresd-wm8962",
 			   "fsl,imx-audio-wm8962";
 		model = "wm8962-audio";
-		ssi-controller = <&ssi2>;
+		cpu-dai = <&ssi2>;
 		audio-codec = <&codec>;
 		audio-routing =
 			"Headphone Jack", "HPOUTL",
@@ -197,6 +208,17 @@
 			0x0000 /* 5:Default */
 		>;
        };
+
+	mma8451@1c {
+		compatible = "fsl,mma8451";
+		reg = <0x1c>;
+		position = <0>;
+		vdd-supply = <&reg_sensor>;
+		vddio-supply = <&reg_sensor>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <18 8>;
+		interrupt-route = <1>;
+	};
 };
 
 &i2c2 {
@@ -318,6 +340,25 @@
 		interrupts = <7 2>;
 		wakeup-gpios = <&gpio6 7 0>;
 	};
+
+	isl29023@44 {
+		compatible = "fsl,isl29023";
+		reg = <0x44>;
+		rext = <499>;
+		vdd-supply = <&reg_sensor>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <9 2>;
+	};
+
+	mag3110@0e {
+		compatible = "fsl,mag3110";
+		reg = <0x0e>;
+		position = <2>;
+		vdd-supply = <&reg_sensor>;
+		vddio-supply = <&reg_sensor>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <16 1>;
+	};
 };
 
 &iomuxc {
@@ -336,6 +377,10 @@
 				MX6QDL_PAD_ENET_TXD1__GPIO1_IO29 0x1b0b0
 				MX6QDL_PAD_EIM_D22__GPIO3_IO22  0x1b0b0
 				MX6QDL_PAD_ENET_CRS_DV__GPIO1_IO25 0x1b0b0
+				MX6QDL_PAD_EIM_EB3__GPIO2_IO31 0x80000000
+				MX6QDL_PAD_SD1_CMD__GPIO1_IO18 0x80000000
+				MX6QDL_PAD_EIM_D16__GPIO3_IO16 0x80000000
+				MX6QDL_PAD_EIM_DA9__GPIO3_IO09 0x80000000
 			>;
 		};
 
@@ -429,6 +474,24 @@
 			fsl,pins = <
 				MX6QDL_PAD_CSI0_DAT10__UART1_TX_DATA	0x1b0b1
 				MX6QDL_PAD_CSI0_DAT11__UART1_RX_DATA	0x1b0b1
+			>;
+		};
+
+		pinctrl_uart5_1: uart5grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_KEY_COL1__UART5_TX_DATA	0x1b0b1
+				MX6QDL_PAD_KEY_ROW1__UART5_RX_DATA	0x1b0b1
+				MX6QDL_PAD_KEY_COL4__UART5_RTS_B	0x1b0b1
+				MX6QDL_PAD_KEY_ROW4__UART5_CTS_B	0x1b0b1
+			>;
+		};
+
+		pinctrl_uart5dte_1: uart5dtegrp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_KEY_ROW1__UART5_TX_DATA	0x1b0b1
+				MX6QDL_PAD_KEY_COL1__UART5_RX_DATA	0x1b0b1
+				MX6QDL_PAD_KEY_ROW4__UART5_RTS_B	0x1b0b1
+				MX6QDL_PAD_KEY_COL4__UART5_CTS_B	0x1b0b1
 			>;
 		};
 

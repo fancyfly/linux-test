@@ -47,7 +47,6 @@ MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
 
 static const char longname[] = "Gadget Android";
-static struct wake_lock wakelock;
 
 /* Default vendor and product IDs, overridden by userspace */
 #define VENDOR_ID		0x18D1
@@ -1401,7 +1400,6 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (!dev->connected) {
-		android_wake_lock(&wakelock);
 		dev->connected = 1;
 		schedule_work(&dev->work);
 	} else if (c->bRequest == USB_REQ_SET_CONFIGURATION &&
@@ -1425,7 +1423,6 @@ static void android_disconnect(struct usb_composite_dev *cdev)
 
 	dev->connected = 0;
 	schedule_work(&dev->work);
-	android_wake_lock_timeout(&wakelock, HZ/2);
 }
 
 static struct usb_composite_driver android_usb_driver = {
@@ -1491,7 +1488,6 @@ static int __init init(void)
 
 	_android_dev = dev;
 
-	android_wake_lock_init(&wakelock, WAKE_LOCK_SUSPEND, "gadget");
 	err = usb_composite_probe(&android_usb_driver);
 	if (err) {
 		pr_err("%s: failed to probe driver %d", __func__, err);
@@ -1516,7 +1512,6 @@ late_initcall(init);
 
 static void __exit cleanup(void)
 {
-	android_wake_lock_destroy(&wakelock);
 	usb_composite_unregister(&android_usb_driver);
 	class_destroy(android_class);
 	kfree(_android_dev);

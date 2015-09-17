@@ -15,9 +15,6 @@
 #include <linux/workqueue.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
-#include <linux/rtc.h>
-#include <linux/syscalls.h> /* sys_sync */
-#include <linux/list.h>
 
 #include "power.h"
 
@@ -316,7 +313,7 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 static suspend_state_t decode_state(const char *buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
-	suspend_state_t state = PM_SUSPEND_ON;
+	suspend_state_t state = PM_SUSPEND_MIN;
 	const char * const *s;
 #endif
 	char *p;
@@ -343,6 +340,7 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	suspend_state_t state;
 	int error;
+
 	error = pm_autosleep_lock();
 	if (error)
 		return error;
@@ -351,13 +349,10 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 		error = -EBUSY;
 		goto out;
 	}
+
 	state = decode_state(buf, n);
-	if (state < PM_SUSPEND_MAX) {
-		if (state == PM_SUSPEND_ON || valid_state(state)) {
-			error = 0;
-			request_suspend_state(state);
-		}
-	}
+	if (state < PM_SUSPEND_MAX)
+		error = pm_suspend(state);
 	else if (state == PM_SUSPEND_MAX)
 		error = hibernate();
 	else
@@ -470,6 +465,7 @@ static ssize_t autosleep_store(struct kobject *kobj,
 	if (state == PM_SUSPEND_ON
 	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
 		return -EINVAL;
+
 	error = pm_autosleep_set_state(state);
 	return error ? error : n;
 }
@@ -478,19 +474,38 @@ power_attr(autosleep);
 #endif /* CONFIG_PM_AUTOSLEEP */
 
 #ifdef CONFIG_PM_WAKELOCKS
-extern ssize_t wake_lock_show(struct kobject *kobj,
+static ssize_t wake_lock_show(struct kobject *kobj,
 			      struct kobj_attribute *attr,
-			      char *buf);
-extern ssize_t wake_lock_store(struct kobject *kobj,
+			      char *buf)
+{
+	return pm_show_wakelocks(buf, true);
+}
+
+static ssize_t wake_lock_store(struct kobject *kobj,
 			       struct kobj_attribute *attr,
-			       const char *buf, size_t n);
+			       const char *buf, size_t n)
+{
+	int error = pm_wake_lock(buf);
+	return error ? error : n;
+}
+
 power_attr(wake_lock);
-extern ssize_t wake_unlock_show(struct kobject *kobj,
+
+static ssize_t wake_unlock_show(struct kobject *kobj,
 				struct kobj_attribute *attr,
-				char *buf);
-extern ssize_t wake_unlock_store(struct kobject *kobj,
+				char *buf)
+{
+	return pm_show_wakelocks(buf, false);
+}
+
+static ssize_t wake_unlock_store(struct kobject *kobj,
 				 struct kobj_attribute *attr,
-				 const char *buf, size_t n);
+				 const char *buf, size_t n)
+{
+	int error = pm_wake_unlock(buf);
+	return error ? error : n;
+}
+
 power_attr(wake_unlock);
 
 #endif /* CONFIG_PM_WAKELOCKS */

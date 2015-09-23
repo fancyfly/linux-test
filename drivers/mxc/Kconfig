@@ -1,0 +1,11 @@
+# drivers/mxc/Kconfig
+
+if ARCH_FSL_IMX8DV
+
+menu "MXC support drivers"
+
+source "drivers/mxc/gpu-viv/Kconfig"
+
+endmenu
+
+endif

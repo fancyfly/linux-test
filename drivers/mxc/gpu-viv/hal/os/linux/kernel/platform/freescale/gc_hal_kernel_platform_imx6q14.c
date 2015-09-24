@@ -895,9 +895,9 @@ static int gpu_runtime_resume(struct device *dev)
     request_bus_freq(BUS_FREQ_HIGH);
     return 0;
 }
-#endif
 
 static struct dev_pm_ops gpu_pm_ops;
+#endif
 #endif
 #endif
 

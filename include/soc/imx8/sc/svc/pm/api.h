@@ -44,7 +44,7 @@
 /* Types */
 
 /*!
- * This type is used to indicate the power mode. Note resources only use
+ * This type is used to declare a power mode. Note resources only use
  * SC_PM_PW_MODE_OFF and SC_PM_PW_MODE_ON. The other modes are used only
  * as system power modes.
  */
@@ -57,12 +57,12 @@ typedef enum sc_pm_power_mode_e
 } sc_pm_power_mode_t;
 
 /*!
- * This type is used to indicate the clock.
+ * This type is used to declare a clock.
  */
 typedef uint8_t sc_pm_clk_t;
 
 /*!
- * This type is used to indicate the clock mode.
+ * This type is used to declare a clock mode.
  */
 typedef enum sc_pm_clk_mode_e
 {
@@ -73,12 +73,12 @@ typedef enum sc_pm_clk_mode_e
 } sc_pm_clk_mode_t;
 
 /*!
- * This type is used to store clock rates.
+ * This type is used to declare clock rates.
  */
 typedef uint32_t sc_pm_clock_rate_t;
 
 /*!
- * This type is used to indicate a desired reset type.
+ * This type is used to declare a desired reset type.
  */
 typedef enum sc_pm_reset_type_e
 {
@@ -87,7 +87,7 @@ typedef enum sc_pm_reset_type_e
 } sc_pm_reset_type_t;
 
 /*!
- * This type is used to indicate the reason for a reset.
+ * This type is used to declare a reason for a reset.
  */
 typedef enum sc_pm_reset_reason_e
 {
@@ -272,7 +272,7 @@ sc_err_t sc_pm_clock_enable(sc_ipc_t ipc, sc_rsrc_t resource,
  * @param[in]     ipc         IPC handle
  * @param[in]     pt          handle of partition to boot
  * @param[in]     boot_cpu    ID of the CPU resource to start
- * @param[in]     addr        64-bit boot address
+ * @param[in]     boot_addr   64-bit boot address
  * @param[in]     boot_mu     ID of the MU that must be powered
  *
  * @return Returns an error code (SC_ERR_NONE = success).

@@ -27,7 +27,7 @@
 /* Types */
 
 /*!
- * This type is used to store watchdog time values in milliseconds.
+ * This type is used to declare a watchdog time value in milliseconds.
  */
 typedef uint32_t sc_wdog_time_t;
 

@@ -15,6 +15,8 @@
 
 /* Defines */
 
+#define SC_NUM_IPC		5
+
 /* Includes */
 
 #include <soc/imx8/sc/ipc.h>
@@ -27,6 +29,13 @@
 /* Types */
 
 /* Functions */
+/*!
+ * This function initializes the MU connection to SCU.
+ *
+ * @return  Returns an error code.
+ */
+int imx8dv_mu_init(void);
+
 
 #endif /* _SC_SCI_H */
 

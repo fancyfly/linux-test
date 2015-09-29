@@ -10,6 +10,7 @@
 #define _SC_TYPES_H
 
 /* Includes */
+
 #include <linux/types.h>
 
 /* Defines */
@@ -550,6 +551,61 @@ typedef enum sc_ctrl_e
  * This type is used to indicate a pin. Valid values are SoC specific.
  */
 typedef uint16_t sc_pin_t;
+
+/*!
+ * This type is used to declare a handle for an IPC communication
+ * channel. Its meaning is specific to the IPC implementation.
+ */
+typedef uint32_t sc_ipc_t;
+
+/* Extra documentation of standard types */
+
+#ifdef DOXYGEN
+    /*! 
+     * Type used to declare a true/false boolean.
+     */
+    typedef enum {false = 0, true = 1} bool;
+
+    /*! 
+     * Type used to declare an 8-bit integer.
+     */
+    typedef __INT8_TYPE__ int8_t;
+
+    /*! 
+     * Type used to declare a 16-bit integer.
+     */
+    typedef __INT16_TYPE__ int16_t;
+
+    /*! 
+     * Type used to declare a 32-bit integer.
+     */
+    typedef __INT32_TYPE__ int32_t;
+
+    /*! 
+     * Type used to declare a 64-bit integer.
+     */
+    typedef __INT64_TYPE__ int64_t;
+
+    /*! 
+     * Type used to declare an 8-bit unsigned integer.
+     */
+    typedef __UINT8_TYPE__ uint8_t;
+
+    /*! 
+     * Type used to declare a 16-bit unsigned integer.
+     */
+    typedef __UINT16_TYPE__ uint16_t;
+
+    /*! 
+     * Type used to declare a 32-bit unsigned integer.
+     */
+    typedef __UINT32_TYPE__ uint32_t;
+
+    /*! 
+     * Type used to declare a 64-bit unsigned integer.
+     */
+    typedef __UINT64_TYPE__ uint64_t;
+#endif
 
 #endif /* _SC_TYPES_H */
 

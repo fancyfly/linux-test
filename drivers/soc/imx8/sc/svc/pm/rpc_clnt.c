@@ -14,12 +14,15 @@
 
 /* Includes */
 
-#include <linux/io.h>
 #include <soc/imx8/sc/types.h>
-#include <soc/imx8/sc/rpc.h>
 #include <soc/imx8/sc/svc/rm/api.h>
 #include <soc/imx8/sc/svc/pm/api.h>
+#include "../../main/rpc.h"
 #include "rpc.h"
+
+/* Local Defines */
+
+/* Local Types */
 
 /* IDL: E8 SET_SYS_POWER_MODE(I8 pt, I4 mode) */
 sc_err_t sc_pm_set_sys_power_mode(sc_ipc_t ipc, sc_rm_pt_t pt,

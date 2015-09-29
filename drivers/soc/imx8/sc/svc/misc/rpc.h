@@ -16,21 +16,28 @@
 
 /* Includes */
 
-#include <soc/imx8/sc/rpc.h>
-
 /* Defines */
 
 /* Types */
 
+/*!
+ * This type is used to indicate RPC MISC function calls.
+ */
 typedef enum misc_func_e
 {
-    MISC_FUNC_UNKNOWN,
-    MISC_FUNC_SET_CONTROL,
-    MISC_FUNC_GET_CONTROL
+    MISC_FUNC_UNKNOWN, //!< Unknown function
+    MISC_FUNC_SET_CONTROL, //!< Index for misc_set_control() RPC call
+    MISC_FUNC_GET_CONTROL, //!< Index for misc_get_control() RPC call
 } misc_func_t;
 
 /* Functions */
 
+/*!
+ * This function dispatches an incoming MISC RPC request.
+ *
+ * @param[in]     caller_pt   caller partition
+ * @param[in]     msg         pointer to RPC message
+ */
 void misc_dispatch(sc_rm_pt_t caller_pt, sc_rpc_msg_t *msg);
 
 #endif /* _SC_MISC_RPC_H */

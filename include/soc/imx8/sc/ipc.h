@@ -10,21 +10,12 @@
 #define _SC_IPC_H
 
 /* Includes */
+
 #include <soc/imx8/sc/types.h>
 
 /* Defines */
 
-#define SC_NUM_IPC          5
-
-#define SC_IPC_AP_CH0       0
-#define SC_IPC_AP_CH1       1
-#define SC_IPC_AP_CH2       2
-#define SC_IPC_AP_CH3       3
-#define SC_IPC_AP_CH4       4
-
 /* Types */
-
-typedef uint32_t sc_ipc_t;
 
 /* Functions */
 
@@ -53,7 +44,7 @@ void sc_ipc_close(sc_ipc_t ipc);
  * This function reads a message from an IPC channel.
  *
  * @param[in]     ipc         id of channel read from
- * @param[out]    msg         message buffer to read
+ * @param[out]    data        pointer to message buffer to read
  *
  * This function will block if no message is available to be read.
  */
@@ -63,18 +54,11 @@ void sc_ipc_read(sc_ipc_t ipc, void *data);
  * This function writes a message to an IPC channel.
  *
  * @param[in]     ipc         id of channel to write to
- * @param[in]     msg         message buffer to write
+ * @param[in]     data        pointer to message buffer to write
  *
  * This function will block if the outgoing buffer is full.
  */
 void sc_ipc_write(sc_ipc_t ipc, void *data);
-
-/*!
- * This function initializes the MU connection to SCU.
- *
- * @return  Returns an error code.
- */
-int imx8dv_mu_init(void);
 
 #endif /* _SC_IPC_H */
 

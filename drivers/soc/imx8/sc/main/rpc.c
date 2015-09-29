@@ -8,12 +8,12 @@
 
 /* Includes */
 
-#include <soc/imx8/sc/rpc.h>
 #include <soc/imx8/sc/svc/pm/rpc.h>
 #include <soc/imx8/sc/svc/rm/rpc.h>
 #include <soc/imx8/sc/svc/otp/rpc.h>
 #include <soc/imx8/sc/svc/wdog/rpc.h>
 #include <soc/imx8/sc/svc/misc/rpc.h>
+#include "rpc.h"
 
 
 /* Local Defines */

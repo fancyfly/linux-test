@@ -46,29 +46,28 @@
 /* Types */
 
 /*!
- * This handle is used to reference a resource partition.
+ * This type is used to declare a resource partition.
  */
 typedef uint8_t sc_rm_pt_t;
 
 /*!
- * This handle is used to reference a memory region.
+ * This type is used to declare a memory region.
  */
 typedef uint8_t sc_rm_mr_t;
 
 /*!
- * This type is used to store a resource domain ID used by the
+ * This type is used to declare a resource domain ID used by the
  * isolation HW.
  */
 typedef uint8_t sc_rm_did_t;
 
 /*!
- * This type is used to store an SMMU StreamID.
+ * This type is used to declare an SMMU StreamID.
  */
 typedef uint16_t sc_rm_sid_t;
 
 /*!
- * This type is a used to indicate the attributes to apply to a master
- * transaction.
+ * This type is a used to declare master transaction attributes.
  */
 typedef enum sc_rm_spa_e
 {
@@ -79,7 +78,7 @@ typedef enum sc_rm_spa_e
 } sc_rm_spa_t;
 
 /*!
- * This type is used to indicate a resource/memory region access permission.
+ * This type is used to declare a resource/memory region access permission.
  * Refer to the XRDC2 Block Guide for more information.
  */
 typedef enum sc_rm_perm_e

@@ -8,7 +8,7 @@
 extern spinlock_t imx_ccm_lock;
 extern sc_ipc_t ccm_ipcHandle;
 
-struct clk *imx_clk_divider_scu(const char *name, 
+struct clk *imx_clk_divider_scu(const char *name,
 					sc_rsrc_t rsrc_id, sc_pm_clk_t clk_type);
 
 struct clk *clk_register_gate_scu(struct device *dev, const char *name,
@@ -16,6 +16,11 @@ struct clk *clk_register_gate_scu(struct device *dev, const char *name,
 		u8 clk_gate_scu_flags, spinlock_t *lock,
 		sc_rsrc_t rsrc_id, sc_pm_clk_t clk_type,
 		void __iomem *reg, u8 bit_idx, bool hw_gate);
+
+static inline struct clk *imx_clk_fixed(const char *name, int rate)
+{
+	return clk_register_fixed_rate(NULL, name, NULL, CLK_IS_ROOT, rate);
+}
 
 static inline struct clk *imx_clk_gate_scu(const char *name, const char *parent,
 		sc_rsrc_t rsrc_id, sc_pm_clk_t clk_type,

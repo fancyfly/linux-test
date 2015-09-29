@@ -25,12 +25,12 @@
 /* Types */
 
 /*!
- * This type is used to access OTP values in word lengths.
+ * This type is used to declare OTP values in word lengths.
  */
 typedef uint32_t sc_otp_word_t;
 
 /*!
- * This type is used to access OTP values by offset (of OTP word lengths).
+ * This type is used to declare OTP offset values (of OTP word lengths).
  */
 typedef uint8_t sc_otp_offset_t;
 
@@ -40,8 +40,8 @@ typedef uint8_t sc_otp_offset_t;
  * This function reads the OTP value. 
  *
  * @param[in]     ipc         IPC handle
- * @param[in]      offset  offset into OTP region
- * @param[out]     data    data to read from the OTP 
+ * @param[in]     offset      offset into OTP region
+ * @param[out]    data        data to read from the OTP 
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  *         
@@ -58,9 +58,9 @@ sc_err_t sc_otp_read(sc_ipc_t ipc, sc_otp_word_t *data,
  * This function writes the OTP value. 
  *
  * @param[in]     ipc         IPC handle
- * @param[in]      offset  offset into OTP region
- * @param[in]      data    data to write to the OTP 
- * @param[in]      bitmask mask bits to program 
+ * @param[in]     offset      offset into OTP region
+ * @param[in]     data        data to write to the OTP 
+ * @param[in]     bitmask     mask bits to program 
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  *         

@@ -15,8 +15,8 @@
 /* Includes */
 
 #include <soc/imx8/sc/types.h>
-#include <soc/imx8/sc/rpc.h>
 #include <soc/imx8/sc/svc/rm/api.h>
+#include "../../main/rpc.h"
 #include "rpc.h"
 
 /* Local Defines */

@@ -18,8 +18,9 @@
 #include <linux/of_irq.h>
 
 #include <soc/imx8/sc/ipc.h>
-#include <soc/imx8/sc/rpc.h>
+#include <soc/imx8/sc/sci.h>
 #include "../mu/fsl_mu_hal.h"
+#include "rpc.h"
 
 /* Local Defines */
 #define MU_SIZE 0x10000

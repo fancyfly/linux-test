@@ -10,6 +10,7 @@
 #define _SC_RPC_H
 
 /* Includes */
+
 #include <soc/imx8/sc/types.h>
 #include <soc/imx8/sc/ipc.h>
 

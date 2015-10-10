@@ -439,6 +439,28 @@ gckPLATFORM_AdjustParam(
         Args->registerMemSizeVG = res->end - res->start + 1;
     }
 
+    res = platform_get_resource_byname(pdev, IORESOURCE_IRQ, "irq_3d0");
+    if (res)
+        Args->irqs[gcvCORE_MAJOR] = res->start;
+
+    res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "iobase_3d0");
+    if (res)
+    {
+        Args->registerBases[gcvCORE_MAJOR] = res->start;
+        Args->registerSizes[gcvCORE_MAJOR] = res->end - res->start + 1;
+    }
+
+    res = platform_get_resource_byname(pdev, IORESOURCE_IRQ, "irq_3d1");
+    if (res)
+        Args->irqs[gcvCORE_3D1] = res->start;
+
+    res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "iobase_3d1");
+    if (res)
+    {
+        Args->registerBases[gcvCORE_3D1] = res->start;
+        Args->registerSizes[gcvCORE_3D1] = res->end - res->start + 1;
+    }
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
        Args->contiguousBase = 0;
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)

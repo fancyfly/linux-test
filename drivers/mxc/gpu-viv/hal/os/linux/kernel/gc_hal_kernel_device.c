@@ -1786,11 +1786,7 @@ gckGALDEVICE_Setup_ISR(
         );
 #else
     ret = request_irq(
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
-        Device->irqLines[Core], isrRoutine, IRQF_DISABLED,
-#else
-        Device->irqLines[Core], isrRoutine, 0x0,
-#endif
+        Device->irqLines[Core], isrRoutine, gcdIRQF_FLAG,
         "galcore interrupt service", (gctPOINTER)Core
         );
 
@@ -1848,11 +1844,7 @@ gckGALDEVICE_Setup_ISR_VG(
         );
 #else
     ret = request_irq(
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
-        Device->irqLines[gcvCORE_VG], isrRoutineVG, IRQF_DISABLED,
-#else
-        Device->irqLines[gcvCORE_VG], isrRoutineVG, 0x0,
-#endif
+        Device->irqLines[gcvCORE_VG], isrRoutineVG, gcdIRQF_FLAG,
         "galcore interrupt service for 2D", Device
         );
 #endif

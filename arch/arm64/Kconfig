@@ -613,6 +613,7 @@ config XEN
 config FORCE_MAX_ZONEORDER
 	int
 	default "14" if (ARM64_64K_PAGES && TRANSPARENT_HUGEPAGE)
+	default "14" if ARCH_FSL_IMX8DV
 	default "11"
 
 menuconfig ARMV8_DEPRECATED

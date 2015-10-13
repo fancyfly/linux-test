@@ -19,7 +19,7 @@
 
 #include <soc/imx8/sc/ipc.h>
 #include <soc/imx8/sc/sci.h>
-#include "../mu/fsl_mu_hal.h"
+#include "../../mu/fsl_mu_hal.h"
 #include "rpc.h"
 
 /* Local Defines */

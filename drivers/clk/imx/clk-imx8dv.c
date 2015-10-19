@@ -77,11 +77,15 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	clks[IMX8DV_GPT3_DIV] = imx_clk_divider_scu("gpt3_div", SC_R_GPT_3, 2);
 	clks[IMX8DV_GPT4_DIV] = imx_clk_divider_scu("gpt4_div", SC_R_GPT_4, 2);
 
-	clks[IMX8DV_GPU0_CORE_DIV] = imx_clk_divider_scu("gpu0_core_div", SC_R_GPU_0_PID0, 2);
-	clks[IMX8DV_GPU0_SHADER_DIV] = imx_clk_divider_scu("gpu0_shader_div", SC_R_GPU_0_PID0, 4);
-	clks[IMX8DV_GPU1_CORE_DIV] = imx_clk_divider_scu("gpu1_core_div", SC_R_GPU_1_PID0, 2);
-	clks[IMX8DV_GPU1_SHADER_DIV] = imx_clk_divider_scu("gpu1_shader_div", SC_R_GPU_1_PID0, 4);
+	clks[IMX8DV_GPU0_AXI_DIV] = imx_clk_divider_scu("gpu0_axi_div", SC_R_GPU_0_PID0, 1);
+	clks[IMX8DV_GPU0_AHB_DIV] = imx_clk_divider_scu("gpu0_ahb_div", SC_R_GPU_0_PID0, 2);
+	clks[IMX8DV_GPU1_AXI_DIV] = imx_clk_divider_scu("gpu1_axi_div", SC_R_GPU_1_PID0, 1);
+	clks[IMX8DV_GPU1_AHB_DIV] = imx_clk_divider_scu("gpu1_ahb_div", SC_R_GPU_1_PID0, 2);
 
+	clks[IMX8DV_GPU0_CORE_DIV] = imx_clk_divider_scu("gpu0_core_div", SC_R_GPU_0_PID0, 4);
+	clks[IMX8DV_GPU0_SHADER_DIV] = imx_clk_divider_scu("gpu0_shader_div", SC_R_GPU_0_PID0, 3);
+	clks[IMX8DV_GPU1_CORE_DIV] = imx_clk_divider_scu("gpu1_core_div", SC_R_GPU_1_PID0, 4);
+	clks[IMX8DV_GPU1_SHADER_DIV] = imx_clk_divider_scu("gpu1_shader_div", SC_R_GPU_1_PID0, 3);
 
 	clks[IMX8DV_I2C0_DIV_CLK] = imx_clk_gate_scu("i2c0_div_clk", "i2c0_div", SC_R_I2C_0, 2, (void __iomem *)(SC_R_I2C_0_LPCG + 0x8), 0, 0);
 	clks[IMX8DV_I2C1_DIV_CLK] = imx_clk_gate_scu("i2c1_div_clk", "i2c0_div", SC_R_I2C_1, 2, (void __iomem *)(SC_R_I2C_1_LPCG + 0x8), 0, 0);
@@ -112,10 +116,15 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	clks[IMX8DV_ENET0_CLK] = imx_clk_gate_scu("enet0_clk", "enet0_div", SC_R_ENET_0, 2, NULL, 0, 0);
 	clks[IMX8DV_ENET1_CLK] = imx_clk_gate_scu("enet1_clk", "enet1_div", SC_R_ENET_1, 2, NULL, 0, 0);
 
-	clks[IMX8DV_GPU0_CORE_CLK] = imx_clk_gate_scu("gpu_core0_clk", "gpu0_core_div", SC_R_GPU_0_PID0, 2, NULL, 0, 0);
-	clks[IMX8DV_GPU0_SHADER_CLK] = imx_clk_gate_scu("gpu_shader0_clk", "gpu0_shader_div", SC_R_GPU_0_PID0, 4, NULL, 0, 0);
-	clks[IMX8DV_GPU1_CORE_CLK] = imx_clk_gate_scu("gpu_core1_clk", "gpu1_core_div", SC_R_GPU_1_PID0, 2, NULL, 0, 0);
-	clks[IMX8DV_GPU1_SHADER_CLK] = imx_clk_gate_scu("gpu_shader1_clk", "gpu1_shader_div", SC_R_GPU_1_PID0, 4, NULL, 0, 0);
+	clks[IMX8DV_GPU0_AXI_CLK] = imx_clk_gate_scu("gpu0_axi_clk", "gpu0_axi_div", SC_R_GPU_0_PID0, 1, NULL, 0, 0);
+	clks[IMX8DV_GPU0_AHB_CLK] = imx_clk_gate_scu("gpu0_ahb_clk", "gpu0_ahb_div", SC_R_GPU_0_PID0, 2, NULL, 0, 0);
+	clks[IMX8DV_GPU1_AXI_CLK] = imx_clk_gate_scu("gpu1_axi_clk", "gpu1_axi_div", SC_R_GPU_1_PID0, 1, NULL, 0, 0);
+	clks[IMX8DV_GPU1_AHB_CLK] = imx_clk_gate_scu("gpu1_ahb_clk", "gpu1_ahb_div", SC_R_GPU_1_PID0, 2, NULL, 0, 0);
+
+	clks[IMX8DV_GPU0_CORE_CLK] = imx_clk_gate_scu("gpu0_core_clk", "gpu0_core_div", SC_R_GPU_0_PID0, 4, NULL, 0, 0);
+	clks[IMX8DV_GPU0_SHADER_CLK] = imx_clk_gate_scu("gpu0_shader_clk", "gpu0_shader_div", SC_R_GPU_0_PID0, 3, NULL, 0, 0);
+	clks[IMX8DV_GPU1_CORE_CLK] = imx_clk_gate_scu("gpu1_core_clk", "gpu1_core_div", SC_R_GPU_1_PID0, 4, NULL, 0, 0);
+	clks[IMX8DV_GPU1_SHADER_CLK] = imx_clk_gate_scu("gpu1_shader_clk", "gpu1_shader_div", SC_R_GPU_1_PID0, 3, NULL, 0, 0);
 
 	for (i = 0; i < ARRAY_SIZE(clks); i++)
 		if (IS_ERR(clks[i]))
@@ -137,6 +146,18 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 
 	clk_disable(clks[IMX8DV_I2C0_CLK]);
 	clk_enable(clks[IMX8DV_I2C0_CLK]);
+
+    clk_prepare(clks[IMX8DV_GPU0_AXI_CLK]);
+    clk_enable(clks[IMX8DV_GPU0_AXI_CLK]);
+
+    clk_prepare(clks[IMX8DV_GPU0_AHB_CLK]);
+    clk_enable(clks[IMX8DV_GPU0_AHB_CLK]);
+
+    clk_prepare(clks[IMX8DV_GPU1_AXI_CLK]);
+    clk_enable(clks[IMX8DV_GPU1_AXI_CLK]);
+
+    clk_prepare(clks[IMX8DV_GPU1_AHB_CLK]);
+    clk_enable(clks[IMX8DV_GPU1_AHB_CLK]);
 
     clk_prepare(clks[IMX8DV_GPU0_CORE_CLK]);
     clk_set_rate(clks[IMX8DV_GPU0_CORE_CLK], 800000000);

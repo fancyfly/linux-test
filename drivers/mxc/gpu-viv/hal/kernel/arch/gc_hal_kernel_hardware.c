@@ -375,6 +375,8 @@ _GetHardwareSignature(
                                  &Signature->chipRevision));
     }
 
+    gcmkPRINT("%s %d, GPU Core=%d, chipModel=0x%x, chipRevision=0x%x ###\n", __FUNCTION__, __LINE__, Core,  Signature->chipModel, Signature->chipRevision);
+
     /***************************************************************************
     ** Get chip features.
     */

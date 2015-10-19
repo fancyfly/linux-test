@@ -49,6 +49,8 @@
  *     OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <dt-bindings/clock/imx8dv-clock.h>
+
 /* First 4KB has trampoline code for secondary cores. */
 /memreserve/ 0x80000000 0x00010000;
 

@@ -51,7 +51,7 @@
 
 /dts-v1/;
 
-/include/ "fsl-imx8dv.dtsi"
+#include "fsl-imx8dv.dtsi"
 
 / {
 	model = "Freescale i.MX8dv Zebu";

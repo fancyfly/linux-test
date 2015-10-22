@@ -3356,6 +3356,7 @@ gckOS_Delay(
 {
     gcmkHEADER_ARG("Os=0x%X Delay=%u", Os, Delay);
 
+#if 0
     if (Delay > 0)
     {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28)
@@ -3366,6 +3367,7 @@ gckOS_Delay(
         msleep(Delay);
 #endif
     }
+#endif
 
     /* Success. */
     gcmkFOOTER_NO();

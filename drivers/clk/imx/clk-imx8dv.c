@@ -314,6 +314,20 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	clk_disable(clks[IMX8DV_I2C0_CLK]);
 	clk_enable(clks[IMX8DV_I2C0_CLK]);
 
+    clk_prepare(clks[IMX8DV_GPU0_CORE_CLK]);
+    clk_set_rate(clks[IMX8DV_GPU0_CORE_CLK], 800000000);
+    clk_enable(clks[IMX8DV_GPU0_CORE_CLK]);
+
+    clk_prepare(clks[IMX8DV_GPU0_SHADER_CLK]);
+    clk_enable(clks[IMX8DV_GPU0_SHADER_CLK]);
+
+    clk_prepare(clks[IMX8DV_GPU1_CORE_CLK]);
+    clk_set_rate(clks[IMX8DV_GPU1_CORE_CLK], 800000000);
+    clk_enable(clks[IMX8DV_GPU1_CORE_CLK]);
+
+    clk_prepare(clks[IMX8DV_GPU1_SHADER_CLK]);
+    clk_enable(clks[IMX8DV_GPU1_SHADER_CLK]);
+
 	printk("*************** finished imx8dv_clocks_init\n");
 }
 

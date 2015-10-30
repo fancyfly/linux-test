@@ -50,7 +50,6 @@ static int clk_gate_scu_enable(struct clk_hw *hw)
 	unsigned long flags = 0;
 	sc_err_t sciErr;
 
-	/* Need to implement LPCG code here. */
 	spin_lock_irqsave(gate->lock, flags);
 
 	if (gate->reg) {

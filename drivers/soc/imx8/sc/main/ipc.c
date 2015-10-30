@@ -31,18 +31,27 @@ static unsigned long mu_base_physaddr;
 static void __iomem *mu_base_virtaddr;
 
 /* Local functions */
+static void sc_ipc_write(sc_ipc_t handle, void *data);
+static void sc_ipc_read(sc_ipc_t handle, void *data);
 
 /* Local variables */
 static uint32_t gIPCport;
+static uint32_t scu_mu_init;
+
+DEFINE_MUTEX(scu_mu_mutex);
 
 /*--------------------------------------------------------------------------*/
 /* RPC command/response                                                     */
 /*--------------------------------------------------------------------------*/
 void sc_call_rpc(sc_ipc_t handle, sc_rpc_msg_t *msg, bool no_resp)
 {
-    sc_ipc_write(handle, msg);
-    if (!no_resp)
-        sc_ipc_read(handle, msg);
+	mutex_lock(&scu_mu_mutex);
+
+	sc_ipc_write(handle, msg);
+	if (!no_resp)
+		sc_ipc_read(handle, msg);
+
+	mutex_unlock(&scu_mu_mutex);
 }
 
 EXPORT_SYMBOL(sc_call_rpc);
@@ -51,15 +60,15 @@ EXPORT_SYMBOL(sc_call_rpc);
 /*--------------------------------------------------------------------------*/
 static MU_Type *sc_ipc_get_mu_base(uint32_t id)
 {
-    MU_Type *base;
+	MU_Type *base;
 
-    /* Check parameters */
-    if (id >= SC_NUM_IPC)
-        base = NULL;
-    else
-        base = (MU_Type*)(mu_base_virtaddr + (id * MU_SIZE));
+	/* Check parameters */
+	if (id >= SC_NUM_IPC)
+		base = NULL;
+	else
+	base = (MU_Type*)(mu_base_virtaddr + (id * MU_SIZE));
 
-    return base;
+	return base;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -67,48 +76,70 @@ static MU_Type *sc_ipc_get_mu_base(uint32_t id)
 /*--------------------------------------------------------------------------*/
 sc_err_t sc_ipc_open(sc_ipc_t *handle, uint32_t id)
 {
-    MU_Type *base;
-    uint32_t i;
+	MU_Type *base;
+	uint32_t i;
 
-    /* Get MU base associated with IPC channel */
-    base = sc_ipc_get_mu_base(id);
+	mutex_lock(&scu_mu_mutex);
 
-    if (base == NULL)
-        return SC_ERR_IPC;
+	/* Get MU base associated with IPC channel */
+	base = sc_ipc_get_mu_base(id);
 
-    /* Init MU */
-    MU_HAL_Init(base);
+	if (base == NULL) {
+		mutex_unlock(&scu_mu_mutex);
+		return SC_ERR_IPC;
+	}
 
-    /* Enable all RX interrupts */
-    for (i = 0; i < MU_RR_COUNT; i++)
-        MU_HAL_EnableRxFullInt(base, i);
+	if (!scu_mu_init) {
+		/* Init MU */
+		MU_HAL_Init(base);
 
-    gIPCport = id;
-    *handle = (sc_ipc_t)task_pid_vnr(current);
+		/* Enable all RX interrupts */
+		for (i = 0; i < MU_RR_COUNT; i++)
+		    MU_HAL_EnableRxFullInt(base, i);
 
-    return SC_ERR_NONE;
+		gIPCport = id;
+	}
+	scu_mu_init++;
+	*handle = (sc_ipc_t)task_pid_vnr(current);
+
+	mutex_unlock(&scu_mu_mutex);
+
+	return SC_ERR_NONE;
 }
 
 /*--------------------------------------------------------------------------*/
 /* Close an IPC channel                                                     */
 /*--------------------------------------------------------------------------*/
-void sc_ipc_close(sc_ipc_t handle)
+void sc_ipc_close(sc_ipc_t *handle)
 {
-    MU_Type *base;
+	MU_Type *base;
 
-    /* Get MU base associated with IPC channel */
-    base = sc_ipc_get_mu_base(gIPCport);
+	mutex_lock(&scu_mu_mutex);
 
+	if (!scu_mu_init) {
+		mutex_unlock(&scu_mu_mutex);
+		return;
+	}
+
+	scu_mu_init--;
+
+	/* Get MU base associated with IPC channel */
+	base = sc_ipc_get_mu_base(gIPCport);
+
+	handle = (sc_ipc_t *)NULL;
 	/* TBD ***** What needs to be done here? */
-    if (base != NULL)
-        /* Init MU */
-        MU_HAL_Init(base);
+	mutex_unlock(&scu_mu_mutex);
 }
 
-/*--------------------------------------------------------------------------*/
-/* Read message from an IPC channel                                         */
-/*--------------------------------------------------------------------------*/
-void sc_ipc_read(sc_ipc_t handle, void *data)
+/*!
+ * This function reads a message from an IPC channel.
+ *
+ * @param[in]     ipc         id of channel read from
+ * @param[out]    data        pointer to message buffer to read
+ *
+ * This function will block if no message is available to be read.
+ */
+static void sc_ipc_read(sc_ipc_t handle, void *data)
 {
 	MU_Type *base;
 	uint8_t count = 0;
@@ -120,29 +151,34 @@ void sc_ipc_read(sc_ipc_t handle, void *data)
 	if ((base == NULL) || (msg == NULL))
 		return;
 
+
 	/* Read first word */
 	MU_HAL_ReceiveMsg(base, 0, (uint32_t*) msg);
 	count++;
 
-    /* Check size */
-    if (msg->size > SC_RPC_MAX_MSG) {
-        *((uint32_t*) msg) = 0;
-        return;
-    }
-    
-    /* Read remaining words */
-    while (count < msg->size)
-    {
-        MU_HAL_ReceiveMsg(base, count % MU_RR_COUNT,
-            &(msg->DATA.d32[count - 1]));   
-        count++;
-    }
+	/* Check size */
+	if (msg->size > SC_RPC_MAX_MSG) {
+		*((uint32_t*) msg) = 0;
+		return;
+	}
+
+	/* Read remaining words */
+	while (count < msg->size) {
+		MU_HAL_ReceiveMsg(base, count % MU_RR_COUNT,
+			&(msg->DATA.d32[count - 1]));   
+		count++;
+	}
 }
 
-/*--------------------------------------------------------------------------*/
-/* Write a message to an IPC channel                                        */
-/*--------------------------------------------------------------------------*/
-void sc_ipc_write(sc_ipc_t handle, void *data)
+/*!
+ * This function writes a message to an IPC channel.
+ *
+ * @param[in]     ipc         id of channel to write to
+ * @param[in]     data        pointer to message buffer to write
+ *
+ * This function will block if the outgoing buffer is full.
+ */
+static void sc_ipc_write(sc_ipc_t handle, void *data)
 {
 	MU_Type *base;
 	uint8_t count = 0;
@@ -172,30 +208,29 @@ void sc_ipc_write(sc_ipc_t handle, void *data)
 }
 
 static const char * const mu_data[] __initconst = {
-    "fsl,imx8dv-mu",
-    NULL
-    };
+	"fsl,imx8dv-mu",
+	NULL
+	};
 
 static int __init imx8dv_dt_find_muaddr(unsigned long node, const char *uname,
     int depth, void *data)
 {
-    const __be64 *prop64;
-    const __be32 *prop32;
+	const __be64 *prop64;
+	const __be32 *prop32;
 
-    if (of_flat_dt_match(node, mu_data)) {
+	if (of_flat_dt_match(node, mu_data)) {
+		prop64 = of_get_flat_dt_prop(node, (const char *)"reg", NULL);
 
-        prop64 = of_get_flat_dt_prop(node, (const char *)"reg", NULL);
+		if (!prop64)
+			return -EINVAL;
+		mu_base_physaddr = be64_to_cpup(prop64);
 
-        if (!prop64)
-            return -EINVAL;
-        mu_base_physaddr = be64_to_cpup(prop64);
-
-        prop32 = of_get_flat_dt_prop(node, (const char *)"fsl,scu_ap_mu_id", NULL);
-        if (!prop32)
-            return -EINVAL;
-        scu_mu_id = be32_to_cpup(prop32);
-    }
-    return 0;
+		prop32 = of_get_flat_dt_prop(node, (const char *)"fsl,scu_ap_mu_id", NULL);
+		if (!prop32)
+			return -EINVAL;
+		scu_mu_id = be32_to_cpup(prop32);
+	}
+	return 0;
 }
 
 /*Initialization of the MU code. */
@@ -216,7 +251,3 @@ int __init imx8dv_mu_init()
 }
 
 EXPORT_SYMBOL(imx8dv_mu_init);
-/*early_param("setup_mu", imx8dv_mu_early_init); */
-
-/*early_initcall(imx8dv_mu_early_init);*/
-

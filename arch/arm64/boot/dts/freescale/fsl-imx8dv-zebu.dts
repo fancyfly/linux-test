@@ -62,7 +62,20 @@
 		stdout-path = &uart1;
 	};
 };
+
+&iomuxc {
+	imx8dv-zebu {
+		pinctrl_usdhc1: usdhc1grp {
+			fsl,pins = <
+			0x191 5 0 3 0 0 0x10
+			>;
+		};
+	};
+};
+
 &usdhc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc1>;
 	bus-width = <4>;
 	non-removable;
 	no-1-8-v;

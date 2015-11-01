@@ -1009,7 +1009,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		clk_prepare_enable(imx_data->clk_ahb);
 	}
 
-#if 0
 	imx_data->pinctrl = devm_pinctrl_get(&pdev->dev);
 	if (IS_ERR(imx_data->pinctrl)) {
 		err = PTR_ERR(imx_data->pinctrl);
@@ -1020,7 +1019,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 						PINCTRL_STATE_DEFAULT);
 	if (IS_ERR(imx_data->pins_default))
 		dev_warn(mmc_dev(host->mmc), "could not get default state\n");
-#endif
 
 	host->quirks |= SDHCI_QUIRK_BROKEN_TIMEOUT_VAL;
 
@@ -1109,7 +1107,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		break;
 	}
 
-#if 0
 	/* sdr50 and sdr104 needs work on 1.8v signal voltage */
 	if ((boarddata->support_vsel) && esdhc_is_usdhc(imx_data) &&
 	    !IS_ERR(imx_data->pins_default)) {
@@ -1124,9 +1121,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 			/* fall back to not support uhs by specify no 1.8v quirk */
 			host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
 		}
-#else
-	if (0) {
-#endif
 	} else {
 		host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
 	}

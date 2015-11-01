@@ -188,6 +188,9 @@ config ARCH_FSL_LS2085A
 config ARCH_FSL_IMX8DV
 	bool "Freescale i.MX8dv SOC"
 	select SERIAL_IMX
+	select PINCTRL
+	select PINCTRL_IMX
+	select PINCTRL_IMX8DV
 	help
 	  This enables support for Freescale i.MX8dv SOC.
 

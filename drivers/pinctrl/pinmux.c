@@ -401,6 +401,11 @@ int pinmux_enable_setting(struct pinctrl_setting const *setting)
 		ret = pctlops->get_group_pins(pctldev, setting->data.mux.group,
 					      &pins, &num_pins);
 
+	printk("%s %d\n", __func__, num_pins);
+	for (i = 0;  i < num_pins; i++)
+		printk("%d ", pins[i]);
+	printk("\n");
+
 	if (ret) {
 		const char *gname;
 

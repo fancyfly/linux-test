@@ -22,6 +22,7 @@
 #include <soc/imx8/sc/ipc.h>
 #include <soc/imx8/sc/svc/misc/api.h>
 #include <soc/imx8/sc/svc/otp/api.h>
+#include <soc/imx8/sc/svc/pad/api.h>
 #include <soc/imx8/sc/svc/pm/api.h>
 #include <soc/imx8/sc/svc/rm/api.h>
 #include <soc/imx8/sc/svc/wdog/api.h>

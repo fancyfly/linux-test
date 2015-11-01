@@ -145,6 +145,10 @@
 		#clock-cells = <1>;
 	};
 
+	iomuxc: iomuxc {
+		compatible = "fsl,imx8dv-iomuxc";
+	};
+
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <1 13 0x8>, /* Physical Secure PPI, active-low */

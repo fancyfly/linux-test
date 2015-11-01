@@ -62,3 +62,9 @@
 		stdout-path = &uart1;
 	};
 };
+&usdhc1 {
+	bus-width = <4>;
+	non-removable;
+	no-1-8-v;
+	status = "okay";
+};

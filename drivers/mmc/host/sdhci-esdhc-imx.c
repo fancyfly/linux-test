@@ -142,6 +142,11 @@ static struct esdhc_soc_data usdhc_imx6sl_data = {
 			| ESDHC_FLAG_HAVE_CAP1,
 };
 
+static struct esdhc_soc_data usdhc_imx8dv_data = {
+	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
+		| ESDHC_FLAG_HAVE_CAP1,
+};
+
 struct pltfm_imx_data {
 	u32 scratchpad;
 	struct pinctrl *pinctrl;
@@ -184,6 +189,7 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
 	{ .compatible = "fsl,imx53-esdhc", .data = &esdhc_imx53_data, },
 	{ .compatible = "fsl,imx6sl-usdhc", .data = &usdhc_imx6sl_data, },
 	{ .compatible = "fsl,imx6q-usdhc", .data = &usdhc_imx6q_data, },
+	{ .compatible = "fsl,imx8dv-usdhc", .data = &usdhc_imx8dv_data, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_esdhc_dt_ids);
@@ -201,6 +207,11 @@ static inline int is_imx53_esdhc(struct pltfm_imx_data *data)
 static inline int is_imx6q_usdhc(struct pltfm_imx_data *data)
 {
 	return data->socdata == &usdhc_imx6q_data;
+}
+
+static inline int is_imx8dv_usdhc(struct pltfm_imx_data *data)
+{
+	return data->socdata == &usdhc_imx8dv_data;
 }
 
 static inline int esdhc_is_usdhc(struct pltfm_imx_data *data)
@@ -581,7 +592,7 @@ static unsigned int esdhc_pltfm_get_min_clock(struct sdhci_host *host)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 
-	return pltfm_host->clock / 256 / 16;
+	return pltfm_host->clock / 256 / 32;
 }
 
 static inline void esdhc_pltfm_set_clock(struct sdhci_host *host,
@@ -773,7 +784,11 @@ static int esdhc_change_pinstate(struct sdhci_host *host,
 		pinctrl = imx_data->pins_default;
 	}
 
+#if 0
 	return pinctrl_select_state(imx_data->pinctrl, pinctrl);
+#else
+	return 0;
+#endif
 }
 
 static void esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned timing)
@@ -951,30 +966,50 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 						  pdev->id_entry->driver_data;
 	pltfm_host->priv = imx_data;
 
-	imx_data->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
-	if (IS_ERR(imx_data->clk_ipg)) {
-		err = PTR_ERR(imx_data->clk_ipg);
-		goto free_sdhci;
+	if (is_imx8dv_usdhc(imx_data)) {
+		imx_data->clk_ipg = devm_clk_get(&pdev->dev, "sdhc_bus");
+		if (IS_ERR(imx_data->clk_ipg)) {
+			err = PTR_ERR(imx_data->clk_ipg);
+			goto free_sdhci;
+		}
+
+		imx_data->clk_ahb = devm_clk_get(&pdev->dev, "sdhc_clk");
+		if (IS_ERR(imx_data->clk_ahb)) {
+			err = PTR_ERR(imx_data->clk_ahb);
+			goto free_sdhci;
+		}
+		pltfm_host->clk = imx_data->clk_ahb;
+		pltfm_host->clock = clk_get_rate(pltfm_host->clk);
+		clk_prepare_enable(imx_data->clk_ipg);
+		clk_prepare_enable(imx_data->clk_ahb);
+		printk("sdhc clk ========= %d\n", pltfm_host->clock);
+	} else {
+		imx_data->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
+		if (IS_ERR(imx_data->clk_ipg)) {
+			err = PTR_ERR(imx_data->clk_ipg);
+			goto free_sdhci;
+		}
+
+		imx_data->clk_ahb = devm_clk_get(&pdev->dev, "ahb");
+		if (IS_ERR(imx_data->clk_ahb)) {
+			err = PTR_ERR(imx_data->clk_ahb);
+			goto free_sdhci;
+		}
+
+		imx_data->clk_per = devm_clk_get(&pdev->dev, "per");
+		if (IS_ERR(imx_data->clk_per)) {
+			err = PTR_ERR(imx_data->clk_per);
+			goto free_sdhci;
+		}
+
+		pltfm_host->clk = imx_data->clk_per;
+		pltfm_host->clock = clk_get_rate(pltfm_host->clk);
+		clk_prepare_enable(imx_data->clk_per);
+		clk_prepare_enable(imx_data->clk_ipg);
+		clk_prepare_enable(imx_data->clk_ahb);
 	}
 
-	imx_data->clk_ahb = devm_clk_get(&pdev->dev, "ahb");
-	if (IS_ERR(imx_data->clk_ahb)) {
-		err = PTR_ERR(imx_data->clk_ahb);
-		goto free_sdhci;
-	}
-
-	imx_data->clk_per = devm_clk_get(&pdev->dev, "per");
-	if (IS_ERR(imx_data->clk_per)) {
-		err = PTR_ERR(imx_data->clk_per);
-		goto free_sdhci;
-	}
-
-	pltfm_host->clk = imx_data->clk_per;
-	pltfm_host->clock = clk_get_rate(pltfm_host->clk);
-	clk_prepare_enable(imx_data->clk_per);
-	clk_prepare_enable(imx_data->clk_ipg);
-	clk_prepare_enable(imx_data->clk_ahb);
-
+#if 0
 	imx_data->pinctrl = devm_pinctrl_get(&pdev->dev);
 	if (IS_ERR(imx_data->pinctrl)) {
 		err = PTR_ERR(imx_data->pinctrl);
@@ -985,6 +1020,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 						PINCTRL_STATE_DEFAULT);
 	if (IS_ERR(imx_data->pins_default))
 		dev_warn(mmc_dev(host->mmc), "could not get default state\n");
+#endif
 
 	host->quirks |= SDHCI_QUIRK_BROKEN_TIMEOUT_VAL;
 
@@ -1073,6 +1109,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		break;
 	}
 
+#if 0
 	/* sdr50 and sdr104 needs work on 1.8v signal voltage */
 	if ((boarddata->support_vsel) && esdhc_is_usdhc(imx_data) &&
 	    !IS_ERR(imx_data->pins_default)) {
@@ -1087,6 +1124,9 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 			/* fall back to not support uhs by specify no 1.8v quirk */
 			host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
 		}
+#else
+	if (0) {
+#endif
 	} else {
 		host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
 	}

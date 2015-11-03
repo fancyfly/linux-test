@@ -544,6 +544,8 @@ typedef enum sc_rsrc_e
 typedef enum sc_ctrl_e
 {
     SC_C_OTG_LINESTATE0     = 0,
+    SC_C_GPU_FORCE_TO_SINGLE_MODE,
+    SC_C_GPU_ID,
     SC_C_LAST
 } sc_ctrl_t;
 

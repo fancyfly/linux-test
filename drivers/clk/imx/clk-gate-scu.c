@@ -164,7 +164,7 @@ struct clk *clk_register_gate_scu(struct device *dev, const char *name,
 	gate->rsrc_id = rsrc_id;
 	gate->clk_type = clk_type;
 	if (reg != NULL)
-		gate->reg = ioremap((phys_addr_t)reg, SZ_4);
+		gate->reg = ioremap((phys_addr_t)reg, SZ_64K);
 	else
 		gate->reg = NULL;
 	gate->bit_idx = bit_idx;

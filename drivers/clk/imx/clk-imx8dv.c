@@ -110,8 +110,8 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 
 	/* HSIO subsystem */
 	clks[IMX8DV_PCIE_PER_DIV] = imx_clk_divider_scu("pcie_per_div", SC_R_PCIE_A, 2);
-	clks[IMX8DV_PCIE_PHY_REF_DIV]  = imx_clk_divider_scu("pcie_phy_ref_div", SC_R_PCIE_A, 3);
-	clks[IMX8DV_PCIE_PHY_PIPE_DIV] = imx_clk_divider_scu("pcie_phy_pipe_div", SC_R_PCIE_A, 4);
+	clks[IMX8DV_PCIE_PHY_REF_DIV]  = imx_clk_divider_scu("pcie_phy_ref_div", SC_R_PCIE_PHY, 3);
+	clks[IMX8DV_PCIE_PHY_PIPE_DIV] = imx_clk_divider_scu("pcie_phy_pipe_div", SC_R_PCIE_PHY, 4);
 
 	/* LCD Subsystem */
 	clks[IMX8DV_LCD_PIXEL_DIV] = imx_clk_divider_scu("lcd_pixel_div", SC_R_LCD_0, 2);
@@ -239,9 +239,9 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	clks[IM8DV_DC1_GPU_3_CLK] = imx_clk_gate_scu("dc1_gpu2_clk", "dc1_gpu2_div", SC_R_GPU_3_PID0, 2, (void __iomem *)(DC_1_LPCG + 0x0), 0, 0);
 
 	/* HSIO subsystem */
-	clks[IMX8DV_PCIE_PER_CLK] = imx_clk_gate_scu("pcie_per_clk", "pcie_per_div", SC_R_PCIE_A, 2, (void __iomem *)(PCIE_PER_LPCG + 0x0), 0, 0);
-	clks[IMX8DV_PCIE_PHY_REF_CLK]  = imx_clk_gate_scu("pcie_phy_ref_clk", "pcie_phy_ref_div", SC_R_PCIE_A, 3, NULL, 0, 0);
-	clks[IMX8DV_PCIE_PHY_PIPE_CLK] = imx_clk_gate_scu("pcie_phy_pipe_clk", "pcie_phy_pipe_div", SC_R_PCIE_A, 4, NULL, 0, 0);
+	clks[IMX8DV_PCIE_PER_CLK] = imx_clk_gate_scu("pcie_per_clk", "pcie_per_div", SC_R_PCIE_A, 2, NULL, 0, 0);
+	clks[IMX8DV_PCIE_PHY_REF_CLK]  = imx_clk_gate_scu("pcie_phy_ref_clk", "pcie_phy_ref_div", SC_R_PCIE_PHY, 3, NULL, 0, 0);
+	clks[IMX8DV_PCIE_PHY_PIPE_CLK] = imx_clk_gate_scu("pcie_phy_pipe_clk", "pcie_phy_pipe_div", SC_R_PCIE_PHY, 4, NULL, 0, 0);
 
 	/* LCD Subsystem. */
 	clks[IMX8DV_LCD_I2C0_CLK] = imx_clk_gate_scu("lcd_i2c0_clk", "lcd_i2c0_div", SC_R_LCD_0_I2C_0, 2,(void __iomem *)(LCD_LPCG + 0x1c), 0, 0);

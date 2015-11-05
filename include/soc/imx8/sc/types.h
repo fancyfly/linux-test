@@ -45,6 +45,7 @@
 #define SC_1000MHZ     1000000000   //!< 1GHz
 #define SC_1200MHZ     1200000000   //!< 1.2GHz
 #define SC_1400MHZ     1400000000   //!< 1.4GHz
+#define SC_BYPASS      0x7FFFFFFF   //!< Bypass Source, rate is unknown
 /*@}*/
 
 /*!

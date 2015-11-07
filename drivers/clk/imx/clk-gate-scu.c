@@ -99,9 +99,14 @@ static int clk_gate_scu_prepare(struct clk_hw *hw)
 
 	spin_lock_irqsave(gate->lock, flags);
 
+	sciErr = sc_pm_set_resource_power_mode(ccm_ipcHandle, gate->rsrc_id,
+											SC_PM_PW_MODE_ON);
+
 	if (gate->reg) {
 		u32 reg;
 
+		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
+										gate->clk_type, true, false);
 		/* Disable clock at LPCG level before enabling the clock slice. */
 		reg = readl(gate->reg);
 		if (gate->hw_gate)
@@ -109,13 +114,7 @@ static int clk_gate_scu_prepare(struct clk_hw *hw)
 		else
 			reg &= ~(0x2 << gate->bit_idx);
 		writel(reg, gate->reg);
-
-		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
-										gate->clk_type, true, false);
 	}
-
-	sciErr = sc_pm_set_resource_power_mode(ccm_ipcHandle, gate->rsrc_id,
-											SC_PM_PW_MODE_ON);
 	spin_unlock_irqrestore(gate->lock, flags);
 	return sciErr;
 }
@@ -128,11 +127,12 @@ static void clk_gate_scu_unprepare(struct clk_hw *hw)
 
 	spin_lock_irqsave(gate->lock, flags);
 
-	sciErr = sc_pm_set_resource_power_mode(ccm_ipcHandle, gate->rsrc_id,
-												SC_PM_PW_MODE_OFF);
 	if (gate->reg)
 		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
-										gate->clk_type, true,false);
+										gate->clk_type, false, false);
+
+	sciErr = sc_pm_set_resource_power_mode(ccm_ipcHandle, gate->rsrc_id,
+												SC_PM_PW_MODE_OFF);
 
 	spin_unlock_irqrestore(gate->lock, flags);
 }

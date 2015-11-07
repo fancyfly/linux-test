@@ -29,7 +29,7 @@
 #define 	GPT_4_LPCG			0x5E580000
 #define 	DC_0_LPCG			0x56050000
 #define 	DC_1_LPCG			0x57050000
-#define 	PCIE_PER_LPCG		0x5f060000
+#define 	PCIE_PER_LPCG		0x5f050000
 #define 	LCD_LPCG			0x56230000
 #define 	LVDS_0_LPCG			0x56210000
 #define 	LVDS_1_LPCG			0x57230000

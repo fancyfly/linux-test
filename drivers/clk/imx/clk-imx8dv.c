@@ -240,7 +240,7 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 
 	/* HSIO subsystem */
 	clks[IMX8DV_PCIE_PER_CLK] = imx_clk_gate_scu("pcie_per_clk", "pcie_per_div", SC_R_PCIE_A, 2, (void __iomem *)(PCIE_PER_LPCG + 0x0), 0, 0);
-	clks[IMX8DV_PCIE_PHY_REF_CLK]  = imx_clk_gate_scu("pcie_phy_ref_clk", "pcie_phy_ref_div", SC_R_PCIE_PHY, 3, NULL, 0, 0);
+	clks[IMX8DV_PCIE_PHY_REF_CLK]  = imx_clk_gate_scu("pcie_phy_ref_clk", "pcie_phy_ref_div", SC_R_PCIE_PHY, 3, (void __iomem *)(PCIE_PHY_LPCG + 0x0), 0, 0);
 	clks[IMX8DV_PCIE_PHY_PIPE_CLK] = imx_clk_gate_scu("pcie_phy_pipe_clk", "pcie_phy_pipe_div", SC_R_PCIE_PHY, 4, NULL, 0, 0);
 
 	/* LCD Subsystem. */

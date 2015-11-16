@@ -78,7 +78,7 @@
 #include <linux/busfreq-imx6.h>
 #include <linux/reset.h>
 #else
-/*#include <linux/busfreq-imx.h>*/
+#include <linux/busfreq-imx.h>
 #include <linux/reset.h>
 #endif
 #endif
@@ -520,7 +520,6 @@ _SetClock(
     IN gctBOOL Enable
     );
 
-#if 0
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 static void imx6sx_optimize_qosc_for_GPU(IN gckPLATFORM Platform)
 {
@@ -543,14 +542,12 @@ static void imx6sx_optimize_qosc_for_GPU(IN gckPLATFORM Platform)
     return;
 }
 #endif
-#endif
 
 gceSTATUS
 _GetPower(
     IN gckPLATFORM Platform
     )
 {
-#if 0
     struct device* pdev = &Platform->device->dev;
     struct imx_priv *priv = Platform->priv;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
@@ -651,8 +648,6 @@ _GetPower(
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
     imx6sx_optimize_qosc_for_GPU(Platform);
 #endif
-#endif
-
     return gcvSTATUS_OK;
 }
 
@@ -661,7 +656,6 @@ _PutPower(
     IN gckPLATFORM Platform
     )
 {
-#if 0
     struct imx_priv *priv = Platform->priv;
 
     /*Disable clock*/
@@ -709,7 +703,7 @@ _PutPower(
 
     driver_remove_file(pdevice->dev.driver, &driver_attr_gpu3DMinClock);
 #endif
-#endif
+
     return gcvSTATUS_OK;
 }
 
@@ -720,7 +714,6 @@ _SetPower(
     IN gctBOOL Enable
     )
 {
-#if 0
     struct imx_priv* priv = Platform->priv;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0) || LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
@@ -763,7 +756,7 @@ _SetPower(
 #endif
 
     }
-#endif
+
     return gcvSTATUS_OK;
 }
 
@@ -774,7 +767,6 @@ _SetClock(
     IN gctBOOL Enable
     )
 {
-#if 0
     struct imx_priv* priv = Platform->priv;
     struct clk *clk_3dcore = priv->clk_3d_core;
     struct clk *clk_3dshader = priv->clk_3d_shader;
@@ -877,7 +869,7 @@ _SetClock(
         }
     }
 #endif
-#endif
+
     return gcvSTATUS_OK;
 }
 
@@ -895,9 +887,9 @@ static int gpu_runtime_resume(struct device *dev)
     request_bus_freq(BUS_FREQ_HIGH);
     return 0;
 }
+#endif
 
 static struct dev_pm_ops gpu_pm_ops;
-#endif
 #endif
 #endif
 
@@ -916,18 +908,18 @@ _AdjustDriver(
 
     /* Override PM callbacks to add runtime PM callbacks. */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
-#ifdef CONFIG_PM_RUNTIME
     /* Fill local structure with original value. */
     memcpy(&gpu_pm_ops, driver->driver.pm, sizeof(struct dev_pm_ops));
 
     /* Add runtime PM callback. */
+#ifdef CONFIG_PM_RUNTIME
     gpu_pm_ops.runtime_suspend = gpu_runtime_suspend;
     gpu_pm_ops.runtime_resume = gpu_runtime_resume;
     gpu_pm_ops.runtime_idle = NULL;
+#endif
 
     /* Replace callbacks. */
     driver->driver.pm = &gpu_pm_ops;
-#endif
 #endif
     return gcvSTATUS_OK;
 }

@@ -35,7 +35,6 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	sc_err_t sciErr;
 	sc_pm_clock_rate_t rate;
 	int i, mu_id;
-	uint32_t val;
 
 	mu_id = imx8dv_mu_init();
 
@@ -315,25 +314,17 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	clk_disable(clks[IMX8DV_I2C0_CLK]);
 	clk_enable(clks[IMX8DV_I2C0_CLK]);
 
-	sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_FORCE_TO_SINGLE_MODE, 1);
-	sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_FORCE_TO_SINGLE_MODE, 1);
+	sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 0);
+	sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 0);
 	sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_ID, 0);
 	sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_ID, 1);
-
-	sc_misc_get_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_FORCE_TO_SINGLE_MODE, &val);
-	printk("*** GPU_0: SC_C_GPU_FORCE_TO_SINGLE_MODE = %d\n", val);
-	sc_misc_get_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_FORCE_TO_SINGLE_MODE, &val);
-	printk("*** GPU_1: SC_C_GPU_FORCE_TO_SINGLE_MODE = %d\n", val);
-	sc_misc_get_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_ID, &val);
-	printk("*** GPU_0: SC_C_GPU_ID = %d\n", val);
-	sc_misc_get_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_ID, &val);
-	printk("*** GPU_1: SC_C_GPU_ID = %d\n", val);
 
     clk_prepare(clks[IMX8DV_GPU0_CORE_CLK]);
     clk_set_rate(clks[IMX8DV_GPU0_CORE_CLK], 800000000);
     clk_enable(clks[IMX8DV_GPU0_CORE_CLK]);
 
     clk_prepare(clks[IMX8DV_GPU0_SHADER_CLK]);
+    clk_set_rate(clks[IMX8DV_GPU0_SHADER_CLK], 800000000);
     clk_enable(clks[IMX8DV_GPU0_SHADER_CLK]);
 
     clk_prepare(clks[IMX8DV_GPU1_CORE_CLK]);
@@ -341,6 +332,7 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
     clk_enable(clks[IMX8DV_GPU1_CORE_CLK]);
 
     clk_prepare(clks[IMX8DV_GPU1_SHADER_CLK]);
+    clk_set_rate(clks[IMX8DV_GPU1_SHADER_CLK], 800000000);
     clk_enable(clks[IMX8DV_GPU1_SHADER_CLK]);
 
 	printk("*************** finished imx8dv_clocks_init\n");

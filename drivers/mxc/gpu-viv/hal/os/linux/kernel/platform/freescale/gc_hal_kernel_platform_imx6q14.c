@@ -78,7 +78,7 @@
 #include <linux/busfreq-imx6.h>
 #include <linux/reset.h>
 #else
-#include <linux/busfreq-imx.h>
+/*#include <linux/busfreq-imx.h>*/
 #include <linux/reset.h>
 #endif
 #endif

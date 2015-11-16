@@ -4985,6 +4985,8 @@ gckOS_CacheClean(
     gcmkVERIFY_ARGUMENT(Logical != gcvNULL);
     gcmkVERIFY_ARGUMENT(Bytes > 0);
 
+    return gcvSTATUS_OK;
+
     platform = Os->device->platform;
 
     if (platform && platform->ops->cache)
@@ -5089,6 +5091,8 @@ gckOS_CacheInvalidate(
     gcmkVERIFY_ARGUMENT(Logical != gcvNULL);
     gcmkVERIFY_ARGUMENT(Bytes > 0);
 
+    return gcvSTATUS_OK;
+
     platform = Os->device->platform;
 
     if (platform && platform->ops->cache)
@@ -5188,6 +5192,8 @@ gckOS_CacheFlush(
     gcmkVERIFY_OBJECT(Os, gcvOBJ_OS);
     gcmkVERIFY_ARGUMENT(Logical != gcvNULL);
     gcmkVERIFY_ARGUMENT(Bytes > 0);
+
+    return gcvSTATUS_OK;
 
     platform = Os->device->platform;
 

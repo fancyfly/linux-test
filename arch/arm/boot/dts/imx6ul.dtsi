@@ -665,6 +665,10 @@
 			caam_snvs: caam-snvs@020cc000 {
 				compatible = "fsl,imx6q-caam-snvs";
 				reg = <0x020cc000 0x4000>;
+                jtag-active-alarm = "enabled";
+                watchdog-reset-alarm = "enabled";
+                internal-boot-alarm = "enabled";
+                external-tamper-alarm = "disabled";
 			};
 
 			snvs: snvs@020cc000 {

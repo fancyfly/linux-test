@@ -642,6 +642,10 @@
 				reg = <0x30370000 0x10000>;
 				clocks = <&clks IMX7D_SNVS_ROOT_CLK>;
 				clock-names = "snvs";
+                jtag-active-alarm = "enabled";
+                watchdog-reset-alarm = "enabled";
+                internal-boot-alarm = "enabled";
+                external-tamper-alarm = "disabled";
 			};
 
 			snvs: snvs@30370000 {

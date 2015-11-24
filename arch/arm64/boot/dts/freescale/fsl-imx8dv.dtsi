@@ -169,6 +169,9 @@
 		reg-names = "iobase_3d_0", "iobase_3d_1", "phys_baseaddr";
 		interrupts = <0 64 0x4>, <0 65 0x4>;
 		interrupt-names = "irq_3d_0", "irq_3d_1";
+		clocks = <&clk IMX8DV_GPU0_CORE_CLK>, <&clk IMX8DV_GPU0_SHADER_CLK>,
+					<&clk IMX8DV_GPU1_CORE_CLK>, <&clk IMX8DV_GPU1_SHADER_CLK>;
+		clock-names = "clk_core_3d_0", "clk_shader_3d_0", "clk_core_3d_1", "clk_shader_3d_1";
 		status = "disabled";
 	};
 

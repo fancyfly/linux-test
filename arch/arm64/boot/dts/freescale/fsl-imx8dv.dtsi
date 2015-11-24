@@ -164,7 +164,7 @@
 	};
 
 	gpu: gpu {
-		compatible = "fsl,imx8dv-gpu", "fsl,imx6q-gpu";
+		compatible = "fsl,imx8dv-gpu", "fsl,imx8x-gpu";
 		reg = <0x0 0x53100000 0 0x40000>, <0x0 0x54100000 0x0 0x40000>, <0x0 0x0 0x0 0x0>;
 		reg-names = "iobase_3d_0", "iobase_3d_1", "phys_baseaddr";
 		interrupts = <0 64 0x4>, <0 65 0x4>;

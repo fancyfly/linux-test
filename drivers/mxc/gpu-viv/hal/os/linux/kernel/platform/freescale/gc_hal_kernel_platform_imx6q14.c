@@ -1112,6 +1112,8 @@ _SetClock_imx8x(
                 clk_prepare(clk_shader_3d_0);
                 clk_enable(clk_shader_3d_0);
             }
+            break;
+        case gcvCORE_3D1:
             if(clk_core_3d_1) {
                 clk_prepare(clk_core_3d_1);
                 clk_enable(clk_core_3d_1);
@@ -1131,6 +1133,8 @@ _SetClock_imx8x(
                 clk_disable(clk_shader_3d_0);
                 clk_unprepare(clk_shader_3d_0);
             }
+            break;
+        case gcvCORE_3D1:
             if(clk_core_3d_1) {
                 clk_disable(clk_core_3d_1);
                 clk_unprepare(clk_core_3d_1);

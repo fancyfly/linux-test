@@ -85,6 +85,11 @@
 
 #include <linux/clk.h>
 
+#if IMX8_SCU_CONTROL
+#include <soc/imx8/sc/sci.h>
+extern sc_ipc_t ccm_ipcHandle;
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #include <mach/hardware.h>
 #endif
@@ -1028,6 +1033,25 @@ _GetPower_imx8x(
         priv->clk_shader_3d_1 = NULL;
         gckOS_Print("galcore: clk_get clk_core_3d_1 failed, disable 3d1!\n");
     }
+
+#if IMX8_SCU_CONTROL
+    sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_ID, 0);
+    sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_ID, 1);
+
+    /* check dual core mode */
+    if(priv->clk_core_3d_0 != NULL && priv->clk_core_3d_1 != NULL)
+    {
+        sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 0);
+        sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 0);
+    }
+    /* check single core mode */
+    else if(priv->clk_core_3d_0 != NULL || priv->clk_core_3d_1 != NULL)
+    {
+        sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 1);
+        sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 1);
+    }
+    else ; /* caution, do NOT call SCU control without gpu core enabled !!! */
+#endif
 
 #if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
     pdevice = Platform->device;

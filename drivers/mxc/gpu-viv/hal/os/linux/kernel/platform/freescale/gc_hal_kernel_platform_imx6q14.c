@@ -725,7 +725,10 @@ _SetPower(
     IN gctBOOL Enable
     )
 {
+#ifdef CONFIG_PM
     struct imx_priv* priv = Platform->priv;
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0) || LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
     int ret;
@@ -917,6 +920,7 @@ _AdjustDriver(
     driver->driver.of_match_table = mxs_gpu_dt_ids;
 #endif
 
+#ifdef CONFIG_PM
     /* Override PM callbacks to add runtime PM callbacks. */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
     /* Fill local structure with original value. */
@@ -932,6 +936,8 @@ _AdjustDriver(
     /* Replace callbacks. */
     driver->driver.pm = &gpu_pm_ops;
 #endif
+#endif
+
     return gcvSTATUS_OK;
 }
 

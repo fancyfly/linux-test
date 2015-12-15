@@ -1019,8 +1019,14 @@ _GetPower_imx8x(
                    priv->clk_shader_3d_0 = NULL;
                    gckOS_Print("galcore: clk_get clk_shader_3d_0 failed, disable 3d0!\n");
          } else {
+             clk_prepare(priv->clk_core_3d_0);
+             clk_prepare(priv->clk_shader_3d_0);
+
              clk_set_rate(priv->clk_core_3d_0, 800000000);
              clk_set_rate(priv->clk_shader_3d_0, 800000000);
+
+             clk_unprepare(priv->clk_core_3d_0);
+             clk_unprepare(priv->clk_shader_3d_0);
          }
     } else {
         priv->clk_core_3d_0 = NULL;
@@ -1037,8 +1043,14 @@ _GetPower_imx8x(
                    priv->clk_shader_3d_1 = NULL;
                    gckOS_Print("galcore: clk_get clk_shader_3d_1 failed, disable 3d1!\n");
          } else {
+             clk_prepare(priv->clk_core_3d_1);
+             clk_prepare(priv->clk_shader_3d_1);
+
              clk_set_rate(priv->clk_core_3d_1, 800000000);
              clk_set_rate(priv->clk_shader_3d_1, 800000000);
+
+             clk_unprepare(priv->clk_core_3d_1);
+             clk_unprepare(priv->clk_shader_3d_1);
          }
     } else {
         priv->clk_core_3d_1 = NULL;

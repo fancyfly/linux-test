@@ -94,7 +94,7 @@ sc_err_t sc_otp_write(sc_ipc_t ipc, sc_otp_word_t data,
  * Assigns some part of the OTP resource owned by the caller's partition
  * to another partition.
  */
-/* IDL: E8 SET_PERMISSIONS(I8 offset, I1 readen, I1 writeen, I1 lock) */   
+/* IDL: E8 SET_PERMISSIONS(I8 offset, IB readen, IB writeen, IB lock) */   
 sc_err_t sc_otp_set_permissions(sc_ipc_t ipc, sc_otp_offset_t offset,
     bool readen, bool writeen, bool lock);
 

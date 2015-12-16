@@ -150,7 +150,7 @@ sc_err_t sc_pm_get_clock_rate(sc_ipc_t ipc, sc_rsrc_t resource,
     return result;
 }
 
-/* IDL: E8 CLOCK_ENABLE(I16 resource, I4 clk, I1 enable, I1 autog) */
+/* IDL: E8 CLOCK_ENABLE(I16 resource, I4 clk, IB enable, IB autog) */
 sc_err_t sc_pm_clock_enable(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_pm_clk_t clk, bool enable, bool autog)
 {
@@ -228,7 +228,7 @@ void sc_pm_reset_reason(sc_ipc_t ipc, sc_pm_reset_reason_t *reason)
     return;
 }
 
-/* IDL: E8 CPU_START(I16 resource, I1 enable, I64 addr) */
+/* IDL: E8 CPU_START(I16 resource, IB enable, I64 addr) */
 sc_err_t sc_pm_cpu_start(sc_ipc_t ipc, sc_rsrc_t resource, bool enable,
     sc_faddr_t addr)
 {

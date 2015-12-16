@@ -37,15 +37,17 @@
 #define SC_250MHZ       250000000   //!< 250MHz
 #define SC_266MHZ       266666666   //!< 266MHz
 #define SC_320MHZ       320000000   //!< 320MHz
+#define SC_375MHZ       375000000   //!< 375MHz
 #define SC_384MHZ       384000000   //!< 384MHz
 #define SC_400MHZ       400000000   //!< 400MHz
 #define SC_480MHZ       480000000   //!< 480MHz
 #define SC_500MHZ       500000000   //!< 500MHz
+#define SC_750MHZ       750000000   //!< 750MHz
 #define SC_800MHZ       800000000   //!< 800MHz
 #define SC_1000MHZ     1000000000   //!< 1GHz
 #define SC_1200MHZ     1200000000   //!< 1.2GHz
 #define SC_1400MHZ     1400000000   //!< 1.4GHz
-#define SC_BYPASS      0x7FFFFFFF   //!< Bypass Source, rate is unknown
+#define SC_BYPASS      (INT32_MAX)  //!< Bypass Source, rate is unknown
 /*@}*/
 
 /*!
@@ -91,16 +93,16 @@ typedef enum sc_err_e
  */
 typedef enum sc_rsrc_e
 {   
-    SC_R_AP_0               = 0,
-    SC_R_AP_0_0             = 1,
-    SC_R_AP_0_1             = 2,
-    SC_R_AP_0_2             = 3,
-    SC_R_AP_0_3             = 4,
-    SC_R_AP_1               = 5,
-    SC_R_AP_1_0             = 6,
-    SC_R_AP_1_1             = 7,
-    SC_R_AP_1_2             = 8,
-    SC_R_AP_1_3             = 9,
+    SC_R_A53                = 0,
+    SC_R_A53_0              = 1,
+    SC_R_A53_1              = 2,
+    SC_R_A53_2              = 3,
+    SC_R_A53_3              = 4,
+    SC_R_A72                = 5,
+    SC_R_A72_0              = 6,
+    SC_R_A72_1              = 7,
+    SC_R_A72_2              = 8,
+    SC_R_A72_3              = 9,
     SC_R_CCI                = 10,
     SC_R_SSI_MST_LSIO       = 11,
     SC_R_PG0_SSI_MST_DRC0   = 12,
@@ -536,6 +538,16 @@ typedef enum sc_rsrc_e
     SC_R_VPU_PID6           = 442,
     SC_R_VPU_PID7           = 443,
     SC_R_VPU_UART           = 444,
+    SC_R_ROM_0              = 445,
+    SC_R_OSPI_0             = 446,
+    SC_R_OSPI_1             = 447,
+    SC_R_IEE                = 448,
+    SC_R_AUD_PLL_0          = 449,
+    SC_R_DC_0_PLL_0         = 450,
+    SC_R_DC_0_PLL_1         = 451,
+    SC_R_DC_1_PLL_0         = 452,
+    SC_R_DC_1_PLL_1         = 453,
+    SC_R_RTC                = 454,
     SC_R_LAST   
 } sc_rsrc_t;
 

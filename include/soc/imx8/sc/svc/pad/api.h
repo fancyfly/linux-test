@@ -95,7 +95,7 @@ typedef enum sc_pad_wakeup_e
 /* Functions */
 
 /*!
- * This function configures the mux settings for a pin. This include
+ * This function configures the mux settings for a pin. This includes
  * the signal mux, pad config, and low-power isolation mode.
  *
  * @param[in]     ipc         IPC handle
@@ -150,7 +150,7 @@ sc_err_t sc_pad_set_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t ctrl);
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  */
-/* IDL: E8 SET_GP_28LPP(I16 pin, I2 dse, I1 sre, I1 hys, I1 pe, I2 ps) */
+/* IDL: E8 SET_GP_28LPP(I16 pin, I2 dse, IB sre, IB hys, IB pe, I2 ps) */
 sc_err_t sc_pad_set_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin, 
     sc_pad_28lpp_dse_t dse, bool sre, bool hys, bool pe,
     sc_pad_28lpp_ps_t ps);
@@ -196,6 +196,109 @@ sc_err_t sc_pad_set_wakeup(sc_ipc_t ipc, sc_pin_t pin,
 sc_err_t sc_pad_set_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t mux, 
     sc_pad_config_t config, sc_pad_iso_t iso, uint32_t ctrl,
     sc_pad_wakeup_t wakeup);
+
+/*!
+ * This function gets the mux settings for a pin. This includes
+ * the signal mux, pad config, and low-power isolation mode.
+ *
+ * @param[in]     ipc         IPC handle
+ * @param[in]     pin         pin to query
+ * @param[out]    mux         pointer to return mux setting
+ * @param[out]    config      pointer to return pad config
+ * @param[out]    iso         pointer to return low-power isolation mode
+ *
+ * @return Returns an error code (SC_ERR_NONE = success).
+ *
+ * Return errors:
+ * - SC_PARM if arguments out of range or invalid,
+ * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ */
+/* IDL: E8 GET_MUX(I16 pin, O8 mux, O2 config, O2 iso) */
+sc_err_t sc_pad_get_mux(sc_ipc_t ipc, sc_pin_t pin,
+    uint8_t *mux, sc_pad_config_t *config, sc_pad_iso_t *iso);
+
+/*!
+ * This function gets the general purpose pad control. This
+ * is technology dependent and includes things like drive strength,
+ * slew rate, pull up/down, etc. Refer to the SoC Reference Manual
+ * for bit field details.
+ *
+ * @param[in]     ipc         IPC handle
+ * @param[in]     pin         pin to query
+ * @param[out]    ctrl        pointer to return control value
+ *
+ * @return Returns an error code (SC_ERR_NONE = success).
+ *
+ * Return errors:
+ * - SC_PARM if arguments out of range or invalid,
+ * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ */
+/* IDL: E8 GET_GP(I16 pin, O32 ctrl) */
+sc_err_t sc_pad_get_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t *ctrl);
+
+/*!
+ * This function gets the pad control specific to 28LPP.
+ *
+ * @param[in]     ipc         IPC handle
+ * @param[in]     pin         pin to query
+ * @param[out]    dse         pointer to return drive strength
+ * @param[out]    sre         pointer to return slew rate
+ * @param[out]    hys         pointer to return hysteresis
+ * @param[out]    pe          pointer to return pull enable
+ * @param[out]    ps          pointer to return pull select
+ *
+ * @return Returns an error code (SC_ERR_NONE = success).
+ *
+ * Return errors:
+ * - SC_PARM if arguments out of range or invalid,
+ * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ */
+/* IDL: E8 GET_GP_28LPP(I16 pin, O2 dse, OB sre, OB hys, OB pe, O2 ps) */
+sc_err_t sc_pad_get_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin, 
+    sc_pad_28lpp_dse_t *dse, bool *sre, bool *hys, bool *pe,
+    sc_pad_28lpp_ps_t *ps);
+
+/*!
+ * This function gets the wakeup mode of a pin.
+ *
+ * @param[in]     ipc         IPC handle
+ * @param[in]     pin         pin to query
+ * @param[out]    wakeup      pointer to return wakeup
+ *
+ * @return Returns an error code (SC_ERR_NONE = success).
+ *
+ * Return errors:
+ * - SC_PARM if arguments out of range or invalid,
+ * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ */
+/* IDL: E8 GET_WAKEUP(I16 pin, O3 wakeup) */
+sc_err_t sc_pad_get_wakeup(sc_ipc_t ipc, sc_pin_t pin,
+    sc_pad_wakeup_t *wakeup);
+
+/*!
+ * This function gets a pad's config.
+ *
+ * @param[in]     ipc         IPC handle
+ * @param[in]     pin         pin to query
+ * @param[out]    mux         pointer to return mux setting
+ * @param[out]    config      pointer to return pad config
+ * @param[out]    iso         pointer to return low-power isolation mode
+ * @param[out]    ctrl        pointer to return control value
+ * @param[out]    wakeup      pointer to return wakeup to set
+ *
+ * @see sc_pad_set_mux().
+ * @see sc_pad_set_gp().
+ *
+ * Return errors:
+ * - SC_PARM if arguments out of range or invalid,
+ * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * @return Returns an error code (SC_ERR_NONE = success).
+ */
+/* IDL: E8 GET_ALL(I16 pin, O8 mux, O2 config, O2 iso, O32 ctrl, O3 wakeup) */
+sc_err_t sc_pad_get_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t *mux, 
+    sc_pad_config_t *config, sc_pad_iso_t *iso, uint32_t *ctrl,
+    sc_pad_wakeup_t *wakeup);
 
 #endif /* _SC_PAD_API_H */
 

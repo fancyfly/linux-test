@@ -55,12 +55,19 @@ typedef enum rm_func_e
 /* Functions */
 
 /*!
+ * @name Internal RPC Function
+ * @{
+ */
+
+/*!
  * This function dispatches an incoming RM RPC request.
  *
  * @param[in]     caller_pt   caller partition
  * @param[in]     msg         pointer to RPC message
  */
 void rm_dispatch(sc_rm_pt_t caller_pt, sc_rpc_msg_t *msg);
+
+/* @} */
 
 #endif /* _SC_RM_RPC_H */
 

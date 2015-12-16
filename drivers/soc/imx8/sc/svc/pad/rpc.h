@@ -31,9 +31,19 @@ typedef enum pad_func_e
     PAD_FUNC_SET_GP_28LPP, //!< Index for pad_set_gp_28lpp() RPC call
     PAD_FUNC_SET_WAKEUP, //!< Index for pad_set_wakeup() RPC call
     PAD_FUNC_SET_ALL, //!< Index for pad_set_all() RPC call
+    PAD_FUNC_GET_MUX, //!< Index for pad_get_mux() RPC call
+    PAD_FUNC_GET_GP, //!< Index for pad_get_gp() RPC call
+    PAD_FUNC_GET_GP_28LPP, //!< Index for pad_get_gp_28lpp() RPC call
+    PAD_FUNC_GET_WAKEUP, //!< Index for pad_get_wakeup() RPC call
+    PAD_FUNC_GET_ALL, //!< Index for pad_get_all() RPC call
 } pad_func_t;
 
 /* Functions */
+
+/*!
+ * @name Internal RPC Function
+ * @{
+ */
 
 /*!
  * This function dispatches an incoming PAD RPC request.
@@ -42,6 +52,8 @@ typedef enum pad_func_e
  * @param[in]     msg         pointer to RPC message
  */
 void pad_dispatch(sc_rm_pt_t caller_pt, sc_rpc_msg_t *msg);
+
+/* @} */
 
 #endif /* _SC_PAD_RPC_H */
 

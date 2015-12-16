@@ -42,12 +42,19 @@ typedef enum pm_func_e
 /* Functions */
 
 /*!
+ * @name Internal RPC Function
+ * @{
+ */
+
+/*!
  * This function dispatches an incoming PM RPC request.
  *
  * @param[in]     caller_pt   caller partition
  * @param[in]     msg         pointer to RPC message
  */
 void pm_dispatch(sc_rm_pt_t caller_pt, sc_rpc_msg_t *msg);
+
+/* @} */
 
 #endif /* _SC_PM_RPC_H */
 

@@ -38,7 +38,7 @@ typedef enum sc_rpc_svc_e
     SC_RPC_SVC_PM               = 2,
     SC_RPC_SVC_RM               = 3,
     SC_RPC_SVC_OTP              = 4,
-    SC_RPC_SVC_WDOG             = 5,
+    SC_RPC_SVC_TIMER            = 5,
     SC_RPC_SVC_PAD              = 6,
     SC_RPC_SVC_MISC             = 7,
     SC_RPC_SVC_ABORT            = 8        

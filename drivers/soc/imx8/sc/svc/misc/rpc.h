@@ -33,12 +33,19 @@ typedef enum misc_func_e
 /* Functions */
 
 /*!
+ * @name Internal RPC Function
+ * @{
+ */
+
+/*!
  * This function dispatches an incoming MISC RPC request.
  *
  * @param[in]     caller_pt   caller partition
  * @param[in]     msg         pointer to RPC message
  */
 void misc_dispatch(sc_rm_pt_t caller_pt, sc_rpc_msg_t *msg);
+
+/* @} */
 
 #endif /* _SC_MISC_RPC_H */
 

@@ -128,7 +128,7 @@ typedef enum sc_rm_perm_e
  * partition to assert the secure signal. If restricted then the new partition is limited
  * in what functions it can call, especially those associated with managing partitions.
  */
-/* IDL: E8 PARTITION_ALLOC(O8 pt, I1 secure, I1 isolated, I1 restricted, I1 confidential) */   
+/* IDL: E8 PARTITION_ALLOC(O8 pt, IB secure, IB isolated, IB restricted, IB confidential) */   
 sc_err_t sc_rm_partition_alloc(sc_ipc_t ipc, sc_rm_pt_t *pt, bool secure,
     bool isolated, bool restricted, bool confidential);
 
@@ -251,7 +251,7 @@ sc_err_t sc_rm_set_parent(sc_ipc_t ipc, sc_rm_pt_t pt,
  *   parent of \a pt_src,
  * - SC_ERR_LOCKED if either partition is locked
  */
-/* IDL: E8 MOVE_ALL(I8 pt_src, I8 pt_dst, I8 move_rsrc, I8 move_pins) */
+/* IDL: E8 MOVE_ALL(I8 pt_src, I8 pt_dst, IB move_rsrc, IB move_pins) */
 sc_err_t sc_rm_move_all(sc_ipc_t ipc, sc_rm_pt_t pt_src, sc_rm_pt_t pt_dst,
     bool move_rsrc, bool move_pins);
 
@@ -304,7 +304,7 @@ sc_err_t sc_rm_assign_resource(sc_ipc_t ipc, sc_rm_pt_t pt,
  * by default so this function is normally used to prevent a set of
  * resources from moving.
  */
-/* IDL: E8 SET_RESOURCE_MOVABLE(I16 resource, I1 movable) */
+/* IDL: E8 SET_RESOURCE_MOVABLE(I16 resource, IB movable) */
 sc_err_t sc_rm_set_resource_movable(sc_ipc_t ipc, sc_rsrc_t resource,
     bool movable);
 
@@ -330,7 +330,7 @@ sc_err_t sc_rm_set_resource_movable(sc_ipc_t ipc, sc_rsrc_t resource,
  * from the specified master. Note the security attribute will only be
  * changed if the caller's partition is secure.
  */
-/* IDL: E8 SET_MASTER_ATTRIBUTES(I16 resource, I4 sa, I4 pa, I1 smmu_bypass) */
+/* IDL: E8 SET_MASTER_ATTRIBUTES(I16 resource, I4 sa, I4 pa, IB smmu_bypass) */
 sc_err_t sc_rm_set_master_attributes(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_rm_spa_t sa, sc_rm_spa_t pa, bool smmu_bypass);
 

@@ -561,8 +561,10 @@ _GetPower(
 {
     struct device* pdev = &Platform->device->dev;
     struct imx_priv *priv = Platform->priv;
+#ifdef CONFIG_RESET_CONTROLLER
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
     struct reset_control *rstc;
+#endif
 #endif
 
 #ifdef CONFIG_PM
@@ -572,6 +574,7 @@ _GetPower(
 #endif
 
 
+#ifdef CONFIG_RESET_CONTROLLER
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
     rstc = devm_reset_control_get(pdev, "gpu3d");
     priv->rstc[gcvCORE_MAJOR] = IS_ERR(rstc) ? NULL : rstc;
@@ -579,6 +582,7 @@ _GetPower(
     priv->rstc[gcvCORE_2D] = IS_ERR(rstc) ? NULL : rstc;
     rstc = devm_reset_control_get(pdev, "gpuvg");
     priv->rstc[gcvCORE_VG] = IS_ERR(rstc) ? NULL : rstc;
+#endif
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)

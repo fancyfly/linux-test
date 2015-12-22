@@ -74,11 +74,11 @@
 #include <linux/pm_runtime.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
 #include <mach/busfreq.h>
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 29)
 #include <linux/busfreq-imx6.h>
 #include <linux/reset.h>
 #else
-/*#include <linux/busfreq-imx.h>*/
+#include <linux/busfreq-imx.h>
 #include <linux/reset.h>
 #endif
 #endif
@@ -108,6 +108,10 @@ extern int unregister_thermal_notifier(struct notifier_block *nb);
 #define REG_THERMAL_NOTIFIER(a) register_thermal_notifier(a);
 #define UNREG_THERMAL_NOTIFIER(a) unregister_thermal_notifier(a);
 #endif
+#endif
+
+#ifndef gcdDEFAULT_CONTIGUOUS_SIZE
+#define gcdDEFAULT_CONTIGUOUS_SIZE (4 << 20)
 #endif
 
 static int initgpu3DMinClock = 1;
@@ -472,7 +476,16 @@ gckPLATFORM_AdjustParam(
         Args->registerSizes[gcvCORE_3D1] = res->end - res->start + 1;
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+    res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "contiguous_mem");
+    if (res)
+    {
+        if( Args->contiguousBase == 0 )
+           Args->contiguousBase = res->start;
+        if( Args->contiguousSize == -1 )
+           Args->contiguousSize = res->end - res->start + 1;
+    }
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
        Args->contiguousBase = 0;
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
        prop = of_get_property(dn, "contiguousbase", NULL);
@@ -486,8 +499,12 @@ gckPLATFORM_AdjustParam(
        Args->contiguousSize = pdata->reserved_mem_size;
      }
 #endif
-    if (Args->contiguousSize == 0)
+    if (Args->contiguousSize == -1)
+    {
        gckOS_Print("Warning: No contiguous memory is reserverd for gpu.!\n ");
+       gckOS_Print("Warning: Will use default value(%d) for the reserved memory!\n ",gcdDEFAULT_CONTIGUOUS_SIZE);
+       Args->contiguousSize = gcdDEFAULT_CONTIGUOUS_SIZE;
+    }
 
     Args->gpu3DMinClock = initgpu3DMinClock;
 
@@ -1005,6 +1022,7 @@ gcsPLATFORM_OPERATIONS platformOperations = {
     .name          = _Name,
 };
 
+/* the following code is implemented for imx8x gpu specifically */
 gceSTATUS
 _GetPower_imx8x(
     IN gckPLATFORM Platform
@@ -1021,21 +1039,20 @@ _GetPower_imx8x(
                    clk_put(priv->clk_core_3d_0);
                    priv->clk_core_3d_0 = NULL;
                    priv->clk_shader_3d_0 = NULL;
-                   gckOS_Print("galcore: clk_get clk_shader_3d_0 failed, disable 3d0!\n");
+                   gckOS_Print("galcore: clk_get clk_shader_3d_0 failed, disable 3d_0!\n");
          } else {
              clk_prepare(priv->clk_core_3d_0);
-             clk_prepare(priv->clk_shader_3d_0);
-
              clk_set_rate(priv->clk_core_3d_0, 800000000);
-             clk_set_rate(priv->clk_shader_3d_0, 800000000);
-
              clk_unprepare(priv->clk_core_3d_0);
+
+             clk_prepare(priv->clk_shader_3d_0);
+             clk_set_rate(priv->clk_shader_3d_0, 800000000);
              clk_unprepare(priv->clk_shader_3d_0);
          }
     } else {
         priv->clk_core_3d_0 = NULL;
         priv->clk_shader_3d_0 = NULL;
-        gckOS_Print("galcore: clk_get clk_core_3d_0 failed, disable 3d0!\n");
+        gckOS_Print("galcore: clk_get clk_core_3d_0 failed, disable 3d_0!\n");
     }
 
     priv->clk_core_3d_1 = clk_get(pdev, "clk_core_3d_1");
@@ -1045,21 +1062,20 @@ _GetPower_imx8x(
                    clk_put(priv->clk_core_3d_1);
                    priv->clk_core_3d_1 = NULL;
                    priv->clk_shader_3d_1 = NULL;
-                   gckOS_Print("galcore: clk_get clk_shader_3d_1 failed, disable 3d1!\n");
+                   gckOS_Print("galcore: clk_get clk_shader_3d_1 failed, disable 3d_1!\n");
          } else {
              clk_prepare(priv->clk_core_3d_1);
-             clk_prepare(priv->clk_shader_3d_1);
-
              clk_set_rate(priv->clk_core_3d_1, 800000000);
-             clk_set_rate(priv->clk_shader_3d_1, 800000000);
-
              clk_unprepare(priv->clk_core_3d_1);
+
+             clk_prepare(priv->clk_shader_3d_1);
+             clk_set_rate(priv->clk_shader_3d_1, 800000000);
              clk_unprepare(priv->clk_shader_3d_1);
          }
     } else {
         priv->clk_core_3d_1 = NULL;
         priv->clk_shader_3d_1 = NULL;
-        gckOS_Print("galcore: clk_get clk_core_3d_1 failed, disable 3d1!\n");
+        gckOS_Print("galcore: clk_get clk_core_3d_1 failed, disable 3d_1!\n");
     }
 
 #if IMX8_SCU_CONTROL
@@ -1067,13 +1083,13 @@ _GetPower_imx8x(
     sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_ID, 1);
 
     /* check dual core mode */
-    if(priv->clk_core_3d_0 != NULL && priv->clk_core_3d_1 != NULL)
+    if (priv->clk_core_3d_0 != NULL && priv->clk_core_3d_1 != NULL)
     {
         sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 0);
         sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 0);
     }
     /* check single core mode */
-    else if(priv->clk_core_3d_0 != NULL || priv->clk_core_3d_1 != NULL)
+    else if (priv->clk_core_3d_0 != NULL || priv->clk_core_3d_1 != NULL)
     {
         sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 1);
         sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 1);
@@ -1158,7 +1174,7 @@ _SetClock_imx8x(
     if (Enable) {
         switch (GPU) {
         case gcvCORE_MAJOR:
-            if(clk_core_3d_0) {
+            if (clk_core_3d_0 && clk_shader_3d_0) {
                 clk_prepare(clk_core_3d_0);
                 clk_enable(clk_core_3d_0);
                 clk_prepare(clk_shader_3d_0);
@@ -1166,7 +1182,7 @@ _SetClock_imx8x(
             }
             break;
         case gcvCORE_3D1:
-            if(clk_core_3d_1) {
+            if (clk_core_3d_1 && clk_shader_3d_1) {
                 clk_prepare(clk_core_3d_1);
                 clk_enable(clk_core_3d_1);
                 clk_prepare(clk_shader_3d_1);
@@ -1179,7 +1195,7 @@ _SetClock_imx8x(
     } else {
         switch (GPU) {
         case gcvCORE_MAJOR:
-            if(clk_core_3d_0) {
+            if (clk_core_3d_0 && clk_shader_3d_0) {
                 clk_disable(clk_core_3d_0);
                 clk_unprepare(clk_core_3d_0);
                 clk_disable(clk_shader_3d_0);
@@ -1187,7 +1203,7 @@ _SetClock_imx8x(
             }
             break;
         case gcvCORE_3D1:
-            if(clk_core_3d_1) {
+            if (clk_core_3d_1 && clk_shader_3d_1) {
                 clk_disable(clk_core_3d_1);
                 clk_unprepare(clk_core_3d_1);
                 clk_disable(clk_shader_3d_1);

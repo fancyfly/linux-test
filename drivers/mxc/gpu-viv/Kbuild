@@ -295,8 +295,8 @@ endif
 
 EXTRA_CFLAGS += -DHOST=\"$(HOST)\"
 
-obj-$(CONFIG_MXC_GPU_VIV) += galcore.o
+obj-$(CONFIG_MXC_GPU_VIV) = $(MODULE_NAME).o
 
-galcore-objs  := $(OBJS)
+$(MODULE_NAME)-objs  = $(OBJS)
 
 endif

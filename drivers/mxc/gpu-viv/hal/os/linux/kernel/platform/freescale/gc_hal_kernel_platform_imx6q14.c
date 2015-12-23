@@ -1078,6 +1078,11 @@ _GetPower_imx8x(
         gckOS_Print("galcore: clk_get clk_core_3d_1 failed, disable 3d_1!\n");
     }
 
+    if (priv->clk_core_3d_0 == NULL && priv->clk_core_3d_1 == NULL)
+    {
+        return gcvSTATUS_OUT_OF_RESOURCES;
+    }
+
 #if IMX8_SCU_CONTROL
     sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_ID, 0);
     sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_ID, 1);

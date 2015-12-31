@@ -2954,6 +2954,18 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
 		break;
 	case USB_SPEED_HIGH:		/* fixed at 64 */
 		udev->ep0.desc.wMaxPacketSize = cpu_to_le16(64);
+#ifdef MX6_USB_HOST_HACK
+	{	/*Must enable HOSTDISCONDETECT after bus reset*/
+		if ((port1 == 1) && (udev->level == 1)) {
+			struct device *dev = hcd->self.controller;
+			struct fsl_usb2_platform_data *pdata;
+			pdata = (struct fsl_usb2_platform_data *)
+				 dev->platform_data;
+			if (pdata && pdata->platform_set_disconnect_det)
+				pdata->platform_set_disconnect_det(pdata, 1);
+		}
+	}
+#endif
 		break;
 	case USB_SPEED_FULL:		/* 8, 16, 32, or 64 */
 		/* to determine the ep0 maxpacket size, try to read
@@ -3125,20 +3137,6 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
 			break;
 		}
 	}
-#ifdef MX6_USB_HOST_HACK
-	{	/*Must enable HOSTDISCONDETECT after second reset*/
-		if ((port1 == 1) && (udev->level == 1)) {
-			if (udev->speed == USB_SPEED_HIGH) {
-				struct device *dev = hcd->self.controller;
-				struct fsl_usb2_platform_data *pdata;
-				pdata = (struct fsl_usb2_platform_data *)
-					 dev->platform_data;
-				if (pdata && pdata->platform_set_disconnect_det)
-					pdata->platform_set_disconnect_det(pdata, 1);
-			}
-		}
-	}
-#endif
 	if (retval)
 		goto fail;
 

@@ -7,7 +7,7 @@
  *
  * Based on code from Freescale:
  *
- * Copyright 2004-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2016 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -1093,11 +1093,9 @@ static int sdma_config_channel(struct sdma_channel *sdmac)
 	sdmac->shp_addr = 0;
 	sdmac->per_addr = 0;
 
-	if (sdmac->event_id0 >= 0) {
-		if (sdmac->event_id0 >= sdmac->sdma->drvdata->num_events)
-			return -EINVAL;
-		sdma_event_enable(sdmac, sdmac->event_id0);
-	}
+	if (sdmac->event_id0 >= sdmac->sdma->drvdata->num_events)
+		return -EINVAL;
+	sdma_event_enable(sdmac, sdmac->event_id0);
 
 	if (sdmac->event_id1) {
 		if (sdmac->event_id1 >= sdmac->sdma->drvdata->num_events)
@@ -1177,19 +1175,20 @@ static int sdma_request_channel(struct sdma_channel *sdmac)
 	struct sdma_engine *sdma = sdmac->sdma;
 	int channel = sdmac->channel;
 	int ret = -EBUSY;
+	u32 bd_size = sizeof(struct sdma_buffer_descriptor);
 
 	sdmac->bd_iram = true;
-	sdmac->bd = gen_pool_dma_alloc(sdma->iram_pool, PAGE_SIZE, &sdmac->bd_phys);
+	sdmac->bd = gen_pool_dma_alloc(sdma->iram_pool, bd_size, &sdmac->bd_phys);
 	if (!sdmac->bd) {
 		sdmac->bd_iram = false;
-		sdmac->bd = dma_alloc_coherent(NULL, PAGE_SIZE, &sdmac->bd_phys, GFP_KERNEL);
+		sdmac->bd = dma_alloc_coherent(NULL, bd_size, &sdmac->bd_phys, GFP_KERNEL);
 		if (!sdmac->bd) {
 			ret = -ENOMEM;
 			goto out;
 		}
 	}
 
-	memset(sdmac->bd, 0, PAGE_SIZE);
+	memset(sdmac->bd, 0, bd_size);
 
 	sdma->channel_control[channel].base_bd_ptr = sdmac->bd_phys;
 	sdma->channel_control[channel].current_bd_ptr = sdmac->bd_phys;
@@ -1275,8 +1274,7 @@ static void sdma_free_chan_resources(struct dma_chan *chan)
 
 	sdma_disable_channel(sdmac);
 
-	if (sdmac->event_id0 >= 0)
-		sdma_event_disable(sdmac, sdmac->event_id0);
+	sdma_event_disable(sdmac, sdmac->event_id0);
 	if (sdmac->event_id1)
 		sdma_event_disable(sdmac, sdmac->event_id1);
 

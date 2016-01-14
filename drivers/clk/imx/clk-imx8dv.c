@@ -32,19 +32,10 @@ static struct clk_onecell_data clk_data;
 
 static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 {
-	sc_err_t sciErr;
-	sc_pm_clock_rate_t rate;
-	int i, mu_id;
+	int i;
 
-	mu_id = imx8dv_mu_init();
-
-	sciErr = sc_ipc_open(&ccm_ipcHandle, mu_id);
-
-	if (sciErr != SC_ERR_NONE) {
-		pr_info("Cannot open MU channel to SCU\n");
-		return;
-	};
-
+	printk("*************** imx8dv_clocks_init\n");
+	
 	/* Fixed clocks. */
 	/* Megawrap */
 	clks[IMX8DV_SDHC_BUS_CLK] = imx_clk_fixed("sdhc_bus_clk_fixed", SC_266MHZ);
@@ -298,24 +289,40 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 			pr_err("i.MX8DV clk %d: register failed with %ld\n",
 					i, PTR_ERR(clks[i]));
 
-
 	clk_data.clks = clks;
 	clk_data.clk_num = ARRAY_SIZE(clks);
 	of_clk_add_provider(ccm_node, of_clk_src_onecell_get, &clk_data);
-
-	/* Following is an example for clock init in Linux. */
-	clk_prepare(clks[IMX8DV_I2C0_CLK]);
-	clk_set_rate(clks[IMX8DV_I2C0_CLK], 133000000);
-	sciErr = sc_pm_get_clock_rate(ccm_ipcHandle, SC_R_I2C_0, 2, &rate);
-	printk("In ****%s**********I2C0_clk rate = %d\n", __FILE__, rate);
-
-	clk_enable(clks[IMX8DV_I2C0_CLK]);
-
-	clk_disable(clks[IMX8DV_I2C0_CLK]);
-	clk_enable(clks[IMX8DV_I2C0_CLK]);
+	
 
 	printk("*************** finished imx8dv_clocks_init\n");
 }
+
+void notify_imx8_clk(void)
+{
+	uint32_t mu_id;
+	sc_err_t sciErr;
+	int i;
+
+	printk("MU and Power domains initialized\n");
+
+	sciErr = sc_ipc_getMuID(&mu_id);
+	if (sciErr != SC_ERR_NONE) {
+		pr_info("Cannot obtain MU ID\n");
+		return;
+	}
+
+	sciErr = sc_ipc_open(&ccm_ipcHandle, mu_id);
+
+	if (sciErr != SC_ERR_NONE) {
+		pr_info("Cannot open MU channel to SCU\n");
+		return;
+	};
+
+	/* Initialize the clk rate for all the possible clocks now. */
+	for (i = 0; i < IMX8DV_CLK_END; i++)
+		clk_get_rate(clks[i]);
+}
+EXPORT_SYMBOL(notify_imx8_clk);
 
 CLK_OF_DECLARE(imx8dv,"fsl,imx8dv-clk", imx8dv_clocks_init);
 

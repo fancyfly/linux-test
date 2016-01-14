@@ -50,7 +50,9 @@ static int clk_gate_scu_enable(struct clk_hw *hw)
 	unsigned long flags = 0;
 	sc_err_t sciErr;
 
-	spin_lock_irqsave(gate->lock, flags);
+	if (!ccm_ipcHandle) {
+			return -1;
+	}
 
 	if (gate->reg) {
 		reg = readl(gate->reg);
@@ -62,7 +64,7 @@ static int clk_gate_scu_enable(struct clk_hw *hw)
 	} else
 		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
 										gate->clk_type, true, false);
-	spin_unlock_irqrestore(gate->lock, flags);
+
 	return 0;
 }
 
@@ -74,9 +76,11 @@ static void clk_gate_scu_disable(struct clk_hw *hw)
 	unsigned long flags = 0;
 	sc_err_t sciErr;
 
-	/* Need to implement LPCG code here. */
-	spin_lock_irqsave(gate->lock, flags);
+	if (!ccm_ipcHandle) {
+			return -1;
+	}
 
+	/* Need to implement LPCG code here. */
 	if (gate->reg) {
 		reg = readl(gate->reg);
 		if (gate->hw_gate)
@@ -88,7 +92,6 @@ static void clk_gate_scu_disable(struct clk_hw *hw)
 		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
 										gate->clk_type, false, false);
 
-	spin_unlock_irqrestore(gate->lock, flags);
 }
 
 static int clk_gate_scu_prepare(struct clk_hw *hw)
@@ -97,10 +100,9 @@ static int clk_gate_scu_prepare(struct clk_hw *hw)
 	unsigned long flags = 0;
 	sc_err_t sciErr;
 
-	spin_lock_irqsave(gate->lock, flags);
-
-	sciErr = sc_pm_set_resource_power_mode(ccm_ipcHandle, gate->rsrc_id,
-											SC_PM_PW_MODE_ON);
+	if (!ccm_ipcHandle) {
+			return -1;
+	}
 
 	if (gate->reg) {
 		u32 reg;
@@ -115,7 +117,6 @@ static int clk_gate_scu_prepare(struct clk_hw *hw)
 			reg &= ~(0x2 << gate->bit_idx);
 		writel(reg, gate->reg);
 	}
-	spin_unlock_irqrestore(gate->lock, flags);
 	return sciErr;
 }
 
@@ -125,16 +126,14 @@ static void clk_gate_scu_unprepare(struct clk_hw *hw)
 	unsigned long flags = 0;
 	sc_err_t sciErr;
 
-	spin_lock_irqsave(gate->lock, flags);
+	if (!ccm_ipcHandle) {
+			return;
+	}
 
 	if (gate->reg)
 		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
 										gate->clk_type, false, false);
 
-	sciErr = sc_pm_set_resource_power_mode(ccm_ipcHandle, gate->rsrc_id,
-												SC_PM_PW_MODE_OFF);
-
-	spin_unlock_irqrestore(gate->lock, flags);
 }
 
 static struct clk_ops clk_gate_scu_ops = {

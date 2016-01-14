@@ -36,7 +36,7 @@ static void sc_ipc_read(sc_ipc_t handle, void *data);
 
 /* Local variables */
 static uint32_t gIPCport;
-static uint32_t scu_mu_init;
+static bool scu_mu_init;
 
 DEFINE_MUTEX(scu_mu_mutex);
 
@@ -66,9 +66,21 @@ static MU_Type *sc_ipc_get_mu_base(uint32_t id)
 	if (id >= SC_NUM_IPC)
 		base = NULL;
 	else
-	base = (MU_Type*)(mu_base_virtaddr + (id * MU_SIZE));
+		base = (MU_Type*)(mu_base_virtaddr + (id * MU_SIZE));
 
 	return base;
+}
+
+/*--------------------------------------------------------------------------*/
+/* Get the MU ID used by Linux                                              */
+/*--------------------------------------------------------------------------*/
+int sc_ipc_getMuID(uint32_t *mu_id)
+{
+	if (scu_mu_init) {
+		*mu_id = scu_mu_id;
+		return SC_ERR_NONE;
+	}
+	return SC_ERR_UNAVAILABLE;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -81,6 +93,10 @@ sc_err_t sc_ipc_open(sc_ipc_t *handle, uint32_t id)
 
 	mutex_lock(&scu_mu_mutex);
 
+	if (!scu_mu_init) {
+		mutex_unlock(&scu_mu_mutex);
+		return SC_ERR_UNAVAILABLE;
+	}
 	/* Get MU base associated with IPC channel */
 	base = sc_ipc_get_mu_base(id);
 
@@ -88,18 +104,6 @@ sc_err_t sc_ipc_open(sc_ipc_t *handle, uint32_t id)
 		mutex_unlock(&scu_mu_mutex);
 		return SC_ERR_IPC;
 	}
-
-	if (!scu_mu_init) {
-		/* Init MU */
-		MU_HAL_Init(base);
-
-		/* Enable all RX interrupts */
-		for (i = 0; i < MU_RR_COUNT; i++)
-		    MU_HAL_EnableRxFullInt(base, i);
-
-		gIPCport = id;
-	}
-	scu_mu_init++;
 	*handle = (sc_ipc_t)task_pid_vnr(current);
 
 	mutex_unlock(&scu_mu_mutex);
@@ -120,8 +124,6 @@ void sc_ipc_close(sc_ipc_t *handle)
 		mutex_unlock(&scu_mu_mutex);
 		return;
 	}
-
-	scu_mu_init--;
 
 	/* Get MU base associated with IPC channel */
 	base = sc_ipc_get_mu_base(gIPCport);
@@ -247,7 +249,21 @@ int __init imx8dv_mu_init()
 	}
 	mu_base_virtaddr = ioremap(mu_base_physaddr, SZ_64K);
 
+	if (!scu_mu_init) {
+		uint32_t i;
+		/* Init MU */
+		MU_HAL_Init(mu_base_virtaddr);
+
+		/* Enable all RX interrupts */
+		for (i = 0; i < MU_RR_COUNT; i++)
+		    MU_HAL_EnableRxFullInt(mu_base_virtaddr, i);
+
+		gIPCport = scu_mu_id;
+		scu_mu_init = true;
+	}
+
+	pr_info("*****Initialized MU\n");
 	return scu_mu_id;
 }
 
-EXPORT_SYMBOL(imx8dv_mu_init);
+early_initcall(imx8dv_mu_init);

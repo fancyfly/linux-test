@@ -41,6 +41,9 @@ static unsigned long clk_divider_scu_recalc_rate(struct clk_hw *hw,
 	sc_err_t sciErr;
 	sc_pm_clock_rate_t rate;
 
+	if (!ccm_ipcHandle) {
+		return -EAGAIN;
+	}
 	sciErr = sc_pm_get_clock_rate(ccm_ipcHandle, clk->rsrc_id,
 									clk->clk_type, &rate);
 	if (!sciErr)
@@ -62,9 +65,11 @@ static int clk_divider_scu_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct clk_divider_scu *clk = to_clk_divider_scu(hw);
 	sc_err_t sciErr;
 
+	if (!ccm_ipcHandle) {
+		return -EAGAIN;
+	}
 	sciErr = sc_pm_set_clock_rate(ccm_ipcHandle, clk->rsrc_id,
 									clk->clk_type, (sc_pm_clock_rate_t *)&rate);
-
 	return sciErr;
 }
 
@@ -93,7 +98,7 @@ struct clk *imx_clk_divider_scu(const char *name,
 
 	init.name = name;
 	init.ops = &clk_divider_scu_ops;
-	init.flags = CLK_IS_ROOT;
+	init.flags = CLK_IS_ROOT | CLK_GET_RATE_NOCACHE;
 	init.num_parents = 0;
 	div_clk->div.hw.init = &init;
 

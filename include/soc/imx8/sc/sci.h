@@ -37,6 +37,7 @@
  */
 int imx8dv_mu_init(void);
 
+void notify_imx8_clk(void);
 
 #endif /* _SC_SCI_H */
 

@@ -81,3 +81,18 @@
 	no-1-8-v;
 	status = "okay";
 };
+
+&usdhc2 {
+	bus-width = <4>;
+	non-removable;
+	no-1-8-v;
+	status = "okay";
+};
+
+&pwm1 {
+	status = "okay";
+};
+
+&pwm2 {
+	status = "okay";
+};

@@ -40,5 +40,14 @@ sc_err_t sc_ipc_open(sc_ipc_t *ipc, uint32_t id);
  */
 void sc_ipc_close(sc_ipc_t *ipc);
 
+/*!
+ * This function returns the MU channel ID for this implementation
+ *
+ * @param[in]     ipc         pointer to Mu channel ID
+ * @return Returns an error code (SC_ERR_NONE = success, SC_ERR_IPC
+ *         otherwise).
+ */
+int sc_ipc_getMuID(uint32_t *mu_id);
+
 #endif /* _SC_IPC_H */
 

@@ -1,0 +1,12 @@
+# drivers/soc/imx8/Kconfig
+#
+# Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
+#               http://www.samsung.com/
+#
+# Licensed under GPLv2
+
+# Configuration options for NXP IMX8
+
+config ARCH_NXP_IMX8
+	select PM_GENERIC_DOMAINS if PM
+

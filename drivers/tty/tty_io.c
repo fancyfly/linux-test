@@ -1801,7 +1801,7 @@ int tty_release(struct inode *inode, struct file *filp)
 	 * We must *not* drop the tty_mutex until we ensure that a further
 	 * entry into tty_open can not pick up this tty.
 	 */
-	if (pty_master) {
+	if (o_tty) {
 		if (--o_tty->count < 0) {
 			printk(KERN_WARNING "%s: bad pty slave count (%d) for %s\n",
 				__func__, o_tty->count, tty_name(o_tty, buf));

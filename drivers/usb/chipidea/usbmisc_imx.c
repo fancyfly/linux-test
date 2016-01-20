@@ -1352,7 +1352,7 @@ EXPORT_SYMBOL_GPL(imx_usbmisc_term_select_override);
 int imx_usbmisc_charger_detection(struct imx_usbmisc_data *data, bool connect)
 {
 	struct imx_usbmisc *usbmisc;
-	struct usb_charger *charger = data->charger;
+	struct usb_charger *charger;
 	int ret = 0;
 
 	if (!data)
@@ -1362,6 +1362,7 @@ int imx_usbmisc_charger_detection(struct imx_usbmisc_data *data, bool connect)
 	if (!usbmisc->ops->charger_primary_detection)
 		return -ENOTSUPP;
 
+	charger = data->charger;
 	mutex_lock(&charger->lock);
 	if (connect) {
 		charger->online = 1;

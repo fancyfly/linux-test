@@ -82,9 +82,9 @@ static int __init imx8_add_pm_domains(struct device_node *parent,
 
 		pm_genpd_init(&imx8_pd->pd, NULL, true);
 
-		if (genpd_parent) {
+		if (genpd_parent)
 			pm_genpd_add_subdomain(genpd_parent, &imx8_pd->pd);
-		}
+
 		of_genpd_add_provider_simple(np, &imx8_pd->pd);
 
 		imx8_add_pm_domains(np, &imx8_pd->pd);
@@ -94,7 +94,6 @@ static int __init imx8_add_pm_domains(struct device_node *parent,
 
 static int __init imx8_init_pm_domains(void)
 {
-	struct platform_device *pdev;
 	struct device_node *np;
 	sc_err_t sciErr;
 	sc_rsrc_t rsrc_id;
@@ -104,7 +103,6 @@ static int __init imx8_init_pm_domains(void)
 
 	for_each_compatible_node(np, NULL, "nxp, imx8-pd") {
 		struct imx8_pm_domain *imx8_pd;
-		struct device *dev;
 
 		imx8_pd = kzalloc(sizeof(struct imx8_pm_domain), GFP_KERNEL);
 		if (!imx8_pd) {
@@ -165,7 +163,7 @@ static int __init imx8_init_pm_domains(void)
 	sciErr = sc_ipc_getMuID(&mu_id);
 	if (sciErr != SC_ERR_NONE) {
 		pr_info("Cannot obtain MU ID\n");
-		return;
+		return sciErr;
 	}
 
 	sciErr = sc_ipc_open(&pm_ipcHandle, mu_id);

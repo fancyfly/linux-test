@@ -208,15 +208,19 @@
 			pd_gpu0: gpu0 {
 				name = "gpu0";
 				reg = <SC_R_GPU_0_PID0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
 				#power-domain-cells = <0>;
 				power-domains =<&pd_gpu>;
-			};
+	
 			pd_gpu1: gpu1 {
 				name = "gpu1";
 				reg = <SC_R_GPU_1_PID0>;
 				#power-domain-cells = <0>;
-				power-domains =<&pd_gpu>;
+				power-domains =<&pd_gpu0>;
 			};
+		};
+
 		};
 	};
 
@@ -251,26 +255,15 @@
 		power-domains = <&pd_mw_uart1>;
 	};
 
-	gpu1: gpu1@53100000 {
+	gpu: gpu@53100000 {
 		compatible = "fsl,imx8dv-gpu", "fsl,imx8x-gpu";
-		reg = <0x0 0x53100000 0 0x40000>, <0x0 0x0 0x0 0x0>;
-		reg-names = "iobase_3d_0", "phys_baseaddr";
-		interrupts = <0 64 0x4>;
-		interrupt-names = "irq_3d_0";
-		clocks = <&clk IMX8DV_GPU0_CORE_CLK>, <&clk IMX8DV_GPU0_SHADER_CLK>;
-		clock-names = "clk_core_3d_0", "clk_shader_3d_0";
-		status = "disabled";
-		power-domains = <&pd_gpu0>;
-	};
-
-	gpu2: gpu2@54100000 {
-		compatible = "fsl,imx8dv-gpu", "fsl,imx8x-gpu";
-		reg = <0x0 0x54100000 0x0 0x40000>, <0x0 0x0 0x0 0x0>;
-		reg-names = "iobase_3d_1", "phys_baseaddr";
-		interrupts = <0 65 0x4>;
-		interrupt-names = "irq_3d_1";
-		clocks = <&clk IMX8DV_GPU1_CORE_CLK>, <&clk IMX8DV_GPU1_SHADER_CLK>;
-		clock-names = "clk_core_3d_1", "clk_shader_3d_1";
+		reg = <0x0 0x53100000 0 0x40000>, <0x0 0x54100000 0x0 0x40000>, <0x0 0x0 0x0 0x0>;
+		reg-names = "iobase_3d_0","iobase_3d_1", "phys_baseaddr";
+		interrupts = <0 64 0x4>, <0 65 0x4>;
+		interrupt-names = "irq_3d_0", "irq_3d_1";
+		clocks = <&clk IMX8DV_GPU0_CORE_CLK>, <&clk IMX8DV_GPU0_SHADER_CLK>,
+						<&clk IMX8DV_GPU1_CORE_CLK>, <&clk IMX8DV_GPU1_SHADER_CLK>;
+		clock-names = "clk_core_3d_0", "clk_shader_3d_0", "clk_core_3d_1", "clk_shader_3d_1";
 		status = "disabled";
 		power-domains = <&pd_gpu1>;
 	};

@@ -51,10 +51,7 @@
 
 #include "fsl-imx8dv-zebu.dts"
 
-&gpu1 {
-	status = "okay";
-};
-&gpu2 {
+&gpu {
 	status = "okay";
 };
 

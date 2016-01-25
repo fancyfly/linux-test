@@ -1031,6 +1031,13 @@ _GetPower_imx8x(
     struct device* pdev = &Platform->device->dev;
     struct imx_priv *priv = Platform->priv;
 
+#ifdef CONFIG_PM
+    /*Init runtime pm for gpu*/
+    pm_runtime_enable(pdev);
+    pm_runtime_get_sync(pdev);
+    priv->pmdev = pdev;
+#endif
+
     /*Initialize the clock structure*/
     priv->clk_core_3d_0 = clk_get(pdev, "clk_core_3d_0");
     if (!IS_ERR(priv->clk_core_3d_0)) {
@@ -1148,6 +1155,11 @@ _PutPower_imx8x(
     UNREG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 
     driver_remove_file(pdevice->dev.driver, &driver_attr_gpu3DMinClock);
+#endif
+
+#ifdef CONFIG_PM
+    if(priv->pmdev)
+        pm_runtime_disable(priv->pmdev);
 #endif
 
     return gcvSTATUS_OK;

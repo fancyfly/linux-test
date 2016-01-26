@@ -173,6 +173,7 @@ void imx_gpc_pre_suspend(bool arm_power_off);
 void imx_gpcv2_pre_suspend(bool arm_power_off);
 void imx_gpc_post_resume(void);
 void imx_gpcv2_post_resume(void);
+void imx_gpcv2_enable_rbc(bool enable);
 void imx_gpc_mask_all(void);
 void imx_gpc_restore_all(void);
 void imx_gpc_irq_mask(struct irq_data *d);

@@ -493,10 +493,12 @@ void imx_gpcv2_post_resume(void)
 	val |= BM_SLPCR_EN_A7_FASTWUP_WAIT_MODE;
 	writel_relaxed(val, gpc_base + GPC_SLPCR);
 
-	/* disable memory low power mode */
-	val = readl_relaxed(gpc_base + GPC_MLPCR);
-	val |= BM_GPC_MLPCR_MEMLP_CTL_DIS;
-	writel_relaxed(val, gpc_base + GPC_MLPCR);
+	if (imx_get_soc_revision() == IMX_CHIP_REVISION_1_0) {
+		/* disable memory low power mode */
+		val = readl_relaxed(gpc_base + GPC_MLPCR);
+		val |= BM_GPC_MLPCR_MEMLP_CTL_DIS;
+		writel_relaxed(val, gpc_base + GPC_MLPCR);
+	}
 
 	for (i = 0; i < IMR_NUM; i++)
 		writel_relaxed(gpcv2_saved_imrs[i], reg_imr1 + i * 4);
@@ -771,10 +773,12 @@ void __init imx_gpcv2_init(void)
 	val |= BM_SLPCR_EN_A7_FASTWUP_WAIT_MODE;
 	writel_relaxed(val, gpc_base + GPC_SLPCR);
 
-	/* disable memory low power mode */
-	val = readl_relaxed(gpc_base + GPC_MLPCR);
-	val |= BM_GPC_MLPCR_MEMLP_CTL_DIS;
-	writel_relaxed(val, gpc_base + GPC_MLPCR);
+	if (imx_get_soc_revision() == IMX_CHIP_REVISION_1_0) {
+		/* disable memory low power mode */
+		val = readl_relaxed(gpc_base + GPC_MLPCR);
+		val |= BM_GPC_MLPCR_MEMLP_CTL_DIS;
+		writel_relaxed(val, gpc_base + GPC_MLPCR);
+	}
 
 	/* Register GPC as the secondary interrupt controller behind GIC */
 	gic_arch_extn.irq_mask = imx_gpcv2_irq_mask;

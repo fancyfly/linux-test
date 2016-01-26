@@ -197,31 +197,6 @@
 				power-domains = <&pd_mw>;
 			};
 		};
-
-		pd_gpu: gpu-power-domain {
-			compatible = "nxp, imx8-pd";
-			reg = <SC_R_LAST>;
-			#power-domain-cells = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			pd_gpu0: gpu0 {
-				name = "gpu0";
-				reg = <SC_R_GPU_0_PID0>;
-				#address-cells = <1>;
-				#size-cells = <0>;
-				#power-domain-cells = <0>;
-				power-domains =<&pd_gpu>;
-	
-			pd_gpu1: gpu1 {
-				name = "gpu1";
-				reg = <SC_R_GPU_1_PID0>;
-				#power-domain-cells = <0>;
-				power-domains =<&pd_gpu0>;
-			};
-		};
-
-		};
 	};
 
 	clk: clk {
@@ -265,7 +240,6 @@
 						<&clk IMX8DV_GPU1_CORE_CLK>, <&clk IMX8DV_GPU1_SHADER_CLK>;
 		clock-names = "clk_core_3d_0", "clk_shader_3d_0", "clk_core_3d_1", "clk_shader_3d_1";
 		status = "disabled";
-		power-domains = <&pd_gpu1>;
 	};
 
 	usdhc1: usdhc@5a240000 {

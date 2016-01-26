@@ -87,7 +87,7 @@
 
 #if IMX8_SCU_CONTROL
 #include <soc/imx8/sc/sci.h>
-extern sc_ipc_t ccm_ipcHandle;
+static sc_ipc_t gpu_ipcHandle;
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
@@ -1030,6 +1030,22 @@ _GetPower_imx8x(
 {
     struct device* pdev = &Platform->device->dev;
     struct imx_priv *priv = Platform->priv;
+#if IMX8_SCU_CONTROL
+    sc_err_t sciErr;
+    uint32_t mu_id;
+
+    sciErr = sc_ipc_getMuID(&mu_id);
+    if (sciErr != SC_ERR_NONE) {
+        gckOS_Print("galcore; cannot obtain mu id\n");
+        return gcvSTATUS_FALSE;
+    }
+
+    sciErr = sc_ipc_open(&gpu_ipcHandle, mu_id);
+    if (sciErr != SC_ERR_NONE) {
+        gckOS_Print("galcore: cannot open MU channel to SCU\n");
+        return gcvSTATUS_FALSE;
+    };
+#endif
 
     /*Initialize the clock structure*/
     priv->clk_core_3d_0 = clk_get(pdev, "clk_core_3d_0");
@@ -1041,6 +1057,13 @@ _GetPower_imx8x(
                    priv->clk_shader_3d_0 = NULL;
                    gckOS_Print("galcore: clk_get clk_shader_3d_0 failed, disable 3d_0!\n");
          } else {
+#if IMX8_SCU_CONTROL
+             sciErr = sc_pm_set_resource_power_mode(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_PM_PW_MODE_ON);
+             if (sciErr != SC_ERR_NONE) {
+                 gckOS_Print("galcore; cannot power up 3d_0\n");
+                 return gcvSTATUS_FALSE;
+             }
+#endif
              clk_prepare(priv->clk_core_3d_0);
              clk_set_rate(priv->clk_core_3d_0, 800000000);
              clk_unprepare(priv->clk_core_3d_0);
@@ -1048,6 +1071,14 @@ _GetPower_imx8x(
              clk_prepare(priv->clk_shader_3d_0);
              clk_set_rate(priv->clk_shader_3d_0, 800000000);
              clk_unprepare(priv->clk_shader_3d_0);
+
+#if IMX8_SCU_CONTROL
+             sciErr = sc_pm_set_resource_power_mode(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_PM_PW_MODE_OFF);
+             if (sciErr != SC_ERR_NONE) {
+                 gckOS_Print("galcore; cannot power down 3d_0\n");
+                 return gcvSTATUS_FALSE;
+             }
+#endif
          }
     } else {
         priv->clk_core_3d_0 = NULL;
@@ -1064,6 +1095,13 @@ _GetPower_imx8x(
                    priv->clk_shader_3d_1 = NULL;
                    gckOS_Print("galcore: clk_get clk_shader_3d_1 failed, disable 3d_1!\n");
          } else {
+#if IMX8_SCU_CONTROL
+             sciErr = sc_pm_set_resource_power_mode(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_PM_PW_MODE_ON);
+             if (sciErr != SC_ERR_NONE) {
+                 gckOS_Print("galcore; cannot power up 3d_1\n");
+                 return gcvSTATUS_FALSE;
+             }
+#endif
              clk_prepare(priv->clk_core_3d_1);
              clk_set_rate(priv->clk_core_3d_1, 800000000);
              clk_unprepare(priv->clk_core_3d_1);
@@ -1071,6 +1109,14 @@ _GetPower_imx8x(
              clk_prepare(priv->clk_shader_3d_1);
              clk_set_rate(priv->clk_shader_3d_1, 800000000);
              clk_unprepare(priv->clk_shader_3d_1);
+
+#if IMX8_SCU_CONTROL
+             sciErr = sc_pm_set_resource_power_mode(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_PM_PW_MODE_OFF);
+             if (sciErr != SC_ERR_NONE) {
+                 gckOS_Print("galcore; cannot power down 3d_1\n");
+                 return gcvSTATUS_FALSE;
+            }
+#endif
          }
     } else {
         priv->clk_core_3d_1 = NULL;
@@ -1084,22 +1130,38 @@ _GetPower_imx8x(
     }
 
 #if IMX8_SCU_CONTROL
-    sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_ID, 0);
-    sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_ID, 1);
+    sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_ID, 0);
+    if (sciErr != SC_ERR_NONE)
+        gckOS_Print("galcore: failed to set gpu id for 3d_0\n");
+
+    sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_ID, 1);
+    if (sciErr != SC_ERR_NONE)
+        gckOS_Print("galcore: failed to set gpu id for 3d_1\n");
 
     /* check dual core mode */
     if (priv->clk_core_3d_0 != NULL && priv->clk_core_3d_1 != NULL)
     {
-        sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 0);
-        sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 0);
+        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 0);
+        if (sciErr != SC_ERR_NONE)
+            gckOS_Print("galcore: failed to set gpu dual more for 3d_0\n");
+
+        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 0);
+        if (sciErr != SC_ERR_NONE)
+            gckOS_Print("galcore: failed to set gpu dual more for 3d_1\n");
     }
     /* check single core mode */
     else if (priv->clk_core_3d_0 != NULL || priv->clk_core_3d_1 != NULL)
     {
-        sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 1);
-        sc_misc_set_control(ccm_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 1);
+        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 1);
+        if (sciErr != SC_ERR_NONE)
+            gckOS_Print("galcore: failed to set gpu single more for 3d_0\n");
+
+        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 1);
+        if (sciErr != SC_ERR_NONE)
+            gckOS_Print("galcore: failed to set gpu single more for 3d_1\n");
     }
     else ; /* caution, do NOT call SCU control without gpu core enabled !!! */
+
 #endif
 
 #if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
@@ -1150,6 +1212,10 @@ _PutPower_imx8x(
     driver_remove_file(pdevice->dev.driver, &driver_attr_gpu3DMinClock);
 #endif
 
+#if IMX8_SCU_CONTROL
+     sc_ipc_close(&gpu_ipcHandle);
+#endif
+
     return gcvSTATUS_OK;
 }
 
@@ -1160,6 +1226,40 @@ _SetPower_imx8x(
     IN gctBOOL Enable
     )
 {
+#if IMX8_SCU_CONTROL
+    sc_err_t sciErr = 0;
+
+    if (Enable) {
+        switch (GPU) {
+        case gcvCORE_MAJOR:
+            sciErr = sc_pm_set_resource_power_mode(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_PM_PW_MODE_ON);
+            break;
+        case gcvCORE_3D1:
+            sciErr = sc_pm_set_resource_power_mode(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_PM_PW_MODE_ON);
+            break;
+        default:
+            break;
+        }
+    } else {
+        switch (GPU) {
+        case gcvCORE_MAJOR:
+            sciErr = sc_pm_set_resource_power_mode(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_PM_PW_MODE_OFF);
+            break;
+        case gcvCORE_3D1:
+            sciErr = sc_pm_set_resource_power_mode(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_PM_PW_MODE_OFF);
+            break;
+        default:
+            break;
+        }
+    }
+
+    if (sciErr != SC_ERR_NONE) {
+        gckOS_Print("galcore: failed power operation on gpu %d\n", GPU);
+        return gcvSTATUS_FALSE;
+    }
+
+#endif
+
     return gcvSTATUS_OK;
 }
 

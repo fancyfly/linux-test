@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2015 Freescale Semiconductor, Inc.
+ * Copyright 2013-2016 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -767,16 +767,19 @@ static int imx_thermal_probe(struct platform_device *pdev)
 	regmap_field_write(data->power_down, POWERON);
 	regmap_field_write(data->measure, START);
 
+	data->mode = THERMAL_DEVICE_ENABLED;
+
 	ret = devm_request_threaded_irq(&pdev->dev, data->irq,
 			imx_thermal_alarm_irq, imx_thermal_alarm_irq_thread,
 			0, "imx_thermal", data);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to request alarm irq: %d\n", ret);
+		thermal_zone_device_unregister(data->tz);
+		cpufreq_cooling_unregister(data->cdev[0]);
+		devfreq_cooling_unregister(data->cdev[1]);
 		goto out;
 	}
 	data->irq_enabled = true;
-
-	data->mode = THERMAL_DEVICE_ENABLED;
 
 	/* register the busfreq notifier called in low bus freq */
 	if (data->socdata->version != TEMPMON_V3)

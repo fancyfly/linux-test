@@ -1,0 +1,13 @@
+* Freescale i.MX8 DV IOMUX Controller
+
+Required properties:
+- compatible: "fsl,imx8dv-iomuxc"
+- fsl,pins: each entry consists of 7 integers. Its' format is
+  <pin_id pin_flags mux config iso wakeup gp>.
+
+pin_flags definition:
+#define IMX_SCU_PIN_MUX_SET_MASK        (1 << 0)
+#define IMX_SCU_PIN_WAKEUP_SET_MASK     (1 << 1)
+#define IMX_SCU_PIN_GP_SET_MASK         (1 << 2)
+If IMX_SCU_PIN_MUX_SET_MASK is set, mux config iso will be set, since
+we only have one scu api to set mux/config/iso.

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2012 Renesas Solutions Corp.
+ * imx8 power management support
  *
- * Kuninori Morimoto <morimoto.kuninori@renesas.com>
+ * Copyright (C) 2016  NXP Inc
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive

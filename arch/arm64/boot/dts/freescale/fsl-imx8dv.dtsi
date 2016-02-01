@@ -159,10 +159,105 @@
 				#power-domain-cells = <0>;
 				power-domains = <&pd_lsio>;
 			};
-
 			pd_lsio_pwm1: lsio-pwm1 {
 				name = "lsio-pwm1";
 				reg = <SC_R_PWM_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_pwm2: lsio-pwm2 {
+				name = "lsio-pwm2";
+				reg = <SC_R_PWM_2>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_pwm3: lsio-pwm3 {
+				name = "lsio-pwm3";
+				reg = <SC_R_PWM_3>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_pwm4: lsio-pwm4 {
+				name = "lsio-pwm4";
+				reg = <SC_R_PWM_4>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_pwm5: lsio-pwm5 {
+				name = "lsio-pwm5";
+				reg = <SC_R_PWM_5>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_pwm6: lsio-pwm6 {
+				name = "lsio-pwm6";
+				reg = <SC_R_PWM_6>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_pwm7: lsio-pwm7 {
+				name = "lsio-pwm7";
+				reg = <SC_R_PWM_7>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_i2c0: lsio-i2c0 {
+				name = "lsio-i2c0";
+				reg = <SC_R_I2C_0>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_i2c1: lsio-i2c1 {
+				name = "lsio-i2c1";
+				reg = <SC_R_I2C_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_i2c2: lsio-i2c2 {
+				name = "lsio-i2c2";
+				reg = <SC_R_I2C_2>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_i2c3: lsio-i2c3 {
+				name = "lsio-i2c3";
+				reg = <SC_R_I2C_3>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_kpp: lsio-kpp {
+				name = "lsio-kpp";
+				reg = <SC_R_KPP>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpt0: lsio-gpt0 {
+				name = "lsio-gpt0";
+				reg = <SC_R_GPT_0>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpt1: lsio-gpt1 {
+				name = "lsio-gpt1";
+				reg = <SC_R_GPT_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpt2: lsio-gpt2 {
+				name = "lsio-gpt2";
+				reg = <SC_R_GPT_2>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpt3: lsio-gpt3 {
+				name = "lsio-gpt3";
+				reg = <SC_R_GPT_3>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpt4: lsio-gpt4 {
+				name = "lsio-gpt4";
+				reg = <SC_R_GPT_4>;
 				#power-domain-cells = <0>;
 				power-domains = <&pd_lsio>;
 			};
@@ -186,6 +281,12 @@
 				#power-domain-cells = <0>;
 				power-domains = <&pd_mw>;
 			};
+			pd_mw_uart2: megawrap-uart2 {
+				name = "megawrap-uart2";
+				reg = <SC_R_UART_2>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
 			pd_mw_sdch0: megawrap-sdhc0 {
 				name = "megawrap-sdhc0";
 				reg = <SC_R_SDHC_0>;
@@ -198,11 +299,149 @@
 				#power-domain-cells = <0>;
 				power-domains = <&pd_mw>;
 			};
+			pd_mw_sdch2: megawrap-sdhc2 {
+				name = "megawrap-sdhc2";
+				reg = <SC_R_SDHC_2>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_qspi: megawrap-qspi {
+				name = "megawrap-qspi";
+				reg = <SC_R_QSPI_0>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_sai0: megawrap-sai0 {
+				name = "megawrap-sai0";
+				reg = <SC_R_SAI_0>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_sai1: megawrap-sai1 {
+				name = "megawrap-sai1";
+				reg = <SC_R_SAI_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_sai2: megawrap-sai2 {
+				name = "megawrap-sai2";
+				reg = <SC_R_SAI_2>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
 			pd_mw_enet0: megawrap-enet0 {
 				name = "megawrap-enet0";
 				reg = <SC_R_ENET_0>;
 				#power-domain-cells = <0>;
 				power-domains = <&pd_mw>;
+			};
+			pd_mw_enet1: megawrap-enet1 {
+				name = "megawrap-enet1";
+				reg = <SC_R_ENET_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_spi0: megawrap-spi0 {
+				name = "megawrap-spi0";
+				reg = <SC_R_SPI_0>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_spi1: megawrap-spi1 {
+				name = "megawrap-spi1";
+				reg = <SC_R_SPI_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_spi2: megawrap-spi2 {
+				name = "megawrap-spi2";
+				reg = <SC_R_SPI_2>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_can0: megawrap-can0 {
+				name = "megawrap-can0";
+				reg = <SC_R_CAN_0>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_can1: megawrap-can1 {
+				name = "megawrap-can1";
+				reg = <SC_R_CAN_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_can2: megawrap-can2 {
+				name = "megawrap-can2";
+				reg = <SC_R_CAN_2>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_ftm0: megawrap-ftm0 {
+				name = "megawrap-ftm0";
+				reg = <SC_R_FTM_0>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_ftm1: megawrap-ftm1 {
+				name = "megawrap-ftm1";
+				reg = <SC_R_FTM_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+		};
+
+		pd_gpu: gpu-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_LAST>;
+			#power-domain-cells = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			pd_gpu0: gpu0 {
+				name = "gpu0";
+				reg = <SC_R_GPU_0_PID0>;
+				#power-domain-cells = <0>;
+				power-domains =<&pd_gpu>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				pd_gpu1: gpu1 {
+					name = "gpu1";
+					reg = <SC_R_GPU_1_PID0>;
+					#power-domain-cells = <0>;
+					power-domains =<&pd_gpu0>;
+				};
+			};
+		};
+
+		pd_vpu: vpu-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_VPU_PID0>;
+			#power-domain-cells = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			pd_vpu_core: vpu_core {
+				name = "vpu_core";
+				reg = <SC_R_VPUCORE>;
+				#power-domain-cells = <0>;
+				power-domains =<&pd_vpu>;
+			};
+		};
+
+		pd_hsio: hsio-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_LAST>;
+			#power-domain-cells = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			pd_pcie: hsio-pcie-pd {
+				name = "hsio-pcie-pd";
+				reg = <SC_R_PCIE_A>;
+				#power-domain-cells = <0>;
+				power-domains =<&pd_hsio>;
 			};
 		};
 	};

@@ -1,8 +1,7 @@
 /*
  * imx8 power management support
  *
- * Copyright (C) 2013  NXP Inc
-
+ * Copyright (C) 2016  NXP Inc
  *
  * based on pm-rmoblie.c
  *  Copyright (C) 2014 Glider bvba

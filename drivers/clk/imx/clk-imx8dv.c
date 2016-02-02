@@ -35,7 +35,7 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	int i;
 
 	printk("*************** imx8dv_clocks_init\n");
-	
+
 	/* Fixed clocks. */
 	/* Megawrap */
 	clks[IMX8DV_SDHC_BUS_CLK] = imx_clk_fixed("sdhc_bus_clk_fixed", SC_266MHZ);
@@ -190,7 +190,7 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	/* Megawrap */
 	clks[IMX8DV_SDHC_BUS_CLK] = imx_clk_gate_scu("sdhc_bus_clk", "sdhc_bus_clk_fixed", SC_R_SDHC_0, 1, NULL, 0, 0);
 	clks[IMX8DV_ENET_BUS_CLK] = imx_clk_gate_scu("enet_bus_clk", "enet_bus_clk_fixed", SC_R_ENET_0, 1, NULL, 0, 0);
-	clks[IMX8DV_ANATOP_CLK] = imx_clk_gate_scu("enet_anatop_clk", "anatop_bus_clk_fixed", SC_R_ENET_0, 1, NULL, 0, 0);
+	clks[IMX8DV_ANATOP_CLK] = imx_clk_gate_scu("enet_anatop_clk", "anatop_bus_clk_fixed", SC_R_ENET_0, 3, NULL, 0, 0);
 	clks[IMX8DV_CAN_OSC_CLK]  = imx_clk_gate_scu("can_osc_clk", NULL, SC_R_CAN_0, 4, NULL, 0, 0);
 	clks[IMX8DV_USB_PHY_CLK]  = imx_clk_gate_scu("usb_phy_clk", NULL, SC_R_USB_0, 3, NULL, 0, 0);
 	clks[IMX8DV_SDHC0_CLK] = imx_clk_gate_scu("sdhc0_clk", "sdhc0_div", SC_R_SDHC_0, 2, NULL, 0, 0);
@@ -292,7 +292,7 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	clk_data.clks = clks;
 	clk_data.clk_num = ARRAY_SIZE(clks);
 	of_clk_add_provider(ccm_node, of_clk_src_onecell_get, &clk_data);
-	
+
 
 	printk("*************** finished imx8dv_clocks_init\n");
 }

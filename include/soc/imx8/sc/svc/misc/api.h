@@ -1,7 +1,22 @@
-/*==========================================================================*/
-/*!
- * @file svc/misc/api.h
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/*!
  * Header file containing the public API for the System Controller (SC)
  * Miscellaneous (MISC) function.
  *
@@ -11,7 +26,6 @@
  *
  * @{
  */
-/*==========================================================================*/
 
 #ifndef _SC_MISC_API_H
 #define _SC_MISC_API_H
@@ -39,10 +53,11 @@
  *
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
- * - SC_ERR_NOACCESS if caller's partition is not the control owner or parent
+ * - SC_ERR_NOACCESS if caller's partition is not the resource owner or parent
  *   of the owner
+ *
+ * Refer to the [Control List](@ref CONTROLS) for valid control values. 
  */
-/* IDL: E8 SET_CONTROL(I16 resource, I32 ctrl, I32 val) */
 sc_err_t sc_misc_set_control(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_ctrl_t ctrl, uint32_t val);
 
@@ -58,10 +73,11 @@ sc_err_t sc_misc_set_control(sc_ipc_t ipc, sc_rsrc_t resource,
  *
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
- * - SC_ERR_NOACCESS if caller's partition is not the control owner or parent
+ * - SC_ERR_NOACCESS if caller's partition is not the resource owner or parent
  *   of the owner
+ *
+ * Refer to the [Control List](@ref CONTROLS) for valid control values. 
  */
-/* IDL: E8 GET_CONTROL(I16 resource, I32 ctrl, O32 val) */
 sc_err_t sc_misc_get_control(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_ctrl_t ctrl, uint32_t *val);
 

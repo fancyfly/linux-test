@@ -1,7 +1,22 @@
-/*==========================================================================*/
-/*!
- * @file svc/timer/api.h
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/*!
  * Header file containing the public API for the System Controller (SC)
  * Timer function.
  *
@@ -13,7 +28,6 @@
  *
  * @{
  */
-/*==========================================================================*/
 
 #ifndef _SC_TIMER_API_H
 #define _SC_TIMER_API_H
@@ -50,7 +64,6 @@ typedef uint32_t sc_timer_wdog_time_t;
  * @return Returns an error code (SC_ERR_NONE = success, SC_ERR_LOCKED
  *         = locked).
  */
-/* IDL: E8 SET_WDOG_TIMEOUT(I32 timeout) */
 sc_err_t sc_timer_set_wdog_timeout(sc_ipc_t ipc,
     sc_timer_wdog_time_t timeout);
 
@@ -65,7 +78,6 @@ sc_err_t sc_timer_set_wdog_timeout(sc_ipc_t ipc,
  * If \a lock is set then the watchdog cannot be stopped or the timeout
  * period changed.
  */
-/* IDL: E8 START_WDOG(IB lock) */
 sc_err_t sc_timer_start_wdog(sc_ipc_t ipc, bool lock);
 
 /*!
@@ -76,7 +88,6 @@ sc_err_t sc_timer_start_wdog(sc_ipc_t ipc, bool lock);
  * @return Returns an error code (SC_ERR_NONE = success, SC_ERR_LOCKED
  *         = locked).
  */
-/* IDL: E8 STOP_WDOG() */
 sc_err_t sc_timer_stop_wdog(sc_ipc_t ipc);
 
 /*!
@@ -87,7 +98,6 @@ sc_err_t sc_timer_stop_wdog(sc_ipc_t ipc);
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  */
-/* IDL: E8 PING_WDOG() */
 sc_err_t sc_timer_ping_wdog(sc_ipc_t ipc);
 
 /*!
@@ -102,7 +112,6 @@ sc_err_t sc_timer_ping_wdog(sc_ipc_t ipc);
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  */
-/* IDL: E8 GET_WDOG_STATUS(O32 timeout, O32 max_timeout, O32 remaining_time) */
 sc_err_t sc_timer_get_wdog_status(sc_ipc_t ipc,
     sc_timer_wdog_time_t *timeout, sc_timer_wdog_time_t *max_timeout,
     sc_timer_wdog_time_t *remaining_time);
@@ -132,7 +141,6 @@ sc_err_t sc_timer_get_wdog_status(sc_ipc_t ipc,
  * - SC_ERR_PARM if invalid time/date parameters,
  * - SC_ERR_NOACCESS if caller's partition is not the RTC owner
  */
-/* IDL: E8 SET_RTC_TIME(I16 year, I8 mon, I8 day, I8 hour, I8 min, I8 sec) */
 sc_err_t sc_timer_set_rtc_time(sc_ipc_t ipc, uint16_t year, uint8_t mon,
     uint8_t day, uint8_t hour, uint8_t min, uint8_t sec);
 
@@ -149,7 +157,6 @@ sc_err_t sc_timer_set_rtc_time(sc_ipc_t ipc, uint16_t year, uint8_t mon,
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  */
-/* IDL: E8 GET_RTC_TIME(O16 year, O8 mon, O8 day, O8 hour, O8 min, O8 sec) */
 sc_err_t sc_timer_get_rtc_time(sc_ipc_t ipc, uint16_t *year, uint8_t *mon,
     uint8_t *day, uint8_t *hour, uint8_t *min, uint8_t *sec);
 
@@ -171,7 +178,6 @@ sc_err_t sc_timer_get_rtc_time(sc_ipc_t ipc, uint16_t *year, uint8_t *mon,
  * - SC_ERR_PARM if invalid time/date parameters,
  * - SC_ERR_NOACCESS if caller's partition is not the RTC owner
  */
-/* IDL: E8 SET_RTC_ALARM(I16 year, I8 mon, I8 day, I8 hour, I8 min, I8 sec) */
 sc_err_t sc_timer_set_rtc_alarm(sc_ipc_t ipc, uint16_t year, uint8_t mon,
     uint8_t day, uint8_t hour, uint8_t min, uint8_t sec);
 

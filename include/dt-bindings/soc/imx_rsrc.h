@@ -1,16 +1,26 @@
 /*
- * Copyright 2015 Freescale Semiconductor, Inc.
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __DT_BINDINGS_RSCRC_IMX8DV_H
-#define __DT_BINDINGS_RSCRC_IMX8DV_H
+#ifndef __DT_BINDINGS_RSCRC_IMX_H
+#define __DT_BINDINGS_RSCRC_IMX_H
 
 /*!
- * This type is used to indicate a resource. Resources include peripherals
+ * These defines are used to indicate a resource. Resources include peripherals
  * and bus masters (but not memory regions). Note items from list should
  * never be changed or removed (only added to at the end of the list).
  */
@@ -469,6 +479,15 @@
 #define    SC_R_DC_1_PLL_0          452
 #define    SC_R_DC_1_PLL_1          453
 #define    SC_R_RTC                 454
-#define    SC_R_LAST 		    455  			
+#define    SC_R_DRC_PLL_0_V         455
+#define    SC_R_DRC_PLL_0_H         456
+#define    SC_R_DRC_PLL_1_V         457
+#define    SC_R_DRC_PLL_1_H         458
+#define    SC_R_DC_0_DPL_MSI        459
+#define    SC_R_DC_0_CPL_MSI        460
+#define    SC_R_DC_1_DPL_MSI        461
+#define    SC_R_DC_1_CPL_MSI        462
+#define    SC_R_LAST                463
 
-#endif
+#endif /* __DT_BINDINGS_RSCRC_IMX_H */
+

@@ -1,7 +1,22 @@
-/*==========================================================================*/
-/*!
- * @file svc/pm/api.h
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/*!
  * Header file containing the public API for the System Controller (SC)
  * Power Management (PM) function. This includes functions for power state
  * control, clock control, reset control, and wake-up event control.
@@ -12,7 +27,6 @@
  *
  * @{
  */
-/*==========================================================================*/
 
 #ifndef _SC_PM_API_H
 #define _SC_PM_API_H
@@ -32,6 +46,12 @@
 #define SC_PM_CLOCK_MODE_W      2       //!< Width of sc_pm_clock_mode_t
 #define SC_PM_RESET_TYPE_W      1       //!< Width of sc_pm_reset_type_t
 #define SC_PM_RESET_REASON_W    3       //!< Width of sc_pm_reset_reason_t
+/*@}*/
+
+/*!
+ * @name Defines for clock indexes (sc_pm_clk_t)
+ */
+/*@{*/
 /*@}*/
 
 /*!
@@ -59,7 +79,21 @@ typedef enum sc_pm_power_mode_e
 /*!
  * This type is used to declare a clock.
  */
-typedef uint8_t sc_pm_clk_t;
+typedef enum sc_pm_clk_e
+{
+    SC_PM_CLK_SLV_BUS           = 0,    //!< Slave bus clock
+    SC_PM_CLK_MST_BUS           = 1,    //!< Master bus clock
+    SC_PM_CLK_PER               = 2,    //!< Peripheral clock
+    SC_PM_CLK_PHY               = 3,    //!< Phy clock
+    SC_PM_CLK_MISC              = 4,    //!< Misc clock
+    SC_PM_CLK_MISC0             = 0,    //!< Misc 0 clock
+    SC_PM_CLK_MISC1             = 1,    //!< Misc 1 clock
+    SC_PM_CLK_MISC2             = 2,    //!< Misc 2 clock
+    SC_PM_CLK_MISC3             = 3,    //!< Misc 3 clock
+    SC_PM_CLK_MISC4             = 4,    //!< Misc 4 clock
+    SC_PM_CLK_CPU               = 2,    //!< CPU clock
+    SC_PM_CLK_PLL               = 4     //!< PLL
+} sc_pm_clk_t;
 
 /*!
  * This type is used to declare a clock mode.
@@ -127,7 +161,6 @@ typedef enum sc_pm_reset_reason_e
  *
  * @see sc_pm_set_resource_power_mode().
  */
-/* IDL: E8 SET_SYS_POWER_MODE(I8 pt, I4 mode) */
 sc_err_t sc_pm_set_sys_power_mode(sc_ipc_t ipc, sc_rm_pt_t pt,
     sc_pm_power_mode_t mode);
 
@@ -143,7 +176,6 @@ sc_err_t sc_pm_set_sys_power_mode(sc_ipc_t ipc, sc_rm_pt_t pt,
  * Return errors:
  * - SC_ERR_PARM if invalid partition
  */
-/* IDL: E8 GET_SYS_POWER_MODE(I8 pt, O4 mode) */
 sc_err_t sc_pm_get_sys_power_mode(sc_ipc_t ipc, sc_rm_pt_t pt,
     sc_pm_power_mode_t *mode);
 
@@ -167,7 +199,6 @@ sc_err_t sc_pm_get_sys_power_mode(sc_ipc_t ipc, sc_rm_pt_t pt,
  *
  *  @see sc_pm_set_sys_power_mode().
  */
-/* IDL: E8 SET_RESOURCE_POWER_MODE(I16 resource, I4 mode) */
 sc_err_t sc_pm_set_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_pm_power_mode_t mode);
 
@@ -183,57 +214,56 @@ sc_err_t sc_pm_set_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
  * Note only SC_PM_PW_MODE_OFF and SC_PM_PW_MODE_ON are valid. The value
  * returned does not reflect the power mode of the partition..
  */
-/* IDL: E8 GET_RESOURCE_POWER_MODE(I16 resource, O4 mode) */
 sc_err_t sc_pm_get_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_pm_power_mode_t *mode);
 
 /* @} */
 
 /*!
- * @name Clock Functions
+ * @name Clock/PLL Functions
  * @{
  */
 
 /*!
- * This function sets the rate of a resource's clock.
+ * This function sets the rate of a resource's clock/PLL.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     resource    ID of the resource
- * @param[in]     clk         clock to affect
- * @param[in,out] rate        pointer to clock rate to set,
+ * @param[in]     clk         clock/PLL to affect
+ * @param[in,out] rate        pointer to rate to set,
  *                            return actual rate
  * @return Returns an error code (SC_ERR_NONE = success).
  *
  * Return errors:
- * - SC_ERR_PARM if invalid resource or clock,
+ * - SC_ERR_PARM if invalid resource or clock/PLL,
  * - SC_ERR_NOACCESS if caller's partition is not the resource owner
  *   or parent of the owner,
- * - SC_ERR_LOCKED if rate locked (usually because shared clock)
+ * - SC_ERR_UNAVAILABLE if clock/PLL not applicable to this resource,
+ * - SC_ERR_LOCKED if rate locked (usually because shared clock/PLL)
  *
- * Refer to the [Clock List](@ref CLOCKS) for valid clock values.
+ * Refer to the [Clock List](@ref CLOCKS) for valid clock/PLL values.
  */
-/* IDL: E8 SET_CLOCK_RATE(I16 resource, I4 clk, IO32 rate) */
 sc_err_t sc_pm_set_clock_rate(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_pm_clk_t clk, sc_pm_clock_rate_t *rate);
 
 /*!
- * This function gets the rate of a resource's clock.
+ * This function gets the rate of a resource's clock/PLL.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     resource    ID of the resource
- * @param[in]     clk         clock to affect
- * @param[out]    rate        pointer to return clock rate
+ * @param[in]     clk         clock/PLL to affect
+ * @param[out]    rate        pointer to return rate
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  *
  * Return errors:
- * - SC_ERR_PARM if invalid resource or clock,
+ * - SC_ERR_PARM if invalid resource or clock/PLL,
  * - SC_ERR_NOACCESS if caller's partition is not the resource owner
- *   or parent of the owner
+ *   or parent of the owner,
+ * - SC_ERR_UNAVAILABLE if clock/PLL not applicable to this resource
  *
- * Refer to the [Clock List](@ref CLOCKS) for valid clock values.
+ * Refer to the [Clock List](@ref CLOCKS) for valid clock/PLL values.
  */
-/* IDL: E8 GET_CLOCK_RATE(I16 resource, I4 clk, O32 rate) */
 sc_err_t sc_pm_get_clock_rate(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_pm_clk_t clk, sc_pm_clock_rate_t *rate);
 
@@ -251,11 +281,11 @@ sc_err_t sc_pm_get_clock_rate(sc_ipc_t ipc, sc_rsrc_t resource,
  * Return errors:
  * - SC_ERR_PARM if invalid resource or clock,
  * - SC_ERR_NOACCESS if caller's partition is not the resource owner
- *   or parent of the owner
+ *   or parent of the owner,
+ * - SC_ERR_UNAVAILABLE if clock not applicable to this resource
  *
  * Refer to the [Clock List](@ref CLOCKS) for valid clock values.
  */
-/* IDL: E8 CLOCK_ENABLE(I16 resource, I4 clk, I1 enable, I1 autog) */
 sc_err_t sc_pm_clock_enable(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_pm_clk_t clk, bool enable, bool autog);
 
@@ -282,7 +312,6 @@ sc_err_t sc_pm_clock_enable(sc_ipc_t ipc, sc_rsrc_t resource,
  * - SC_ERR_NOACCESS if caller's partition is not the parent of the
  *   partition to boot
  */
-/* IDL: E8 BOOT(I8 pt, I16 boot_cpu, I64 boot_addr, I16 boot_mu) */
 sc_err_t sc_pm_boot(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rsrc_t boot_cpu,
     sc_faddr_t boot_addr, sc_rsrc_t boot_mu);
 
@@ -305,7 +334,6 @@ sc_err_t sc_pm_boot(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rsrc_t boot_cpu,
  * If this function returns, then the reset did not occur due to an
  * invalid parameter.
  */
-/* IDL: RN REBOOT(I1 type) */
 void sc_pm_reboot(sc_ipc_t ipc, sc_pm_reset_type_t type);
 
 /*!
@@ -314,7 +342,6 @@ void sc_pm_reboot(sc_ipc_t ipc, sc_pm_reset_type_t type);
  * @param[in]     ipc         IPC handle
  * @param[out]    reason      pointer to return reset reason
  */
-/* IDL: R0 RESET_REASON(O4 reason) */
 void sc_pm_reset_reason(sc_ipc_t ipc, sc_pm_reset_reason_t *reason);
 
 /*!
@@ -332,7 +359,6 @@ void sc_pm_reset_reason(sc_ipc_t ipc, sc_pm_reset_reason_t *reason);
  * - SC_ERR_NOACCESS if caller's partition is not the parent of the
  *   resource (CPU) owner
  */
-/* IDL: E8 CPU_START(I16 resource, I1 enable, I64 addr) */
 sc_err_t sc_pm_cpu_start(sc_ipc_t ipc, sc_rsrc_t resource, bool enable,
     sc_faddr_t addr);
 

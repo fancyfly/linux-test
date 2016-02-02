@@ -1,12 +1,19 @@
 /*
- * Copyright (C) 2010-2011 Canonical Ltd <jeremy.kerr@canonical.com>
- * Copyright (C) 2011-2012 Mike Turquette, Linaro Ltd <mturquette@linaro.org>
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
- * Gated clock implementation
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #include <linux/clk-provider.h>
@@ -47,7 +54,6 @@ static int clk_gate_scu_enable(struct clk_hw *hw)
 {
 	struct clk_gate_scu *gate = to_clk_gate_scu(hw);
 	u32 reg;
-	unsigned long flags = 0;
 	sc_err_t sciErr;
 
 	if (!ccm_ipcHandle) {
@@ -73,11 +79,10 @@ static void clk_gate_scu_disable(struct clk_hw *hw)
 {
 	struct clk_gate_scu *gate = to_clk_gate_scu(hw);
 	u32 reg;
-	unsigned long flags = 0;
 	sc_err_t sciErr;
 
 	if (!ccm_ipcHandle) {
-			return -1;
+			return;
 	}
 
 	/* Need to implement LPCG code here. */
@@ -91,14 +96,12 @@ static void clk_gate_scu_disable(struct clk_hw *hw)
 	} else 
 		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
 										gate->clk_type, false, false);
-
 }
 
 static int clk_gate_scu_prepare(struct clk_hw *hw)
 {
 	struct clk_gate_scu *gate = to_clk_gate_scu(hw);
-	unsigned long flags = 0;
-	sc_err_t sciErr;
+	sc_err_t sciErr = SC_ERR_NONE;
 
 	if (!ccm_ipcHandle) {
 			return -1;
@@ -123,7 +126,6 @@ static int clk_gate_scu_prepare(struct clk_hw *hw)
 static void clk_gate_scu_unprepare(struct clk_hw *hw)
 {
 	struct clk_gate_scu *gate = to_clk_gate_scu(hw);
-	unsigned long flags = 0;
 	sc_err_t sciErr;
 
 	if (!ccm_ipcHandle) {

@@ -1,7 +1,22 @@
-/*==========================================================================*/
-/*!
- * @file svc/otp/api.h
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/*!
  * Header file containing the public API for the System Controller (SC)
  * One Time Programmable (OTP) function.
  *
@@ -11,7 +26,6 @@
  *
  * @{
  */
-/*==========================================================================*/
 
 #ifndef _SC_OTP_API_H
 #define _SC_OTP_API_H
@@ -50,7 +64,6 @@ typedef uint8_t sc_otp_offset_t;
  * - SC_ERR_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS No read allowed
  */
-/* IDL: E8 READ(O32 data, I8 offset) */   
 sc_err_t sc_otp_read(sc_ipc_t ipc, sc_otp_word_t *data,
     sc_otp_offset_t offset);
 
@@ -69,7 +82,6 @@ sc_err_t sc_otp_read(sc_ipc_t ipc, sc_otp_word_t *data,
  * - SC_ERR_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS No write allowed
  */
-/* IDL: E8 WRITE(I32 data, I8 offset, I32 bitmask) */   
 sc_err_t sc_otp_write(sc_ipc_t ipc, sc_otp_word_t data,
     sc_otp_offset_t offset, sc_otp_word_t bitmask);
 
@@ -94,7 +106,6 @@ sc_err_t sc_otp_write(sc_ipc_t ipc, sc_otp_word_t data,
  * Assigns some part of the OTP resource owned by the caller's partition
  * to another partition.
  */
-/* IDL: E8 SET_PERMISSIONS(I8 offset, IB readen, IB writeen, IB lock) */   
 sc_err_t sc_otp_set_permissions(sc_ipc_t ipc, sc_otp_offset_t offset,
     bool readen, bool writeen, bool lock);
 

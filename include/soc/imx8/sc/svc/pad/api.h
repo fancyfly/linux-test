@@ -1,7 +1,22 @@
-/*==========================================================================*/
-/*!
- * @file svc/pad/api.h
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/*!
  * Header file containing the public API for the System Controller (SC)
  * Pad Control (PAD) function.
  *
@@ -11,7 +26,6 @@
  *
  * @{
  */
-/*==========================================================================*/
 
 #ifndef _SC_PAD_API_H
 #define _SC_PAD_API_H
@@ -110,7 +124,6 @@ typedef enum sc_pad_wakeup_e
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  */
-/* IDL: E8 SET_MUX(I16 pin, I8 mux, I2 config, I2 iso) */
 sc_err_t sc_pad_set_mux(sc_ipc_t ipc, sc_pin_t pin,
     uint8_t mux, sc_pad_config_t config, sc_pad_iso_t iso);
 
@@ -130,7 +143,6 @@ sc_err_t sc_pad_set_mux(sc_ipc_t ipc, sc_pin_t pin,
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  */
-/* IDL: E8 SET_GP(I16 pin, I32 ctrl) */
 sc_err_t sc_pad_set_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t ctrl);
 
 /*!
@@ -150,7 +162,6 @@ sc_err_t sc_pad_set_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t ctrl);
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  */
-/* IDL: E8 SET_GP_28LPP(I16 pin, I2 dse, IB sre, IB hys, IB pe, I2 ps) */
 sc_err_t sc_pad_set_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin, 
     sc_pad_28lpp_dse_t dse, bool sre, bool hys, bool pe,
     sc_pad_28lpp_ps_t ps);
@@ -168,7 +179,6 @@ sc_err_t sc_pad_set_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin,
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  */
-/* IDL: E8 SET_WAKEUP(I16 pin, I3 wakeup) */
 sc_err_t sc_pad_set_wakeup(sc_ipc_t ipc, sc_pin_t pin,
     sc_pad_wakeup_t wakeup);
 
@@ -192,7 +202,6 @@ sc_err_t sc_pad_set_wakeup(sc_ipc_t ipc, sc_pin_t pin,
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  */
-/* IDL: E8 SET_ALL(I16 pin, I8 mux, I2 config, I2 iso, I32 ctrl, I3 wakeup) */
 sc_err_t sc_pad_set_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t mux, 
     sc_pad_config_t config, sc_pad_iso_t iso, uint32_t ctrl,
     sc_pad_wakeup_t wakeup);
@@ -213,7 +222,6 @@ sc_err_t sc_pad_set_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t mux,
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  */
-/* IDL: E8 GET_MUX(I16 pin, O8 mux, O2 config, O2 iso) */
 sc_err_t sc_pad_get_mux(sc_ipc_t ipc, sc_pin_t pin,
     uint8_t *mux, sc_pad_config_t *config, sc_pad_iso_t *iso);
 
@@ -233,7 +241,6 @@ sc_err_t sc_pad_get_mux(sc_ipc_t ipc, sc_pin_t pin,
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  */
-/* IDL: E8 GET_GP(I16 pin, O32 ctrl) */
 sc_err_t sc_pad_get_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t *ctrl);
 
 /*!
@@ -253,7 +260,6 @@ sc_err_t sc_pad_get_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t *ctrl);
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  */
-/* IDL: E8 GET_GP_28LPP(I16 pin, O2 dse, OB sre, OB hys, OB pe, O2 ps) */
 sc_err_t sc_pad_get_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin, 
     sc_pad_28lpp_dse_t *dse, bool *sre, bool *hys, bool *pe,
     sc_pad_28lpp_ps_t *ps);
@@ -271,7 +277,6 @@ sc_err_t sc_pad_get_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin,
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  */
-/* IDL: E8 GET_WAKEUP(I16 pin, O3 wakeup) */
 sc_err_t sc_pad_get_wakeup(sc_ipc_t ipc, sc_pin_t pin,
     sc_pad_wakeup_t *wakeup);
 
@@ -295,7 +300,6 @@ sc_err_t sc_pad_get_wakeup(sc_ipc_t ipc, sc_pin_t pin,
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  */
-/* IDL: E8 GET_ALL(I16 pin, O8 mux, O2 config, O2 iso, O32 ctrl, O3 wakeup) */
 sc_err_t sc_pad_get_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t *mux, 
     sc_pad_config_t *config, sc_pad_iso_t *iso, uint32_t *ctrl,
     sc_pad_wakeup_t *wakeup);

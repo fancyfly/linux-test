@@ -1,17 +1,31 @@
-/*==========================================================================*/
-/*!
- * @file  main/types.h
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/*!
  * Header file containing types used across multiple service APIs.
  */
-/*==========================================================================*/
 
 #ifndef _SC_TYPES_H
 #define _SC_TYPES_H
 
 /* Includes */
 
-#include <linux/types.h>
+#include "scfw.h"
 
 /* Defines */
 
@@ -58,6 +72,7 @@
 #define SC_BOOL_W       1       //!< Width of bool
 #define SC_ERR_W        4       //!< Width of sc_err_t
 #define SC_RSRC_W       9       //!< Width of sc_rsrc_t
+#define SC_CTRL_W       4       //!< Width of sc_ctrl_t
 /*@}*/
 
 #define SC_R_ALL        UINT16_MAX  //!< All resources
@@ -548,7 +563,15 @@ typedef enum sc_rsrc_e
     SC_R_DC_1_PLL_0         = 452,
     SC_R_DC_1_PLL_1         = 453,
     SC_R_RTC                = 454,
-    SC_R_LAST   
+    SC_R_DRC_PLL_0_V        = 455,
+    SC_R_DRC_PLL_0_H        = 456,
+    SC_R_DRC_PLL_1_V        = 457,
+    SC_R_DRC_PLL_1_H        = 458,
+    SC_R_DC_0_DPL_MSI       = 459,
+    SC_R_DC_0_CPL_MSI       = 460,
+    SC_R_DC_1_DPL_MSI       = 461,
+    SC_R_DC_1_CPL_MSI       = 462,
+    SC_R_LAST
 } sc_rsrc_t;
 
 /*!
@@ -556,9 +579,20 @@ typedef enum sc_rsrc_e
  */
 typedef enum sc_ctrl_e
 {
-    SC_C_OTG_LINESTATE0     = 0,
+    SC_C_OTG_LINESTATE      = 0,
     SC_C_GPU_SINGLE_MODE    = 1,
     SC_C_GPU_ID             = 2,
+    SC_C_PXL_LINK_MST1_ADDR = 3,
+    SC_C_PXL_LINK_MST2_ADDR = 4,
+    SC_C_PXL_LINK_MST_ENB   = 5,
+    SC_C_PXL_LINK_MST1_ENB  = 6,
+    SC_C_PXL_LINK_MST2_ENB  = 7,
+    SC_C_PXL_LINK_SLV1_ADDR = 8,
+    SC_C_PXL_LINK_SLV2_ADDR = 9,
+    SC_C_PXL_LINK_MST_VLD   = 10,
+    SC_C_PXL_LINK_MST1_VLD  = 11,
+    SC_C_PXL_LINK_MST2_VLD  = 12,
+    SC_C_PXL_CLK_POLARITY   = 13,
     SC_C_LAST
 } sc_ctrl_t;
 
@@ -566,12 +600,6 @@ typedef enum sc_ctrl_e
  * This type is used to indicate a pin. Valid values are SoC specific.
  */
 typedef uint16_t sc_pin_t;
-
-/*!
- * This type is used to declare a handle for an IPC communication
- * channel. Its meaning is specific to the IPC implementation.
- */
-typedef uint32_t sc_ipc_t;
 
 /* Extra documentation of standard types */
 

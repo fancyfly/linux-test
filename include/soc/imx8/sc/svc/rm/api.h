@@ -1,7 +1,22 @@
-/*==========================================================================*/
-/*!
- * @file svc/rm/api.h
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/*!
  * Header file containing the public API for the System Controller (SC)
  * Resource Management (RM) function. This includes functions for
  * partitioning resources, pins, and memory regions.
@@ -12,7 +27,6 @@
  *
  * @{
  */
-/*==========================================================================*/
 
 #ifndef _SC_RM_API_H
 #define _SC_RM_API_H
@@ -128,7 +142,6 @@ typedef enum sc_rm_perm_e
  * partition to assert the secure signal. If restricted then the new partition is limited
  * in what functions it can call, especially those associated with managing partitions.
  */
-/* IDL: E8 PARTITION_ALLOC(O8 pt, IB secure, IB isolated, IB restricted, IB confidential) */   
 sc_err_t sc_rm_partition_alloc(sc_ipc_t ipc, sc_rm_pt_t *pt, bool secure,
     bool isolated, bool restricted, bool confidential);
 
@@ -150,7 +163,6 @@ sc_err_t sc_rm_partition_alloc(sc_ipc_t ipc, sc_rm_pt_t *pt, bool secure,
  * All resources, memory regions, and pins are assigned to the caller/parent.
  * The partition watchdog is disabled (even if locked). DID is freed.
  */
-/* IDL: E8 PARTITION_FREE(I8 pt) */   
 sc_err_t sc_rm_partition_free(sc_ipc_t ipc, sc_rm_pt_t pt);
 
 /*!
@@ -171,7 +183,6 @@ sc_err_t sc_rm_partition_free(sc_ipc_t ipc, sc_rm_pt_t pt);
  * Assumes no assigned resources or memory regions yet! The number of static
  * DID is fixed by the SC at boot.
  */
-/* IDL: E8 PARTITION_STATIC(I8 pt, I4 did) */   
 sc_err_t sc_rm_partition_static(sc_ipc_t ipc, sc_rm_pt_t pt,
     sc_rm_did_t did);
 
@@ -190,7 +201,6 @@ sc_err_t sc_rm_partition_static(sc_ipc_t ipc, sc_rm_pt_t pt,
  * If a partition is locked it cannot be freed, have resources/pins assigned
  * to/from it, memory regions created/assigned, DID changed, or parent changed.
  */
-/* IDL: E8 PARTITION_LOCK(I8 pt) */   
 sc_err_t sc_rm_partition_lock(sc_ipc_t ipc, sc_rm_pt_t pt);
 
 /*!
@@ -201,7 +211,6 @@ sc_err_t sc_rm_partition_lock(sc_ipc_t ipc, sc_rm_pt_t pt);
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  */
-/* IDL: E8 GET_PARTITION(O8 pt) */
 sc_err_t sc_rm_get_partition(sc_ipc_t ipc, sc_rm_pt_t *pt);
 
 /*!
@@ -220,7 +229,6 @@ sc_err_t sc_rm_get_partition(sc_ipc_t ipc, sc_rm_pt_t *pt);
  * - SC_ERR_NOACCESS if caller's partition is not the parent of \a pt,
  * - SC_ERR_LOCKED if either partition is locked
  */
-/* IDL: E8 SET_PARENT(I8 pt, I8 parent) */
 sc_err_t sc_rm_set_parent(sc_ipc_t ipc, sc_rm_pt_t pt,
     sc_rm_pt_t parent);
 
@@ -251,7 +259,6 @@ sc_err_t sc_rm_set_parent(sc_ipc_t ipc, sc_rm_pt_t pt,
  *   parent of \a pt_src,
  * - SC_ERR_LOCKED if either partition is locked
  */
-/* IDL: E8 MOVE_ALL(I8 pt_src, I8 pt_dst, IB move_rsrc, IB move_pins) */
 sc_err_t sc_rm_move_all(sc_ipc_t ipc, sc_rm_pt_t pt_src, sc_rm_pt_t pt_dst,
     bool move_rsrc, bool move_pins);
 
@@ -281,7 +288,6 @@ sc_err_t sc_rm_move_all(sc_ipc_t ipc, sc_rm_pt_t pt_src, sc_rm_pt_t pt_dst,
  *   of the owner,
  * - SC_ERR_LOCKED if the owning partition or \a pt is locked
  */
-/* IDL: E8 ASSIGN_RESOURCE(I8 pt, I16 resource) */
 sc_err_t sc_rm_assign_resource(sc_ipc_t ipc, sc_rm_pt_t pt,
     sc_rsrc_t resource);
 
@@ -304,7 +310,6 @@ sc_err_t sc_rm_assign_resource(sc_ipc_t ipc, sc_rm_pt_t pt,
  * by default so this function is normally used to prevent a set of
  * resources from moving.
  */
-/* IDL: E8 SET_RESOURCE_MOVABLE(I16 resource, IB movable) */
 sc_err_t sc_rm_set_resource_movable(sc_ipc_t ipc, sc_rsrc_t resource,
     bool movable);
 
@@ -330,7 +335,6 @@ sc_err_t sc_rm_set_resource_movable(sc_ipc_t ipc, sc_rsrc_t resource,
  * from the specified master. Note the security attribute will only be
  * changed if the caller's partition is secure.
  */
-/* IDL: E8 SET_MASTER_ATTRIBUTES(I16 resource, I4 sa, I4 pa, IB smmu_bypass) */
 sc_err_t sc_rm_set_master_attributes(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_rm_spa_t sa, sc_rm_spa_t pa, bool smmu_bypass);
 
@@ -355,7 +359,6 @@ sc_err_t sc_rm_set_master_attributes(sc_ipc_t ipc, sc_rsrc_t resource,
  * from this master. Note 0 is not a valid SID as it is reserved to indicate
  * bypass.
  */
-/* IDL: E8 SET_MASTER_SID(I16 resource, I16 sid) */
 sc_err_t sc_rm_set_master_sid(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_rm_sid_t sid);
 
@@ -379,7 +382,6 @@ sc_err_t sc_rm_set_master_sid(sc_ipc_t ipc, sc_rsrc_t resource,
  * This function configures how the HW isolation will restrict access to a
  * peripheral based on the attributes of a transaction from bus master.
  */
-/* IDL: E8 SET_PERIPHERAL_PERMISSIONS(I16 resource, I8 pt, I4 perm) */
 sc_err_t sc_rm_set_peripheral_permissions(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_rm_pt_t pt, sc_rm_perm_t perm);
 
@@ -393,7 +395,6 @@ sc_err_t sc_rm_set_peripheral_permissions(sc_ipc_t ipc, sc_rsrc_t resource,
  *
  * If \a resource is out of range then false is returned.
  */
-/* IDL: R1 IS_RESOURCE_OWNED(I16 resource) */
 bool sc_rm_is_resource_owned(sc_ipc_t ipc, sc_rsrc_t resource);
 
 /*!
@@ -406,7 +407,6 @@ bool sc_rm_is_resource_owned(sc_ipc_t ipc, sc_rsrc_t resource);
  *
  * If \a resource is out of range then false is returned.
  */
-/* IDL: R1 IS_RESOURCE_MASTER(I16 resource) */
 bool sc_rm_is_resource_master(sc_ipc_t ipc, sc_rsrc_t resource);
 
 /*!
@@ -419,7 +419,6 @@ bool sc_rm_is_resource_master(sc_ipc_t ipc, sc_rsrc_t resource);
  *
  * If \a resource is out of range then false is returned.
  */
-/* IDL: R1 IS_RESOURCE_PERIPHERAL(I16 resource) */
 bool sc_rm_is_resource_peripheral(sc_ipc_t ipc, sc_rsrc_t resource);
 
 /*!
@@ -434,7 +433,6 @@ bool sc_rm_is_resource_peripheral(sc_ipc_t ipc, sc_rsrc_t resource);
  * Return errors:
  * - SC_PARM if \a resource is out of range
  */
-/* IDL: E8 GET_RESOURCE_INFO(I16 resource, O16 sid) */
 sc_err_t sc_rm_get_resource_info(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_rm_sid_t *sid);
 
@@ -470,7 +468,6 @@ sc_err_t sc_rm_get_resource_info(sc_ipc_t ipc, sc_rsrc_t resource,
  * By default, the new region will have access permission set to allow the
  * caller to access.
  */
-/* IDL: E8 MEMREG_ALLOC(O8 mr, I64 start, I64 end) */
 sc_err_t sc_rm_memreg_alloc(sc_ipc_t ipc, sc_rm_mr_t *mr, sc_faddr_t start,
     sc_faddr_t end);
 
@@ -487,7 +484,6 @@ sc_err_t sc_rm_memreg_alloc(sc_ipc_t ipc, sc_rm_mr_t *mr, sc_faddr_t start,
  * - SC_ERR_NOACCESS if caller's partition is not a parent of \a mr,
  * - SC_ERR_LOCKED if the owning partition of \a mr is locked
  */
-/* IDL: E8 MEMREG_FREE(I8 mr) */
 sc_err_t sc_rm_memreg_free(sc_ipc_t ipc, sc_rm_mr_t mr);
 
 /*!
@@ -506,7 +502,6 @@ sc_err_t sc_rm_memreg_free(sc_ipc_t ipc, sc_rm_mr_t mr);
  *   of the owner,
  * - SC_ERR_LOCKED if the owning partition or \a pt is locked
  */
-/* IDL: E8 ASSIGN_MEMREG(I8 pt, I8 mr) */
 sc_err_t sc_rm_assign_memreg(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rm_mr_t mr);
 
 /*!
@@ -530,7 +525,6 @@ sc_err_t sc_rm_assign_memreg(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rm_mr_t mr);
  * This function configures how the HW isolation will restrict access to a
  * memory region based on the attributes of a transaction from bus master.
  */
-/* IDL: E8 SET_MEMREG_PERMISSIONS(I8 mr, I8 pt, I4 perm) */
 sc_err_t sc_rm_set_memreg_permissions(sc_ipc_t ipc, sc_rm_mr_t mr,
     sc_rm_pt_t pt, sc_rm_perm_t perm);
 
@@ -545,7 +539,6 @@ sc_err_t sc_rm_set_memreg_permissions(sc_ipc_t ipc, sc_rm_mr_t mr,
  *
  * If \a mr is out of range then false is returned.
  */
-/* IDL: R1 IS_MEMREG_OWNED(I8 mr) */
 bool sc_rm_is_memreg_owned(sc_ipc_t ipc, sc_rm_mr_t mr);
 
 /*!
@@ -561,7 +554,6 @@ bool sc_rm_is_memreg_owned(sc_ipc_t ipc, sc_rm_mr_t mr);
  * Return errors:
  * - SC_PARM if \a mr is out of range
  */
-/* IDL: E8 GET_MEMREG_INFO(I8 mr, O64 start, O64 end) */
 sc_err_t sc_rm_get_memreg_info(sc_ipc_t ipc, sc_rm_mr_t mr,
     sc_faddr_t *start, sc_faddr_t *end);
 
@@ -589,7 +581,6 @@ sc_err_t sc_rm_get_memreg_info(sc_ipc_t ipc, sc_rm_mr_t mr,
  *   of the owner,
  * - SC_ERR_LOCKED if the owning partition or \a pt is locked
  */
-/* IDL: E8 ASSIGN_PIN(I8 pt, I16 pin) */
 sc_err_t sc_rm_assign_pin(sc_ipc_t ipc, sc_rm_pt_t pt, sc_pin_t pin);
 
 /*!
@@ -602,7 +593,6 @@ sc_err_t sc_rm_assign_pin(sc_ipc_t ipc, sc_rm_pt_t pt, sc_pin_t pin);
  *
  * If \a pin is out of range then false is returned.
  */
-/* IDL: R1 IS_PIN_OWNED(I8 pin) */
 bool sc_rm_is_pin_owned(sc_ipc_t ipc, sc_pin_t pin);
 
 /* @} */

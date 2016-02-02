@@ -7,7 +7,7 @@ config NET_VENDOR_FREESCALE
 	default y
 	depends on FSL_SOC || QUICC_ENGINE || CPM1 || CPM2 || PPC_MPC512x || \
 		   M523x || M527x || M5272 || M528x || M520x || M532x || \
-		   ARCH_MXC || ARCH_MXS || (PPC_MPC52xx && PPC_BESTCOMM)
+		   ARCH_MXC || ARCH_MXS || ARCH_NXP_IMX8 || (PPC_MPC52xx && PPC_BESTCOMM)
 	---help---
 	  If you have a network (Ethernet) card belonging to this class, say Y
 	  and read the Ethernet-HOWTO, available from
@@ -23,8 +23,8 @@ if NET_VENDOR_FREESCALE
 config FEC
 	tristate "FEC ethernet controller (of ColdFire and some i.MX CPUs)"
 	depends on (M523x || M527x || M5272 || M528x || M520x || M532x || \
-		   ARCH_MXC || SOC_IMX28)
-	default ARCH_MXC || SOC_IMX28 if ARM
+		   ARCH_MXC || SOC_IMX28 || ARCH_NXP_IMX8)
+	default ARCH_MXC || ARCH_NXP_IMX8 || SOC_IMX28
 	select PHYLIB
 	select PTP_1588_CLOCK
 	---help---

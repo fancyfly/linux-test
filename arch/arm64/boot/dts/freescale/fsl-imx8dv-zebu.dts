@@ -70,6 +70,25 @@
 			0x191 5 0 3 0 0 0x10
 			>;
 		};
+        /*pin flag mux config iso wakeup gp*/
+    	pinctrl_fec1: fec1grp {
+            fsl,pins = <
+            420 5 0 0 0 0 0x70
+            421 5 0 0 0 0 0x70
+            428 5 0 0 0 0 0x70
+            429 5 0 0 0 0 0x70
+            430 5 0 0 0 0 0x70
+            431 5 0 0 0 0 0x70
+            432 5 0 0 0 0 0x70
+            433 5 0 0 0 0 0x70
+
+            422 5 0 0 0 0 0x10
+            423 5 0 0 0 0 0x10
+            424 5 0 0 0 0 0x10
+            425 5 0 0 0 0 0x10
+            426 5 0 0 0 0 0x10
+			>;
+		};
 	};
 };
 
@@ -95,4 +114,16 @@
 
 &pwm2 {
 	status = "okay";
+};
+
+&fec1 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_fec1>;
+    phy-mode = "rgmii";
+    status = "okay";
+
+    fixed-link {
+        speed = <1000>;
+        full-duplex;
+    };
 };

@@ -46,6 +46,7 @@
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/clk.h>
+#include <linux/clk/clk-conf.h>
 #include <linux/platform_device.h>
 #include <linux/phy.h>
 #include <linux/fec.h>
@@ -2638,7 +2639,7 @@ static int fec_enet_alloc_queue(struct net_device *ndev)
 		txq->tx_wake_threshold =
 				(txq->tx_ring_size - txq->tx_stop_threshold) / 2;
 
-		txq->tso_hdrs = dma_alloc_coherent(NULL,
+		txq->tso_hdrs = dma_alloc_coherent(&fep->pdev->dev,
 					txq->tx_ring_size * TSO_HEADER_SIZE,
 					&txq->tso_hdrs_dma,
 					GFP_KERNEL);
@@ -3032,7 +3033,7 @@ static int fec_enet_init(struct net_device *ndev)
 			fep->bufdesc_size;
 
 	/* Allocate memory for buffer descriptors. */
-	cbd_base = dma_alloc_coherent(NULL, bd_size, &bd_dma,
+	cbd_base = dma_alloc_coherent(&fep->pdev->dev, bd_size, &bd_dma,
 				      GFP_KERNEL);
 	if (!cbd_base) {
 		return -ENOMEM;
@@ -3206,7 +3207,9 @@ fec_probe(struct platform_device *pdev)
 	if (!ndev)
 		return -ENOMEM;
 
-	SET_NETDEV_DEV(ndev, &pdev->dev);
+	of_clk_set_defaults(pdev->dev.of_node, false);
+
+    SET_NETDEV_DEV(ndev, &pdev->dev);
 
 	/* setup board info structure */
 	fep = netdev_priv(ndev);

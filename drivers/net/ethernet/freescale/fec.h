@@ -191,27 +191,28 @@
 /*
  *	Define the buffer descriptor structure.
  */
-#if defined(CONFIG_ARCH_MXC) || defined(CONFIG_SOC_IMX28)
+#if defined(CONFIG_ARCH_MXC) || defined(CONFIG_SOC_IMX28) \
+        || defined(CONFIG_ARCH_NXP_IMX8)
 struct bufdesc {
-	unsigned short cbd_datlen;	/* Data length */
-	unsigned short cbd_sc;	/* Control and status info */
-	unsigned long cbd_bufaddr;	/* Buffer address */
+	u16 cbd_datlen;	/* Data length */
+	u16 cbd_sc;	/* Control and status info */
+	u32 cbd_bufaddr;	/* Buffer address */
 };
 #else
 struct bufdesc {
-	unsigned short	cbd_sc;			/* Control and status info */
-	unsigned short	cbd_datlen;		/* Data length */
-	unsigned long	cbd_bufaddr;		/* Buffer address */
+	u16	cbd_sc;			/* Control and status info */
+	u16 short	cbd_datlen;		/* Data length */
+	u32	cbd_bufaddr;		/* Buffer address */
 };
 #endif
 
 struct bufdesc_ex {
 	struct bufdesc desc;
-	unsigned long cbd_esc;
-	unsigned long cbd_prot;
-	unsigned long cbd_bdu;
-	unsigned long ts;
-	unsigned short res0[4];
+	u32 cbd_esc;
+	u32 cbd_prot;
+	u32 cbd_bdu;
+	u32 ts;
+	u16 res0[4];
 };
 
 /*

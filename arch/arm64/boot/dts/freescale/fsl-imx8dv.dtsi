@@ -136,7 +136,7 @@
                 linux,cma {
                         compatible = "shared-dma-pool";
                         reusable;
-                        size = <0 0x02000000>;
+                        size = <0 0x08000000>;
                         linux,cma-default;
                 };
         };

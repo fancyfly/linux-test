@@ -10,7 +10,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -125,7 +125,7 @@ typedef enum sc_rm_perm_e
  * @param[in]     isolated     boolean indicating if this partition should be HW isolated
  *                             via XRDC; set true if new DID is desired
  * @param[in]     restricted   boolean indicating if this partition should be restricted; set
- *                             true if masters in this partition cannot create new partitions 
+ *                             true if masters in this partition cannot create new partitions
  * @param[in]     confidential boolean indicating if this partition should be confidential;
  *                             set true if only this partition should be able to grant
  *                             resource access permissions to this partition
@@ -314,7 +314,7 @@ sc_err_t sc_rm_set_resource_movable(sc_ipc_t ipc, sc_rsrc_t resource,
     bool movable);
 
 /*!
- * This function sets attributes for a resource which is a bus master (i.e. 
+ * This function sets attributes for a resource which is a bus master (i.e.
  * capable of DMA).
  *
  * @param[in]     ipc         IPC handle
@@ -339,7 +339,7 @@ sc_err_t sc_rm_set_master_attributes(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_rm_spa_t sa, sc_rm_spa_t pa, bool smmu_bypass);
 
 /*!
- * This function sets the StreamID for a resource which is a bus master (i.e. 
+ * This function sets the StreamID for a resource which is a bus master (i.e.
  * capable of DMA).
  *
  * @param[in]     ipc         IPC handle

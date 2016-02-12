@@ -25,7 +25,7 @@
 
 /* Includes */
 
-#include "scfw.h"
+#include <soc/imx8/sc/scfw.h>
 
 /* Defines */
 
@@ -44,6 +44,7 @@
 #define SC_125MHZ       125000000   //!< 125MHz
 #define SC_132MHZ       132000000   //!< 132MHz
 #define SC_133MHZ       133333333   //!< 133MHz
+#define SC_150MHZ       150000000   //!< 150MHz
 #define SC_160MHZ       160000000   //!< 160MHz
 #define SC_192MHZ       192000000   //!< 192MHz
 #define SC_200MHZ       200000000   //!< 200MHz
@@ -72,7 +73,7 @@
 #define SC_BOOL_W       1       //!< Width of bool
 #define SC_ERR_W        4       //!< Width of sc_err_t
 #define SC_RSRC_W       9       //!< Width of sc_rsrc_t
-#define SC_CTRL_W       4       //!< Width of sc_ctrl_t
+#define SC_CTRL_W       5       //!< Width of sc_ctrl_t
 /*@}*/
 
 #define SC_R_ALL        UINT16_MAX  //!< All resources
@@ -89,9 +90,9 @@ typedef uint64_t sc_faddr_t;
 typedef enum sc_err_e
 {
     SC_ERR_NONE         = 0,    //!< Success
-    SC_ERR_VERSION      = 1,    //!< Incompatible API version  
-    SC_ERR_CONFIG       = 2,    //!< Configuration error  
-    SC_ERR_PARM         = 3,    //!< Bad parameter 
+    SC_ERR_VERSION      = 1,    //!< Incompatible API version
+    SC_ERR_CONFIG       = 2,    //!< Configuration error
+    SC_ERR_PARM         = 3,    //!< Bad parameter
     SC_ERR_NOACCESS     = 4,    //!< Permission error (no access)
     SC_ERR_LOCKED       = 5,    //!< Permission error (locked)
     SC_ERR_UNAVAILABLE  = 6,    //!< Unavailable (out of resources)
@@ -107,7 +108,7 @@ typedef enum sc_err_e
  * never be changed or removed (only added to at the end of the list).
  */
 typedef enum sc_rsrc_e
-{   
+{
     SC_R_A53                = 0,
     SC_R_A53_0              = 1,
     SC_R_A53_1              = 2,
@@ -563,14 +564,16 @@ typedef enum sc_rsrc_e
     SC_R_DC_1_PLL_0         = 452,
     SC_R_DC_1_PLL_1         = 453,
     SC_R_RTC                = 454,
-    SC_R_DRC_PLL_0_V        = 455,
-    SC_R_DRC_PLL_0_H        = 456,
-    SC_R_DRC_PLL_1_V        = 457,
-    SC_R_DRC_PLL_1_H        = 458,
+    SC_R_DRC_0_V_PLL        = 455,
+    SC_R_DRC_0_H_PLL        = 456,
+    SC_R_DRC_1_V_PLL        = 457,
+    SC_R_DRC_1_H_PLL        = 458,
     SC_R_DC_0_DPL_MSI       = 459,
     SC_R_DC_0_CPL_MSI       = 460,
     SC_R_DC_1_DPL_MSI       = 461,
     SC_R_DC_1_CPL_MSI       = 462,
+    SC_R_PI_0_PLL           = 463,
+    SC_R_PI_1_PLL           = 464,
     SC_R_LAST
 } sc_rsrc_t;
 
@@ -579,9 +582,9 @@ typedef enum sc_rsrc_e
  */
 typedef enum sc_ctrl_e
 {
-    SC_C_OTG_LINESTATE      = 0,
-    SC_C_GPU_SINGLE_MODE    = 1,
-    SC_C_GPU_ID             = 2,
+    SC_C_LINESTATE          = 0,
+    SC_C_SINGLE_MODE        = 1,
+    SC_C_ID                 = 2,
     SC_C_PXL_LINK_MST1_ADDR = 3,
     SC_C_PXL_LINK_MST2_ADDR = 4,
     SC_C_PXL_LINK_MST_ENB   = 5,
@@ -593,6 +596,9 @@ typedef enum sc_ctrl_e
     SC_C_PXL_LINK_MST1_VLD  = 11,
     SC_C_PXL_LINK_MST2_VLD  = 12,
     SC_C_PXL_CLK_POLARITY   = 13,
+    SC_C_TEMP               = 14,
+    SC_C_TEMP_HI            = 15,
+    SC_C_TEMP_LOW           = 16,
     SC_C_LAST
 } sc_ctrl_t;
 
@@ -604,47 +610,47 @@ typedef uint16_t sc_pin_t;
 /* Extra documentation of standard types */
 
 #ifdef DOXYGEN
-    /*! 
+    /*!
      * Type used to declare a true/false boolean.
      */
     typedef enum {false = 0, true = 1} bool;
 
-    /*! 
+    /*!
      * Type used to declare an 8-bit integer.
      */
     typedef __INT8_TYPE__ int8_t;
 
-    /*! 
+    /*!
      * Type used to declare a 16-bit integer.
      */
     typedef __INT16_TYPE__ int16_t;
 
-    /*! 
+    /*!
      * Type used to declare a 32-bit integer.
      */
     typedef __INT32_TYPE__ int32_t;
 
-    /*! 
+    /*!
      * Type used to declare a 64-bit integer.
      */
     typedef __INT64_TYPE__ int64_t;
 
-    /*! 
+    /*!
      * Type used to declare an 8-bit unsigned integer.
      */
     typedef __UINT8_TYPE__ uint8_t;
 
-    /*! 
+    /*!
      * Type used to declare a 16-bit unsigned integer.
      */
     typedef __UINT16_TYPE__ uint16_t;
 
-    /*! 
+    /*!
      * Type used to declare a 32-bit unsigned integer.
      */
     typedef __UINT32_TYPE__ uint32_t;
 
-    /*! 
+    /*!
      * Type used to declare a 64-bit unsigned integer.
      */
     typedef __UINT64_TYPE__ uint64_t;

@@ -17,14 +17,14 @@
  */
 
 /*!
- * Header file for the MISC RPC implementation.
+ * Header file for the IRQ RPC implementation.
  *
- * @addtogroup MISC_SVC
+ * @addtogroup IRQ_SVC
  * @{
  */
 
-#ifndef _SC_MISC_RPC_H
-#define _SC_MISC_RPC_H
+#ifndef _SC_IRQ_RPC_H
+#define _SC_IRQ_RPC_H
 
 /* Includes */
 
@@ -33,14 +33,14 @@
 /* Types */
 
 /*!
- * This type is used to indicate RPC MISC function calls.
+ * This type is used to indicate RPC IRQ function calls.
  */
-typedef enum misc_func_e
+typedef enum irq_func_e
 {
-    MISC_FUNC_UNKNOWN, //!< Unknown function
-    MISC_FUNC_SET_CONTROL, //!< Index for misc_set_control() RPC call
-    MISC_FUNC_GET_CONTROL, //!< Index for misc_get_control() RPC call
-} misc_func_t;
+    IRQ_FUNC_UNKNOWN, //!< Unknown function
+    IRQ_FUNC_ENABLE, //!< Index for irq_enable() RPC call
+    IRQ_FUNC_STATUS, //!< Index for irq_status() RPC call
+} irq_func_t;
 
 /* Functions */
 
@@ -50,16 +50,16 @@ typedef enum misc_func_e
  */
 
 /*!
- * This function dispatches an incoming MISC RPC request.
+ * This function dispatches an incoming IRQ RPC request.
  *
  * @param[in]     caller_pt   caller partition
  * @param[in]     msg         pointer to RPC message
  */
-void misc_dispatch(sc_rm_pt_t caller_pt, sc_rpc_msg_t *msg);
+void irq_dispatch(sc_rm_pt_t caller_pt, sc_rpc_msg_t *msg);
 
 /* @} */
 
-#endif /* _SC_MISC_RPC_H */
+#endif /* _SC_IRQ_RPC_H */
 
 /**@}*/
 

@@ -10,7 +10,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -77,7 +77,7 @@ sc_err_t sc_pad_set_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t ctrl)
     return result;
 }
 
-sc_err_t sc_pad_set_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin, 
+sc_err_t sc_pad_set_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin,
     sc_pad_28lpp_dse_t dse, bool sre, bool hys, bool pe,
     sc_pad_28lpp_ps_t ps)
 {
@@ -120,7 +120,7 @@ sc_err_t sc_pad_set_wakeup(sc_ipc_t ipc, sc_pin_t pin,
     return result;
 }
 
-sc_err_t sc_pad_set_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t mux, 
+sc_err_t sc_pad_set_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t mux,
     sc_pad_config_t config, sc_pad_iso_t iso, uint32_t ctrl,
     sc_pad_wakeup_t wakeup)
 {
@@ -187,7 +187,7 @@ sc_err_t sc_pad_get_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t *ctrl)
     return result;
 }
 
-sc_err_t sc_pad_get_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin, 
+sc_err_t sc_pad_get_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin,
     sc_pad_28lpp_dse_t *dse, bool *sre, bool *hys, bool *pe,
     sc_pad_28lpp_ps_t *ps)
 {
@@ -236,7 +236,7 @@ sc_err_t sc_pad_get_wakeup(sc_ipc_t ipc, sc_pin_t pin,
     return result;
 }
 
-sc_err_t sc_pad_get_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t *mux, 
+sc_err_t sc_pad_get_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t *mux,
     sc_pad_config_t *config, sc_pad_iso_t *iso, uint32_t *ctrl,
     sc_pad_wakeup_t *wakeup)
 {

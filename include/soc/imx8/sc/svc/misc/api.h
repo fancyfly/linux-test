@@ -10,7 +10,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -42,7 +42,7 @@
 /* Functions */
 
 /*!
- * This function sets a misc. control value.
+ * This function sets a miscellaneous control value.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     resource    resource the control is associated with
@@ -56,13 +56,13 @@
  * - SC_ERR_NOACCESS if caller's partition is not the resource owner or parent
  *   of the owner
  *
- * Refer to the [Control List](@ref CONTROLS) for valid control values. 
+ * Refer to the [Control List](@ref CONTROLS) for valid control values.
  */
 sc_err_t sc_misc_set_control(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_ctrl_t ctrl, uint32_t val);
 
 /*!
- * This function gets a misc. control value.
+ * This function gets a miscellaneous control value.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     resource    resource the control is associated with
@@ -76,7 +76,7 @@ sc_err_t sc_misc_set_control(sc_ipc_t ipc, sc_rsrc_t resource,
  * - SC_ERR_NOACCESS if caller's partition is not the resource owner or parent
  *   of the owner
  *
- * Refer to the [Control List](@ref CONTROLS) for valid control values. 
+ * Refer to the [Control List](@ref CONTROLS) for valid control values.
  */
 sc_err_t sc_misc_get_control(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_ctrl_t ctrl, uint32_t *val);

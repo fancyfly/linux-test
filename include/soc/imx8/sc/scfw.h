@@ -33,4 +33,13 @@ typedef uint32_t sc_ipc_t;
  */
 typedef uint32_t sc_ipc_id_t;
 
+/*!
+ * This function returns the MU channel ID for this implementation
+ *
+ * @param[in]     ipc         pointer to Mu channel ID
+ * @return Returns an error code (SC_ERR_NONE = success, SC_ERR_IPC
+ *         otherwise).
+ */
+int sc_ipc_getMuID(uint32_t *mu_id);
+
 #endif

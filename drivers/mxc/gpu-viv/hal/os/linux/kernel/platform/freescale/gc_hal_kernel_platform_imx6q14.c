@@ -1130,33 +1130,33 @@ _GetPower_imx8x(
     }
 
 #if IMX8_SCU_CONTROL
-    sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_ID, 0);
+    sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_C_ID, 0);
     if (sciErr != SC_ERR_NONE)
         gckOS_Print("galcore: failed to set gpu id for 3d_0\n");
 
-    sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_ID, 1);
+    sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_C_ID, 1);
     if (sciErr != SC_ERR_NONE)
         gckOS_Print("galcore: failed to set gpu id for 3d_1\n");
 
     /* check dual core mode */
     if (priv->clk_core_3d_0 != NULL && priv->clk_core_3d_1 != NULL)
     {
-        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 0);
+        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_C_SINGLE_MODE, 0);
         if (sciErr != SC_ERR_NONE)
             gckOS_Print("galcore: failed to set gpu dual more for 3d_0\n");
 
-        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 0);
+        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_C_SINGLE_MODE, 0);
         if (sciErr != SC_ERR_NONE)
             gckOS_Print("galcore: failed to set gpu dual more for 3d_1\n");
     }
     /* check single core mode */
     else if (priv->clk_core_3d_0 != NULL || priv->clk_core_3d_1 != NULL)
     {
-        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_C_GPU_SINGLE_MODE, 1);
+        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_0_PID0, SC_C_SINGLE_MODE, 1);
         if (sciErr != SC_ERR_NONE)
             gckOS_Print("galcore: failed to set gpu single more for 3d_0\n");
 
-        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_C_GPU_SINGLE_MODE, 1);
+        sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_C_SINGLE_MODE, 1);
         if (sciErr != SC_ERR_NONE)
             gckOS_Print("galcore: failed to set gpu single more for 3d_1\n");
     }
@@ -1213,7 +1213,7 @@ _PutPower_imx8x(
 #endif
 
 #if IMX8_SCU_CONTROL
-     sc_ipc_close(&gpu_ipcHandle);
+     sc_ipc_close(gpu_ipcHandle);
 #endif
 
     return gcvSTATUS_OK;

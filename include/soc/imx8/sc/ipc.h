@@ -10,7 +10,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -50,18 +50,29 @@ sc_err_t sc_ipc_open(sc_ipc_t *ipc, sc_ipc_id_t id);
 /*!
  * This function closes an IPC channel.
  *
- * @param[in]     ipc         pointer to id of channel to close
+ * @param[in]     ipc         id of channel to close
  */
-void sc_ipc_close(sc_ipc_t *ipc);
+void sc_ipc_close(sc_ipc_t ipc);
 
 /*!
- * This function returns the MU channel ID for this implementation
+ * This function reads a message from an IPC channel.
  *
- * @param[in]     ipc         pointer to Mu channel ID
- * @return Returns an error code (SC_ERR_NONE = success, SC_ERR_IPC
- *         otherwise).
+ * @param[in]     ipc         id of channel read from
+ * @param[out]    data        pointer to message buffer to read
+ *
+ * This function will block if no message is available to be read.
  */
-int sc_ipc_getMuID(uint32_t *mu_id);
+void sc_ipc_read(sc_ipc_t ipc, void *data);
+
+/*!
+ * This function writes a message to an IPC channel.
+ *
+ * @param[in]     ipc         id of channel to write to
+ * @param[in]     data        pointer to message buffer to write
+ *
+ * This function will block if the outgoing buffer is full.
+ */
+void sc_ipc_write(sc_ipc_t ipc, void *data);
 
 #endif /* _SC_IPC_H */
 

@@ -10,7 +10,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -40,22 +40,24 @@
 #define RPC_FUNC(MSG)           ((MSG)->func)
 #define RPC_R8(MSG)             ((MSG)->func)
 #define RPC_D32(MSG, IDX)       ((MSG)->DATA.d32[IDX / 4])
+#define RPC_F32(MSG, IDX)       ((MSG)->DATA.f32[IDX / 4])
 #define RPC_D16(MSG, IDX)       ((MSG)->DATA.d16[IDX / 2])
 #define RPC_D8(MSG, IDX)        ((MSG)->DATA.d8[IDX])
-                
+
 /* Types */
 
 typedef enum sc_rpc_svc_e
 {
     SC_RPC_SVC_UNKNOWN          = 0,
-    SC_RPC_SVC_RETURN           = 1,        
+    SC_RPC_SVC_RETURN           = 1,
     SC_RPC_SVC_PM               = 2,
     SC_RPC_SVC_RM               = 3,
     SC_RPC_SVC_OTP              = 4,
     SC_RPC_SVC_TIMER            = 5,
     SC_RPC_SVC_PAD              = 6,
     SC_RPC_SVC_MISC             = 7,
-    SC_RPC_SVC_ABORT            = 8        
+    SC_RPC_SVC_IRQ              = 8,
+    SC_RPC_SVC_ABORT            = 9
 } sc_rpc_svc_t;
 
 typedef struct sc_rpc_msg_s
@@ -63,7 +65,7 @@ typedef struct sc_rpc_msg_s
     uint8_t version;
     uint8_t size;
     uint8_t svc;
-    uint8_t func;   
+    uint8_t func;
     union
     {
         uint32_t d32[(SC_RPC_MAX_MSG - 1)];
@@ -87,7 +89,7 @@ typedef struct sc_rpc_async_msg_s
     sc_rpc_async_state_t state;
     uint8_t wordIdx;
     sc_rpc_msg_t msg;
-    uint32_t timeStamp;    
+    uint32_t timeStamp;
 } sc_rpc_async_msg_t;
 
 /* Functions */

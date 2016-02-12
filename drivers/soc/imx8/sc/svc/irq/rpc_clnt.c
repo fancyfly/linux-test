@@ -17,10 +17,10 @@
  */
 
 /*!
- * File containing client-side RPC functions for the OTP service. These
+ * File containing client-side RPC functions for the IRQ service. These
  * function are ported to clients that communicate to the SC.
  *
- * @addtogroup OTP_SVC
+ * @addtogroup IRQ_SVC
  * @{
  */
 
@@ -28,7 +28,7 @@
 
 #include <soc/imx8/sc/types.h>
 #include <soc/imx8/sc/svc/rm/api.h>
-#include <soc/imx8/sc/svc/otp/api.h>
+#include <soc/imx8/sc/svc/irq/api.h>
 #include "../../main/rpc.h"
 #include "rpc.h"
 
@@ -38,39 +38,20 @@
 
 /* Local Functions */
 
-sc_err_t sc_otp_read(sc_ipc_t ipc, sc_otp_word_t *data,
-    sc_otp_offset_t offset)
+sc_err_t sc_irq_enable(sc_ipc_t ipc, sc_rsrc_t resource,
+    sc_irq_group_t group, uint32_t mask, bool enable)
 {
     sc_rpc_msg_t msg;
     uint8_t result;
 
     RPC_VER(&msg) = SC_RPC_VERSION;
-    RPC_SVC(&msg) = SC_RPC_SVC_OTP;
-    RPC_FUNC(&msg) = OTP_FUNC_READ;
-    RPC_D8(&msg, 0) = offset;
-    RPC_SIZE(&msg) = 2;
-
-    sc_call_rpc(ipc, &msg, false);
-
-    if (data != NULL)
-        *data = RPC_D32(&msg, 0);
-    result = RPC_R8(&msg);
-    return result;
-}
-
-sc_err_t sc_otp_write(sc_ipc_t ipc, sc_otp_word_t data,
-    sc_otp_offset_t offset, sc_otp_word_t bitmask)
-{
-    sc_rpc_msg_t msg;
-    uint8_t result;
-
-    RPC_VER(&msg) = SC_RPC_VERSION;
-    RPC_SVC(&msg) = SC_RPC_SVC_OTP;
-    RPC_FUNC(&msg) = OTP_FUNC_WRITE;
-    RPC_D32(&msg, 0) = data;
-    RPC_D32(&msg, 4) = bitmask;
-    RPC_D8(&msg, 8) = offset;
-    RPC_SIZE(&msg) = 4;
+    RPC_SVC(&msg) = SC_RPC_SVC_IRQ;
+    RPC_FUNC(&msg) = IRQ_FUNC_ENABLE;
+    RPC_D32(&msg, 0) = mask;
+    RPC_D16(&msg, 4) = resource;
+    RPC_D8(&msg, 6) = group;
+    RPC_D8(&msg, 7) = enable;
+    RPC_SIZE(&msg) = 3;
 
     sc_call_rpc(ipc, &msg, false);
 
@@ -78,23 +59,23 @@ sc_err_t sc_otp_write(sc_ipc_t ipc, sc_otp_word_t data,
     return result;
 }
 
-sc_err_t sc_otp_set_permissions(sc_ipc_t ipc, sc_otp_offset_t offset,
-    bool readen, bool writeen, bool lock)
+sc_err_t sc_irq_status(sc_ipc_t ipc, sc_rsrc_t resource,
+    sc_irq_group_t group, uint32_t *status)
 {
     sc_rpc_msg_t msg;
     uint8_t result;
 
     RPC_VER(&msg) = SC_RPC_VERSION;
-    RPC_SVC(&msg) = SC_RPC_SVC_OTP;
-    RPC_FUNC(&msg) = OTP_FUNC_SET_PERMISSIONS;
-    RPC_D8(&msg, 0) = offset;
-    RPC_D8(&msg, 1) = readen;
-    RPC_D8(&msg, 2) = writeen;
-    RPC_D8(&msg, 3) = lock;
+    RPC_SVC(&msg) = SC_RPC_SVC_IRQ;
+    RPC_FUNC(&msg) = IRQ_FUNC_STATUS;
+    RPC_D16(&msg, 0) = resource;
+    RPC_D8(&msg, 2) = group;
     RPC_SIZE(&msg) = 2;
 
     sc_call_rpc(ipc, &msg, false);
 
+    if (status != NULL)
+        *status = RPC_D32(&msg, 0);
     result = RPC_R8(&msg);
     return result;
 }

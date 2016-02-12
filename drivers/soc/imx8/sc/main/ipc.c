@@ -39,8 +39,6 @@ static unsigned long mu_base_physaddr;
 static void __iomem *mu_base_virtaddr;
 
 /* Local functions */
-static void sc_ipc_write(sc_ipc_t handle, void *data);
-static void sc_ipc_read(sc_ipc_t handle, void *data);
 
 /* Local variables */
 static uint32_t gIPCport;
@@ -121,7 +119,7 @@ sc_err_t sc_ipc_open(sc_ipc_t *handle, uint32_t id)
 /*--------------------------------------------------------------------------*/
 /* Close an IPC channel                                                     */
 /*--------------------------------------------------------------------------*/
-void sc_ipc_close(sc_ipc_t *handle)
+void sc_ipc_close(sc_ipc_t handle)
 {
 	MU_Type *base;
 
@@ -135,7 +133,6 @@ void sc_ipc_close(sc_ipc_t *handle)
 	/* Get MU base associated with IPC channel */
 	base = sc_ipc_get_mu_base(gIPCport);
 
-	handle = (sc_ipc_t *)NULL;
 	/* TBD ***** What needs to be done here? */
 	mutex_unlock(&scu_mu_mutex);
 }
@@ -148,7 +145,7 @@ void sc_ipc_close(sc_ipc_t *handle)
  *
  * This function will block if no message is available to be read.
  */
-static void sc_ipc_read(sc_ipc_t handle, void *data)
+void sc_ipc_read(sc_ipc_t handle, void *data)
 {
 	MU_Type *base;
 	uint8_t count = 0;
@@ -187,7 +184,7 @@ static void sc_ipc_read(sc_ipc_t handle, void *data)
  *
  * This function will block if the outgoing buffer is full.
  */
-static void sc_ipc_write(sc_ipc_t handle, void *data)
+void sc_ipc_write(sc_ipc_t handle, void *data)
 {
 	MU_Type *base;
 	uint8_t count = 0;

@@ -10,7 +10,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -51,14 +51,14 @@ typedef uint8_t sc_otp_offset_t;
 /* Functions */
 
 /*!
- * This function reads the OTP value. 
+ * This function reads the OTP value.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     offset      offset into OTP region
- * @param[out]    data        data to read from the OTP 
+ * @param[out]    data        data to read from the OTP
  *
  * @return Returns an error code (SC_ERR_NONE = success).
- *         
+ *
  * Return errors:
  * - SC_ERR_UNAVAILABLE if caller's partition has no OTP resources,
  * - SC_ERR_PARM if arguments out of range or invalid,
@@ -68,15 +68,15 @@ sc_err_t sc_otp_read(sc_ipc_t ipc, sc_otp_word_t *data,
     sc_otp_offset_t offset);
 
 /*!
- * This function writes the OTP value. 
+ * This function writes the OTP value.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     offset      offset into OTP region
- * @param[in]     data        data to write to the OTP 
- * @param[in]     bitmask     mask bits to program 
+ * @param[in]     data        data to write to the OTP
+ * @param[in]     bitmask     mask bits to program
  *
  * @return Returns an error code (SC_ERR_NONE = success).
- *         
+ *
  * Return errors:
  * - SC_ERR_UNAVAILABLE if caller's partition has no OTP resources,
  * - SC_ERR_PARM if arguments out of range or invalid,
@@ -102,7 +102,7 @@ sc_err_t sc_otp_write(sc_ipc_t ipc, sc_otp_word_t data,
  * Return errors:
  * - SC_ERR_UNAVAILABLE if caller's partition has no OTP resources,
  * - SC_ERR_LOCKED if partition is already locked
- * 
+ *
  * Assigns some part of the OTP resource owned by the caller's partition
  * to another partition.
  */

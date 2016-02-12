@@ -81,7 +81,7 @@ sc_err_t sc_timer_set_wdog_timeout(sc_ipc_t ipc,
 sc_err_t sc_timer_start_wdog(sc_ipc_t ipc, bool lock);
 
 /*!
- * This function stops the watchdog if it is not locked. 
+ * This function stops the watchdog if it is not locked.
  *
  * @param[in]     ipc         IPC handle
  *

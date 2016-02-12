@@ -10,7 +10,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -153,7 +153,7 @@ typedef enum sc_pm_reset_reason_e
  *
  * Return errors:
  * - SC_ERR_PARM if invalid partition or mode,
- * - SC_ERR_NOACCESS if caller's partition is not the owner or 
+ * - SC_ERR_NOACCESS if caller's partition is not the owner or
  *   parent of \a pt
  *
  * All resources owned by \a pt that are on will have their power
@@ -295,7 +295,7 @@ sc_err_t sc_pm_clock_enable(sc_ipc_t ipc, sc_rsrc_t resource,
  * @name Reset Functions
  * @{
  */
- 
+
 /*!
  * This function is used to boot a partition.
  *

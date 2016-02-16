@@ -92,7 +92,8 @@ typedef enum sc_pm_clk_e
     SC_PM_CLK_MISC3             = 3,    //!< Misc 3 clock
     SC_PM_CLK_MISC4             = 4,    //!< Misc 4 clock
     SC_PM_CLK_CPU               = 2,    //!< CPU clock
-    SC_PM_CLK_PLL               = 4     //!< PLL
+    SC_PM_CLK_PLL               = 4,    //!< PLL
+    SC_PM_CLK_BYPASS            = 4,    //!< Bypass clock
 } sc_pm_clk_t;
 
 /*!

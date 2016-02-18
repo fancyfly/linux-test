@@ -49,11 +49,9 @@
  *     OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "fsl-imx8dv-ca53.dtsi"
 #include <dt-bindings/clock/imx8dv-clock.h>
 #include <dt-bindings/soc/imx_rsrc.h>
-
-/* First 4KB has trampoline code for secondary cores. */
-/memreserve/ 0x80000000 0x00010000;
 
 / {
 	compatible = "fsl,imx8dv";
@@ -66,59 +64,6 @@
 		serial1 = &uart2;
 		mmc0 = &usdhc1;
         ethernet0 = &fec1;
-	};
-
-	cpus {
-		#address-cells = <2>;
-		#size-cells = <0>;
-
-		/*
-		 * We expect the enable-method for cpu's to be "psci", but this
-		 * is dependent on the SoC FW, which will fill this in.
-		 *
-		 * Currently supported enable-method is psci v0.2
-		 */
-
-		/* We have 1 clusters having 4 Cortex-A53 cores */
-		A53_0: cpu@0 {
-			device_type = "cpu";
-			compatible = "arm,cortex-a53";
-			reg = <0x0 0x0>;
-			enable-method = "spin-table";
-			cpu-release-addr = <0x0 0x80001400>;
-			next-level-cache = <&A53_L2>;
-		};
-
-		A53_1: cpu@1 {
-			device_type = "cpu";
-			compatible = "arm,cortex-a53";
-			reg = <0x0 0x1>;
-			enable-method = "spin-table";
-			cpu-release-addr = <0x0 0x80001440>;
-			next-level-cache = <&A53_L2>;
-		};
-
-		A53_2: cpu@2 {
-			device_type = "cpu";
-			compatible = "arm,cortex-a53";
-			reg = <0x0 0x2>;
-			enable-method = "spin-table";
-			cpu-release-addr = <0x0 0x80001480>;
-			next-level-cache = <&A53_L2>;
-		};
-
-		A53_3: cpu@3 {
-			device_type = "cpu";
-			compatible = "arm,cortex-a53";
-			reg = <0x0 0x3>;
-			enable-method = "spin-table";
-			cpu-release-addr = <0x0 0x800014c0>;
-			next-level-cache = <&A53_L2>;
-		};
-
-		A53_L2: l2-cache0 {
-			compatible = "cache";
-		};
 	};
 
 	memory@80000000 {

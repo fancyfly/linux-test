@@ -1,12 +1,12 @@
 /*
- * Device Tree file for Freescale i.MX8dv zebu
+ * Device Tree Include file for Freescale i.MX8dv A53 cluster.
  *
- * Copyright (C) 2015, Freescale Semiconductor Inc
+ * Copyright (C) 2015, Freescale Semiconductor inc
  *
  * Nitin Garg <nitin.garg@freescale.com>
  *
  * This file is dual-licensed: you can use it either under the terms
- * of the GPL or the X11 license, at your option. Note that this dual
+ * of the GPLv2 or the X11 license, at your option. Note that this dual
  * licensing only applies to this file, and not this project as a
  * whole.
  *
@@ -49,84 +49,57 @@
  *     OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/dts-v1/;
+/{
+	cpus {
+		#address-cells = <2>;
+		#size-cells = <0>;
 
-/* First 4KB has trampoline code for secondary cores. */
-/memreserve/ 0x80000000 0x00010000;
+		/*
+		 * We expect the enable-method for cpu's to be "psci", but this
+		 * is dependent on the SoC FW, which will fill this in.
+		 *
+		 * Currently supported enable-method is psci v0.2
+		 */
 
-#include "fsl-imx8dv.dtsi"
-
-/ {
-	model = "Freescale i.MX8dv Zebu";
-	compatible = "fsl,imx8dv-zebu", "fsl,imx8dv";
-
-	chosen {
-		bootargs = "console=ttymxc0,115200 earlycon=imxuart,0x5a060000,115200";
-		stdout-path = &uart1;
-	};
-};
-
-&iomuxc {
-	imx8dv-zebu {
-		pinctrl_usdhc1: usdhc1grp {
-			fsl,pins = <
-			0x191 5 0 3 0 0 0x10
-			>;
+		/* We have 1 clusters having 4 Cortex-A53 cores */
+		A53_0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x0 0x0>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0x0 0x80001400>;
+			next-level-cache = <&A53_L2>;
 		};
-        /*pin flag mux config iso wakeup gp*/
-    	pinctrl_fec1: fec1grp {
-            fsl,pins = <
-            420 5 0 0 0 0 0x70
-            421 5 0 0 0 0 0x70
-            428 5 0 0 0 0 0x70
-            429 5 0 0 0 0 0x70
-            430 5 0 0 0 0 0x70
-            431 5 0 0 0 0 0x70
-            432 5 0 0 0 0 0x70
-            433 5 0 0 0 0 0x70
 
-            422 5 0 0 0 0 0x10
-            423 5 0 0 0 0 0x10
-            424 5 0 0 0 0 0x10
-            425 5 0 0 0 0 0x10
-            426 5 0 0 0 0 0x10
-			>;
+		A53_1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x0 0x1>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0x0 0x80001440>;
+			next-level-cache = <&A53_L2>;
+		};
+
+		A53_2: cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x0 0x2>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0x0 0x80001480>;
+			next-level-cache = <&A53_L2>;
+		};
+
+		A53_3: cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x0 0x3>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0x0 0x800014c0>;
+			next-level-cache = <&A53_L2>;
+		};
+
+		A53_L2: l2-cache0 {
+			compatible = "cache";
 		};
 	};
-};
-
-&usdhc1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usdhc1>;
-	bus-width = <4>;
-	non-removable;
-	no-1-8-v;
-	status = "okay";
-};
-
-&usdhc2 {
-	bus-width = <4>;
-	non-removable;
-	no-1-8-v;
-	status = "okay";
-};
-
-&pwm1 {
-	status = "okay";
-};
-
-&pwm2 {
-	status = "okay";
-};
-
-&fec1 {
-    pinctrl-names = "default";
-    pinctrl-0 = <&pinctrl_fec1>;
-    phy-mode = "rgmii";
-    status = "okay";
-
-    fixed-link {
-        speed = <1000>;
-        full-duplex;
-    };
 };

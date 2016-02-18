@@ -49,17 +49,7 @@
  *     OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/dts-v1/;
 
-#include "fsl-imx8dv.dtsi"
+#include "fsl-imx8dv-zebu.dts"
 #include "fsl-imx8dv-ca72.dtsi"
 
-/ {
-	model = "Freescale i.MX8dv Zebu";
-	compatible = "fsl,imx8dv-zebu", "fsl,imx8dv";
-
-	chosen {
-		bootargs = "console=ttymxc0,115200 earlycon=imxuart,0x5a060000,115200";
-		stdout-path = &uart1;
-	};
-};

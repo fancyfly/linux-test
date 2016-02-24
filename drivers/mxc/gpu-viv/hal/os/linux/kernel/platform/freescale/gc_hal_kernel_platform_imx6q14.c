@@ -2,7 +2,7 @@
 *
 *    The MIT License (MIT)
 *
-*    Copyright (c) 2014 - 2015 Vivante Corporation
+*    Copyright (c) 2014 - 2016 Vivante Corporation
 *
 *    Permission is hereby granted, free of charge, to any person obtaining a
 *    copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 *
 *    The GPL License (GPL)
 *
-*    Copyright (C) 2014 - 2015 Vivante Corporation
+*    Copyright (C) 2014 - 2016 Vivante Corporation
 *
 *    This program is free software; you can redistribute it and/or
 *    modify it under the terms of the GNU General Public License
@@ -78,7 +78,9 @@
 #include <linux/busfreq-imx6.h>
 #include <linux/reset.h>
 #else
-/*#include <linux/busfreq-imx.h>*/
+#ifndef IMX8_SCU_CONTROL
+#include <linux/busfreq-imx.h>
+#endif
 #include <linux/reset.h>
 #endif
 #endif
@@ -110,8 +112,8 @@ extern int unregister_thermal_notifier(struct notifier_block *nb);
 #endif
 #endif
 
-#ifndef gcdDEFAULT_CONTIGUOUS_SIZE
-#define gcdDEFAULT_CONTIGUOUS_SIZE (4 << 20)
+#ifndef gcdFSL_CONTIGUOUS_SIZE
+#define gcdFSL_CONTIGUOUS_SIZE (4 << 20)
 #endif
 
 static int initgpu3DMinClock = 1;
@@ -482,7 +484,7 @@ gckPLATFORM_AdjustParam(
     {
         if( Args->contiguousBase == 0 )
            Args->contiguousBase = res->start;
-        if( Args->contiguousSize == -1 )
+        if( Args->contiguousSize == ~0U )
            Args->contiguousSize = res->end - res->start + 1;
     }
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
@@ -499,11 +501,11 @@ gckPLATFORM_AdjustParam(
        Args->contiguousSize = pdata->reserved_mem_size;
      }
 #endif
-    if (Args->contiguousSize == -1)
+    if (Args->contiguousSize == ~0U)
     {
        gckOS_Print("Warning: No contiguous memory is reserverd for gpu.!\n ");
-       gckOS_Print("Warning: Will use default value(%d) for the reserved memory!\n ",gcdDEFAULT_CONTIGUOUS_SIZE);
-       Args->contiguousSize = gcdDEFAULT_CONTIGUOUS_SIZE;
+       gckOS_Print("Warning: Will use default value(%d) for the reserved memory!\n ",gcdFSL_CONTIGUOUS_SIZE);
+       Args->contiguousSize = gcdFSL_CONTIGUOUS_SIZE;
     }
 
     Args->gpu3DMinClock = initgpu3DMinClock;
@@ -1069,7 +1071,7 @@ _GetPower_imx8x(
              clk_unprepare(priv->clk_core_3d_0);
 
              clk_prepare(priv->clk_shader_3d_0);
-             clk_set_rate(priv->clk_shader_3d_0, 800000000);
+             clk_set_rate(priv->clk_shader_3d_0, 1000000000);
              clk_unprepare(priv->clk_shader_3d_0);
 
 #if IMX8_SCU_CONTROL
@@ -1107,10 +1109,10 @@ _GetPower_imx8x(
              clk_unprepare(priv->clk_core_3d_1);
 
              clk_prepare(priv->clk_shader_3d_1);
-             clk_set_rate(priv->clk_shader_3d_1, 800000000);
+             clk_set_rate(priv->clk_shader_3d_1, 1000000000);
              clk_unprepare(priv->clk_shader_3d_1);
 
-#if IMX8_SCU_CONTROL
+#ifdef IMX8_SCU_CONTROL
              sciErr = sc_pm_set_resource_power_mode(gpu_ipcHandle, SC_R_GPU_1_PID0, SC_PM_PW_MODE_OFF);
              if (sciErr != SC_ERR_NONE) {
                  gckOS_Print("galcore; cannot power down 3d_1\n");

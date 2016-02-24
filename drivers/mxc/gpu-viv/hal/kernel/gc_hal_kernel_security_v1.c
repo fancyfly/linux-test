@@ -60,7 +60,7 @@
 
 #define _GC_OBJ_ZONE    gcvZONE_KERNEL
 
-#if gcdSECURITY
+#if gcdENABLE_TRUST_APPLICATION
 
 /*
 ** Open a security service channel.
@@ -124,7 +124,9 @@ OnError:
 
 gceSTATUS
 gckKERNEL_SecurityStartCommand(
-    IN gckKERNEL Kernel
+    IN gckKERNEL Kernel,
+    IN gctUINT32 Address,
+    IN gctUINT32 Bytes
     )
 {
     gceSTATUS status;
@@ -134,6 +136,8 @@ gckKERNEL_SecurityStartCommand(
 
     iface.command = KERNEL_START_COMMAND;
     iface.u.StartCommand.gpu = Kernel->core;
+    iface.u.StartCommand.address = Address;
+    iface.u.StartCommand.bytes = Bytes;
 
     gcmkONERROR(gckKERNEL_SecurityCallService(Kernel->securityChannel, &iface));
 
@@ -173,39 +177,27 @@ OnError:
 }
 
 gceSTATUS
-gckKERNEL_SecurityExecute(
+gckKERNEL_SecurityMapMemory(
     IN gckKERNEL Kernel,
-    IN gctPOINTER Buffer,
-    IN gctUINT32 Bytes
+    IN gctUINT32 *PhysicalArray,
+    IN gctPHYS_ADDR_T Physical,
+    IN gctUINT32 PageCount,
+    OUT gctUINT32 * GPUAddress
     )
 {
     gceSTATUS status;
-#if defined(LINUX)
-    gctPHYS_ADDR_T physical;
-    gctUINT32 address;
-#endif
     gcsTA_INTERFACE iface;
 
     gcmkHEADER();
 
-    iface.command = KERNEL_EXECUTE;
-    iface.u.Execute.command_buffer = (gctUINT32 *)Buffer;
-    iface.u.Execute.gpu = Kernel->core;
-    iface.u.Execute.command_buffer_length = Bytes;
+    iface.command = KERNEL_MAP_MEMORY;
 
-#if defined(LINUX)
-    gcmkONERROR(gckOS_GetPhysicalAddress(Kernel->os, Buffer, &physical));
-    gcmkSAFECASTPHYSADDRT(address, physical);
-
-    iface.u.Execute.command_buffer = (gctUINT32 *)address;
-#endif
+    iface.u.MapMemory.physicals = PhysicalArray;
+    iface.u.MapMemory.physical = Physical;
+    iface.u.MapMemory.pageCount = PageCount;
+    iface.u.MapMemory.gpuAddress = *GPUAddress;
 
     gcmkONERROR(gckKERNEL_SecurityCallService(Kernel->securityChannel, &iface));
-
-    /* Update queue tail pointer. */
-    gcmkONERROR(gckHARDWARE_UpdateQueueTail(
-        Kernel->hardware, 0, 0
-        ));
 
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
@@ -216,35 +208,18 @@ OnError:
 }
 
 gceSTATUS
-gckKERNEL_SecurityMapMemory(
-    IN gckKERNEL Kernel,
-    IN gctUINT32 *PhysicalArray,
-    IN gctUINT32 PageCount,
-    OUT gctUINT32 * GPUAddress
+gckKERNEL_SecurityDumpMMUException(
+    IN gckKERNEL Kernel
     )
 {
     gceSTATUS status;
     gcsTA_INTERFACE iface;
-#if defined(LINUX)
-    gctPHYS_ADDR_T physical;
-    gctUINT32 address;
-#endif
 
     gcmkHEADER();
 
-    iface.command = KERNEL_MAP_MEMORY;
-
-#if defined(LINUX)
-    gcmkONERROR(gckOS_GetPhysicalAddress(Kernel->os, PhysicalArray, &physical));
-    gcmkSAFECASTPHYSADDRT(address, physical);
-    iface.u.MapMemory.physicals = (gctUINT32 *)address;
-#endif
-
-    iface.u.MapMemory.pageCount = PageCount;
+    iface.command = KERNEL_DUMP_MMU_EXCEPTION;
 
     gcmkONERROR(gckKERNEL_SecurityCallService(Kernel->securityChannel, &iface));
-
-    *GPUAddress = iface.u.MapMemory.gpuAddress;
 
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
@@ -253,6 +228,8 @@ OnError:
     gcmkFOOTER();
     return status;
 }
+
+
 
 gceSTATUS
 gckKERNEL_SecurityUnmapMemory(

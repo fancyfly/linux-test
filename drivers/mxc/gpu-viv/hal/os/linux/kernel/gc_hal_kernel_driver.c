@@ -2,7 +2,7 @@
 *
 *    The MIT License (MIT)
 *
-*    Copyright (c) 2014 - 2015 Vivante Corporation
+*    Copyright (c) 2014 - 2016 Vivante Corporation
 *
 *    Permission is hereby granted, free of charge, to any person obtaining a
 *    copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 *
 *    The GPL License (GPL)
 *
-*    Copyright (C) 2014 - 2015 Vivante Corporation
+*    Copyright (C) 2014 - 2016 Vivante Corporation
 *
 *    This program is free software; you can redistribute it and/or
 *    modify it under the terms of the GNU General Public License
@@ -75,51 +75,43 @@ static gckGALDEVICE galDevice;
 
 static uint major = 199;
 module_param(major, uint, 0644);
-
-static int irqLine3D0 = -1;
-module_param(irqLine3D0, int, 0644);
-
-static ulong registerMemBase3D0 = 0;
-module_param(registerMemBase3D0, ulong, 0644);
-
-static ulong registerMemSize3D0 = 2 << 10;
-module_param(registerMemSize3D0, ulong, 0644);
-
-static int irqLine3D1 = -1;
-module_param(irqLine3D1, int, 0644);
-
-static ulong registerMemBase3D1 = 0;
-module_param(registerMemBase3D1, ulong, 0644);
-
-static ulong registerMemSize3D1 = 2 << 10;
-module_param(registerMemSize3D1, ulong, 0644);
+MODULE_PARM_DESC(major, "major device number for GC device");
 
 static int irqLine = -1;
 module_param(irqLine, int, 0644);
+MODULE_PARM_DESC(irqLine, "IRQ number of GC core");
 
 static ulong registerMemBase = 0x80000000;
 module_param(registerMemBase, ulong, 0644);
+MODULE_PARM_DESC(registerMemBase, "Base of bus address of GC core AHB register");
 
 static ulong registerMemSize = 2 << 10;
 module_param(registerMemSize, ulong, 0644);
+MODULE_PARM_DESC(registerMemSize, "Size of bus address range of GC core AHB register");
 
 static int irqLine2D = -1;
 module_param(irqLine2D, int, 0644);
+MODULE_PARM_DESC(irqLine2D, "IRQ number of G2D core if irqLine is used for a G3D core");
 
 static ulong registerMemBase2D = 0x00000000;
 module_param(registerMemBase2D, ulong, 0644);
+MODULE_PARM_DESC(registerMemBase2D, "Base of bus address of G2D core if registerMemBase2D is used for a G3D core");
 
 static ulong registerMemSize2D = 2 << 10;
 module_param(registerMemSize2D, ulong, 0644);
+MODULE_PARM_DESC(registerMemSize2D, "Size of bus address range of G2D core if registerMemSize is used for a G3D core");
 
 static int irqLineVG = -1;
 module_param(irqLineVG, int, 0644);
+MODULE_PARM_DESC(irqLineVG, "IRQ number of VG core");
 
 static ulong registerMemBaseVG = 0x00000000;
 module_param(registerMemBaseVG, ulong, 0644);
+MODULE_PARM_DESC(registerMemBaseVG, "Base of bus address of VG core");
 
 static ulong registerMemSizeVG = 2 << 10;
 module_param(registerMemSizeVG, ulong, 0644);
+MODULE_PARM_DESC(registerMemSizeVG, "Size of bus address range of VG core");
 
 #if gcdENABLE_DEC_COMPRESSION
 static ulong registerMemBaseDEC300 = 0x00000000;
@@ -129,29 +121,32 @@ static ulong registerMemSizeDEC300 = 2 << 10;
 module_param(registerMemSizeDEC300, ulong, 0644);
 #endif
 
-static long contiguousSize = -1;
+#ifndef gcdDEFAULT_CONTIGUOUS_SIZE
+#define gcdDEFAULT_CONTIGUOUS_SIZE (4 << 20)
+#endif
+static ulong contiguousSize = gcdDEFAULT_CONTIGUOUS_SIZE;
 module_param(contiguousSize, ulong, 0644);
+MODULE_PARM_DESC(contiguousSize, "Size of memory reserved for GC");
 
 static ulong contiguousBase = 0;
 module_param(contiguousBase, ulong, 0644);
-
-static ulong bankSize = 0;
-module_param(bankSize, ulong, 0644);
+MODULE_PARM_DESC(contiguousBase, "Base address of memory reserved for GC, if it is 0, GC driver will try to allocate a buffer whose size defined by contiguousSize");
 
 static int fastClear = -1;
 module_param(fastClear, int, 0644);
+MODULE_PARM_DESC(fastClear, "Disable fast clear if set it to 0, enabled by default");
 
 static int compression = -1;
 module_param(compression, int, 0644);
+MODULE_PARM_DESC(compression, "Disable compression if set it to 0, enabled by default");
 
 static int powerManagement = 1;
 module_param(powerManagement, int, 0644);
+MODULE_PARM_DESC(powerManagement, "Disable auto power saving if set it to 1, enabled by default");
 
 static int gpuProfiler = 0;
 module_param(gpuProfiler, int, 0644);
-
-static int signal = 48;
-module_param(signal, int, 0644);
+MODULE_PARM_DESC(gpuProfiler, "Enable profiling support, disabled by default");
 
 static ulong baseAddress = 0;
 module_param(baseAddress, ulong, 0644);
@@ -163,6 +158,7 @@ MODULE_PARM_DESC(physSize, "Obsolete");
 
 static uint logFileSize = 0;
 module_param(logFileSize,uint, 0644);
+MODULE_PARM_DESC(logFileSize, "Size of buffer to store GC driver output messsage, if it is not 0, message is read from /sys/kernel/debug/gc/galcore_trace, default value is 0");
 
 static uint recovery = 1;
 module_param(recovery, uint, 0644);
@@ -175,18 +171,27 @@ MODULE_PARM_DESC(stuckDump, "Level of stuck dump content (1: Minimal, 2: Middle,
 
 static int showArgs = 0;
 module_param(showArgs, int, 0644);
+MODULE_PARM_DESC(showArgs, "Display parameters value when driver loaded");
 
 static int mmu = 1;
 module_param(mmu, int, 0644);
+MODULE_PARM_DESC(mmu, "Disable MMU if set it to 0, enabled by default");
 
 static int irqs[gcvCORE_COUNT] = {[0 ... gcvCORE_COUNT - 1] = -1};
 module_param_array(irqs, int, NULL, 0644);
+MODULE_PARM_DESC(irqs, "Array of IRQ numbers of multi-GPU");
 
 static uint registerBases[gcvCORE_COUNT];
 module_param_array(registerBases, uint, NULL, 0644);
+MODULE_PARM_DESC(registerBases, "Array of bases of bus address of register of multi-GPU");
 
 static uint registerSizes[gcvCORE_COUNT] = {[0 ... gcvCORE_COUNT - 1] = 2 << 10};
 module_param_array(registerSizes, uint, NULL, 0644);
+MODULE_PARM_DESC(registerSizes, "Array of sizes of bus address range of register of multi-GPU");
+
+static uint chipIDs[gcvCORE_COUNT] = {[0 ... gcvCORE_COUNT - 1] = gcvCHIP_ID_DEFAULT};
+module_param_array(chipIDs, uint, NULL, 0644);
+MODULE_PARM_DESC(chipIDs, "Array of chipIDs of multi-GPU");
 
 static int gpu3DMinClock = 1;
 
@@ -194,6 +199,9 @@ static int contiguousRequested = 0;
 
 static gctBOOL registerMemMapped = gcvFALSE;
 static gctPOINTER registerMemAddress = gcvNULL;
+static ulong bankSize = 0;
+static int signal = 48;
+
 static int drv_open(
     struct inode* inode,
     struct file* filp
@@ -265,6 +273,7 @@ _UpdateModuleParam(
     memcpy(irqs, Param->irqs, gcmSIZEOF(gctINT) * gcvCORE_COUNT);
     memcpy(registerBases, Param->registerBases, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
     memcpy(registerSizes, Param->registerSizes, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
+    memcpy(chipIDs, Param->chipIDs, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
 }
 
 void
@@ -333,6 +342,13 @@ gckOS_DumpParam(
     for (i = 0; i < gcvCORE_COUNT; i++)
     {
         printk("0x%08X, ", registerSizes[i]);
+    }
+    printk("\n");
+
+    printk("  chipIDs     = ");
+    for (i = 0; i < gcvCORE_COUNT; i++)
+    {
+        printk("0x%08X, ", chipIDs[i]);
     }
     printk("\n");
 
@@ -847,6 +863,7 @@ static int drv_init(void)
     memcpy(args.irqs, irqs, gcmSIZEOF(gctINT) * gcvCORE_COUNT);
     memcpy(args.registerBases, registerBases, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
     memcpy(args.registerSizes, registerSizes, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
+    memcpy(args.chipIDs, chipIDs, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
 
     printk(KERN_INFO "Galcore version %d.%d.%d.%d\n",
         gcvVERSION_MAJOR, gcvVERSION_MINOR, gcvVERSION_PATCH, gcvVERSION_BUILD);
@@ -860,6 +877,7 @@ static int drv_init(void)
 #endif
 
     args.powerManagement = powerManagement;
+    args.gpuProfiler = gpuProfiler;
 
     if (showArgs)
     {
@@ -1043,6 +1061,7 @@ static int __devinit gpu_probe(struct platform_device *pdev)
     memcpy(moduleParam.irqs, irqs, gcmSIZEOF(gctINT) * gcvCORE_COUNT);
     memcpy(moduleParam.registerBases, registerBases, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
     memcpy(moduleParam.registerSizes, registerSizes, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
+    memcpy(moduleParam.chipIDs, chipIDs, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
 
     platform.device = pdev;
 

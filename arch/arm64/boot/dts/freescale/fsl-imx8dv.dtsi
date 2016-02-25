@@ -426,7 +426,6 @@
 			     <1 14 0x8>, /* Physical Non-Secure PPI, active-low */
 			     <1 11 0x8>, /* Virtual PPI, active-low */
 			     <1 10 0x8>; /* Hypervisor PPI, active-low */
-    	clock-frequency = <80000>;
 	};
 
 	uart1: serial@5a060000 {

@@ -403,6 +403,48 @@
 				power-domains =<&pd_hsio>;
 			};
 		};
+		pd_dc0: DispCtrl0-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_DC_0>;
+			#power-domain-cells = <0>;
+			power-domains =<&pd_dc0>;
+		};
+		pd_dc1: DispCtrl1-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_DC_1>;
+			#power-domain-cells = <0>;
+			power-domains =<&pd_dc1>;
+		};
+		pd_pi0: ParallelInput0-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_PI_0>;
+			#power-domain-cells = <0>;
+			power-domains =<&pd_pi0>;
+		};
+		pd_pi1: ParallelInput1-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_PI_1>;
+			#power-domain-cells = <0>;
+			power-domains =<&pd_pi1>;
+		};
+		pd_lcd: lcd-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_LCD_0>;
+			#power-domain-cells = <0>;
+			power-domains =<&pd_lcd>;
+		};
+		pd_lvds0: LVDS0-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_LVDS_0>;
+			#power-domain-cells = <0>;
+			power-domains =<&pd_lvds0>;
+		};
+		pd_lvds1: LVDS1-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_LVDS_1>;
+			#power-domain-cells = <0>;
+			power-domains =<&pd_lvds1>;
+		};
 	};
 
 	clk: clk {

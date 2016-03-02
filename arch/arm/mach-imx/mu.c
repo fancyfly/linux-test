@@ -379,9 +379,9 @@ int imx_mcc_bsp_int_enable(void)
 #ifdef CONFIG_HAVE_IMX_MCC
 int mcc_wait_for_buffer_freed(MCC_RECEIVE_BUFFER **buffer, unsigned int timeout)
 {
-    int return_value;
-    unsigned long timeout_j; /* jiffies */
-    MCC_RECEIVE_BUFFER *buf = null;
+	int return_value;
+	unsigned long timeout_j; /* jiffies */
+	MCC_RECEIVE_BUFFER *buf = null;
 
 	/*
 	 * Blocking calls: CPU-to-CPU ISR sets the event and thus
@@ -430,6 +430,7 @@ int mcc_wait_for_buffer_freed(MCC_RECEIVE_BUFFER **buffer, unsigned int timeout)
 
 int mcc_wait_for_buffer_queued(MCC_ENDPOINT *endpoint, unsigned int timeout)
 {
+	int return_value;
 	unsigned long timeout_j; /* jiffies */
 	MCC_RECEIVE_LIST *tmp_list;
 
@@ -439,7 +440,9 @@ int mcc_wait_for_buffer_queued(MCC_ENDPOINT *endpoint, unsigned int timeout)
 	if (timeout == 0xffffffff) {
 		wait_event(buffer_queued_wait_queue,
 				imx_mcc_buffer_queued == 1);
-		mcc_get_semaphore();
+		return_value = mcc_get_semaphore();
+		if (return_value != MCC_SUCCESS)
+			return return_value;
 		/*
 		* double check if the tmp_list head is still null
 		* or not, if yes, wait again.
@@ -449,13 +452,17 @@ int mcc_wait_for_buffer_queued(MCC_ENDPOINT *endpoint, unsigned int timeout)
 			mcc_release_semaphore();
 			wait_event(buffer_queued_wait_queue,
 					imx_mcc_buffer_queued == 1);
-			mcc_get_semaphore();
-		}
+			return_value = mcc_get_semaphore();
+			if (return_value != MCC_SUCCESS)
+				return return_value;
+			}
 	} else {
 		timeout_j = msecs_to_jiffies(timeout);
 		wait_event_timeout(buffer_queued_wait_queue,
 				imx_mcc_buffer_queued == 1, timeout_j);
-		mcc_get_semaphore();
+		return_value = mcc_get_semaphore();
+		if (return_value != MCC_SUCCESS)
+			return return_value;
 	}
 
 	if (imx_mcc_buffer_queued)

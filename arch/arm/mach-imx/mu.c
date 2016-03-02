@@ -436,6 +436,10 @@ int mcc_wait_for_buffer_queued(MCC_ENDPOINT *endpoint, unsigned int timeout)
 
 	/* Get list of buffers kept by the particular endpoint */
 	tmp_list = mcc_get_endpoint_list(*endpoint);
+	if (tmp_list == null) {
+		pr_err("%s can't get queued buffer.\n", __func__);
+		return MCC_ERR_ENDPOINT;
+	}
 
 	if (timeout == 0xffffffff) {
 		wait_event(buffer_queued_wait_queue,

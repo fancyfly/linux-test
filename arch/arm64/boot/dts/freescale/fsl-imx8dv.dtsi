@@ -496,6 +496,18 @@
 		status = "disabled";
 	};
 
+	vpu: vpu@2c000000 {
+		compatible = "nxp,imx8dv-vpu", "nxp,imx8x-vpu";
+		reg = <0x0 0x2c000000 0x0 0x4000000>;
+		reg-names = "iobase_vpu";
+		interrupts = <0 169 0x4>;
+		interrupt-names = "irq_vpu";
+		clocks = <&clk IMX8DV_VPU_DDR_CLK>, <&clk IMX8DV_VPU_CABAC_CLK>,<&clk IMX8DV_VPU_XUVI_CLK>, <&clk IMX8DV_VPU_UART_CLK>;
+		clock-names = "clk_vpu_ddr", "clk_vpu_cabac","clk_vpu_xuvi", "clk_vpu_uart";
+		status = "disabled";
+		power-domains = <&pd_vpu_core>;
+	};
+
 	usdhc1: usdhc@5a240000 {
 		compatible = "fsl,imx8dv-usdhc", "fsl,imx6sl-usdhc";
 		status = "disabled";

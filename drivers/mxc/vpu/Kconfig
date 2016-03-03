@@ -1,0 +1,34 @@
+#
+# Codec configuration
+#
+
+menu "MXC VPU(Video Processing Unit) support"
+	depends on ARCH_FSL_IMX8DV
+
+config MXC_VPU
+	tristate "Support for MXC VPU(Video Processing Unit)"
+	default n
+	select MEDIA_SUPPORT
+	select MEDIA_CAMERA_SUPPORT
+	select MEDIA_RC_SUPPORT
+	select MEDIA_CONTROLLER
+	select VIDEO_DEV
+	select VIDEO_V4L2
+	select VIDEO_V4L2_SUBDEV_API
+	select VIDEOBUF_GEN
+	select VIDEOBUF2_CORE
+	select V4L2_MEM2MEM_DEV
+	select VIDEOBUF2_VMALLOC
+	select VIDEOBUF2_MEMOPS
+	select VIDEOBUF2_DMA_CONTIG
+	---help---
+         VPU codec device.
+
+config MXC_VPU_DEBUG
+	bool "MXC VPU debugging"
+	depends on MXC_VPU != n
+	help
+	  This is an option for the developers; most people should
+	  say N here.  This enables MXC VPU driver debugging.
+
+endmenu

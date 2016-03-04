@@ -46,6 +46,7 @@
 #include "zv_codec.h"
 #include "cchannel.h"
 #include "czvcodec.h"
+#include "czvavlib.h"
 #include "ctask.h"
 #include "zoe_dbg.h"
 #include "zoe_util.h"
@@ -85,7 +86,6 @@ zoe_errs_t c_zv_codec_release_task(i_zv_codec *This_p,
 				   hTask
 				   );
 	return (err);
-
 }
 
 
@@ -97,6 +97,7 @@ zoe_errs_t c_zv_codec_alloc_task(i_zv_codec *This_p,
 {
 	zoe_errs_t	        err;
 	c_zv_codec	        *This = GET_INHERITED_OBJECT(c_zv_codec, m_iZVCodec, This_p);
+    c_zv_av_lib         *p_avlib = GET_INHERITED_OBJECT(c_zv_av_lib, m_Object, This->m_Object.m_pParent);
     c_task              *pTask;
     ZOE_OBJECT_HANDLE   hTask = ZOE_NULL_HANDLE;
     uint32_t            t_priority = zoe_sosal_thread_maxpriorities_get();
@@ -105,6 +106,34 @@ zoe_errs_t c_zv_codec_alloc_task(i_zv_codec *This_p,
 	{
 		return (ZOE_ERRS_PARMS);
 	}
+
+	// downloading firmware
+	//
+	ENTER_CRITICAL(&This->m_Object)
+    if (!This->m_fw_loaded)
+    {
+		zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
+                       This->m_dbgID,
+				       "%s() c_zv_av_lib_firmware_download...\n",
+                       __FUNCTION__
+				       );
+        err = c_zv_av_lib_firmware_download(p_avlib);
+        if (ZOE_FAIL(err))
+        {
+		    zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
+                           This->m_dbgID,
+					       "%s() c_zv_av_lib_firmware_download Failed(%d)!!!!\n",
+                           __FUNCTION__,
+                           err
+					       );
+            return (err);
+        }
+        else
+        {
+            This->m_fw_loaded = ZOE_TRUE;
+        }
+    }
+	LEAVE_CRITICAL(&This->m_Object)
 
     // allocate and init c_task
     //

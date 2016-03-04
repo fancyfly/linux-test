@@ -1559,6 +1559,8 @@ zoe_errs_t CHPUInterface_StartDevice(CHPUInterface *This,
     // Initialize lock for DMA access
 	sema_init(&pdx->m_semDMA, 1);
 #endif //ZV_SERIALIZE_DMA
+    // Initialize lock for PIO access
+	sema_init(&pdx->m_semPIO, 1);
 
     pm_runtime_enable(&pdx->plat_dev->dev);
     pm_runtime_get_sync(&pdx->plat_dev->dev);
@@ -1741,6 +1743,10 @@ zoe_errs_t CHPUInterface_WriteReg(CHPUInterface *This,
 }
 
 
+#ifdef PIO_USE_KMAP
+extern void __flush_dcache_area_(void *addr, size_t len);
+extern void __invalidate_dcache_area_(void *addr, size_t len);
+#endif //PIO_USE_KMAP
 
 zoe_errs_t CHPUInterface_ReadMem(CHPUInterface *This,
                                  zoe_dev_mem_t dwAddr,
@@ -1749,6 +1755,8 @@ zoe_errs_t CHPUInterface_ReadMem(CHPUInterface *This,
                                  )
 {
     PHPU_DEVICE_EXTENSION   pdx = (PHPU_DEVICE_EXTENSION)This->m_pPrivateData;
+
+    down(&pdx->m_semPIO);
 
     if (pdx->regs_base)
     {
@@ -1774,8 +1782,6 @@ zoe_errs_t CHPUInterface_ReadMem(CHPUInterface *This,
 		       );
 #endif //DEBUG_PIO
 
-	    flush_cache_all();
-
         for (i = 0; i < nr_pages; i++)
         {
             page = pfn_to_page(first + i);
@@ -1795,6 +1801,7 @@ zoe_errs_t CHPUInterface_ReadMem(CHPUInterface *This,
                            copy
 		                   );
 #endif //DEBUG_PIO
+                    __invalidate_dcache_area_(dev_mem + offset, copy);
                     memcpy(pBuffer, (void *)((unsigned long)dev_mem + offset), copy);
                     pBuffer += copy;
                     remain -= copy;
@@ -1842,6 +1849,7 @@ zoe_errs_t CHPUInterface_ReadMem(CHPUInterface *This,
 #endif //DEBUG_PIO
 #endif //PIO_USE_KMAP
     }
+    up(&pdx->m_semPIO);
     return (ZOE_ERRS_SUCCESS);
 }
 
@@ -1854,6 +1862,8 @@ zoe_errs_t CHPUInterface_WriteMem(CHPUInterface *This,
                                   )
 {
     PHPU_DEVICE_EXTENSION   pdx = (PHPU_DEVICE_EXTENSION)This->m_pPrivateData;
+
+    down(&pdx->m_semPIO);
 
     if (pdx->regs_base)
     {
@@ -1897,6 +1907,7 @@ zoe_errs_t CHPUInterface_WriteMem(CHPUInterface *This,
 		                   );
 #endif //DEBUG_PIO
                     memcpy((void *)((unsigned long)dev_mem + offset), pBuffer, copy);
+                    __flush_dcache_area_(dev_mem + offset, copy);
                     pBuffer += copy;
                     remain -= copy;
                     offset = 0;
@@ -1929,8 +1940,6 @@ zoe_errs_t CHPUInterface_WriteMem(CHPUInterface *This,
                 break;
             }
         }
-
-	    flush_cache_all();
 #else //!PIO_USE_KMAP
         void    *dev_mem = phys_to_virt((unsigned long)dwAddr);
         memcpy(dev_mem, pBuffer,numBytes);
@@ -1945,6 +1954,7 @@ zoe_errs_t CHPUInterface_WriteMem(CHPUInterface *This,
 #endif //DEBUG_DMA
 #endif //PIO_USE_KMAP
     }
+    up(&pdx->m_semPIO);
     return (ZOE_ERRS_SUCCESS);
 }
 

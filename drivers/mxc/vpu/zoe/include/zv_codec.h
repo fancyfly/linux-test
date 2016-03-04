@@ -249,7 +249,7 @@ typedef struct _ZVCODEC_INITDATA
 //
 //
 
-// codec cllback command code
+// codec callback command code
 //
 #define ZVCODEC_CMD_STOP_COMPLETED			0x00000010
 #define ZVCODEC_CMD_DONE_DATA				0x00000020
@@ -264,7 +264,7 @@ typedef struct _ZVCODEC_INITDATA
 //
 //
 
-// codec cllback command data
+// codec callback command data
 //
 
 

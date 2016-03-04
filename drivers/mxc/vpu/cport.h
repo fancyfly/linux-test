@@ -35,6 +35,7 @@
 #include "zoe_cqueue.h"
 #include "zv_avlib.h"
 #include "zoe_util.h"
+#include "zoe_module_vdec_intf.h"
 
 
 typedef enum _PORT_STATE
@@ -109,12 +110,14 @@ struct c_port
 	PORT_DIRECTION				m_dir;
 	uint32_t				    m_dwOpenType;
 	COMPONENT_PORT_OPEN_FORMAT	m_openFormat;
+    VPU_PICTURE                 m_pic_format;
     zoe_bool_t                  m_format_valid;
     uint32_t                    m_pixel_format;
     uint32_t                    m_vdec_std;
 	int							m_memoryType;
 	uint32_t				    m_frame_nbs;
 	uint32_t				    m_frame_size;
+	uint32_t				    m_frame_alloc_size;
 	zoe_bool_t					m_bBufferPartialFill;
 	zoe_bool_t					m_bBufferFrameAligned;
 	zoe_bool_t					m_bSupportUserPtr;

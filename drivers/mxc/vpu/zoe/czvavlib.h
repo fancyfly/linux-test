@@ -166,6 +166,13 @@ void c_zv_av_lib_clr_error(c_zv_av_lib *This);
 uint32_t c_zv_av_lib_get_error(c_zv_av_lib *This);
 zoe_bool_t c_zv_av_lib_is_error(c_zv_av_lib *This);
 
+// callback helper
+//
+zoe_errs_t c_zv_av_lib_device_callback(c_zv_av_lib *This, 
+								       uint32_t dwCode,
+								       zoe_void_ptr_t pParam
+								       );
+
 
 #ifdef __cplusplus
 }

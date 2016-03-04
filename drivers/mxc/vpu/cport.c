@@ -1161,19 +1161,22 @@ static zoe_errs_t c_port_init_free_queue(c_port *This)
 
     if (!This->m_free_queue_inited)
     {
+        This->m_frame_alloc_size = (This->m_frame_size + (2 * PAGE_SIZE) - 1) & PAGE_MASK; 
 		zoe_dbg_printf(ZOE_DBG_LVL_ERROR, 
                        g_ZVV4LDevDBGCompID,
-					   "%s type(%d) buf_cnt(%d)\n", 
+					   "%s type(%d) buf_cnt(%d) x buf_size(%d) buf_alloc_size(%d)\n", 
 					   __FUNCTION__,
                        This->m_memoryType,
-                       This->m_frame_nbs
+                       This->m_frame_nbs,
+                       This->m_frame_size,
+                       This->m_frame_alloc_size
 					   );
 
 		if (V4L2_MEMORY_MMAP == This->m_memoryType)
 		{
             if (!This->m_pBufMem)
             {
-			    This->m_pBufMem = vmalloc_32(This->m_frame_nbs * This->m_frame_size);
+			    This->m_pBufMem = vmalloc_32(This->m_frame_nbs * This->m_frame_alloc_size);
 			    if (!This->m_pBufMem)
 			    {
 				    zoe_dbg_printf(ZOE_DBG_LVL_ERROR, 
@@ -1181,7 +1184,7 @@ static zoe_errs_t c_port_init_free_queue(c_port *This)
 							       "%s Unable to allocate buffer(%d x %d)!\n", 
 							       __FUNCTION__,
 							       This->m_frame_nbs,
-							       This->m_frame_size
+							       This->m_frame_alloc_size
 							       );
 				    return (ZOE_ERRS_NOMEMORY);
 			    }
@@ -1216,11 +1219,11 @@ static zoe_errs_t c_port_init_free_queue(c_port *This)
                     (COMPONENT_PORT_YUV_OUT == This->m_id)
                     )
                 {
-			        This->m_v4l2Buffers[i].m.planes[0].m.mem_offset = i * This->m_frame_size;
+			        This->m_v4l2Buffers[i].m.planes[0].m.mem_offset = i * This->m_frame_alloc_size;
 		            This->m_v4l2Buffers[i].m.planes[0].length = (This->m_openFormat.yuv.nWidth * This->m_openFormat.yuv.nHeight);
 			        This->m_v4l2Buffers[i].m.planes[0].bytesused = 0;
 			        This->m_v4l2Buffers[i].m.planes[0].data_offset = 0;
-			        This->m_v4l2Buffers[i].m.planes[1].m.mem_offset = This->m_v4l2Buffers[i].m.planes[0].m.mem_offset + This->m_v4l2Buffers[i].m.planes[0].length;
+			        This->m_v4l2Buffers[i].m.planes[1].m.mem_offset = ((This->m_v4l2Buffers[i].m.planes[0].m.mem_offset + This->m_v4l2Buffers[i].m.planes[0].length) + PAGE_SIZE - 1) & PAGE_MASK;
 		            This->m_v4l2Buffers[i].m.planes[1].length = (This->m_v4l2Buffers[i].m.planes[0].length / 2);
 			        This->m_v4l2Buffers[i].m.planes[1].bytesused = 0;
 			        This->m_v4l2Buffers[i].m.planes[1].data_offset = 0;
@@ -1228,7 +1231,7 @@ static zoe_errs_t c_port_init_free_queue(c_port *This)
                 }
                 else
                 {
-			        This->m_v4l2Buffers[i].m.planes[0].m.mem_offset = i * This->m_frame_size;
+			        This->m_v4l2Buffers[i].m.planes[0].m.mem_offset = i * This->m_frame_alloc_size;
 			        This->m_v4l2Buffers[i].m.planes[0].length = This->m_frame_size;
 			        This->m_v4l2Buffers[i].m.planes[0].bytesused = 0;
 			        This->m_v4l2Buffers[i].m.planes[0].data_offset = 0;
@@ -1319,7 +1322,7 @@ static zoe_errs_t c_port_done_free_queue(c_port *This)
 	    {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,15)
 		    unsigned long	ulAddr = (unsigned long)This->m_pBufMem;
-		    size_t			ulSize = This->m_frame_nbs * This->m_frame_size;
+		    size_t			ulSize = This->m_frame_nbs * This->m_frame_alloc_size;
 
 		    while (ulSize > 0) 
 		    {
@@ -1398,12 +1401,17 @@ c_port * c_port_constructor(c_port *pPort,
 				   sizeof(COMPONENT_PORT_OPEN_FORMAT)
 				   );
 		}
+		memset(&pPort->m_pic_format, 
+			   0, 
+			   sizeof(VPU_PICTURE)
+			   );
         pPort->m_format_valid = (0 != frame_nbs) && (0 != frame_size);
         pPort->m_pixel_format = 0;
         pPort->m_vdec_std = 0;
 		pPort->m_memoryType = -1;
 		pPort->m_frame_nbs = frame_nbs;
 		pPort->m_frame_size = frame_size;
+		pPort->m_frame_alloc_size = (frame_size + PAGE_SIZE - 1) & PAGE_MASK;
 		pPort->m_bBufferPartialFill = bBufferPartialFill;
 		pPort->m_bBufferFrameAligned = bBufferFrameAligned;
 		pPort->m_bSupportUserPtr = bSupportUserPtr;
@@ -1461,7 +1469,7 @@ void c_port_destructor(c_port *This)
 	{
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,15)
 		unsigned long	ulAddr = (unsigned long)This->m_pBufMem;
-		size_t			ulSize = This->m_frame_nbs * This->m_frame_size;
+		size_t			ulSize = This->m_frame_nbs * This->m_frame_alloc_size;
 
 		while (ulSize > 0) 
 		{
@@ -1726,7 +1734,7 @@ zoe_errs_t c_port_close(c_port *This)
 	{
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,15)
 		unsigned long	ulAddr = (unsigned long)This->m_pBufMem;
-		size_t			ulSize = This->m_frame_nbs * This->m_frame_size;
+		size_t			ulSize = This->m_frame_nbs * This->m_frame_alloc_size;
 
 		while (ulSize > 0) 
 		{

@@ -234,6 +234,8 @@ zoe_errs_t c_zv_codec_power_down(c_zv_codec *This)
 		This->m_PowerState = ZVCODEC_PWR_STATE_D1;
 	}
 
+    This->m_fw_loaded = ZOE_FALSE;
+
 	LEAVE_CRITICAL(&This->m_Object)
 
 	zoe_dbg_printf(ZOE_DBG_LVL_WARNING,

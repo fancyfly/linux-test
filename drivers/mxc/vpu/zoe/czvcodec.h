@@ -102,6 +102,7 @@ struct c_zv_codec
 	uint32_t		    m_PowerState;                   // power state
     IZOEHALAPI          *m_pHal;                        // HAL pointer
     zoe_dbg_comp_id_t   m_dbgID;                        // debug ID
+    zoe_bool_t          m_fw_loaded;                    // firmware loaded flag
 };
 
 

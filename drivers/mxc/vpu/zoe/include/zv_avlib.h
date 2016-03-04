@@ -91,14 +91,11 @@ typedef struct _ZV_AVLIB_INITDATA
 {
 	// zvavlib portion
 	//
-	zoe_bool_t				bSecureMode;
-	zoe_bool_t				bDownloadFW[ZVAVLIB_IMAGE_MAX];
-	uint8_t			        *pFW[ZVAVLIB_IMAGE_MAX];
-	uint32_t			    FWSize[ZVAVLIB_IMAGE_MAX];
+	zoe_bool_t          bSecureMode;
 
 	// zvcodec portion
 	//
-	ZVCODEC_INITDATA		codecInitData;
+	ZVCODEC_INITDATA	codecInitData;
 
 } ZV_AVLIB_INITDATA, *PZV_AVLIB_INITDATA;
 
@@ -118,9 +115,28 @@ typedef struct _ZV_AVLIB_INITDATA
 //
 //
 
-
-// codec cllback command code
+// avlib callback command code
 //
+#define ZVAVLIB_CMD_REQ_FIRMWARE    0x001000000
+#define ZVAVLIB_CMD_REL_FIRMWARE    0x002000000
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//
+
+// avlib callback command data
+//
+
+// ZVAVLIB_CMD_REQ_FIRMWARE
+typedef struct _ZVAVLIB_CMD_REQ_FIRMWARE_DATA
+{
+	zoe_bool_t  bDownloadFW[ZVAVLIB_IMAGE_MAX];
+	uint8_t     *pFW[ZVAVLIB_IMAGE_MAX];
+	uint32_t	FWSize[ZVAVLIB_IMAGE_MAX];
+} ZVAVLIB_CMD_REQ_FIRMWARE_DATA, *PZVAVLIB_CMD_REQ_FIRMWARE_DATA;
+
 
 
 

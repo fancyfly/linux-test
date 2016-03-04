@@ -11,6 +11,7 @@ EXTRA_CFLAGS += -include$(ZOEROOT)/zoe/include/kernel/dv/target_config.h
 EXTRA_CFLAGS += -include$(ZOEROOT)/zoe/include/zoe_target.h
 EXTRA_CFLAGS += -include$(ZOEROOT)/zoe/include/kernel/dv/zvautoconf.h
 
+obj-$(CONFIG_MXC_VPU)    += cache.o
 obj-$(CONFIG_MXC_VPU)    += cdevice.o
 obj-$(CONFIG_MXC_VPU)    += ccomponent.o
 obj-$(CONFIG_MXC_VPU)    += ccomponent_decoder.o

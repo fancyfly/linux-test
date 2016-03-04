@@ -875,26 +875,42 @@ static zoe_bool_t c_zv_av_lib_wait_firmware_running(c_zv_av_lib *This,
 zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 {
 #if (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_DAWN)
-    uint32_t    firmware_load_addr;
+    uint32_t                        firmware_load_addr;
 #endif // ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_DAWN
-    uint32_t    ret;
-    zoe_bool_t  bVerify;
+    uint32_t                        ret;
+    zoe_bool_t                      bVerify;
+    zoe_errs_t                      err = ZOE_ERRS_SUCCESS;
+    ZVAVLIB_CMD_REQ_FIRMWARE_DATA   fws;
 #if (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_CHISEL)
-    uint32_t    timeout;
-	uint32_t	spu_start_addr;
-	uint32_t	spu_load_addr;
-	uint32_t	sfw_load_addr;
-    uint32_t    firmware_load_addr;
-    zoe_bool_t  skip_sfw_load;
-    uint32_t    dwReg;
+    uint32_t                        timeout;
+	uint32_t	                    spu_start_addr;
+	uint32_t	                    spu_load_addr;
+	uint32_t	                    sfw_load_addr;
+    uint32_t                        firmware_load_addr;
+    zoe_bool_t                      skip_sfw_load;
+    uint32_t                        dwReg;
+#endif // ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_CHISEL
 
-    skip_sfw_load = !This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] &&
-                    !This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_SFW]
+    // request firmware
+    //
+    err = c_zv_av_lib_device_callback(This, 
+                                      ZVAVLIB_CMD_REQ_FIRMWARE, 
+                                      (zoe_void_ptr_t)&fws
+                                      );
+    if (ZOE_FAIL(err))
+    {
+        goto firmware_download_exit;
+    }
+
+#if (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_CHISEL)
+
+    skip_sfw_load = !fws.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] &&
+                    !fws.bDownloadFW[ZVAVLIB_IMAGE_SFW]
                     ;
 
     // boot code
     //
-    if (This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE])
+    if (fws.bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE])
     {
         if (This->m_InitData.bSecureMode) 
         {
@@ -906,8 +922,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                 ZOEHAL_REG_READ(&This->m_iHal, 0x75910008, &dwReg);
                 // load boot code into SRAM
                 ret = c_zv_av_lib_load_bin(This, 
-                                           This->m_InitData.pFW[ZVAVLIB_IMAGE_BOOT_CODE], 
-                                           This->m_InitData.FWSize[ZVAVLIB_IMAGE_BOOT_CODE], 
+                                           fws.pFW[ZVAVLIB_IMAGE_BOOT_CODE], 
+                                           fws.FWSize[ZVAVLIB_IMAGE_BOOT_CODE], 
                                            dwReg
                                            );
                 if (!ret)
@@ -916,12 +932,13 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                    This->m_dbgID,
 						           "c_zv_av_lib_load_bin(ZVAVLIB_IMAGE_BOOT_CODE) Failed!!!\n"
 						           );
-                    return (ZOE_ERRS_FAIL);
+                    err = ZOE_ERRS_FAIL;
+                    goto firmware_download_exit;
                 }
 
                 bVerify = c_zv_av_lib_verify_bin(This,
-                                                 This->m_InitData.pFW[ZVAVLIB_IMAGE_BOOT_CODE], 
-                                                 This->m_InitData.FWSize[ZVAVLIB_IMAGE_BOOT_CODE], 
+                                                 fws.pFW[ZVAVLIB_IMAGE_BOOT_CODE], 
+                                                 fws.FWSize[ZVAVLIB_IMAGE_BOOT_CODE], 
                                                  dwReg
                                                  );
                 if (!bVerify)
@@ -930,7 +947,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                    This->m_dbgID,
 				                   "c_zv_av_lib_verify_bin(ZVAVLIB_IMAGE_BOOT_CODE) Failed!!!\n"
 				                   );
-                    return (ZOE_ERRS_FAIL);
+                    err = ZOE_ERRS_FAIL;
+                    goto firmware_download_exit;
                 }
                 else
                 {
@@ -944,7 +962,7 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                 ZOEHAL_REG_WRITE(&This->m_iHal, 0x75910004, 0);
                 ZOEHAL_REG_WRITE(&This->m_iHal, 0x75910008, 0);
                 // set size
-                ZOEHAL_REG_WRITE(&This->m_iHal, 0x75910010, This->m_InitData.FWSize[ZVAVLIB_IMAGE_BOOT_CODE]);
+                ZOEHAL_REG_WRITE(&This->m_iHal, 0x75910010, fws.FWSize[ZVAVLIB_IMAGE_BOOT_CODE]);
                 ZOEHAL_REG_WRITE(&This->m_iHal, 0x7591000C, HOST_RESPONSE_LOAD_COMPLETE);
 
                 zoe_sosal_thread_sleep_ms(300);
@@ -1010,8 +1028,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 
             // load boot code into SRAM
             ret = c_zv_av_lib_load_bin(This, 
-                                       This->m_InitData.pFW[ZVAVLIB_IMAGE_BOOT_CODE], 
-                                       This->m_InitData.FWSize[ZVAVLIB_IMAGE_BOOT_CODE], 
+                                       fws.pFW[ZVAVLIB_IMAGE_BOOT_CODE], 
+                                       fws.FWSize[ZVAVLIB_IMAGE_BOOT_CODE], 
                                        0x70010000
                                        );
             if (!ret)
@@ -1020,12 +1038,13 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                This->m_dbgID,
 					           "c_zv_av_lib_load_bin(ZVAVLIB_IMAGE_BOOT_CODE) Failed!!!\n"
 					           );
-                return (ZOE_ERRS_FAIL);
+                err = ZOE_ERRS_FAIL;
+                goto firmware_download_exit;
             }
 
             bVerify = c_zv_av_lib_verify_bin(This,
-                                             This->m_InitData.pFW[ZVAVLIB_IMAGE_BOOT_CODE], 
-                                             This->m_InitData.FWSize[ZVAVLIB_IMAGE_BOOT_CODE], 
+                                             fws.pFW[ZVAVLIB_IMAGE_BOOT_CODE], 
+                                             fws.FWSize[ZVAVLIB_IMAGE_BOOT_CODE], 
                                              0x70010000
                                              );
             if (!bVerify)
@@ -1034,7 +1053,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                This->m_dbgID,
 			                   "c_zv_av_lib_verify_bin(ZVAVLIB_IMAGE_BOOT_CODE) Failed!!!\n"
 			                   );
-                return (ZOE_ERRS_FAIL);
+                err = ZOE_ERRS_FAIL;
+                goto firmware_download_exit;
             }
             else
             {
@@ -1077,7 +1097,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 					           "Wait for boot code to be ready Timeout (0x%x)!!!\n",
                                dwReg
 					           );
-                return (ZOE_ERRS_TIMEOUT);
+                err = ZOE_ERRS_TIMEOUT;
+                goto firmware_download_exit;
             }
             dwReg = 0;
             ZOEHAL_REG_READ(&This->m_iHal, 0x75910004, &dwReg);
@@ -1091,18 +1112,18 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 			           );
 
 		// the boot code returns an address in SCRATCH_1: it is 0x900000 in secure mode
-        spu_start_addr = This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] ? 0x800000 : 0x100000;
+        spu_start_addr = fws.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] ? 0x800000 : 0x100000;
         ZOEHAL_REG_READ(&This->m_iHal, 0x75910008, &dwReg);
         spu_load_addr = This->m_InitData.bSecureMode ? dwReg : spu_start_addr;
 
         // custom boot code
         //
-        if (This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT])
+        if (fws.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT])
         {
             sfw_load_addr = 0x4000010;
             ret = c_zv_av_lib_load_bin(This, 
-                                       This->m_InitData.pFW[ZVAVLIB_IMAGE_CUSTOM_BOOT], 
-                                       This->m_InitData.FWSize[ZVAVLIB_IMAGE_CUSTOM_BOOT], 
+                                       fws.pFW[ZVAVLIB_IMAGE_CUSTOM_BOOT], 
+                                       fws.FWSize[ZVAVLIB_IMAGE_CUSTOM_BOOT], 
                                        spu_load_addr
                                        );
             if (!ret)
@@ -1111,12 +1132,13 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                This->m_dbgID,
 					           "c_zv_av_lib_load_bin(ZVAVLIB_IMAGE_CUSTOM_BOOT) Failed!!!\n"
 					           );
-                return (ZOE_ERRS_FAIL);
+                err = ZOE_ERRS_FAIL;
+                goto firmware_download_exit;
             }
 
             bVerify = c_zv_av_lib_verify_bin(This,
-                                             This->m_InitData.pFW[ZVAVLIB_IMAGE_CUSTOM_BOOT], 
-                                             This->m_InitData.FWSize[ZVAVLIB_IMAGE_CUSTOM_BOOT], 
+                                             fws.pFW[ZVAVLIB_IMAGE_CUSTOM_BOOT], 
+                                             fws.FWSize[ZVAVLIB_IMAGE_CUSTOM_BOOT], 
                                              spu_load_addr
                                              );
             if (!bVerify)
@@ -1125,7 +1147,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                This->m_dbgID,
 			                   "c_zv_av_lib_verify_bin(ZVAVLIB_IMAGE_CUSTOM_BOOT) Failed!!!\n"
 			                   );
-                return (ZOE_ERRS_FAIL);
+                err = ZOE_ERRS_FAIL;
+                goto firmware_download_exit;
             }
             else
             {
@@ -1142,11 +1165,11 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 
         // SFW code
         //
-        if (This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_SFW])
+        if (fws.bDownloadFW[ZVAVLIB_IMAGE_SFW])
         {
             ret = c_zv_av_lib_load_bin(This, 
-                                       This->m_InitData.pFW[ZVAVLIB_IMAGE_SFW], 
-                                       This->m_InitData.FWSize[ZVAVLIB_IMAGE_SFW], 
+                                       fws.pFW[ZVAVLIB_IMAGE_SFW], 
+                                       fws.FWSize[ZVAVLIB_IMAGE_SFW], 
                                        sfw_load_addr
                                        );
             if (!ret)
@@ -1155,12 +1178,13 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                This->m_dbgID,
 					           "c_zv_av_lib_load_bin(ZVAVLIB_IMAGE_SFW) Failed!!!\n"
 					           );
-                return (ZOE_ERRS_FAIL);
+                err = ZOE_ERRS_FAIL;
+                goto firmware_download_exit;
             }
 
             bVerify = c_zv_av_lib_verify_bin(This,
-                                             This->m_InitData.pFW[ZVAVLIB_IMAGE_SFW], 
-                                             This->m_InitData.FWSize[ZVAVLIB_IMAGE_SFW], 
+                                             fws.pFW[ZVAVLIB_IMAGE_SFW], 
+                                             fws.FWSize[ZVAVLIB_IMAGE_SFW], 
                                              sfw_load_addr
                                              );
             if (!bVerify)
@@ -1169,7 +1193,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                This->m_dbgID,
 			                   "c_zv_av_lib_verify_bin(ZVAVLIB_IMAGE_SFW) Failed!!!\n"
 			                   );
-                return (ZOE_ERRS_FAIL);
+                err = ZOE_ERRS_FAIL;
+                goto firmware_download_exit;
             }
             else
             {
@@ -1179,10 +1204,10 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 			                   );
             }
 
-            if (This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT])
+            if (fws.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT])
             {
 				// put the SFW bin in DDR with the correct header for the custom boot
-                ZOEHAL_MEM_WRITE(&This->m_iHal, 0x4000000, This->m_InitData.FWSize[ZVAVLIB_IMAGE_SFW], ZOE_FALSE);
+                ZOEHAL_MEM_WRITE(&This->m_iHal, 0x4000000, fws.FWSize[ZVAVLIB_IMAGE_SFW], ZOE_FALSE);
                 ZOEHAL_MEM_WRITE(&This->m_iHal, 0x4000004, 0xABBACAFE, ZOE_FALSE);  // signature
                 ZOEHAL_MEM_WRITE(&This->m_iHal, 0x4000008, 0x5A534657, ZOE_FALSE);  // 'ZSFW'
                 ZOEHAL_MEM_WRITE(&This->m_iHal, 0x400000C, 0, ZOE_FALSE);	        // reserved
@@ -1204,7 +1229,7 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 
     // firmware
     //
-    if (This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_FW])
+    if (fws.bDownloadFW[ZVAVLIB_IMAGE_FW])
     {
         // wait for SPU to ask for firmware
         timeout = 0;
@@ -1216,7 +1241,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                This->m_dbgID,
 					           "Wait for SPU to ask for firmware Timeout!!!\n"
 					           );
-                return (ZOE_ERRS_TIMEOUT);
+                err = ZOE_ERRS_TIMEOUT;
+                goto firmware_download_exit;
             }
             ZOEHAL_REG_READ(&This->m_iHal, 0x75910004, &dwReg);
             zoe_sosal_thread_sleep_ms(10); 
@@ -1246,8 +1272,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
         firmware_load_addr = 0x4000000;
 
         ret = c_zv_av_lib_load_bin(This, 
-                                   This->m_InitData.pFW[ZVAVLIB_IMAGE_FW], 
-                                   This->m_InitData.FWSize[ZVAVLIB_IMAGE_FW], 
+                                   fws.pFW[ZVAVLIB_IMAGE_FW], 
+                                   fws.FWSize[ZVAVLIB_IMAGE_FW], 
                                    firmware_load_addr
                                    );
         if (!ret)
@@ -1256,15 +1282,16 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                            This->m_dbgID,
 				           "c_zv_av_lib_load_bin(ZVAVLIB_IMAGE_FW) Failed!!!\n"
 				           );
-            return (ZOE_ERRS_FAIL);
+            err = ZOE_ERRS_FAIL;
+            goto firmware_download_exit;
         }
 
         // give it some time
         zoe_sosal_thread_sleep_ms(30);
 
         bVerify = c_zv_av_lib_verify_bin(This,
-                                         This->m_InitData.pFW[ZVAVLIB_IMAGE_FW], 
-                                         This->m_InitData.FWSize[ZVAVLIB_IMAGE_FW], 
+                                         fws.pFW[ZVAVLIB_IMAGE_FW], 
+                                         fws.FWSize[ZVAVLIB_IMAGE_FW], 
                                          firmware_load_addr
                                          );
         if (!bVerify)
@@ -1273,7 +1300,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                            This->m_dbgID,
 				           "c_zv_av_lib_verify_bin(ZVAVLIB_IMAGE_FW) Failed!!!\n"
 				           );
-            return (ZOE_ERRS_FAIL);
+            err = ZOE_ERRS_FAIL;
+            goto firmware_download_exit;
         }
         else
         {
@@ -1289,7 +1317,7 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                        This->m_dbgID,
 			           "firmware load done\n"
 			           );
-        if (ZOEHAL_BUS_HPU == This->m_InitData.codecInitData.BusType)
+        if (ZOEHAL_BUS_HPU == fws.codecInitData.BusType)
         {
             ZOEHAL_REG_WRITE(&This->m_iHal, 0x71800048, 0x39f);
         }
@@ -1298,7 +1326,7 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
             ZOEHAL_REG_WRITE(&This->m_iHal, 0x71800048, 0x39e);
         }
 
-        ZOEHAL_REG_WRITE(&This->m_iHal, 0x75910010, This->m_InitData.FWSize[ZVAVLIB_IMAGE_FW]);
+        ZOEHAL_REG_WRITE(&This->m_iHal, 0x75910010, fws.FWSize[ZVAVLIB_IMAGE_FW]);
         // tell boot code we have completed loading firmware
         ZOEHAL_REG_WRITE(&This->m_iHal, 0x7591000c, HOST_RESPONSE_LOAD_COMPLETE);
 
@@ -1312,7 +1340,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                This->m_dbgID,
 					           "Wait for firmware ready Timeout!!!\n"
 					           );
-                return (ZOE_ERRS_TIMEOUT);
+                err = ZOE_ERRS_TIMEOUT;
+                goto firmware_download_exit;
             }
             ZOEHAL_MEM_READ(&This->m_iHal, SYS_HW_RESETS_DONE_INDICATOR, &dwReg, ZOE_FALSE);
             zoe_sosal_thread_sleep_ms(10); 
@@ -1327,7 +1356,7 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 
     // firmware
     //
-    if (This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_FW])
+    if (fws.bDownloadFW[ZVAVLIB_IMAGE_FW])
     {
 		zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
                        This->m_dbgID,
@@ -1347,8 +1376,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 #else
 
         ret = c_zv_av_lib_load_bin(This, 
-                                   This->m_InitData.pFW[ZVAVLIB_IMAGE_FW], 
-                                   This->m_InitData.FWSize[ZVAVLIB_IMAGE_FW], 
+                                   fws.pFW[ZVAVLIB_IMAGE_FW], 
+                                   fws.FWSize[ZVAVLIB_IMAGE_FW], 
                                    firmware_load_addr
                                    );
         if (!ret)
@@ -1357,15 +1386,16 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                            This->m_dbgID,
 				           "c_zv_av_lib_load_bin(ZVAVLIB_IMAGE_FW) Failed!!!\n"
 				           );
-            return (ZOE_ERRS_FAIL);
+            err = ZOE_ERRS_FAIL;
+            goto firmware_download_exit;
         }
 
         // give it some time
         zoe_sosal_thread_sleep_ms(30);
 
         bVerify = c_zv_av_lib_verify_bin(This,
-                                         This->m_InitData.pFW[ZVAVLIB_IMAGE_FW], 
-                                         This->m_InitData.FWSize[ZVAVLIB_IMAGE_FW], 
+                                         fws.pFW[ZVAVLIB_IMAGE_FW], 
+                                         fws.FWSize[ZVAVLIB_IMAGE_FW], 
                                          firmware_load_addr
                                          );
         if (!bVerify)
@@ -1374,7 +1404,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                            This->m_dbgID,
 				           "c_zv_av_lib_verify_bin(ZVAVLIB_IMAGE_FW) Failed!!!\n"
 				           );
-            return (ZOE_ERRS_FAIL);
+            err = ZOE_ERRS_FAIL;
+            goto firmware_download_exit;
         }
         else
         {
@@ -1401,14 +1432,15 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                                ZOE_IPC_SPU
                                                ))
         {
-            return (ZOE_ERRS_TIMEOUT);
+            err = ZOE_ERRS_TIMEOUT;
+            goto firmware_download_exit;
         }
     }
 #elif (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_MX8)
 
 #define MISC_SCRATCH_MEMORY (MISC_XREG_SLV_BASE + MED_MISC_CTRL_MISC_CTRL_SCRATCH_MEMORY)
 
-    if (This->m_InitData.bDownloadFW[ZVAVLIB_IMAGE_FW])
+    if (fws.bDownloadFW[ZVAVLIB_IMAGE_FW])
     {
         zoe_errs_t              err;
         int                     rv;
@@ -1432,7 +1464,7 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 			               "c_zv_av_lib_load_bin(ZVAVLIB_IMAGE_FW) c_zv_av_lib_do_vpu_start Failed (%d)!!!\n",
                            err
 			               );
-            return (err);
+            goto firmware_download_exit;
         }
 
         // stop the cpu first
@@ -1449,7 +1481,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                This->m_dbgID,
 			                   "c_zv_av_lib_load_bin(ZVAVLIB_IMAGE_FW) setCorePwr Failed!!!\n"
 			                   );
-                return (ZOE_ERRS_FAIL);
+                err = ZOE_ERRS_FAIL;
+                goto firmware_download_exit;
             }
         }
 
@@ -1459,7 +1492,7 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
 
         // print the embedded firmware info
         //
-		isP = (zoe_image_start_ptr_t)This->m_InitData.pFW[ZVAVLIB_IMAGE_FW];
+		isP = (zoe_image_start_ptr_t)fws.pFW[ZVAVLIB_IMAGE_FW];
 		if (isP->signature == ZOE_IMAGE_SIGNATURE) 
         {
 			char    *appNameP = isP->strings;
@@ -1480,26 +1513,28 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
         else
         {
 			zoe_dbg_printf(ZOE_DBG_LVL_ERROR, This->m_dbgID, " Invalid image signature 0x%08X, expecting 0x%08X\n",(unsigned int)isP->signature, ZOE_IMAGE_SIGNATURE);
-            return (ZOE_ERRS_FAIL);
+            err = ZOE_ERRS_FAIL;
+            goto firmware_download_exit;
 		}
 
         // load the firmware to the specified location
         //
 #if 1
         memcpy(This->m_p_fw_space_vir, 
-               This->m_InitData.pFW[ZVAVLIB_IMAGE_FW], 
-               This->m_InitData.FWSize[ZVAVLIB_IMAGE_FW]
+               fws.pFW[ZVAVLIB_IMAGE_FW], 
+               fws.FWSize[ZVAVLIB_IMAGE_FW]
                );
         if (0 != memcmp(This->m_p_fw_space_vir, 
-                        This->m_InitData.pFW[ZVAVLIB_IMAGE_FW], 
-                        This->m_InitData.FWSize[ZVAVLIB_IMAGE_FW]
+                        fws.pFW[ZVAVLIB_IMAGE_FW], 
+                        fws.FWSize[ZVAVLIB_IMAGE_FW]
                         ))
         {
 	        zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
                            This->m_dbgID,
 			               "c_zv_av_lib_verify_bin(ZVAVLIB_IMAGE_FW) Failed!!!\n"
 			               );
-            return (ZOE_ERRS_FAIL);
+            err = ZOE_ERRS_FAIL;
+            goto firmware_download_exit;
         }
         else
         {
@@ -1510,8 +1545,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
         }
 #else
         ret = c_zv_av_lib_load_bin(This, 
-                                   This->m_InitData.pFW[ZVAVLIB_IMAGE_FW], 
-                                   This->m_InitData.FWSize[ZVAVLIB_IMAGE_FW], 
+                                   fws.pFW[ZVAVLIB_IMAGE_FW], 
+                                   fws.FWSize[ZVAVLIB_IMAGE_FW], 
                                    This->m_p_fw_space_vir
                                    );
         if (!ret)
@@ -1520,11 +1555,12 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                            This->m_dbgID,
 			               "c_zv_av_lib_load_bin(ZVAVLIB_IMAGE_FW) Failed!!!\n"
 			               );
-            return (ZOE_ERRS_FAIL);
+            err = ZOE_ERRS_FAIL;
+            goto firmware_download_exit;
         }
         bVerify = c_zv_av_lib_verify_bin(This,
-                                         This->m_InitData.pFW[ZVAVLIB_IMAGE_FW], 
-                                         This->m_InitData.FWSize[ZVAVLIB_IMAGE_FW], 
+                                         fws.pFW[ZVAVLIB_IMAGE_FW], 
+                                         fws.FWSize[ZVAVLIB_IMAGE_FW], 
                                          This->m_p_fw_space_phy
                                          );
         if (!bVerify)
@@ -1533,7 +1569,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                            This->m_dbgID,
 			               "c_zv_av_lib_verify_bin(ZVAVLIB_IMAGE_FW) Failed!!!\n"
 			               );
-            return (ZOE_ERRS_FAIL);
+            err = ZOE_ERRS_FAIL;
+            goto firmware_download_exit;
         }
         else
         {
@@ -1554,7 +1591,8 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                            This->m_dbgID,
 			               "start_fwpu Failed!!!\n"
 			               );
-            return (ZOE_ERRS_FAIL);
+            err = ZOE_ERRS_FAIL;
+            goto firmware_download_exit;
         }
 
 		zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
@@ -1569,14 +1607,25 @@ zoe_errs_t c_zv_av_lib_firmware_download(c_zv_av_lib *This)
                                                ZOE_IPC_FWPU
                                                ))
         {
-            return (ZOE_ERRS_TIMEOUT);
+            err = ZOE_ERRS_TIMEOUT;
+            goto firmware_download_exit;
         }
     }
 #else //ZOE_TARGET_CHIP == ???
 #error Unsupported CHIP
 #endif //ZOE_TARGET_CHIP
 
-    return (ZOE_ERRS_SUCCESS);
+    err = ZOE_ERRS_SUCCESS;
+
+firmware_download_exit:
+
+    // release firmware
+    //
+    c_zv_av_lib_device_callback(This, 
+                                ZVAVLIB_CMD_REL_FIRMWARE, 
+                                ZOE_NULL
+                                );
+    return (err);
 }
 
 

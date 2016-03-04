@@ -69,22 +69,21 @@
 #include "ccomponent.h"
 #include "cdevice.h"
 #include "zoe_linuxker_errmap.h"
-#include "zvfops.h"
 #include "objids.h"
 
 extern zoe_dbg_comp_id_t    g_ZVV4LDevDBGCompID;
 extern struct semaphore     g_module_lock;
 extern int                  param_launch_user;
 
-#define BOOTCODE_FILENAME   "/sbin/sfw_boot_code.bin"
-#define CUSTBOOT_FILENAME   "/sbin/sfw_custom_boot.bin"
-#define SFW_FILENAME        "/sbin/sfw_spu.bin"
+#define BOOTCODE_FILENAME   "sfw_boot_code.bin"
+#define CUSTBOOT_FILENAME   "sfw_custom_boot.bin"
+#define SFW_FILENAME        "sfw_spu.bin"
 #if (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_DAWN)
-#define FW_FILENAME         "/sbin/firmware.bin"
+#define FW_FILENAME         "mx8_vpu_firmware.bin"
 #elif (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_MX8)
-#define FW_FILENAME         "/sbin/firmware.bin"
+#define FW_FILENAME         "mx8_vpu_firmware.bin"
 #elif (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_CHISEL)
-#define FW_FILENAME         "/sbin/firmware.bin"
+#define FW_FILENAME         "firmware.bin"
 #else // ZOE_TARGET_CHIP == ??
 #error Unsupported CHIP
 #endif // ZOE_TARGET_CHIP
@@ -658,12 +657,158 @@ inline void video_device_release(struct video_device *vfd)
 #endif //__LINUX24__
 
 
+
 static zoe_errs_t c_device_callback(zoe_void_ptr_t Context, 
 								    uint32_t dwCode, 
 								    zoe_void_ptr_t pParam
 								    ) 
 {
-	return (ZOE_ERRS_SUCCESS);
+	c_device	*This = (c_device *)Context;
+	zoe_errs_t	err = ZOE_ERRS_NOTSUPP;
+    int         i;
+
+	zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
+                   g_ZVV4LDevDBGCompID,
+		           "%s() code(0x%x) param(%p)\n", 
+		           __FUNCTION__,
+                   dwCode,
+                   pParam
+		           );
+
+	switch (dwCode)
+	{
+        case ZVAVLIB_CMD_REQ_FIRMWARE:
+        {
+            ZVAVLIB_CMD_REQ_FIRMWARE_DATA   *p_fws = (ZVAVLIB_CMD_REQ_FIRMWARE_DATA *)pParam;
+			int                             lErr = 0;
+
+            if (p_fws)
+            {
+                memset(p_fws, 
+                       0, 
+                       sizeof(ZVAVLIB_CMD_REQ_FIRMWARE_DATA)
+                       );
+
+		        switch (This->m_type) 
+		        {
+    		        case ZVV4LDEV_TYPE_USB:
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_TRUE;
+        		        break;
+
+    		        case ZVV4LDEV_TYPE_PCIE:
+#if (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_DAWN)
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_TRUE;
+#elif (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_MX8)
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_FALSE;
+#elif (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_CHISEL)
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_TRUE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_TRUE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_TRUE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_TRUE;
+#else // ZOE_TARGET_CHIP == ??
+#error Unsupported CHIP
+#endif // ZOE_TARGET_CHIP
+        		        break;
+
+    		        case ZVV4LDEV_TYPE_DIRECT:
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_FALSE;
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_FALSE;
+#if (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_MX8)
+#ifdef CONFIG_HOST_PLATFORM_ARM64
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_TRUE;
+#else //!CONFIG_HOST_PLATFORM_ARM64
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_FALSE;
+#endif //CONFIG_HOST_PLATFORM_ARM64
+#else // ZOE_TARGET_CHIP != ZOE_TARGET_CHIP_MX8
+				        p_fws->bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_FALSE;
+#endif // ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_MX8
+        		        break;
+
+			        default:
+				        return (ZOE_ERRS_INVALID);
+		        }
+
+                for (i = 0; i < ZVAVLIB_IMAGE_MAX; i++)
+                {
+		            if (p_fws->bDownloadFW[i])
+		            {
+		                zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
+                                       g_ZVV4LDevDBGCompID,
+			                           "%s() request fw %s\n", 
+			                           __FUNCTION__,
+                                       s_FILENAME[i]
+			                           );
+                        lErr = request_firmware((const struct firmware **)&This->m_pFW[i], 
+                                                s_FILENAME[i], 
+                                                This->m_pGenericDevice
+                                                );
+			            if (lErr)
+			            {
+		                    zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
+                                           g_ZVV4LDevDBGCompID,
+			                               "%s() request fw %s failed(%d)\n", 
+			                               __FUNCTION__,
+                                           s_FILENAME[i],
+                                           lErr
+			                               );
+				            p_fws->bDownloadFW[i] = ZOE_FALSE;
+				            if (This->m_pFW[i])
+				            {
+                                release_firmware(This->m_pFW[i]);
+					            This->m_pFW[i] = ZOE_NULL;
+				            }
+                            break;
+			            }
+                        else
+                        {
+		                    zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
+                                           g_ZVV4LDevDBGCompID,
+			                               "%s() request fw %s got size(%d)\n", 
+			                               __FUNCTION__,
+                                           s_FILENAME[i],
+                                           This->m_pFW[i]->size
+			                               );
+					        p_fws->pFW[i] = (uint8_t *)This->m_pFW[i]->data;
+						    p_fws->FWSize[i] = This->m_pFW[i]->size;
+                        }
+		            }
+                }
+
+                err = (0 == lErr) ? ZOE_ERRS_SUCCESS : ZOE_ERRS_FAIL;
+            }
+            else
+            {
+                err = ZOE_ERRS_PARMS;
+            }
+            break;
+        }
+
+        case ZVAVLIB_CMD_REL_FIRMWARE:
+            for (i = 0; i < ZVAVLIB_IMAGE_MAX; i++)
+            {
+		        if (This->m_pFW[i])
+		        {
+                    release_firmware(This->m_pFW[i]);
+		            This->m_pFW[i] = ZOE_NULL;
+		        }
+            }
+            err = ZOE_ERRS_SUCCESS;
+            break;
+
+        default:
+            break;
+    }
+	return (err);
 }
 
 
@@ -720,11 +865,6 @@ c_device * c_device_constructor(c_device *pDevice,
 		switch (type) 
 		{
     		case ZVV4LDEV_TYPE_USB:
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_TRUE;
-
 				pDevice->m_initData.codecInitData.bDontInitHW       = ZOE_FALSE;
         		pDevice->m_initData.codecInitData.BusType           = ZOEHAL_BUS_USB;
         		pDevice->m_initData.codecInitData.Instance          = id;
@@ -735,25 +875,6 @@ c_device * c_device_constructor(c_device *pDevice,
         		break;
 
     		case ZVV4LDEV_TYPE_PCIE:
-#if (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_DAWN)
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_FALSE;
-#elif (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_MX8)
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_FALSE;
-#elif (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_CHISEL)
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_TRUE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_TRUE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_TRUE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_TRUE;
-#else // ZOE_TARGET_CHIP == ??
-#error Unsupported CHIP
-#endif // ZOE_TARGET_CHIP
-
 				pDevice->m_initData.codecInitData.bDontInitHW       = ZOE_FALSE;
         		pDevice->m_initData.codecInitData.BusType           = ZOEHAL_BUS_PCIe;
         		pDevice->m_initData.codecInitData.Instance          = id;
@@ -764,18 +885,6 @@ c_device * c_device_constructor(c_device *pDevice,
         		break;
 
     		case ZVV4LDEV_TYPE_DIRECT:
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_BOOT_CODE] = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_CUSTOM_BOOT] = ZOE_FALSE;
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_SFW]  = ZOE_FALSE;
-#if (ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_MX8)
-#ifdef CONFIG_HOST_PLATFORM_ARM64
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_TRUE;
-#else //!CONFIG_HOST_PLATFORM_ARM64
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_FALSE;
-#endif //CONFIG_HOST_PLATFORM_ARM64
-#else // ZOE_TARGET_CHIP != ZOE_TARGET_CHIP_MX8
-				pDevice->m_initData.bDownloadFW[ZVAVLIB_IMAGE_FW]   = ZOE_FALSE;
-#endif // ZOE_TARGET_CHIP == ZOE_TARGET_CHIP_MX8
 				pDevice->m_initData.codecInitData.bDontInitHW       = ZOE_TRUE;
         		pDevice->m_initData.codecInitData.BusType           = ZOEHAL_BUS_HPU;
         		pDevice->m_initData.codecInitData.Instance          = id;
@@ -799,27 +908,11 @@ c_device * c_device_constructor(c_device *pDevice,
 #error Unsupported CHIP
 #endif // ZOE_TARGET_CHIP
 
+        // reset firmware and size
+        //
         for (i = 0; i < ZVAVLIB_IMAGE_MAX; i++)
         {
-		    if (pDevice->m_initData.bDownloadFW[i])
-		    {
-			    long    lErr;
-
-			    lErr = zvf_load(s_FILENAME[i], 
-							    &pDevice->m_initData.pFW[i], 
-							    &pDevice->m_initData.FWSize[i]
-							    );
-			    if (lErr)
-			    {
-				    pDevice->m_initData.bDownloadFW[i] = ZOE_FALSE;
-
-				    if (pDevice->m_initData.pFW[i])
-				    {
-					    vfree(pDevice->m_initData.pFW[i]);
-					    pDevice->m_initData.pFW[i] = ZOE_NULL;
-				    }
-			    }
-		    }
+            pDevice->m_pFW[i] = ZOE_NULL;
         }
 
 		pDevice->m_PowerState = ZVV4LDEV_PWR_STATE_D0;
@@ -844,10 +937,10 @@ void c_device_destructor(c_device *This)
 
     for (i = 0; i < ZVAVLIB_IMAGE_MAX; i++)
     {
-	    if (This->m_initData.pFW[i])
+	    if (This->m_pFW[i])
 	    {
-		    vfree(This->m_initData.pFW[i]);
-		    This->m_initData.pFW[i] = ZOE_NULL;
+            release_firmware(This->m_pFW[i]);
+		    This->m_pFW[i] = ZOE_NULL;
         }
 	}
 
@@ -884,7 +977,6 @@ void c_device_destructor(c_device *This)
 zoe_errs_t c_device_create(c_device *This)
 {
 	zoe_errs_t	err;
-    int         i;
 
 	zoe_dbg_printf(ZOE_DBG_LVL_TRACE, 
                    g_ZVV4LDevDBGCompID,
@@ -896,10 +988,10 @@ zoe_errs_t c_device_create(c_device *This)
 	if (v4l2_device_register(This->m_pGenericDevice, &This->m_v4l2_dev))
 	{
 		zoe_dbg_printf(ZOE_DBG_LVL_ERROR,
-                           g_ZVV4LDevDBGCompID,
-			   "%s()-> Unable to register v4l\n", 
-			   __FUNCTION__
-			   );
+                       g_ZVV4LDevDBGCompID,
+			           "%s()-> Unable to register v4l\n", 
+			           __FUNCTION__
+			           );
 		return (ZOE_ERRS_FAIL);
 	}
 
@@ -1127,15 +1219,6 @@ zoe_errs_t c_device_create(c_device *This)
 									      This,
 									      ZOE_NULL
 									      );
-
-    for (i = 0; i < ZVAVLIB_IMAGE_MAX; i++)
-    {
-	    if (This->m_initData.pFW[i])
-	    {
-		    vfree(This->m_initData.pFW[i]);
-		    This->m_initData.pFW[i] = ZOE_NULL;
-        }
-	}
 
 	if (!ZOE_SUCCESS(err))
 	{

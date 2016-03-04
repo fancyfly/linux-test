@@ -155,6 +155,8 @@ typedef struct _HPU_DEVICE_EXTENSION
     // lock for dma
 	struct semaphore        m_semDMA;
 #endif //ZV_SERIALIZE_DMA
+    // lock for pio
+	struct semaphore        m_semPIO;
 
 } HPU_DEVICE_EXTENSION, *PHPU_DEVICE_EXTENSION;
 

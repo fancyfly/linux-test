@@ -54,6 +54,7 @@
 #include <linux/videodev2.h>
 #endif
 #include <media/v4l2-device.h>
+#include <linux/firmware.h>
 
 #include "zoe_types.h"
 #include "zv_avlib.h"
@@ -147,6 +148,7 @@ struct c_device
 	// init data
 	//
 	ZV_AVLIB_INITDATA		m_initData;
+    struct firmware         *m_pFW[ZVAVLIB_IMAGE_MAX];
 
 	// device power state
 	//

@@ -94,6 +94,7 @@ static CZoeIPCService   *s_pZoeIPCService = ZOE_NULL;  // IPC service
 static c_zoe_module_mgr *s_p_zoe_module_mgr = ZOE_NULL;// module manager
 
 
+
 /////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -152,6 +153,7 @@ void zoe_ipc_test(CZoeIPCService *p_zoe_ipc_srv,
                   int iteration,
                   int seconds
                   );
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -555,7 +557,7 @@ static zoe_errs_t c_zv_av_lib_init_device(i_zv_av_lib *This_p,
 		goto c_zv_av_lib_init_device_exit;
 	}
 
-#if 1
+#if 0
 	// downloading firmware
 	//
     c_zv_av_lib_firmware_download(This);
@@ -1291,6 +1293,29 @@ uint32_t c_zv_av_lib_get_error(c_zv_av_lib *This)
 zoe_bool_t c_zv_av_lib_is_error(c_zv_av_lib *This)
 {
 	return (0 != This->m_dwDeviceError);
+}
+
+
+// call back function
+//
+zoe_errs_t c_zv_av_lib_device_callback(c_zv_av_lib *This, 
+								       uint32_t dwCode,
+								       zoe_void_ptr_t pParam
+								       )
+{
+	if (This->m_pDeviceCallback && 
+		This->m_callbackContext
+		) 
+	{
+		return (This->m_pDeviceCallback(This->m_callbackContext, 
+										dwCode, 
+										pParam
+										));
+	}
+	else
+	{
+		return (ZOE_ERRS_FAIL);
+	}
 }
 
 

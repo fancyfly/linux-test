@@ -26,6 +26,7 @@
 
 /* Includes */
 
+#include <linux/kernel.h>
 #include <soc/imx8/sc/types.h>
 #include <soc/imx8/sc/svc/rm/api.h>
 #include <soc/imx8/sc/svc/pm/api.h>
@@ -95,6 +96,7 @@ sc_err_t sc_pm_set_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
     result = RPC_R8(&msg);
     return result;
 }
+EXPORT_SYMBOL(sc_pm_set_resource_power_mode);
 
 sc_err_t sc_pm_get_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_pm_power_mode_t *mode)
@@ -115,6 +117,7 @@ sc_err_t sc_pm_get_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
         *mode = RPC_D8(&msg, 0);
     return result;
 }
+EXPORT_SYMBOL(sc_pm_get_resource_power_mode);
 
 sc_err_t sc_pm_set_clock_rate(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_pm_clk_t clk, sc_pm_clock_rate_t *rate)
@@ -252,6 +255,7 @@ sc_err_t sc_pm_cpu_start(sc_ipc_t ipc, sc_rsrc_t resource, bool enable,
     result = RPC_R8(&msg);
     return result;
 }
+EXPORT_SYMBOL(sc_pm_cpu_start);
 
 /**@}*/
 

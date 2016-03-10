@@ -88,6 +88,7 @@ int sc_ipc_getMuID(uint32_t *mu_id)
 	}
 	return SC_ERR_UNAVAILABLE;
 }
+EXPORT_SYMBOL(sc_ipc_getMuID);
 
 /*--------------------------------------------------------------------------*/
 /* Open an IPC channel                                                      */
@@ -115,6 +116,7 @@ sc_err_t sc_ipc_open(sc_ipc_t *handle, uint32_t id)
 
 	return SC_ERR_NONE;
 }
+EXPORT_SYMBOL(sc_ipc_open);
 
 /*--------------------------------------------------------------------------*/
 /* Close an IPC channel                                                     */
@@ -136,6 +138,7 @@ void sc_ipc_close(sc_ipc_t handle)
 	/* TBD ***** What needs to be done here? */
 	mutex_unlock(&scu_mu_mutex);
 }
+EXPORT_SYMBOL(sc_ipc_close);
 
 /*!
  * This function reads a message from an IPC channel.

@@ -46,6 +46,14 @@ static bool scu_mu_init;
 
 DEFINE_MUTEX(scu_mu_mutex);
 
+EXPORT_SYMBOL(sc_pm_set_resource_power_mode);
+EXPORT_SYMBOL(sc_pm_get_resource_power_mode);
+EXPORT_SYMBOL(sc_pm_cpu_start);
+EXPORT_SYMBOL(sc_ipc_getMuID);
+EXPORT_SYMBOL(sc_ipc_open);
+EXPORT_SYMBOL(sc_ipc_close);
+EXPORT_SYMBOL(sc_call_rpc);
+EXPORT_SYMBOL(sc_misc_set_control);
 /*--------------------------------------------------------------------------*/
 /* RPC command/response                                                     */
 /*--------------------------------------------------------------------------*/
@@ -60,7 +68,6 @@ void sc_call_rpc(sc_ipc_t handle, sc_rpc_msg_t *msg, bool no_resp)
 	mutex_unlock(&scu_mu_mutex);
 }
 
-EXPORT_SYMBOL(sc_call_rpc);
 /*--------------------------------------------------------------------------*/
 /* Get MU base address for specified IPC channel                            */
 /*--------------------------------------------------------------------------*/
@@ -88,7 +95,6 @@ int sc_ipc_getMuID(uint32_t *mu_id)
 	}
 	return SC_ERR_UNAVAILABLE;
 }
-EXPORT_SYMBOL(sc_ipc_getMuID);
 
 /*--------------------------------------------------------------------------*/
 /* Open an IPC channel                                                      */
@@ -116,7 +122,6 @@ sc_err_t sc_ipc_open(sc_ipc_t *handle, uint32_t id)
 
 	return SC_ERR_NONE;
 }
-EXPORT_SYMBOL(sc_ipc_open);
 
 /*--------------------------------------------------------------------------*/
 /* Close an IPC channel                                                     */
@@ -138,7 +143,6 @@ void sc_ipc_close(sc_ipc_t handle)
 	/* TBD ***** What needs to be done here? */
 	mutex_unlock(&scu_mu_mutex);
 }
-EXPORT_SYMBOL(sc_ipc_close);
 
 /*!
  * This function reads a message from an IPC channel.

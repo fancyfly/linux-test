@@ -1,3 +1,31 @@
+/*
+ * Copyright 2016 Freescale Semiconductor, Inc.
+ */
+/*
+All rights reserved.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+  o Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+  o Redistributions in binary form must reproduce the above copyright notice,
+    thislist of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+  o Neither the name of Freescale Semiconductor, Inc. nor the names of its
+    contributors may be used to endorse or promote products derived from this
+    software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #ifndef IMXDPU_BE_H
 #define IMXDPU_BE_H
 
@@ -61,6 +89,8 @@ struct blitblend_unit {
 	uint32_t green_func;
 	uint32_t blue_func;
 	uint32_t alpha_func;
+	uint32_t blend_mode1;
+	uint32_t blend_mode2;
 };
 struct engcfg_unit {
 	uint32_t fetchpersp9_dynamic;
@@ -76,6 +106,7 @@ struct engcfg_unit {
 struct be_blit_cfg {
 	struct fetch_unit fetch_decode;
 	struct fetch_unit fetch_persp;
+	struct fetch_unit fetch_eco;
 	struct store_unit store;
 	struct rop_unit rop;
 	struct matrix_unit matrix;
@@ -95,11 +126,12 @@ struct imxdpu_info {
 #define IMXDPU_IOC_BLIT       _IOW(IMXDPU_IOC_MAGIC,1,struct be_blit_cfg)
 #define IMXDPU_IOC_WAIT       _IO(IMXDPU_IOC_MAGIC,2)
 
-irqreturn_t imxdpu_isr(int irq, void *data);
-int imxdpu_be_init(void);
+void imxdpu_be_irq_handler(int8_t imxdpu_id, int8_t irq);
+int imxdpu_be_init(int8_t imxdpu_id, void __iomem * imxdpu_base);
 int imxdpu_be_blit(struct imxdpu_info *imxdpu, struct be_blit_cfg *cfg);
 int imxdpu_be_wait_shadow_load(struct imxdpu_info *imxdpu);
 int imxdpu_be_wait_complete(struct imxdpu_info *imxdpu);
 int imxdpu_be_load(struct imxdpu_info *imxdpu, void __user * p);
 int imxdpu_be_wait(struct imxdpu_info *imxdpu);
+
 #endif

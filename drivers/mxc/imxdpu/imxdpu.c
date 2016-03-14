@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "imxdpu_private.h"
 #include "imxdpu_registers.h"
 #include "imxdpu_events.h"
+#include "imxdpu_be.h"
 
 #define ptr_to_uint32(__ptr__) ((uint32_t)((uint64_t)(__ptr__ )))
 /* Private data*/
@@ -1360,6 +1361,33 @@ int imxdpu_handle_irq(int32_t imxdpu_id)
 	if (int_stat[0] != 0) {
 		if (int_stat[0] & 0xff) {
 			if (int_stat[0] &
+				INTSTAT0_BIT(IMXDPU_STORE9_SHDLOAD_IRQ)) {
+				IMXDPU_TRACE_IRQ
+				    ("IMXDPU_STORE9_SHDLOAD_IRQ irq\n");
+				imxdpu_be_irq_handler(imxdpu_id,
+							     IMXDPU_STORE9_SHDLOAD_IRQ);
+				imxdpu_handle_registered_irq(imxdpu_id,
+							     IMXDPU_STORE9_SHDLOAD_IRQ);
+			}
+			if (int_stat[0] &
+				INTSTAT0_BIT(IMXDPU_STORE9_FRAMECOMPLETE_IRQ)) {
+				IMXDPU_TRACE_IRQ
+				    ("IMXDPU_STORE9_FRAMECOMPLETE_IRQ irq\n");
+				imxdpu_be_irq_handler(imxdpu_id,
+							     IMXDPU_STORE9_FRAMECOMPLETE_IRQ);
+				imxdpu_handle_registered_irq(imxdpu_id,
+							     IMXDPU_STORE9_FRAMECOMPLETE_IRQ);
+			}
+			if (int_stat[0] &
+				INTSTAT0_BIT(IMXDPU_STORE9_SEQCOMPLETE_IRQ)) {
+				IMXDPU_TRACE_IRQ
+				    ("IMXDPU_STORE9_SEQCOMPLETE_IRQ irq\n");
+				imxdpu_be_irq_handler(imxdpu_id,
+							     IMXDPU_STORE9_SEQCOMPLETE_IRQ);
+				imxdpu_handle_registered_irq(imxdpu_id,
+							     IMXDPU_STORE9_SEQCOMPLETE_IRQ);
+			}
+			if (int_stat[0] &
 				INTSTAT0_BIT(IMXDPU_EXTDST0_SHDLOAD_IRQ)) {
 				IMXDPU_TRACE_IRQ
 					("IMXDPU_EXTDST0_SHDLOAD_IRQ irq\n");
@@ -1445,6 +1473,35 @@ int imxdpu_handle_irq(int32_t imxdpu_id)
 	}
 
 	if (int_stat[1] != 0) {
+		if (int_stat[1] & 0xff) {
+			if (int_stat[1] &
+				INTSTAT0_BIT(IMXDPU_STORE9_SHDLOAD_IRQ)) {
+				IMXDPU_TRACE_IRQ
+				    ("IMXDPU_STORE9_SHDLOAD_IRQ irq\n");
+				imxdpu_be_irq_handler(imxdpu_id,
+							     IMXDPU_STORE9_SHDLOAD_IRQ);
+				imxdpu_handle_registered_irq(imxdpu_id,
+							     IMXDPU_STORE9_SHDLOAD_IRQ);
+			}
+			if (int_stat[1] &
+				INTSTAT0_BIT(IMXDPU_STORE9_FRAMECOMPLETE_IRQ)) {
+				IMXDPU_TRACE_IRQ
+				    ("IMXDPU_STORE9_FRAMECOMPLETE_IRQ irq\n");
+				imxdpu_be_irq_handler(imxdpu_id,
+							     IMXDPU_STORE9_FRAMECOMPLETE_IRQ);
+				imxdpu_handle_registered_irq(imxdpu_id,
+							     IMXDPU_STORE9_FRAMECOMPLETE_IRQ);
+			}
+			if (int_stat[1] &
+				INTSTAT0_BIT(IMXDPU_STORE9_SEQCOMPLETE_IRQ)) {
+				IMXDPU_TRACE_IRQ
+				    ("IMXDPU_STORE9_SEQCOMPLETE_IRQ irq\n");
+				imxdpu_be_irq_handler(imxdpu_id,
+							     IMXDPU_STORE9_SEQCOMPLETE_IRQ);
+				imxdpu_handle_registered_irq(imxdpu_id,
+							     IMXDPU_STORE9_SEQCOMPLETE_IRQ);
+			}
+		}
 		if (int_stat[1] & 0xff00) {
 			if (int_stat[1] &
 				INTSTAT1_BIT(IMXDPU_FRAMEGEN1_INT0_IRQ)) {
@@ -2491,6 +2548,8 @@ int imxdpu_init(int8_t imxdpu_id, void __iomem *imxdpu_base)
 	/* IMXDPU_SIG1_STATICCONTROL           */
 #endif
 	imxdpu_init_irqs(imxdpu_id);
+
+	imxdpu_be_init(imxdpu_id, imxdpu_base);
 
 	return ret;
 }

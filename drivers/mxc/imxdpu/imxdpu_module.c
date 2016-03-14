@@ -107,6 +107,11 @@ static int imxdpu_probe(struct platform_device *pdev)
 	/* init IMXDPU */
 	imxdpu_init(instance, ss_base + IMXDPU_REGS_BASE_OFFSET);
 
+	/* init IMXDPU INT STEER for BLT */
+	imxdpu_intsteer_enable_irq(ss_base, IMXDPU_STORE9_SHDLOAD_IRQ);
+	imxdpu_intsteer_enable_irq(ss_base, IMXDPU_STORE9_FRAMECOMPLETE_IRQ);
+	imxdpu_intsteer_enable_irq(ss_base, IMXDPU_STORE9_SEQCOMPLETE_IRQ);
+
 	/* init IMXDPU INT STEER */
 	imxdpu_intsteer_enable_irq(ss_base, IMXDPU_EXTDST0_SHDLOAD_IRQ);
 	imxdpu_intsteer_enable_irq(ss_base, IMXDPU_EXTDST1_SHDLOAD_IRQ);

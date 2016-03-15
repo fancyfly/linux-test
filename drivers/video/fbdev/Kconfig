@@ -2450,6 +2450,20 @@ config FB_SIMPLE
 	  Configuration re: surface address, size, and format must be provided
 	  through device tree, or plain old platform data.
 
+config FB_IMXDPU
+	bool "IMXDPU (Simple) framebuffer support"
+	depends on (FB = y)
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	help
+	  Say Y if you want support for an IMXDPU simple frame-buffer.
+
+	  This driver initializes the the IMXDPU and start the display.
+
+	  Configuration: stride, size, and format must be provided
+	  through device tree.
+
 source "drivers/video/fbdev/omap/Kconfig"
 source "drivers/video/fbdev/omap2/Kconfig"
 source "drivers/video/fbdev/exynos/Kconfig"

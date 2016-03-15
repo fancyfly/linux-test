@@ -484,6 +484,70 @@
 		power-domains = <&pd_mw_uart1>;
 	};
 
+	imxdpu0:  imxdpu0@0x56180000 {
+		compatible = "fsl,imx8dv-imxdpu";
+		reg = <0x0 0x56000000 0x0 0x1000000>;
+		interrupts = 	<0 40 0x4>, <0 41 0x4>, <0 42 0x4>, <0 43 0x4>,
+				<0 44 0x4>, <0 45 0x4>, <0 46 0x4>, <0 47 0x4>,
+				<0 48 0x4>, <0 49 0x4>, <0 50 0x4>;
+		interrupt-names = 	"irq_grp00", "irq_grp01", "irq_grp02", "irq_grp03",
+					"irq_grp04", "irq_grp05", "irq_grp06", "irq_grp07",
+					"irq_grp08", "irq_grp09", "irq_grp10";
+
+		status = "disabled";
+	};
+
+	imxdpu1:  imxdpu1@0x57180000 {
+		compatible = "fsl,imx8dv-imxdpu";
+		reg = <0x0 0x57000000 0x0 0x1000000>;
+		interrupts = 	<0 152 0x4>, <0 151 0x4>, <0 153 0x4>, <0 154 0x4>,
+				<0 155 0x4>, <0 156 0x4>, <0 157 0x4>, <0 158 0x4>,
+				<0 159 0x4>, <0 160 0x4>, <0 161 0x4>;
+		interrupt-names = 	"irq_grp00", "irq_grp01", "irq_grp02", "irq_grp03",
+					"irq_grp04", "irq_grp05", "irq_grp06", "irq_grp07",
+					"irq_grp08", "irq_grp09", "irq_grp10";
+		status = "disabled";
+	};
+
+	framebuffer0: framebuffer@0 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x56220000 0x0 0x10000>;
+		width = <640>;
+		height = <480>;
+		stride = <640>;
+		format = "nv12";
+		status = "disabled";
+	};
+
+	framebuffer1: framebuffer@1 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x56240000 0x0 0x10000>;
+		width = <640>;
+		height = <480>;
+		stride = <(640 * 4)>;
+		format = "ayuv";
+		status = "disabled";
+	};
+
+	framebuffer2: framebuffer@2 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x57220000 0x0 0x10000>;
+		width = <640>;
+		height = <480>;
+		stride = <(640 * 4)>;
+		format = "nv12";
+		status = "disabled";
+	};
+
+	framebuffer3: framebuffer@3 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x57240000 0x0 0x10000>;
+		width = <640>;
+		height = <480>;
+		stride = <640>;
+		format = "nv12";
+		status = "disabled";
+	};
 	gpu: gpu@53100000 {
 		compatible = "fsl,imx8dv-gpu", "fsl,imx8x-gpu";
 		reg = <0x0 0x53100000 0 0x40000>, <0x0 0x54100000 0x0 0x40000>, <0x0 0x0 0x0 0x0>, <0x0 0x0 0x0 0x01000000>;

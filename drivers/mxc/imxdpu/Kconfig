@@ -1,0 +1,2 @@
+config MXC_IMXDPU_DRV
+	bool

@@ -6,6 +6,12 @@ menu "MXC support drivers"
 
 source "drivers/mxc/gpu-viv/Kconfig"
 source "drivers/mxc/vpu/Kconfig"
+config MXC_IMXDPU
+	bool "Display Processing Unit Driver"
+	select MXC_IMXDPU_DRV 
+	help
+	  If you plan to use the Display Processing unit, say
+	  Y here. IMXDPU is needed by Framebuffer and V4L2 drivers.
 
 endmenu
 

@@ -54,7 +54,6 @@ static int clk_gate_scu_enable(struct clk_hw *hw)
 {
 	struct clk_gate_scu *gate = to_clk_gate_scu(hw);
 	u32 reg;
-	sc_err_t sciErr;
 
 	if (!ccm_ipcHandle) {
 			return -1;
@@ -67,10 +66,7 @@ static int clk_gate_scu_enable(struct clk_hw *hw)
 		else
 			reg |= (0x2 << gate->bit_idx);
 		writel(reg, gate->reg);
-	} else
-		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
-										gate->clk_type, true, false);
-
+	}
 	return 0;
 }
 
@@ -85,7 +81,6 @@ static void clk_gate_scu_disable(struct clk_hw *hw)
 			return;
 	}
 
-	/* Need to implement LPCG code here. */
 	if (gate->reg) {
 		reg = readl(gate->reg);
 		if (gate->hw_gate)
@@ -93,9 +88,7 @@ static void clk_gate_scu_disable(struct clk_hw *hw)
 		else
 			reg &= ~(0x2 << gate->bit_idx);
 		writel(reg, gate->reg);
-	} else 
-		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
-										gate->clk_type, false, false);
+	}
 }
 
 static int clk_gate_scu_prepare(struct clk_hw *hw)
@@ -107,12 +100,13 @@ static int clk_gate_scu_prepare(struct clk_hw *hw)
 			return -1;
 	}
 
+	/* Enable the clock at the DSC slice level */
+	sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
+									gate->clk_type, true, false);
 	if (gate->reg) {
 		u32 reg;
 
-		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
-										gate->clk_type, true, false);
-		/* Disable clock at LPCG level before enabling the clock slice. */
+		/* Disable clock at LPCG level. */
 		reg = readl(gate->reg);
 		if (gate->hw_gate)
 			reg &= ~(0x3 << gate->bit_idx);
@@ -132,9 +126,8 @@ static void clk_gate_scu_unprepare(struct clk_hw *hw)
 			return;
 	}
 
-	if (gate->reg)
-		sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
-										gate->clk_type, false, false);
+	sciErr = sc_pm_clock_enable(ccm_ipcHandle, gate->rsrc_id,
+									gate->clk_type, false, false);
 
 }
 

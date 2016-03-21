@@ -59,6 +59,11 @@ EXPORT_SYMBOL(sc_misc_set_control);
 /*--------------------------------------------------------------------------*/
 void sc_call_rpc(sc_ipc_t handle, sc_rpc_msg_t *msg, bool no_resp)
 {
+	if (in_interrupt()){
+		pr_warn("Cannot make SC IPC calls from an interrupt context\n");
+		dump_stack();
+		return;
+	}
 	mutex_lock(&scu_mu_mutex);
 
 	sc_ipc_write(handle, msg);

@@ -1810,6 +1810,8 @@ static void pxp_issue_pending(struct dma_chan *chan)
 	struct pxps *pxp = to_pxp(pxp_dma);
 	unsigned long flags0, flags;
 
+	down(&pxp->sema);
+
 	spin_lock_irqsave(&pxp->lock, flags0);
 	spin_lock_irqsave(&pxp_chan->lock, flags);
 
@@ -1826,7 +1828,6 @@ static void pxp_issue_pending(struct dma_chan *chan)
 	spin_unlock_irqrestore(&pxp->lock, flags0);
 
 	pxp_clk_enable(pxp);
-	down(&pxp->sema);
 
 	spin_lock_irqsave(&pxp->lock, flags);
 	pxp->pxp_ongoing = 1;

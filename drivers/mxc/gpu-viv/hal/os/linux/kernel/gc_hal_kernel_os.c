@@ -4658,8 +4658,6 @@ gckOS_CacheClean(
     gcmkVERIFY_ARGUMENT(Logical != gcvNULL);
     gcmkVERIFY_ARGUMENT(Bytes > 0);
 
-    return gcvSTATUS_OK;
-
     platform = Os->device->platform;
 
     if (platform && platform->ops->cache)
@@ -4688,6 +4686,16 @@ gckOS_CacheClean(
 #      else
     dmac_clean_range(Logical, Logical + Bytes);
 #      endif
+
+#if defined(CONFIG_OUTER_CACHE)
+    /* Outer cache. */
+    _HandleOuterCache(Os, Physical, Logical, Bytes, gcvCACHE_CLEAN);
+#endif
+
+#elif defined(CONFIG_ARM64)
+
+    /* Inner cache. */
+    __dma_map_area(Logical, Bytes, DMA_TO_DEVICE);
 
 #if defined(CONFIG_OUTER_CACHE)
     /* Outer cache. */
@@ -4795,6 +4803,16 @@ gckOS_CacheInvalidate(
 #endif
 
 #elif defined(CONFIG_MIPS)
+
+    /* Inner cache. */
+    __dma_map_area(Logical, Bytes, DMA_FROM_DEVICE);
+
+#if defined(CONFIG_OUTER_CACHE)
+    /* Outer cache. */
+    _HandleOuterCache(Os, Physical, Logical, Bytes, gcvCACHE_INVALIDATE);
+#endif
+
+#elif defined(CONFIG_MIPS)
     dma_cache_inv((unsigned long) Logical, Bytes);
 #elif defined(CONFIG_PPC)
     /* TODO */
@@ -4856,8 +4874,6 @@ gckOS_CacheFlush(
     gcmkVERIFY_ARGUMENT(Logical != gcvNULL);
     gcmkVERIFY_ARGUMENT(Bytes > 0);
 
-    return gcvSTATUS_OK;
-
     platform = Os->device->platform;
 
     if (platform && platform->ops->cache)
@@ -4881,6 +4897,15 @@ gckOS_CacheFlush(
 #ifdef CONFIG_ARM
     /* Inner cache. */
     dmac_flush_range(Logical, Logical + Bytes);
+
+#if defined(CONFIG_OUTER_CACHE)
+    /* Outer cache. */
+    _HandleOuterCache(Os, Physical, Logical, Bytes, gcvCACHE_FLUSH);
+#endif
+
+#elif defined(CONFIG_ARM64)
+    /* Inner cache. */
+    __dma_flush_range(Logical, Logical + Bytes);
 
 #if defined(CONFIG_OUTER_CACHE)
     /* Outer cache. */

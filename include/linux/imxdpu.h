@@ -37,8 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/spinlock.h>
 #include <linux/types.h>
 
-//#define DEBUG
-//#define ENABLE_IMXDPU_TRACE
+#define DEBUG
+#define ENABLE_IMXDPU_TRACE
 //#define ENABLE_IMXDPU_TRACE_REG
 //#define ENABLE_IMXDPU_TRACE_IRQ
 //#define ENABLE_IMXDPU_TRACE_IRQ_READ
@@ -485,6 +485,7 @@ typedef enum {
 #define IMXDPU_PIX_FMT_RGB32   fourcc('R', 'G', 'B', '4')	/*!< 32  RGB-8-8-8-8  */
 #define IMXDPU_PIX_FMT_RGBA32  fourcc('R', 'G', 'B', 'A')	/*!< 32  RGB-8-8-8-8  */
 #define IMXDPU_PIX_FMT_ABGR32  fourcc('A', 'B', 'G', 'R')	/*!< 32  ABGR-8-8-8-8 */
+#define IMXDPU_PIX_FMT_ARGB32  fourcc('A', 'R', 'G', 'B')	/*!< 32  ARGB-8-8-8-8 */
 
 /*! @} */
 /*! @name YUV Interleaved Formats */
@@ -788,6 +789,7 @@ int imxdpu_disp_set_chan_crop(int8_t imxdpu_id,
 	uint16_t dest_height);
 void dump_pixencfg_status(int8_t imxdpu_id);
 int dump_channel(int8_t imxdpu_id, imxdpu_chan_t chan);
+uint32_t imxdpu_get_planes(uint32_t fmt);
 
 int imxdpu_disp_setup_channel(int8_t imxdpu_id,
 			      imxdpu_chan_t chan,

@@ -3724,6 +3724,8 @@ int imxdpu_disp_setup_channel(int8_t imxdpu_id,
 	int ret = 0;
 	imxdpu_chan_t eco_chan;
 	imxdpu_channel_params_t channel;
+	uint32_t uv_offset=0;
+
 	channel.common.chan = chan;
 	channel.common.src_pixel_fmt = src_pixel_fmt;
 	channel.common.src_width = src_width;
@@ -3746,11 +3748,15 @@ int imxdpu_disp_setup_channel(int8_t imxdpu_id,
 	//channel.common.use_video_proc = IMXDPU_FALSE;
 	//channel.common.disp_id = 0;
 
+	if (imxdpu_get_planes(src_pixel_fmt) == 2) {
+		uv_offset = src_width*src_height; /* works for NV12 and NV16*/
+	}
+
 	ret = imxdpu_init_channel(imxdpu_id, &channel);
 
 	ret = imxdpu_init_channel_buffer(imxdpu_id, channel.common.chan, channel.common.stride, IMXDPU_ROTATE_NONE, //imxdpu_rotate_mode_t rot_mode,
 					 disp_addr, //dma_addr_t phyaddr_0,
-					 src_width*src_height, //uint32_t u_offset,
+					 uv_offset, //uint32_t u_offset,
 					 0);    //uint32_t v_offset)
 
 	ret = imxdpu_disp_set_chan_crop(imxdpu_id,
@@ -3894,12 +3900,13 @@ uint32_t imxdpu_get_colorcomponentbits(uint32_t fmt)
 		case IMXDPU_PIX_FMT_BGRA32:
 		case IMXDPU_PIX_FMT_RGBA32:
 		case IMXDPU_PIX_FMT_ABGR32:
+		case IMXDPU_PIX_FMT_ARGB32:
 		case IMXDPU_PIX_FMT_AYUV:
-			return
-				IMXDPU_SET_FIELD(IMXDPU_COLOR_BITSRED0, 0x08) |
-				IMXDPU_SET_FIELD(IMXDPU_COLOR_BITSGREEN0, 0x08) |
-				IMXDPU_SET_FIELD(IMXDPU_COLOR_BITSBLUE0, 0x08) |
-				IMXDPU_SET_FIELD(IMXDPU_COLOR_BITSALPHA0, 0x08);
+				return
+					IMXDPU_SET_FIELD(IMXDPU_COLOR_BITSRED0, 0x08) |
+					IMXDPU_SET_FIELD(IMXDPU_COLOR_BITSGREEN0, 0x08) |
+					IMXDPU_SET_FIELD(IMXDPU_COLOR_BITSBLUE0, 0x08) |
+					IMXDPU_SET_FIELD(IMXDPU_COLOR_BITSALPHA0, 0x08);
 		default:
 			pr_warn("%s(): unsupported pixel format", __func__);
 			return 0;
@@ -3935,6 +3942,7 @@ uint32_t imxdpu_get_planes(uint32_t fmt)
 		case IMXDPU_PIX_FMT_YUV444:
 		case IMXDPU_PIX_FMT_BGR32:
 		case IMXDPU_PIX_FMT_RGB32:
+		case IMXDPU_PIX_FMT_ARGB32:
 			return 1;
 		default:
 			return 0;
@@ -3995,6 +4003,13 @@ uint32_t imxdpu_get_colorcomponentshift(uint32_t fmt)
 			return IMXDPU_SET_FIELD(IMXDPU_COLOR_SHIFTRED0, 0x18) |
 				IMXDPU_SET_FIELD(IMXDPU_COLOR_SHIFTGREEN0, 0x10) |
 				IMXDPU_SET_FIELD(IMXDPU_COLOR_SHIFTBLUE0, 0x08) |
+				IMXDPU_SET_FIELD(IMXDPU_COLOR_SHIFTALPHA0, 0x00);
+
+		case IMXDPU_PIX_FMT_ARGB32:
+			/* 0xBBGGRRAA */
+			return IMXDPU_SET_FIELD(IMXDPU_COLOR_SHIFTRED0, 0x08) |
+				IMXDPU_SET_FIELD(IMXDPU_COLOR_SHIFTGREEN0, 0x10) |
+				IMXDPU_SET_FIELD(IMXDPU_COLOR_SHIFTBLUE0, 0x18) |
 				IMXDPU_SET_FIELD(IMXDPU_COLOR_SHIFTALPHA0, 0x00);
 
 		case IMXDPU_PIX_FMT_GENERIC_32:
@@ -4066,12 +4081,12 @@ int imxdpu_bits_per_pixel(uint32_t fmt)
 		case IMXDPU_PIX_FMT_RGB32:
 		case IMXDPU_PIX_FMT_RGBA32:
 		case IMXDPU_PIX_FMT_ABGR32:
+		case IMXDPU_PIX_FMT_ARGB32:
 		case IMXDPU_PIX_FMT_AYUV:
 			ret = 32;
 			break;
 		default:
 			pr_warn("%s(): unsupported pixel format", __func__);
-			ret = 1;
 			break;
 	}
 	IMXDPU_TRACE("%s(): fmt 0x%08x, ret %d\n", __func__, fmt, ret);
@@ -4088,7 +4103,7 @@ int imxdpu_bits_per_pixel(uint32_t fmt)
  */
 static bool imxdpu_is_yuv(uint32_t fmt)
 {
-	int ret = 0;
+	int ret = IMXDPU_FALSE;
 	switch (fmt) {
 		case IMXDPU_PIX_FMT_AYUV:
 		case IMXDPU_PIX_FMT_NV12:
@@ -4104,6 +4119,7 @@ static bool imxdpu_is_yuv(uint32_t fmt)
 		case IMXDPU_PIX_FMT_RGB32:
 		case IMXDPU_PIX_FMT_RGBA32:
 		case IMXDPU_PIX_FMT_ABGR32:
+		case IMXDPU_PIX_FMT_ARGB32:
 		case IMXDPU_PIX_FMT_RGB565:
 		case IMXDPU_PIX_FMT_BGR24:
 		case IMXDPU_PIX_FMT_RGB24:

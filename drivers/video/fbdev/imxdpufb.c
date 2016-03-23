@@ -50,6 +50,8 @@ static struct fb_var_screeninfo imxdpufb_var = {
 
 #define PSEUDO_PALETTE_SIZE 16
 
+static uint32_t imxdpu_convert_format(uint32_t format);
+
 static int imxdpufb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 			      u_int transp, struct fb_info *info)
 {
@@ -138,8 +140,8 @@ static int imxdpufb_parse_dt(struct platform_device *pdev,
 
 	ret = of_property_read_u32(np, "stride", &params->stride);
 	if (ret) {
-		dev_err(&pdev->dev, "Can't parse stride property\n");
-		return ret;
+		dev_err(&pdev->dev, "Can't parse stride property - using default\n");
+		params->stride = 0;
 	}
 
 	ret = of_property_read_string(np, "format", &format);
@@ -154,9 +156,12 @@ static int imxdpufb_parse_dt(struct platform_device *pdev,
 		params->format = &imxdpufb_formats[i];
 		break;
 	}
+
 	if (!params->format) {
 		dev_err(&pdev->dev, "Invalid format value\n");
 		return -EINVAL;
+	} else {
+		dev_err(&pdev->dev, "format name %s fourcc 0x%08x\n", params->format->name, params->format->fourcc); 
 	}
 	dev_dbg(&pdev->dev, "%s(): %s registered.\n", __func__, temp);
 	return 0;
@@ -337,7 +342,7 @@ static void imxdpu_start(uint64_t disp_phys_addr,
 	imxdpu_disp_setup_channel(
 		imxdpu_id,
 		chan,	//imxdpu_chan_t chan,
-		params->format->fourcc,  //uint32_t src_pixel_fmt,
+		imxdpu_convert_format(params->format->fourcc),  //uint32_t src_pixel_fmt,
 		vmode->hlen,	//uint16_t src_width,
 		vmode->vlen,	//uint16_t src_height,
 		0,	//int16_t  clip_top,
@@ -387,6 +392,29 @@ static void imxdpu_start(uint64_t disp_phys_addr,
 	pr_debug("imxdpufb display start ...\n");
 }
 
+static uint32_t imxdpu_convert_format(uint32_t format)
+{
+	uint32_t ret = 0;
+	switch (format) {
+		case DRM_FORMAT_NV12: ret = IMXDPU_PIX_FMT_NV12; break;
+		case DRM_FORMAT_AYUV: ret = IMXDPU_PIX_FMT_AYUV; break;
+		case DRM_FORMAT_RGB888: ret = IMXDPU_PIX_FMT_RGB24; break;
+		case DRM_FORMAT_XRGB8888: ret = IMXDPU_PIX_FMT_RGB32; break;
+		case DRM_FORMAT_ARGB8888: ret = IMXDPU_PIX_FMT_ARGB32; break;
+		case DRM_FORMAT_ABGR8888: ret = IMXDPU_PIX_FMT_ABGR32; break;
+		case DRM_FORMAT_RGBA8888: ret = IMXDPU_PIX_FMT_RGBA32; break;
+		case DRM_FORMAT_RGB565: ret = IMXDPU_PIX_FMT_RGB565; break;
+
+		case DRM_FORMAT_XRGB1555:
+		case DRM_FORMAT_ARGB1555:
+		case DRM_FORMAT_XRGB2101010:
+		case DRM_FORMAT_ARGB2101010:
+		default:
+			ret = 0;
+	}
+	pr_debug("%s(): format in 0x%08x out 0x%08x\n", __func__, format, ret); 
+ 	return ret;
+}
 static int imxdpufb_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -428,15 +456,23 @@ static int imxdpufb_probe(struct platform_device *pdev)
 	par = info->par;
 	info->fix = imxdpufb_fix;
 
-	if (params.format->fourcc == DRM_FORMAT_AYUV){
+	if (params.format->fourcc == DRM_FORMAT_AYUV) {
+		if (params.stride == 0 ) {
+			params.stride = params.width * 4;
+		}
 		info->var.nonstd = DRM_FORMAT_AYUV;
-	}
-	if (params.format->fourcc == DRM_FORMAT_NV12) {
+	} else if (params.format->fourcc == DRM_FORMAT_NV12) {
+		if (params.stride == 0 ) {
+			params.stride = params.width;
+		}
 		info->fix.smem_len = 
 			params.width * (params.height + params.height/2);
 		info->var.nonstd = DRM_FORMAT_NV12;
 	} else {
-		info->fix.smem_len = params.width * params.stride;
+		if (params.stride == 0 ) {
+			params.stride = params.width * 4;
+		}
+		info->fix.smem_len = params.height * params.stride;
 	}
 	info->fix.line_length = params.stride;
 	info->screen_size = info->fix.smem_len;

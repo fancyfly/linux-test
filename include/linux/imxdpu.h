@@ -37,8 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/spinlock.h>
 #include <linux/types.h>
 
-#define DEBUG
-#define ENABLE_IMXDPU_TRACE
+//#define DEBUG
+//#define ENABLE_IMXDPU_TRACE
 //#define ENABLE_IMXDPU_TRACE_REG
 //#define ENABLE_IMXDPU_TRACE_IRQ
 //#define ENABLE_IMXDPU_TRACE_IRQ_READ

@@ -514,8 +514,8 @@
 		reg = <0x0 0x56220000 0x0 0x10000>;
 		width = <640>;
 		height = <480>;
-		stride = <640>;
-		format = "nv12";
+		stride = <(640*4)>;
+		format = "r8b8g8a8";
 		status = "disabled";
 	};
 

@@ -61,7 +61,7 @@
 	status = "okay";
 };
 &framebuffer1 {
-	status = "disabled";
+	status = "okay";
 };
 &framebuffer2 {
 	status = "disabled";

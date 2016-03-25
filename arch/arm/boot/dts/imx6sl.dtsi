@@ -728,10 +728,14 @@
 				status = "disabled";
 			};
 
-			dcp: dcp@020fc000 {
-				reg = <0x020fc000 0x4000>;
-				interrupts = <0 99 0x04>;
-			};
+                        dcp: dcp@020fc000 {
+                                compatible = "fsl,imx6sl-dcp";
+                                reg = <0x020fc000 0x4000>;
+                               interrupts = <0 99 0x04>,
+                                            <0 100 0x04>,
+                                            <0 101 0x04>;
+                                status = "okay";
+                        };
 		};
 
 		aips2: aips-bus@02100000 {

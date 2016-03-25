@@ -79,5 +79,26 @@ sc_err_t sc_misc_get_control(sc_ipc_t ipc, sc_rsrc_t resource,
     return result;
 }
 
+sc_err_t sc_misc_set_ari(sc_ipc_t ipc, sc_rsrc_t resource,
+    sc_rsrc_t master, uint16_t ari, bool enable)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_MISC;
+    RPC_FUNC(&msg) = MISC_FUNC_SET_ARI;
+    RPC_D16(&msg, 0) = resource;
+    RPC_D16(&msg, 2) = master;
+    RPC_D16(&msg, 4) = ari;
+    RPC_D8(&msg, 6) = enable;
+    RPC_SIZE(&msg) = 3;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    result = RPC_R8(&msg);
+    return result;
+}
+
 /**@}*/
 

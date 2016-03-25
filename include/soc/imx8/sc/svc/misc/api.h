@@ -81,6 +81,29 @@ sc_err_t sc_misc_set_control(sc_ipc_t ipc, sc_rsrc_t resource,
 sc_err_t sc_misc_get_control(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_ctrl_t ctrl, uint32_t *val);
 
+/*!
+ * This function configures the ARI match value for PCIe/SATA resources.
+ *
+ * @param[in]     ipc         IPC handle
+ * @param[in]     resource    match resource
+ * @param[in]     master      PCIe/SATA master to match
+ * @param[in]     ari         ARI to match
+ * @param[in]     enable      enable match or not
+ *
+ * @return Returns an error code (SC_ERR_NONE = success).
+ *
+ * Return errors:
+ * - SC_PARM if arguments out of range or invalid,
+ * - SC_ERR_NOACCESS if caller's partition is not the owner or parent
+ *   of the owner of the resource and translation
+ *
+ * For PCIe, the ARI is the 16-bit value that includes the bus number,
+ * device number, and function number. For SATA, this value includes the
+ * FISType and PM_Port.
+ */
+sc_err_t sc_misc_set_ari(sc_ipc_t ipc, sc_rsrc_t resource,
+    sc_rsrc_t master, uint16_t ari, bool enable);
+
 #endif /* _SC_MISC_API_H */
 
 /**@}*/

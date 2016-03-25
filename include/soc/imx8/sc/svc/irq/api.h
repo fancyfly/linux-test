@@ -64,7 +64,8 @@ typedef enum sc_irq_alarm_e
 /* Functions */
 
 /*!
- * This function enables/disables interrupts.
+ * This function enables/disables interrupts. If pending interrupts
+ * are unmasked, an interrupt will be triggered.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     resource    MU channel
@@ -81,8 +82,8 @@ sc_err_t sc_irq_enable(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_irq_group_t group, uint32_t mask, bool enable);
 
 /*!
- * This function returns the current interrupt status. Automatically
- * clears pending interrupts.
+ * This function returns the current interrupt status (regardless if
+ * masked). Automatically clears pending interrupts.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     resource    MU channel
@@ -93,6 +94,9 @@ sc_err_t sc_irq_enable(sc_ipc_t ipc, sc_rsrc_t resource,
  *
  * Return errors:
  * - SC_PARM if group invalid
+ *
+ * The returned \a status may show interrupts pending that are
+ * currently masked.
  */
 sc_err_t sc_irq_status(sc_ipc_t ipc, sc_rsrc_t resource,
     sc_irq_group_t group, uint32_t *status);

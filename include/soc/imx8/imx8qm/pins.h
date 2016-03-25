@@ -32,465 +32,465 @@
 #define SC_P_ALL            UINT16_MAX      //!< All pins
 
 /*!
- * @name Pins Definitions
+ * @name Pin Definitions
  */
 /*@{*/
-#define SC_P_LVDS0_LVDS1_TS_SCL 0
-#define SC_P_LVDS0_LVDS1_TS_SDA 1
-#define SC_P_LVDS0_LVDS1_BL_PWM 2
-#define SC_P_LVDS0_LVDS1_GPIO0 3
-#define SC_P_LVDS0_LVDS1_GPIO1 4
-#define SC_P_LVDS2_LVDS3_TS_SCL 5
-#define SC_P_LVDS2_LVDS3_TS_SDA 6
-#define SC_P_LVDS2_LVDS3_BL_PWM 7
-#define SC_P_LVDS2_LVDS3_GPIO_0 8
-#define SC_P_LVDS2_LVDS3_GPIO_1 9
-#define SC_P_LVDS4_LVDS5_TS_SCL 10
-#define SC_P_LVDS4_LVDS5_TS_SDA 11
-#define SC_P_LVDS4_LVDS5_BL_PWM 12
-#define SC_P_LVDS4_LVDS5_GPIO_0 13
-#define SC_P_LVDS4_LVDS5_GPIO_1 14
-#define SC_P_USDHC2_DATA2 15
-#define SC_P_USDHC2_DATA3 16
-#define SC_P_USDHC2_CMD 17
-#define SC_P_USDHC2_CLK 18
-#define SC_P_USDHC2_DATA0 19
-#define SC_P_USDHC2_DATA1 20
-#define SC_P_USDHC2_CD_B 21
-#define SC_P_USDHC2_WP 22
-#define SC_P_USDHC2_LCTRL 23
-#define SC_P_USDHC2_RESET_B 24
-#define SC_P_USDHC2_VSELECT 25
-#define SC_P_USB_OTG0_OC 26
-#define SC_P_USB_OTG0_PWR_ON 27
-#define SC_P_USB_OTG1_OC 28
-#define SC_P_USB_OTG1_PWR_ON 29
-#define SC_P_UART0_RX 30
-#define SC_P_UART0_TX 31
-#define SC_P_UART0_RTS_B 32
-#define SC_P_UART0_CTS_B 33
-#define SC_P_UART1_RX 34
-#define SC_P_UART1_TX 35
-#define SC_P_UART1_RTS_B 36
-#define SC_P_UART1_CTS_B 37
-#define SC_P_UART2_RX 38
-#define SC_P_UART2_TX 39
-#define SC_P_UART2_RTS_B 40
-#define SC_P_UART2_CTS_B 41
-#define SC_P_DM_SPI0_CS0 42
-#define SC_P_DM_SPI0_CS1 43
-#define SC_P_DM_SPI0_CS2 44
-#define SC_P_DM_SPI0_CS3 45
-#define SC_P_DM_SPI0_SCLK 46
-#define SC_P_DM_SPI0_MOSI 47
-#define SC_P_DM_SPI0_MISO 48
-#define SC_P_DM_SPI1_CS0 49
-#define SC_P_DM_SPI1_CS1 50
-#define SC_P_DM_SPI1_CS2 51
-#define SC_P_DM_SPI1_CS3 52
-#define SC_P_DM_SPI1_SCLK 53
-#define SC_P_DM_SPI1_MOSI 54
-#define SC_P_DM_SPI1_MISO 55
-#define SC_P_DM_SPI2_CS0 56
-#define SC_P_DM_SPI2_CS1 57
-#define SC_P_DM_SPI2_CS2 58
-#define SC_P_DM_SPI2_CS3 59
-#define SC_P_DM_SPI2_SCLK 60
-#define SC_P_DM_SPI2_MOSI 61
-#define SC_P_DM_SPI2_MISO 62
-#define SC_P_SDMA_EXT_EVENT0 63
-#define SC_P_SDMA_EXT_EVENT1 64
-#define SC_P_CAN_TX0 65
-#define SC_P_CAN_RX0 66
-#define SC_P_CAN_TX1 67
-#define SC_P_CAN_RX1 68
-#define SC_P_AUD_SAI0_RX_DATA0 69
-#define SC_P_AUD_SAI0_RX_BCLK 70
-#define SC_P_AUD_SAI0_RX_SYNC 71
-#define SC_P_AUD_SAI0_TX_DATA0 72
-#define SC_P_AUD_SAI0_TX_BCLK 73
-#define SC_P_AUD_SAI0_TX_SYNC 74
-#define SC_P_AUD_SAI0_EXT_MCLK 75
-#define SC_P_AUD_SAI1_RX_DATA0 76
-#define SC_P_AUD_SAI1_RX_BCLK 77
-#define SC_P_AUD_SAI1_RX_SYNC 78
-#define SC_P_AUD_SAI1_TX_DATA0 79
-#define SC_P_AUD_SAI1_TX_BCLK 80
-#define SC_P_AUD_SAI1_TX_SYNC 81
-#define SC_P_AUD_SAI1_EXT_MCLK 82
-#define SC_P_AUD_SAI2_RX_DATA0 83
-#define SC_P_AUD_SAI2_RX_BCLK 84
-#define SC_P_AUD_SAI2_RX_SYNC 85
-#define SC_P_AUD_SAI2_TX_DATA0 86
-#define SC_P_AUD_SAI2_TX_BCLK 87
-#define SC_P_AUD_SAI2_TX_SYNC 88
-#define SC_P_AUD_SAI2_EXT_MCLK 89
-#define SC_P_VID0_CLK 90
-#define SC_P_VID0_D7 91
-#define SC_P_VID0_D6 92
-#define SC_P_VID0_D5 93
-#define SC_P_VID0_D4 94
-#define SC_P_VID0_D3 95
-#define SC_P_VID0_D2 96
-#define SC_P_VID0_D1 97
-#define SC_P_VID0_D0 98
-#define SC_P_VID0_VLD 99
-#define SC_P_VID0_SYNC 100
-#define SC_P_VID0_FUNC 101
-#define SC_P_VIDS0_CLK 102
-#define SC_P_VIDS0_DATA 103
-#define SC_P_VIDS0_SYNC 104
-#define SC_P_VIDS0_VLD 105
-#define SC_P_VID1_CLK 106
-#define SC_P_VID1_D7 107
-#define SC_P_VID1_D6 108
-#define SC_P_VID1_D5 109
-#define SC_P_VID1_D4 110
-#define SC_P_VID1_D3 111
-#define SC_P_VID1_D2 112
-#define SC_P_VID1_D1 113
-#define SC_P_VID1_D0 114
-#define SC_P_VID1_VLD 115
-#define SC_P_VID1_SYNC 116
-#define SC_P_VID1_FUNC 117
-#define SC_P_VIDS1_CLK 118
-#define SC_P_VIDS1_DATA 119
-#define SC_P_VIDS1_SYNC 120
-#define SC_P_VIDS1_VLD 121
-#define SC_P_LSIO_I2C0_SCL 122
-#define SC_P_LSIO_I2C0_SDA 123
-#define SC_P_LSIO_I2C0_SCLS 124
-#define SC_P_LSIO_I2C0_SDAS 125
-#define SC_P_LSIO_I2C0_HREQ 126
-#define SC_P_LSIO_I2C1_SCL 127
-#define SC_P_LSIO_I2C1_SDA 128
-#define SC_P_LSIO_I2C1_SCLS 129
-#define SC_P_LSIO_I2C1_SDAS 130
-#define SC_P_LSIO_I2C1_HREQ 131
-#define SC_P_LSIO_I2C2_SCL 132
-#define SC_P_LSIO_I2C2_SDA 133
-#define SC_P_LSIO_I2C2_SCLS 134
-#define SC_P_LSIO_I2C2_SDAS 135
-#define SC_P_LSIO_I2C2_HREQ 136
-#define SC_P_LSIO_I2C3_SCL 137
-#define SC_P_LSIO_I2C3_SDA 138
-#define SC_P_LSIO_I2C3_SCLS 139
-#define SC_P_LSIO_I2C3_SDAS 140
-#define SC_P_LSIO_I2C3_HREQ 141
-#define SC_P_LSIO_GPIO0_00 142
-#define SC_P_LSIO_GPIO0_01 143
-#define SC_P_LSIO_GPIO0_02 144
-#define SC_P_LSIO_GPIO0_03 145
-#define SC_P_LSIO_GPIO0_04 146
-#define SC_P_LSIO_GPIO0_05 147
-#define SC_P_LSIO_GPIO0_06 148
-#define SC_P_LSIO_GPIO0_07 149
-#define SC_P_LSIO_GPIO0_08 150
-#define SC_P_LSIO_GPIO0_09 151
-#define SC_P_LSIO_GPIO0_10 152
-#define SC_P_LSIO_GPIO0_11 153
-#define SC_P_LSIO_GPIO0_12 154
-#define SC_P_LSIO_GPIO0_13 155
-#define SC_P_LSIO_GPIO0_14 156
-#define SC_P_LSIO_GPIO0_15 157
-#define SC_P_LSIO_GPIO0_16 158
-#define SC_P_LSIO_GPIO0_17 159
-#define SC_P_LSIO_GPIO0_18 160
-#define SC_P_LSIO_GPIO0_19 161
-#define SC_P_LSIO_GPIO0_20 162
-#define SC_P_LSIO_GPIO0_21 163
-#define SC_P_LSIO_GPIO0_22 164
-#define SC_P_LSIO_GPIO0_23 165
-#define SC_P_LSIO_GPIO0_24 166
-#define SC_P_LSIO_GPIO0_25 167
-#define SC_P_LSIO_GPIO0_26 168
-#define SC_P_LSIO_GPIO0_27 169
-#define SC_P_LSIO_GPIO0_28 170
-#define SC_P_LSIO_GPIO0_29 171
-#define SC_P_LSIO_GPIO0_30 172
-#define SC_P_LSIO_GPIO0_31 173
-#define SC_P_LSIO_GPT0_CLK 174
-#define SC_P_LSIO_GPT0_CA0 175
-#define SC_P_LSIO_GPT0_CA1 176
-#define SC_P_LSIO_GPT0_CO0 177
-#define SC_P_LSIO_GPT0_CO1 178
-#define SC_P_LSIO_GPT0_CO2 179
-#define SC_P_LSIO_GPT1_CLK 180
-#define SC_P_LSIO_GPT1_CA0 181
-#define SC_P_LSIO_GPT1_CA1 182
-#define SC_P_LSIO_GPT1_CO0 183
-#define SC_P_LSIO_GPT1_CO1 184
-#define SC_P_LSIO_GPT1_CO2 185
-#define SC_P_LSIO_PWM0_OUT 186
-#define SC_P_LSIO_PWM1_OUT 187
-#define SC_P_LSIO_PWM2_OUT 188
-#define SC_P_LSIO_PWM3_OUT 189
-#define SC_P_M4_0_UART_RX 190
-#define SC_P_M4_0_UART_TX 191
-#define SC_P_M4_0_GPIO00 192
-#define SC_P_M4_0_GPIO01 193
-#define SC_P_M4_0_GPIO02 194
-#define SC_P_M4_0_GPIO03 195
-#define SC_P_M4_1_UART_RX 196
-#define SC_P_M4_1_UART_TX 197
-#define SC_P_M4_1_GPIO00 198
-#define SC_P_M4_1_GPIO01 199
-#define SC_P_M4_1_GPIO02 200
-#define SC_P_M4_1_GPIO03 201
-#define SC_P_SCU_XTAL_32K_OUT 202
-#define SC_P_SCU_PMIC_I2C_D 203
-#define SC_P_SCU_PMIC_I2C_C 204
-#define SC_P_SCU_GEN_GPIO00 205
-#define SC_P_SCU_GEN_GPIO01 206
-#define SC_P_SCU_GEN_GPIO02 207
-#define SC_P_SCU_GEN_GPIO03 208
-#define SC_P_SCU_GEN_GPIO04 209
-#define SC_P_SCU_GEN_GPIO05 210
-#define SC_P_SCU_GEN_GPIO06 211
-#define SC_P_SCU_GEN_GPIO07 212
-#define SC_P_SCU_GEN_GPIO08 213
-#define SC_P_SCU_GEN_GPIO09 214
-#define SC_P_SCU_GEN_GPIO10 215
-#define SC_P_SCU_GEN_GPIO11 216
-#define SC_P_SCU_GEN_GPIO12 217
-#define SC_P_SCU_GEN_GPIO13 218
-#define SC_P_SCU_GEN_GPIO14 219
-#define SC_P_SCU_GEN_GPIO15 220
-#define SC_P_SCU_UART_RX 221
-#define SC_P_SCU_UART_TX 222
-#define SC_P_SCU_UART_RTS_B 223
-#define SC_P_SCU_UART_CTS_B 224
-#define SC_P_SCU_FB_CS_B 225
-#define SC_P_SCU_FB_TBST_B 226
-#define SC_P_SCU_FB_AD_INOUT01 227
-#define SC_P_SCU_FB_AD_INOUT08 228
-#define SC_P_SCU_FB_AD_INOUT09 229
-#define SC_P_SCU_FB_AD_INOUT00 230
-#define SC_P_SCU_FB_AD_INOUT10 231
-#define SC_P_SCU_FB_AD_INOUT11 232
-#define SC_P_SCU_FB_AD_INOUT22 233
-#define SC_P_SCU_FB_AD_INOUT02 234
-#define SC_P_SCU_FB_AD_INOUT03 235
-#define SC_P_SCU_FB_AD_INOUT04 236
-#define SC_P_SCU_FB_AD_INOUT13 237
-#define SC_P_SCU_FB_AD_INOUT05 238
-#define SC_P_SCU_FB_AD_INOUT12 239
-#define SC_P_SCU_FB_AD_INOUT06 240
-#define SC_P_SCU_FB_TS_B 241
-#define SC_P_SCU_FB_AD_INOUT07 242
-#define SC_P_SCU_FB_AD_INOUT14 243
-#define SC_P_SCU_FB_AD_INOUT23 244
-#define SC_P_SCU_FB_R_WB 245
-#define SC_P_SCU_FB_TA_B 246
-#define SC_P_SCU_FB_OE_B 247
-#define SC_P_SCU_FB_CLK 248
-#define SC_P_SCU_FB_AD_INOUT15 249
-#define SC_P_SCU_FB_AD_INOUT16 250
-#define SC_P_SCU_FB_AD_INOUT19 251
-#define SC_P_SCU_FB_AD_INOUT20 252
-#define SC_P_SCU_FB_AD_INOUT18 253
-#define SC_P_SCU_FB_AD_INOUT17 254
-#define SC_P_SCU_FB_AD_INOUT21 255
-#define SC_P_SCU_FB_BCLKEN 256
-#define SC_P_SCU_FB_TEA_B 257
-#define SC_P_SCU_FB_ALE 258
-#define SC_P_SCU_TPIU_TRACE_CLK 259
-#define SC_P_SCU_TPIU_TRACE_D07 260
-#define SC_P_SCU_TPIU_TRACE_D06 261
-#define SC_P_SCU_TPIU_TRACE_D05 262
-#define SC_P_SCU_TPIU_TRACE_D04 263
-#define SC_P_SCU_TPIU_TRACE_D03 264
-#define SC_P_SCU_TPIU_TRACE_D02 265
-#define SC_P_SCU_TPIU_TRACE_D01 266
-#define SC_P_SCU_TPIU_TRACE_D00 267
-#define SC_P_SCU_TPIU_TRACE_D15 268
-#define SC_P_SCU_TPIU_TRACE_D14 269
-#define SC_P_SCU_TPIU_TRACE_D13 270
-#define SC_P_SCU_TPIU_TRACE_D12 271
-#define SC_P_SCU_TPIU_TRACE_D11 272
-#define SC_P_SCU_TPIU_TRACE_D10 273
-#define SC_P_SCU_TPIU_TRACE_D09 274
-#define SC_P_SCU_TPIU_TRACE_D08 275
-#define SC_P_SCU_TPIU_TRACE_CTL 276
-#define SC_P_LCD_PAR_RESET 277
-#define SC_P_LCD_PAR_CLK 278
-#define SC_P_LCD_PAR_DATA00 279
-#define SC_P_LCD_PAR_DATA01 280
-#define SC_P_LCD_PAR_DATA02 281
-#define SC_P_LCD_PAR_DATA03 282
-#define SC_P_LCD_PAR_DATA04 283
-#define SC_P_LCD_PAR_DATA05 284
-#define SC_P_LCD_PAR_DATA06 285
-#define SC_P_LCD_PAR_DATA07 286
-#define SC_P_LCD_PAR_DATA08 287
-#define SC_P_LCD_PAR_ENABLE 288
-#define SC_P_LCD_PAR_DATA09 289
-#define SC_P_LCD_PAR_DATA10 290
-#define SC_P_LCD_PAR_DATA11 291
-#define SC_P_LCD_PAR_DATA12 292
-#define SC_P_LCD_PAR_DATA13 293
-#define SC_P_LCD_PAR_DATA14 294
-#define SC_P_LCD_PAR_DATA15 295
-#define SC_P_LCD_PAR_DATA16 296
-#define SC_P_LCD_PAR_DATA17 297
-#define SC_P_LCD_PAR_DATA18 298
-#define SC_P_LCD_PAR_DATA19 299
-#define SC_P_LCD_PAR_DATA20 300
-#define SC_P_LCD_PAR_DATA21 301
-#define SC_P_LCD_PAR_DATA22 302
-#define SC_P_LCD_PAR_DATA23 303
-#define SC_P_LCD_PAR_DATA24 304
-#define SC_P_LCD_PAR_DATA25 305
-#define SC_P_LCD_PAR_DATA26 306
-#define SC_P_LCD_PAR_DATA27 307
-#define SC_P_LCD_PAR_DATA28 308
-#define SC_P_LCD_PAR_DATA29 309
-#define SC_P_LCD_PAR_VSYNC 310
-#define SC_P_LCD_PAR_HSYNC 311
-#define SC_P_IMG0_PAR_CLK 312
-#define SC_P_IMG0_PAR_VSYNC 313
-#define SC_P_IMG0_PAR_HSYNC 314
-#define SC_P_IMG0_PAR_DATA23 315
-#define SC_P_IMG0_PAR_DATA22 316
-#define SC_P_IMG0_PAR_DATA21 317
-#define SC_P_IMG0_PAR_DATA20 318
-#define SC_P_IMG0_PAR_DATA19 319
-#define SC_P_IMG0_PAR_DATA18 320
-#define SC_P_IMG0_PAR_DATA17 321
-#define SC_P_IMG0_PAR_DATA16 322
-#define SC_P_IMG0_PAR_DATA15 323
-#define SC_P_IMG0_PAR_DATA14 324
-#define SC_P_IMG0_PAR_DATA13 325
-#define SC_P_IMG0_PAR_DATA12 326
-#define SC_P_IMG0_PAR_DATA11 327
-#define SC_P_IMG0_PAR_DATA10 328
-#define SC_P_IMG0_PAR_DATA9 329
-#define SC_P_IMG0_PAR_DATA8 330
-#define SC_P_IMG0_PAR_DATA7 331
-#define SC_P_IMG0_PAR_DATA6 332
-#define SC_P_IMG0_PAR_DATA5 333
-#define SC_P_IMG0_PAR_DATA4 334
-#define SC_P_IMG0_PAR_DATA3 335
-#define SC_P_IMG0_PAR_DATA2 336
-#define SC_P_IMG0_PAR_DATA1 337
-#define SC_P_IMG0_PAR_DATA0 338
-#define SC_P_IMG0_PAR_MCLK 339
-#define SC_P_IMG0_PAR_FPOL 340
-#define SC_P_IMG0_PAR_ENABLE 341
-#define SC_P_IMG0_PAR_RESET 342
-#define SC_P_IMG0_PAR_GPIO 343
-#define SC_P_IMG0_PAR_SCL 344
-#define SC_P_IMG0_PAR_SDA 345
-#define SC_P_IMG1_PAR_CLK 346
-#define SC_P_IMG1_PAR_VSYNC 347
-#define SC_P_IMG1_PAR_HSYNC 348
-#define SC_P_IMG1_PAR_DATA23 349
-#define SC_P_IMG1_PAR_DATA22 350
-#define SC_P_IMG1_PAR_DATA21 351
-#define SC_P_IMG1_PAR_DATA20 352
-#define SC_P_IMG1_PAR_DATA19 353
-#define SC_P_IMG1_PAR_DATA18 354
-#define SC_P_IMG1_PAR_DATA17 355
-#define SC_P_IMG1_PAR_DATA16 356
-#define SC_P_IMG1_PAR_DATA15 357
-#define SC_P_IMG1_PAR_DATA14 358
-#define SC_P_IMG1_PAR_DATA13 359
-#define SC_P_IMG1_PAR_DATA12 360
-#define SC_P_IMG1_PAR_DATA11 361
-#define SC_P_IMG1_PAR_DATA10 362
-#define SC_P_IMG1_PAR_DATA9 363
-#define SC_P_IMG1_PAR_DATA8 364
-#define SC_P_IMG1_PAR_DATA7 365
-#define SC_P_IMG1_PAR_DATA6 366
-#define SC_P_IMG1_PAR_DATA5 367
-#define SC_P_IMG1_PAR_DATA4 368
-#define SC_P_IMG1_PAR_DATA3 369
-#define SC_P_IMG1_PAR_DATA2 370
-#define SC_P_IMG1_PAR_DATA1 371
-#define SC_P_IMG1_PAR_DATA0 372
-#define SC_P_IMG1_PAR_MCLK 373
-#define SC_P_IMG1_PAR_FPOL 374
-#define SC_P_IMG1_PAR_ENABLE 375
-#define SC_P_IMG1_PAR_RESET 376
-#define SC_P_IMG1_PAR_GPIO 377
-#define SC_P_IMG1_PAR_SCL 378
-#define SC_P_IMG1_PAR_SDA 379
-#define SC_P_QSPI0A_DATA0 380
-#define SC_P_QSPI0A_DATA1 381
-#define SC_P_QSPI0A_DATA2 382
-#define SC_P_QSPI0A_DATA3 383
-#define SC_P_QSPI0A_DQS 384
-#define SC_P_QSPI0A_SCLK 385
-#define SC_P_QSPI0A_SS1 386
-#define SC_P_QSPI0A_SS0 387
-#define SC_P_QSPI0B_DATA0 388
-#define SC_P_QSPI0B_DATA1 389
-#define SC_P_QSPI0B_DATA2 390
-#define SC_P_QSPI0B_DATA3 391
-#define SC_P_QSPI0B_DQS 392
-#define SC_P_QSPI0B_SCLK 393
-#define SC_P_QSPI0B_SS0 394
-#define SC_P_QSPI0B_SS1 395
-#define SC_P_USDHC0_DATA2 396
-#define SC_P_USDHC0_DATA3 397
-#define SC_P_USDHC0_DATA4 398
-#define SC_P_USDHC0_CMD 399
-#define SC_P_USDHC0_DATA5 400
-#define SC_P_USDHC0_CLK 401
-#define SC_P_USDHC0_DATA6 402
-#define SC_P_USDHC0_DATA7 403
-#define SC_P_USDHC0_DATA0 404
-#define SC_P_USDHC0_DATA1 405
-#define SC_P_USDHC0_CD_B 406
-#define SC_P_USDHC0_WP 407
-#define SC_P_USDHC0_RESET_B 408
-#define SC_P_USDHC1_DATA2 409
-#define SC_P_USDHC1_DATA3 410
-#define SC_P_USDHC1_CMD 411
-#define SC_P_USDHC1_CLK 412
-#define SC_P_USDHC1_DATA0 413
-#define SC_P_USDHC1_DATA1 414
-#define SC_P_USDHC1_CD_B 415
-#define SC_P_USDHC1_WP 416
-#define SC_P_USDHC1_LCTRL 417
-#define SC_P_USDHC1_RESET_B 418
-#define SC_P_USDHC1_VSELECT 419
-#define SC_P_ENET0_MDC 420
-#define SC_P_ENET0_MDIO 421
-#define SC_P_ENET0_RGMII_RD3 422
-#define SC_P_ENET0_RGMII_RD2 423
-#define SC_P_ENET0_RGMII_RD1 424
-#define SC_P_ENET0_RGMII_RD0 425
-#define SC_P_ENET0_RGMII_RXC 426
-#define SC_P_ENET0_RGMII_RX_CTL 427
-#define SC_P_ENET0_RGMII_TX_CTL 428
-#define SC_P_ENET0_RGMII_TXC 429
-#define SC_P_ENET0_RGMII_TD0 430
-#define SC_P_ENET0_RGMII_TD1 431
-#define SC_P_ENET0_RGMII_TD2 432
-#define SC_P_ENET0_RGMII_TD3 433
-#define SC_P_ENET0_1588_EVENT0_IN 434
-#define SC_P_ENET0_1588_EVENT1_IN 435
-#define SC_P_ENET0_1588_EVENT0_OUT 436
-#define SC_P_ENET0_1588_EVENT1_OUT 437
-#define SC_P_ENET1_MDC 438
-#define SC_P_ENET1_MDIO 439
-#define SC_P_ENET1_RGMII_RD3 440
-#define SC_P_ENET1_RGMII_RD2 441
-#define SC_P_ENET1_RGMII_RD1 442
-#define SC_P_ENET1_RGMII_RD0 443
-#define SC_P_ENET1_RGMII_RXC 444
-#define SC_P_ENET1_RGMII_RX_CTL 445
-#define SC_P_ENET1_RGMII_TX_CTL 446
-#define SC_P_ENET1_RGMII_TXC 447
-#define SC_P_ENET1_RGMII_TD0 448
-#define SC_P_ENET1_RGMII_TD1 449
-#define SC_P_ENET1_RGMII_TD2 450
-#define SC_P_ENET1_RGMII_TD3 451
-#define SC_P_ENET1_1588_EVENT0_IN 452
-#define SC_P_ENET1_1588_EVENT1_IN 453
-#define SC_P_ENET1_1588_EVENT0_OUT 454
-#define SC_P_ENET1_1588_EVENT1_OUT 455
+#define SC_P_LVDS0_LVDS1_TS_SCL        0    //!< ss_di_lvds_0.lpi2c0.SCL
+#define SC_P_LVDS0_LVDS1_TS_SDA        1    //!< ss_di_lvds_0.lpi2c0.SDA
+#define SC_P_LVDS0_LVDS1_BL_PWM        2    //!< ss_di_lvds_0.pwm.OUT
+#define SC_P_LVDS0_LVDS1_GPIO0         3    //!< ss_di_lvds_0.gpio.IO[0]
+#define SC_P_LVDS0_LVDS1_GPIO1         4    //!< ss_di_lvds_0.gpio.IO[1]
+#define SC_P_LVDS2_LVDS3_TS_SCL        5    //!< ss_di_lvds_1.lpi2c0.SCL
+#define SC_P_LVDS2_LVDS3_TS_SDA        6    //!< ss_di_lvds_1.lpi2c0.SDA
+#define SC_P_LVDS2_LVDS3_BL_PWM        7    //!< ss_di_lvds_1.pwm.OUT
+#define SC_P_LVDS2_LVDS3_GPIO_0        8    //!< ss_di_lvds_1.gpio.IO[0]
+#define SC_P_LVDS2_LVDS3_GPIO_1        9    //!< ss_di_lvds_1.gpio.IO[1]
+#define SC_P_LVDS4_LVDS5_TS_SCL        10   //!< ss_di_lvds_2.lpi2c0.SCL
+#define SC_P_LVDS4_LVDS5_TS_SDA        11   //!< ss_di_lvds_2.lpi2c0.SDA
+#define SC_P_LVDS4_LVDS5_BL_PWM        12   //!< ss_di_lvds_2.pwm.OUT
+#define SC_P_LVDS4_LVDS5_GPIO_0        13   //!< ss_di_lvds_2.gpio.IO[0]
+#define SC_P_LVDS4_LVDS5_GPIO_1        14   //!< ss_di_lvds_2.gpio.IO[1]
+#define SC_P_USDHC2_DATA2              15   //!< ss_megawrap.usdhc3.DATA[2]
+#define SC_P_USDHC2_DATA3              16   //!< ss_megawrap.usdhc3.DATA[3]
+#define SC_P_USDHC2_CMD                17   //!< ss_megawrap.usdhc3.CMD
+#define SC_P_USDHC2_CLK                18   //!< ss_megawrap.usdhc3.CLK
+#define SC_P_USDHC2_DATA0              19   //!< ss_megawrap.usdhc3.DATA[0]
+#define SC_P_USDHC2_DATA1              20   //!< ss_megawrap.usdhc3.DATA[1]
+#define SC_P_USDHC2_CD_B               21   //!< ss_megawrap.usdhc3.CD_B
+#define SC_P_USDHC2_WP                 22   //!< ss_megawrap.usdhc3.WP
+#define SC_P_USDHC2_LCTRL              23   //!< ss_megawrap.usdhc3.LCTRL
+#define SC_P_USDHC2_RESET_B            24   //!< ss_megawrap.usdhc3.RESET_B
+#define SC_P_USDHC2_VSELECT            25   //!< ss_megawrap.usdhc3.VSELECT
+#define SC_P_USB_OTG0_OC               26   //!< ss_megawrap.usb_otg1.OC
+#define SC_P_USB_OTG0_PWR_ON           27   //!< ss_megawrap.usb_otg1.PWR
+#define SC_P_USB_OTG1_OC               28   //!< ss_megawrap.usb_otg2.OC
+#define SC_P_USB_OTG1_PWR_ON           29   //!< ss_megawrap.usb_otg2.PWR
+#define SC_P_UART0_RX                  30   //!< ss_megawrap.uart1.RX_DATA
+#define SC_P_UART0_TX                  31   //!< ss_megawrap.uart1.TX_DATA
+#define SC_P_UART0_RTS_B               32   //!< ss_megawrap.uart1.RTS_B
+#define SC_P_UART0_CTS_B               33   //!< ss_megawrap.uart1.CTS_B
+#define SC_P_UART1_RX                  34   //!< ss_megawrap.uart2.RX_DATA
+#define SC_P_UART1_TX                  35   //!< ss_megawrap.uart2.TX_DATA
+#define SC_P_UART1_RTS_B               36   //!< ss_megawrap.uart2.RTS_B
+#define SC_P_UART1_CTS_B               37   //!< ss_megawrap.uart2.CTS_B
+#define SC_P_UART2_RX                  38   //!< ss_megawrap.uart3.RX_DATA
+#define SC_P_UART2_TX                  39   //!< ss_megawrap.uart3.TX_DATA
+#define SC_P_UART2_RTS_B               40   //!< ss_megawrap.uart3.RTS_B
+#define SC_P_UART2_CTS_B               41   //!< ss_megawrap.uart3.CTS_B
+#define SC_P_DM_SPI0_CS0               42   //!< ss_megawrap.ecspi1.SS0
+#define SC_P_DM_SPI0_CS1               43   //!< ss_megawrap.ecspi1.SS1
+#define SC_P_DM_SPI0_CS2               44   //!< ss_megawrap.ecspi1.SS2
+#define SC_P_DM_SPI0_CS3               45   //!< ss_megawrap.ecspi1.SS3
+#define SC_P_DM_SPI0_SCLK              46   //!< ss_megawrap.ecspi1.SCLK
+#define SC_P_DM_SPI0_MOSI              47   //!< ss_megawrap.ecspi1.MOSI
+#define SC_P_DM_SPI0_MISO              48   //!< ss_megawrap.ecspi1.MISO
+#define SC_P_DM_SPI1_CS0               49   //!< ss_megawrap.ecspi2.SS0
+#define SC_P_DM_SPI1_CS1               50   //!< ss_megawrap.ecspi2.SS1
+#define SC_P_DM_SPI1_CS2               51   //!< ss_megawrap.ecspi2.SS2
+#define SC_P_DM_SPI1_CS3               52   //!< ss_megawrap.ecspi2.SS3
+#define SC_P_DM_SPI1_SCLK              53   //!< ss_megawrap.ecspi2.SCLK
+#define SC_P_DM_SPI1_MOSI              54   //!< ss_megawrap.ecspi2.MOSI
+#define SC_P_DM_SPI1_MISO              55   //!< ss_megawrap.ecspi2.MISO
+#define SC_P_DM_SPI2_CS0               56   //!< ss_megawrap.ecspi3.SS0
+#define SC_P_DM_SPI2_CS1               57   //!< ss_megawrap.ecspi3.SS1
+#define SC_P_DM_SPI2_CS2               58   //!< ss_megawrap.ecspi3.SS2
+#define SC_P_DM_SPI2_CS3               59   //!< ss_megawrap.ecspi3.SS3
+#define SC_P_DM_SPI2_SCLK              60   //!< ss_megawrap.ecspi3.SCLK
+#define SC_P_DM_SPI2_MOSI              61   //!< ss_megawrap.ecspi3.MOSI
+#define SC_P_DM_SPI2_MISO              62   //!< ss_megawrap.ecspi3.MISO
+#define SC_P_SDMA_EXT_EVENT0           63   //!< ss_megawrap.sdma.EXT_EVENT[0]
+#define SC_P_SDMA_EXT_EVENT1           64   //!< ss_megawrap.sdma.EXT_EVENT[1]
+#define SC_P_CAN_TX0                   65   //!< ss_megawrap.can1.TX
+#define SC_P_CAN_RX0                   66   //!< ss_megawrap.can1.RX
+#define SC_P_CAN_TX1                   67   //!< ss_megawrap.can2.TX
+#define SC_P_CAN_RX1                   68   //!< ss_megawrap.can2.RX
+#define SC_P_AUD_SAI0_RX_DATA0         69   //!< ss_megawrap.sai1.RX_DATA[0]
+#define SC_P_AUD_SAI0_RX_BCLK          70   //!< ss_megawrap.sai1.RX_BCLK
+#define SC_P_AUD_SAI0_RX_SYNC          71   //!< ss_megawrap.sai1.RX_SYNC
+#define SC_P_AUD_SAI0_TX_DATA0         72   //!< ss_megawrap.sai1.TX_DATA[0]
+#define SC_P_AUD_SAI0_TX_BCLK          73   //!< ss_megawrap.sai1.TX_BCLK
+#define SC_P_AUD_SAI0_TX_SYNC          74   //!< ss_megawrap.sai1.TX_SYNC
+#define SC_P_AUD_SAI0_EXT_MCLK         75   //!< ss_megawrap.sai1.MCLK
+#define SC_P_AUD_SAI1_RX_DATA0         76   //!< ss_megawrap.sai2.RX_DATA[0]
+#define SC_P_AUD_SAI1_RX_BCLK          77   //!< ss_megawrap.sai2.RX_BCLK
+#define SC_P_AUD_SAI1_RX_SYNC          78   //!< ss_megawrap.sai2.RX_SYNC
+#define SC_P_AUD_SAI1_TX_DATA0         79   //!< ss_megawrap.sai2.TX_DATA[0]
+#define SC_P_AUD_SAI1_TX_BCLK          80   //!< ss_megawrap.sai2.TX_BCLK
+#define SC_P_AUD_SAI1_TX_SYNC          81   //!< ss_megawrap.sai2.TX_SYNC
+#define SC_P_AUD_SAI1_EXT_MCLK         82   //!< ss_megawrap.sai2.MCLK
+#define SC_P_AUD_SAI2_RX_DATA0         83   //!< ss_megawrap.sai3.RX_DATA[0]
+#define SC_P_AUD_SAI2_RX_BCLK          84   //!< ss_megawrap.sai3.RX_BCLK
+#define SC_P_AUD_SAI2_RX_SYNC          85   //!< ss_megawrap.sai3.RX_SYNC
+#define SC_P_AUD_SAI2_TX_DATA0         86   //!< ss_megawrap.sai3.TX_DATA[0]
+#define SC_P_AUD_SAI2_TX_BCLK          87   //!< ss_megawrap.sai3.TX_BCLK
+#define SC_P_AUD_SAI2_TX_SYNC          88   //!< ss_megawrap.sai3.TX_SYNC
+#define SC_P_AUD_SAI2_EXT_MCLK         89   //!< ss_megawrap.sai3.MCLK
+#define SC_P_VID0_CLK                  90   //!< ss_zpu.pts0.CLK
+#define SC_P_VID0_D7                   91   //!< ss_zpu.pts0.DATA[7]
+#define SC_P_VID0_D6                   92   //!< ss_zpu.pts0.DATA[6]
+#define SC_P_VID0_D5                   93   //!< ss_zpu.pts0.DATA[5]
+#define SC_P_VID0_D4                   94   //!< ss_zpu.pts0.DATA[4]
+#define SC_P_VID0_D3                   95   //!< ss_zpu.pts0.DATA[3]
+#define SC_P_VID0_D2                   96   //!< ss_zpu.pts0.DATA[2]
+#define SC_P_VID0_D1                   97   //!< ss_zpu.pts0.DATA[1]
+#define SC_P_VID0_D0                   98   //!< ss_zpu.pts0.DATA[0]
+#define SC_P_VID0_VLD                  99   //!< ss_zpu.pts0.VLD
+#define SC_P_VID0_SYNC                 100  //!< ss_zpu.pts0.SYNC
+#define SC_P_VID0_FUNC                 101  //!< ss_zpu.pts0.FUNC
+#define SC_P_VIDS0_CLK                 102  //!< ss_zpu.sts0.CLK
+#define SC_P_VIDS0_DATA                103  //!< ss_zpu.sts0.DATA
+#define SC_P_VIDS0_SYNC                104  //!< ss_zpu.sts0.SYNC
+#define SC_P_VIDS0_VLD                 105  //!< ss_zpu.sts0.VLD
+#define SC_P_VID1_CLK                  106  //!< ss_zpu.pts1.CLK
+#define SC_P_VID1_D7                   107  //!< ss_zpu.pts1.DATA[7]
+#define SC_P_VID1_D6                   108  //!< ss_zpu.pts1.DATA[6]
+#define SC_P_VID1_D5                   109  //!< ss_zpu.pts1.DATA[5]
+#define SC_P_VID1_D4                   110  //!< ss_zpu.pts1.DATA[4]
+#define SC_P_VID1_D3                   111  //!< ss_zpu.pts1.DATA[3]
+#define SC_P_VID1_D2                   112  //!< ss_zpu.pts1.DATA[2]
+#define SC_P_VID1_D1                   113  //!< ss_zpu.pts1.DATA[1]
+#define SC_P_VID1_D0                   114  //!< ss_zpu.pts1.DATA[0]
+#define SC_P_VID1_VLD                  115  //!< ss_zpu.pts1.VLD
+#define SC_P_VID1_SYNC                 116  //!< ss_zpu.pts1.SYNC
+#define SC_P_VID1_FUNC                 117  //!< ss_zpu.pts1.FUNC
+#define SC_P_VIDS1_CLK                 118  //!< ss_zpu.lpuart.RXD
+#define SC_P_VIDS1_DATA                119  //!< ss_zpu.lpuart.TXD
+#define SC_P_VIDS1_SYNC                120  //!< ss_zpu.lpuart.RTS_B
+#define SC_P_VIDS1_VLD                 121  //!< ss_zpu.lpuart.CTS_B
+#define SC_P_LSIO_I2C0_SCL             122  //!< ss_lsio.lpi2c0.SCL
+#define SC_P_LSIO_I2C0_SDA             123  //!< ss_lsio.lpi2c0.SDA
+#define SC_P_LSIO_I2C0_SCLS            124  //!< ss_lsio.lpi2c0.SCLS
+#define SC_P_LSIO_I2C0_SDAS            125  //!< ss_lsio.lpi2c0.SDAS
+#define SC_P_LSIO_I2C0_HREQ            126  //!< ss_lsio.lpi2c0.HREQ
+#define SC_P_LSIO_I2C1_SCL             127  //!< ss_lsio.lpi2c1.SCL
+#define SC_P_LSIO_I2C1_SDA             128  //!< ss_lsio.lpi2c1.SDA
+#define SC_P_LSIO_I2C1_SCLS            129  //!< ss_lsio.lpi2c1.SCLS
+#define SC_P_LSIO_I2C1_SDAS            130  //!< ss_lsio.lpi2c1.SDAS
+#define SC_P_LSIO_I2C1_HREQ            131  //!< ss_lsio.lpi2c1.HREQ
+#define SC_P_LSIO_I2C2_SCL             132  //!< ss_lsio.lpi2c2.SCL
+#define SC_P_LSIO_I2C2_SDA             133  //!< ss_lsio.lpi2c2.SDA
+#define SC_P_LSIO_I2C2_SCLS            134  //!< ss_lsio.lpi2c2.SCLS
+#define SC_P_LSIO_I2C2_SDAS            135  //!< ss_lsio.lpi2c2.SDAS
+#define SC_P_LSIO_I2C2_HREQ            136  //!< ss_lsio.lpi2c2.HREQ
+#define SC_P_LSIO_I2C3_SCL             137  //!< ss_lsio.lpi2c3.SCL
+#define SC_P_LSIO_I2C3_SDA             138  //!< ss_lsio.lpi2c3.SDA
+#define SC_P_LSIO_I2C3_SCLS            139  //!< ss_lsio.lpi2c3.SCLS
+#define SC_P_LSIO_I2C3_SDAS            140  //!< ss_lsio.lpi2c3.SDAS
+#define SC_P_LSIO_I2C3_HREQ            141  //!< ss_lsio.lpi2c3.HREQ
+#define SC_P_LSIO_GPIO0_00             142  //!< ss_lsio.gpio0.IO[0]
+#define SC_P_LSIO_GPIO0_01             143  //!< ss_lsio.gpio0.IO[1]
+#define SC_P_LSIO_GPIO0_02             144  //!< ss_lsio.gpio0.IO[2]
+#define SC_P_LSIO_GPIO0_03             145  //!< ss_lsio.gpio0.IO[3]
+#define SC_P_LSIO_GPIO0_04             146  //!< ss_lsio.gpio0.IO[4]
+#define SC_P_LSIO_GPIO0_05             147  //!< ss_lsio.gpio0.IO[5]
+#define SC_P_LSIO_GPIO0_06             148  //!< ss_lsio.gpio0.IO[6]
+#define SC_P_LSIO_GPIO0_07             149  //!< ss_lsio.gpio0.IO[7]
+#define SC_P_LSIO_GPIO0_08             150  //!< ss_lsio.gpio0.IO[8]
+#define SC_P_LSIO_GPIO0_09             151  //!< ss_lsio.gpio0.IO[9]
+#define SC_P_LSIO_GPIO0_10             152  //!< ss_lsio.gpio0.IO[10]
+#define SC_P_LSIO_GPIO0_11             153  //!< ss_lsio.gpio0.IO[11]
+#define SC_P_LSIO_GPIO0_12             154  //!< ss_lsio.gpio0.IO[12]
+#define SC_P_LSIO_GPIO0_13             155  //!< ss_lsio.gpio0.IO[13]
+#define SC_P_LSIO_GPIO0_14             156  //!< ss_lsio.gpio0.IO[14]
+#define SC_P_LSIO_GPIO0_15             157  //!< ss_lsio.gpio0.IO[15]
+#define SC_P_LSIO_GPIO0_16             158  //!< ss_lsio.gpio0.IO[16]
+#define SC_P_LSIO_GPIO0_17             159  //!< ss_lsio.gpio0.IO[17]
+#define SC_P_LSIO_GPIO0_18             160  //!< ss_lsio.gpio0.IO[18]
+#define SC_P_LSIO_GPIO0_19             161  //!< ss_lsio.gpio0.IO[19]
+#define SC_P_LSIO_GPIO0_20             162  //!< ss_lsio.gpio0.IO[20]
+#define SC_P_LSIO_GPIO0_21             163  //!< ss_lsio.gpio0.IO[21]
+#define SC_P_LSIO_GPIO0_22             164  //!< ss_lsio.gpio0.IO[22]
+#define SC_P_LSIO_GPIO0_23             165  //!< ss_lsio.gpio0.IO[23]
+#define SC_P_LSIO_GPIO0_24             166  //!< ss_lsio.gpio0.IO[24]
+#define SC_P_LSIO_GPIO0_25             167  //!< ss_lsio.gpio0.IO[25]
+#define SC_P_LSIO_GPIO0_26             168  //!< ss_lsio.gpio0.IO[26]
+#define SC_P_LSIO_GPIO0_27             169  //!< ss_lsio.gpio0.IO[27]
+#define SC_P_LSIO_GPIO0_28             170  //!< ss_lsio.gpio0.IO[28]
+#define SC_P_LSIO_GPIO0_29             171  //!< ss_lsio.gpio0.IO[29]
+#define SC_P_LSIO_GPIO0_30             172  //!< ss_lsio.gpio0.IO[30]
+#define SC_P_LSIO_GPIO0_31             173  //!< ss_lsio.gpio0.IO[31]
+#define SC_P_LSIO_GPT0_CLK             174  //!< ss_lsio.gpt0.CLK
+#define SC_P_LSIO_GPT0_CA0             175  //!< ss_lsio.gpt0.CAPTURE[0]
+#define SC_P_LSIO_GPT0_CA1             176  //!< ss_lsio.gpt0.CAPTURE[1]
+#define SC_P_LSIO_GPT0_CO0             177  //!< ss_lsio.gpt0.COMPARE[0]
+#define SC_P_LSIO_GPT0_CO1             178  //!< ss_lsio.gpt0.COMPARE[1]
+#define SC_P_LSIO_GPT0_CO2             179  //!< ss_lsio.gpt0.COMPARE[2]
+#define SC_P_LSIO_GPT1_CLK             180  //!< ss_lsio.gpt1.CLK
+#define SC_P_LSIO_GPT1_CA0             181  //!< ss_lsio.gpt1.CAPTURE[0]
+#define SC_P_LSIO_GPT1_CA1             182  //!< ss_lsio.gpt1.CAPTURE[1]
+#define SC_P_LSIO_GPT1_CO0             183  //!< ss_lsio.gpt1.COMPARE[0]
+#define SC_P_LSIO_GPT1_CO1             184  //!< ss_lsio.gpt1.COMPARE[1]
+#define SC_P_LSIO_GPT1_CO2             185  //!< ss_lsio.gpt1.COMPARE[2]
+#define SC_P_LSIO_PWM0_OUT             186  //!< ss_lsio.pwm0.OUT
+#define SC_P_LSIO_PWM1_OUT             187  //!< ss_lsio.pwm1.OUT
+#define SC_P_LSIO_PWM2_OUT             188  //!< ss_lsio.pwm2.OUT
+#define SC_P_LSIO_PWM3_OUT             189  //!< ss_lsio.pwm3.OUT
+#define SC_P_M4_0_UART_RX              190  //!< ss_cm4_0.lpuart1.RXD
+#define SC_P_M4_0_UART_TX              191  //!< ss_cm4_0.lpuart1.TXD
+#define SC_P_M4_0_GPIO00               192  //!< ss_cm4_0.gpio.IO[0]
+#define SC_P_M4_0_GPIO01               193  //!< ss_cm4_0.gpio.IO[1]
+#define SC_P_M4_0_GPIO02               194  //!< ss_cm4_0.gpio.IO[2]
+#define SC_P_M4_0_GPIO03               195  //!< ss_cm4_0.gpio.IO[3]
+#define SC_P_M4_1_UART_RX              196  //!< ss_cm4_1.lpuart1.RXD
+#define SC_P_M4_1_UART_TX              197  //!< ss_cm4_1.lpuart1.TXD
+#define SC_P_M4_1_GPIO00               198  //!< ss_cm4_1.gpio.IO[0]
+#define SC_P_M4_1_GPIO01               199  //!< ss_cm4_1.gpio.IO[1]
+#define SC_P_M4_1_GPIO02               200  //!< ss_cm4_1.gpio.IO[2]
+#define SC_P_M4_1_GPIO03               201  //!< ss_cm4_1.gpio.IO[3]
+#define SC_P_SCU_XTAL_32K_OUT          202  //!< ss_scu.dsc.XTAL32K_OUT
+#define SC_P_SCU_PMIC_I2C_D            203  //!< ss_scu.lpi2c1.SDA
+#define SC_P_SCU_PMIC_I2C_C            204  //!< ss_scu.lpi2c1.SCL
+#define SC_P_SCU_GEN_GPIO00            205  //!< ss_scu.gpio.IO[0]
+#define SC_P_SCU_GEN_GPIO01            206  //!< ss_scu.gpio.IO[1]
+#define SC_P_SCU_GEN_GPIO02            207  //!< ss_scu.gpio.IO[2]
+#define SC_P_SCU_GEN_GPIO03            208  //!< ss_scu.gpio.IO[3]
+#define SC_P_SCU_GEN_GPIO04            209  //!< ss_scu.gpio.IO[4]
+#define SC_P_SCU_GEN_GPIO05            210  //!< ss_scu.gpio.IO[5]
+#define SC_P_SCU_GEN_GPIO06            211  //!< ss_scu.gpio.IO[6]
+#define SC_P_SCU_GEN_GPIO07            212  //!< ss_scu.gpio.IO[7]
+#define SC_P_SCU_GEN_GPIO08            213  //!< ss_scu.gpio.IO[8]
+#define SC_P_SCU_GEN_GPIO09            214  //!< ss_scu.gpio.IO[9]
+#define SC_P_SCU_GEN_GPIO10            215  //!< ss_scu.gpio.IO[10]
+#define SC_P_SCU_GEN_GPIO11            216  //!< ss_scu.gpio.IO[11]
+#define SC_P_SCU_GEN_GPIO12            217  //!< ss_scu.gpio.IO[12]
+#define SC_P_SCU_GEN_GPIO13            218  //!< ss_scu.gpio.IO[13]
+#define SC_P_SCU_GEN_GPIO14            219  //!< ss_scu.gpio.IO[14]
+#define SC_P_SCU_GEN_GPIO15            220  //!< ss_scu.gpio.IO[15]
+#define SC_P_SCU_UART_RX               221  //!< ss_scu.lpuart1.RXD
+#define SC_P_SCU_UART_TX               222  //!< ss_scu.lpuart1.TXD
+#define SC_P_SCU_UART_RTS_B            223  //!< ss_scu.lpuart1.RTS_B
+#define SC_P_SCU_UART_CTS_B            224  //!< ss_scu.lpuart1.CTS_B
+#define SC_P_SCU_FB_CS_B               225  //!< ss_scu.flexbus.CS[0]
+#define SC_P_SCU_FB_TBST_B             226  //!< ss_scu.flexbus.TBST_B
+#define SC_P_SCU_FB_AD_INOUT01         227  //!< ss_scu.flexbus.D[1]
+#define SC_P_SCU_FB_AD_INOUT08         228  //!< ss_scu.flexbus.D[8]
+#define SC_P_SCU_FB_AD_INOUT09         229  //!< ss_scu.flexbus.D[9]
+#define SC_P_SCU_FB_AD_INOUT00         230  //!< ss_scu.flexbus.D[0]
+#define SC_P_SCU_FB_AD_INOUT10         231  //!< ss_scu.flexbus.D[10]
+#define SC_P_SCU_FB_AD_INOUT11         232  //!< ss_scu.flexbus.D[11]
+#define SC_P_SCU_FB_AD_INOUT22         233  //!< ss_scu.flexbus.D[22]
+#define SC_P_SCU_FB_AD_INOUT02         234  //!< ss_scu.flexbus.D[2]
+#define SC_P_SCU_FB_AD_INOUT03         235  //!< ss_scu.flexbus.D[3]
+#define SC_P_SCU_FB_AD_INOUT04         236  //!< ss_scu.flexbus.D[4]
+#define SC_P_SCU_FB_AD_INOUT13         237  //!< ss_scu.flexbus.D[13]
+#define SC_P_SCU_FB_AD_INOUT05         238  //!< ss_scu.flexbus.D[5]
+#define SC_P_SCU_FB_AD_INOUT12         239  //!< ss_scu.flexbus.D[12]
+#define SC_P_SCU_FB_AD_INOUT06         240  //!< ss_scu.flexbus.D[6]
+#define SC_P_SCU_FB_TS_B               241  //!< ss_scu.flexbus.TS_B
+#define SC_P_SCU_FB_AD_INOUT07         242  //!< ss_scu.flexbus.D[7]
+#define SC_P_SCU_FB_AD_INOUT14         243  //!< ss_scu.flexbus.D[14]
+#define SC_P_SCU_FB_AD_INOUT23         244  //!< ss_scu.flexbus.D[23]
+#define SC_P_SCU_FB_R_WB               245  //!< ss_scu.flexbus.RWB
+#define SC_P_SCU_FB_TA_B               246  //!< ss_scu.flexbus.TA_B
+#define SC_P_SCU_FB_OE_B               247  //!< ss_scu.flexbus.OE_B
+#define SC_P_SCU_FB_CLK                248  //!< ss_scu.flexbus.BCLK
+#define SC_P_SCU_FB_AD_INOUT15         249  //!< ss_scu.flexbus.D[15]
+#define SC_P_SCU_FB_AD_INOUT16         250  //!< ss_scu.flexbus.D[16]
+#define SC_P_SCU_FB_AD_INOUT19         251  //!< ss_scu.flexbus.D[19]
+#define SC_P_SCU_FB_AD_INOUT20         252  //!< ss_scu.flexbus.D[20]
+#define SC_P_SCU_FB_AD_INOUT18         253  //!< ss_scu.flexbus.D[18]
+#define SC_P_SCU_FB_AD_INOUT17         254  //!< ss_scu.flexbus.D[17]
+#define SC_P_SCU_FB_AD_INOUT21         255  //!< ss_scu.flexbus.D[21]
+#define SC_P_SCU_FB_BCLKEN             256  //!< ss_scu.flexbus.BCLKEN
+#define SC_P_SCU_FB_TEA_B              257  //!< ss_scu.flexbus.TS_B
+#define SC_P_SCU_FB_ALE                258  //!< ss_scu.flexbus.ALE
+#define SC_P_SCU_TPIU_TRACE_CLK        259  //!< ss_scu.cxtpiu.TRACE_CLK
+#define SC_P_SCU_TPIU_TRACE_D07        260  //!< ss_scu.cxtpiu.TRACE[7]
+#define SC_P_SCU_TPIU_TRACE_D06        261  //!< ss_scu.cxtpiu.TRACE[6]
+#define SC_P_SCU_TPIU_TRACE_D05        262  //!< ss_scu.cxtpiu.TRACE[5]
+#define SC_P_SCU_TPIU_TRACE_D04        263  //!< ss_scu.cxtpiu.TRACE[4]
+#define SC_P_SCU_TPIU_TRACE_D03        264  //!< ss_scu.cxtpiu.TRACE[3]
+#define SC_P_SCU_TPIU_TRACE_D02        265  //!< ss_scu.cxtpiu.TRACE[2]
+#define SC_P_SCU_TPIU_TRACE_D01        266  //!< ss_scu.cxtpiu.TRACE[1]
+#define SC_P_SCU_TPIU_TRACE_D00        267  //!< ss_scu.cxtpiu.TRACE[0]
+#define SC_P_SCU_TPIU_TRACE_D15        268  //!< ss_scu.cxtpiu.TRACE[15]
+#define SC_P_SCU_TPIU_TRACE_D14        269  //!< ss_scu.cxtpiu.TRACE[14]
+#define SC_P_SCU_TPIU_TRACE_D13        270  //!< ss_scu.cxtpiu.TRACE[13]
+#define SC_P_SCU_TPIU_TRACE_D12        271  //!< ss_scu.cxtpiu.TRACE[12]
+#define SC_P_SCU_TPIU_TRACE_D11        272  //!< ss_scu.cxtpiu.TRACE[11]
+#define SC_P_SCU_TPIU_TRACE_D10        273  //!< ss_scu.cxtpiu.TRACE[10]
+#define SC_P_SCU_TPIU_TRACE_D09        274  //!< ss_scu.cxtpiu.TRACE[9]
+#define SC_P_SCU_TPIU_TRACE_D08        275  //!< ss_scu.cxtpiu.TRACE[8]
+#define SC_P_SCU_TPIU_TRACE_CTL        276  //!< ss_scu.cxtpiu.TRACE_CTL
+#define SC_P_LCD_PAR_RESET             277  //!< ss_di_lcd.gpio.IO[0]
+#define SC_P_LCD_PAR_CLK               278  //!< ss_di_lcd.pixel_link_slv_top.CLK
+#define SC_P_LCD_PAR_DATA00            279  //!< ss_di_lcd.pixel_link_slv_top.DATA[0]
+#define SC_P_LCD_PAR_DATA01            280  //!< ss_di_lcd.pixel_link_slv_top.DATA[1]
+#define SC_P_LCD_PAR_DATA02            281  //!< ss_di_lcd.pixel_link_slv_top.DATA[2]
+#define SC_P_LCD_PAR_DATA03            282  //!< ss_di_lcd.pixel_link_slv_top.DATA[3]
+#define SC_P_LCD_PAR_DATA04            283  //!< ss_di_lcd.pixel_link_slv_top.DATA[4]
+#define SC_P_LCD_PAR_DATA05            284  //!< ss_di_lcd.pixel_link_slv_top.DATA[5]
+#define SC_P_LCD_PAR_DATA06            285  //!< ss_di_lcd.pixel_link_slv_top.DATA[6]
+#define SC_P_LCD_PAR_DATA07            286  //!< ss_di_lcd.pixel_link_slv_top.DATA[7]
+#define SC_P_LCD_PAR_DATA08            287  //!< ss_di_lcd.pixel_link_slv_top.DATA[8]
+#define SC_P_LCD_PAR_ENABLE            288  //!< ss_di_lcd.pixel_link_slv_top.ENABLE
+#define SC_P_LCD_PAR_DATA09            289  //!< ss_di_lcd.pixel_link_slv_top.DATA[9]
+#define SC_P_LCD_PAR_DATA10            290  //!< ss_di_lcd.pixel_link_slv_top.DATA[10]
+#define SC_P_LCD_PAR_DATA11            291  //!< ss_di_lcd.pixel_link_slv_top.DATA[11]
+#define SC_P_LCD_PAR_DATA12            292  //!< ss_di_lcd.pixel_link_slv_top.DATA[12]
+#define SC_P_LCD_PAR_DATA13            293  //!< ss_di_lcd.pixel_link_slv_top.DATA[13]
+#define SC_P_LCD_PAR_DATA14            294  //!< ss_di_lcd.pixel_link_slv_top.DATA[14]
+#define SC_P_LCD_PAR_DATA15            295  //!< ss_di_lcd.pixel_link_slv_top.DATA[15]
+#define SC_P_LCD_PAR_DATA16            296  //!< ss_di_lcd.pixel_link_slv_top.DATA[16]
+#define SC_P_LCD_PAR_DATA17            297  //!< ss_di_lcd.pixel_link_slv_top.DATA[17]
+#define SC_P_LCD_PAR_DATA18            298  //!< ss_di_lcd.pixel_link_slv_top.DATA[18]
+#define SC_P_LCD_PAR_DATA19            299  //!< ss_di_lcd.pixel_link_slv_top.DATA[19]
+#define SC_P_LCD_PAR_DATA20            300  //!< ss_di_lcd.pixel_link_slv_top.DATA[20]
+#define SC_P_LCD_PAR_DATA21            301  //!< ss_di_lcd.pixel_link_slv_top.DATA[21]
+#define SC_P_LCD_PAR_DATA22            302  //!< ss_di_lcd.pixel_link_slv_top.DATA[22]
+#define SC_P_LCD_PAR_DATA23            303  //!< ss_di_lcd.pixel_link_slv_top.DATA[23]
+#define SC_P_LCD_PAR_DATA24            304  //!< ss_di_lcd.pixel_link_slv_top.DATA[24]
+#define SC_P_LCD_PAR_DATA25            305  //!< ss_di_lcd.pixel_link_slv_top.DATA[25]
+#define SC_P_LCD_PAR_DATA26            306  //!< ss_di_lcd.pixel_link_slv_top.DATA[26]
+#define SC_P_LCD_PAR_DATA27            307  //!< ss_di_lcd.pixel_link_slv_top.DATA[27]
+#define SC_P_LCD_PAR_DATA28            308  //!< ss_di_lcd.pixel_link_slv_top.DATA[28]
+#define SC_P_LCD_PAR_DATA29            309  //!< ss_di_lcd.pixel_link_slv_top.DATA[29]
+#define SC_P_LCD_PAR_VSYNC             310  //!< ss_di_lcd.pixel_link_slv_top.VSYNC
+#define SC_P_LCD_PAR_HSYNC             311  //!< ss_di_lcd.pixel_link_slv_top.HSYNC
+#define SC_P_IMG0_PAR_CLK              312  //!< ss_di_pi_0.pixel_link_mst.CLK
+#define SC_P_IMG0_PAR_VSYNC            313  //!< ss_di_pi_0.pixel_link_mst.VSYNC
+#define SC_P_IMG0_PAR_HSYNC            314  //!< ss_di_pi_0.pixel_link_mst.HSYNC
+#define SC_P_IMG0_PAR_DATA23           315  //!< ss_di_pi_0.pixel_link_mst.DATA[23]
+#define SC_P_IMG0_PAR_DATA22           316  //!< ss_di_pi_0.pixel_link_mst.DATA[22]
+#define SC_P_IMG0_PAR_DATA21           317  //!< ss_di_pi_0.pixel_link_mst.DATA[21]
+#define SC_P_IMG0_PAR_DATA20           318  //!< ss_di_pi_0.pixel_link_mst.DATA[20]
+#define SC_P_IMG0_PAR_DATA19           319  //!< ss_di_pi_0.pixel_link_mst.DATA[19]
+#define SC_P_IMG0_PAR_DATA18           320  //!< ss_di_pi_0.pixel_link_mst.DATA[18]
+#define SC_P_IMG0_PAR_DATA17           321  //!< ss_di_pi_0.pixel_link_mst.DATA[17]
+#define SC_P_IMG0_PAR_DATA16           322  //!< ss_di_pi_0.pixel_link_mst.DATA[16]
+#define SC_P_IMG0_PAR_DATA15           323  //!< ss_di_pi_0.pixel_link_mst.DATA[15]
+#define SC_P_IMG0_PAR_DATA14           324  //!< ss_di_pi_0.pixel_link_mst.DATA[14]
+#define SC_P_IMG0_PAR_DATA13           325  //!< ss_di_pi_0.pixel_link_mst.DATA[13]
+#define SC_P_IMG0_PAR_DATA12           326  //!< ss_di_pi_0.pixel_link_mst.DATA[12]
+#define SC_P_IMG0_PAR_DATA11           327  //!< ss_di_pi_0.pixel_link_mst.DATA[11]
+#define SC_P_IMG0_PAR_DATA10           328  //!< ss_di_pi_0.pixel_link_mst.DATA[10]
+#define SC_P_IMG0_PAR_DATA9            329  //!< ss_di_pi_0.pixel_link_mst.DATA[9]
+#define SC_P_IMG0_PAR_DATA8            330  //!< ss_di_pi_0.pixel_link_mst.DATA[8]
+#define SC_P_IMG0_PAR_DATA7            331  //!< ss_di_pi_0.pixel_link_mst.DATA[7]
+#define SC_P_IMG0_PAR_DATA6            332  //!< ss_di_pi_0.pixel_link_mst.DATA[6]
+#define SC_P_IMG0_PAR_DATA5            333  //!< ss_di_pi_0.pixel_link_mst.DATA[5]
+#define SC_P_IMG0_PAR_DATA4            334  //!< ss_di_pi_0.pixel_link_mst.DATA[4]
+#define SC_P_IMG0_PAR_DATA3            335  //!< ss_di_pi_0.pixel_link_mst.DATA[3]
+#define SC_P_IMG0_PAR_DATA2            336  //!< ss_di_pi_0.pixel_link_mst.DATA[2]
+#define SC_P_IMG0_PAR_DATA1            337  //!< ss_di_pi_0.pixel_link_mst.DATA[1]
+#define SC_P_IMG0_PAR_DATA0            338  //!< ss_di_pi_0.pixel_link_mst.DATA[0]
+#define SC_P_IMG0_PAR_MCLK             339  //!< ss_di_pi_0.pixel_link_mst.MCLK
+#define SC_P_IMG0_PAR_FPOL             340  //!< ss_di_pi_0.pixel_link_mst.DATA[32]
+#define SC_P_IMG0_PAR_ENABLE           341  //!< ss_di_pi_0.pixel_link_mst.ENABLE
+#define SC_P_IMG0_PAR_RESET            342  //!< ss_di_pi_0.gpio.IO[0]
+#define SC_P_IMG0_PAR_GPIO             343  //!< ss_di_pi_0.gpio.IO[1]
+#define SC_P_IMG0_PAR_SCL              344  //!< ss_di_pi_0.lpi2c.SCL
+#define SC_P_IMG0_PAR_SDA              345  //!< ss_di_pi_0.lpi2c.SDA
+#define SC_P_IMG1_PAR_CLK              346  //!< ss_di_pi_1.pixel_link_mst.CLK
+#define SC_P_IMG1_PAR_VSYNC            347  //!< ss_di_pi_1.pixel_link_mst.VSYNC
+#define SC_P_IMG1_PAR_HSYNC            348  //!< ss_di_pi_1.pixel_link_mst.HSYNC
+#define SC_P_IMG1_PAR_DATA23           349  //!< ss_di_pi_1.pixel_link_mst.DATA[23]
+#define SC_P_IMG1_PAR_DATA22           350  //!< ss_di_pi_1.pixel_link_mst.DATA[22]
+#define SC_P_IMG1_PAR_DATA21           351  //!< ss_di_pi_1.pixel_link_mst.DATA[21]
+#define SC_P_IMG1_PAR_DATA20           352  //!< ss_di_pi_1.pixel_link_mst.DATA[20]
+#define SC_P_IMG1_PAR_DATA19           353  //!< ss_di_pi_1.pixel_link_mst.DATA[19]
+#define SC_P_IMG1_PAR_DATA18           354  //!< ss_di_pi_1.pixel_link_mst.DATA[18]
+#define SC_P_IMG1_PAR_DATA17           355  //!< ss_di_pi_1.pixel_link_mst.DATA[17]
+#define SC_P_IMG1_PAR_DATA16           356  //!< ss_di_pi_1.pixel_link_mst.DATA[16]
+#define SC_P_IMG1_PAR_DATA15           357  //!< ss_di_pi_1.pixel_link_mst.DATA[15]
+#define SC_P_IMG1_PAR_DATA14           358  //!< ss_di_pi_1.pixel_link_mst.DATA[14]
+#define SC_P_IMG1_PAR_DATA13           359  //!< ss_di_pi_1.pixel_link_mst.DATA[13]
+#define SC_P_IMG1_PAR_DATA12           360  //!< ss_di_pi_1.pixel_link_mst.DATA[12]
+#define SC_P_IMG1_PAR_DATA11           361  //!< ss_di_pi_1.pixel_link_mst.DATA[11]
+#define SC_P_IMG1_PAR_DATA10           362  //!< ss_di_pi_1.pixel_link_mst.DATA[10]
+#define SC_P_IMG1_PAR_DATA9            363  //!< ss_di_pi_1.pixel_link_mst.DATA[9]
+#define SC_P_IMG1_PAR_DATA8            364  //!< ss_di_pi_1.pixel_link_mst.DATA[8]
+#define SC_P_IMG1_PAR_DATA7            365  //!< ss_di_pi_1.pixel_link_mst.DATA[7]
+#define SC_P_IMG1_PAR_DATA6            366  //!< ss_di_pi_1.pixel_link_mst.DATA[6]
+#define SC_P_IMG1_PAR_DATA5            367  //!< ss_di_pi_1.pixel_link_mst.DATA[5]
+#define SC_P_IMG1_PAR_DATA4            368  //!< ss_di_pi_1.pixel_link_mst.DATA[4]
+#define SC_P_IMG1_PAR_DATA3            369  //!< ss_di_pi_1.pixel_link_mst.DATA[3]
+#define SC_P_IMG1_PAR_DATA2            370  //!< ss_di_pi_1.pixel_link_mst.DATA[2]
+#define SC_P_IMG1_PAR_DATA1            371  //!< ss_di_pi_1.pixel_link_mst.DATA[1]
+#define SC_P_IMG1_PAR_DATA0            372  //!< ss_di_pi_1.pixel_link_mst.DATA[0]
+#define SC_P_IMG1_PAR_MCLK             373  //!< ss_di_pi_1.pixel_link_mst.MCLK
+#define SC_P_IMG1_PAR_FPOL             374  //!< ss_di_pi_1.pixel_link_mst.DATA[32]
+#define SC_P_IMG1_PAR_ENABLE           375  //!< ss_di_pi_1.pixel_link_mst.ENABLE
+#define SC_P_IMG1_PAR_RESET            376  //!< ss_di_pi_1.gpio.IO[0]
+#define SC_P_IMG1_PAR_GPIO             377  //!< ss_di_pi_1.gpio.IO[1]
+#define SC_P_IMG1_PAR_SCL              378  //!< ss_di_pi_1.lpi2c.SCL
+#define SC_P_IMG1_PAR_SDA              379  //!< ss_di_pi_1.lpi2c.SDA
+#define SC_P_QSPI0A_DATA0              380  //!< ss_megawrap.qspi.A_DATA[0]
+#define SC_P_QSPI0A_DATA1              381  //!< ss_megawrap.qspi.A_DATA[1]
+#define SC_P_QSPI0A_DATA2              382  //!< ss_megawrap.qspi.A_DATA[2]
+#define SC_P_QSPI0A_DATA3              383  //!< ss_megawrap.qspi.A_DATA[3]
+#define SC_P_QSPI0A_DQS                384  //!< ss_megawrap.qspi.A_DQS
+#define SC_P_QSPI0A_SCLK               385  //!< ss_megawrap.qspi.A_SCLK
+#define SC_P_QSPI0A_SS1                386  //!< ss_megawrap.qspi.A_SS1_B
+#define SC_P_QSPI0A_SS0                387  //!< ss_megawrap.qspi.A_SS0_B
+#define SC_P_QSPI0B_DATA0              388  //!< ss_megawrap.qspi.B_DATA[0]
+#define SC_P_QSPI0B_DATA1              389  //!< ss_megawrap.qspi.B_DATA[1]
+#define SC_P_QSPI0B_DATA2              390  //!< ss_megawrap.qspi.B_DATA[2]
+#define SC_P_QSPI0B_DATA3              391  //!< ss_megawrap.qspi.B_DATA[3]
+#define SC_P_QSPI0B_DQS                392  //!< ss_megawrap.qspi.B_DQS
+#define SC_P_QSPI0B_SCLK               393  //!< ss_megawrap.qspi.B_SCLK
+#define SC_P_QSPI0B_SS0                394  //!< ss_megawrap.qspi.B_SS0_B
+#define SC_P_QSPI0B_SS1                395  //!< ss_megawrap.qspi.B_SS1_B
+#define SC_P_USDHC0_DATA2              396  //!< ss_megawrap.usdhc1.DATA[2]
+#define SC_P_USDHC0_DATA3              397  //!< ss_megawrap.usdhc1.DATA[3]
+#define SC_P_USDHC0_DATA4              398  //!< ss_megawrap.usdhc1.DATA[4]
+#define SC_P_USDHC0_CMD                399  //!< ss_megawrap.usdhc1.CMD
+#define SC_P_USDHC0_DATA5              400  //!< ss_megawrap.usdhc1.DATA[5]
+#define SC_P_USDHC0_CLK                401  //!< ss_megawrap.usdhc1.CLK
+#define SC_P_USDHC0_DATA6              402  //!< ss_megawrap.usdhc1.DATA[6]
+#define SC_P_USDHC0_DATA7              403  //!< ss_megawrap.usdhc1.DATA[7]
+#define SC_P_USDHC0_DATA0              404  //!< ss_megawrap.usdhc1.DATA[0]
+#define SC_P_USDHC0_DATA1              405  //!< ss_megawrap.usdhc1.DATA[1]
+#define SC_P_USDHC0_CD_B               406  //!< ss_megawrap.usdhc1.CD_B
+#define SC_P_USDHC0_WP                 407  //!< ss_megawrap.usdhc1.WP
+#define SC_P_USDHC0_RESET_B            408  //!< ss_megawrap.usdhc1.RESET_B
+#define SC_P_USDHC1_DATA2              409  //!< ss_megawrap.usdhc2.DATA[2]
+#define SC_P_USDHC1_DATA3              410  //!< ss_megawrap.usdhc2.DATA[3]
+#define SC_P_USDHC1_CMD                411  //!< ss_megawrap.usdhc2.CMD
+#define SC_P_USDHC1_CLK                412  //!< ss_megawrap.usdhc2.CLK
+#define SC_P_USDHC1_DATA0              413  //!< ss_megawrap.usdhc2.DATA[0]
+#define SC_P_USDHC1_DATA1              414  //!< ss_megawrap.usdhc2.DATA[1]
+#define SC_P_USDHC1_CD_B               415  //!< ss_megawrap.usdhc2.CD_B
+#define SC_P_USDHC1_WP                 416  //!< ss_megawrap.usdhc2.WP
+#define SC_P_USDHC1_LCTRL              417  //!< ss_megawrap.usdhc2.LCTRL
+#define SC_P_USDHC1_RESET_B            418  //!< ss_megawrap.usdhc2.RESET_B
+#define SC_P_USDHC1_VSELECT            419  //!< ss_megawrap.usdhc2.VSELECT
+#define SC_P_ENET0_MDC                 420  //!< ss_megawrap.enet1.MDC
+#define SC_P_ENET0_MDIO                421  //!< ss_megawrap.enet1.MDIO
+#define SC_P_ENET0_RGMII_RD3           422  //!< ss_megawrap.enet1.RGMII_RD3
+#define SC_P_ENET0_RGMII_RD2           423  //!< ss_megawrap.enet1.RGMII_RD2
+#define SC_P_ENET0_RGMII_RD1           424  //!< ss_megawrap.enet1.RGMII_RD1
+#define SC_P_ENET0_RGMII_RD0           425  //!< ss_megawrap.enet1.RGMII_RD0
+#define SC_P_ENET0_RGMII_RXC           426  //!< ss_megawrap.enet1.RGMII_RXC
+#define SC_P_ENET0_RGMII_RX_CTL        427  //!< ss_megawrap.enet1.RGMII_RX_CTL
+#define SC_P_ENET0_RGMII_TX_CTL        428  //!< ss_megawrap.enet1.RGMII_TX_CTL
+#define SC_P_ENET0_RGMII_TXC           429  //!< ss_megawrap.enet1.RGMII_TXC
+#define SC_P_ENET0_RGMII_TD0           430  //!< ss_megawrap.enet1.RGMII_TD0
+#define SC_P_ENET0_RGMII_TD1           431  //!< ss_megawrap.enet1.RGMII_TD1
+#define SC_P_ENET0_RGMII_TD2           432  //!< ss_megawrap.enet1.RGMII_TD2
+#define SC_P_ENET0_RGMII_TD3           433  //!< ss_megawrap.enet1.RGMII_TD3
+#define SC_P_ENET0_1588_EVENT0_IN      434  //!< ss_megawrap.enet1.1588_EVENT0_IN
+#define SC_P_ENET0_1588_EVENT1_IN      435  //!< ss_megawrap.enet1.1588_EVENT1_IN
+#define SC_P_ENET0_1588_EVENT0_OUT     436  //!< ss_megawrap.enet1.1588_EVENT0_OUT
+#define SC_P_ENET0_1588_EVENT1_OUT     437  //!< ss_megawrap.enet1.1588_EVENT1_OUT
+#define SC_P_ENET1_MDC                 438  //!< ss_megawrap.enet2.MDC
+#define SC_P_ENET1_MDIO                439  //!< ss_megawrap.enet2.MDIO
+#define SC_P_ENET1_RGMII_RD3           440  //!< ss_megawrap.enet2.RGMII_RD3
+#define SC_P_ENET1_RGMII_RD2           441  //!< ss_megawrap.enet2.RGMII_RD2
+#define SC_P_ENET1_RGMII_RD1           442  //!< ss_megawrap.enet2.RGMII_RD1
+#define SC_P_ENET1_RGMII_RD0           443  //!< ss_megawrap.enet2.RGMII_RD0
+#define SC_P_ENET1_RGMII_RXC           444  //!< ss_megawrap.enet2.RGMII_RXC
+#define SC_P_ENET1_RGMII_RX_CTL        445  //!< ss_megawrap.enet2.RGMII_RX_CTL
+#define SC_P_ENET1_RGMII_TX_CTL        446  //!< ss_megawrap.enet2.RGMII_TX_CTL
+#define SC_P_ENET1_RGMII_TXC           447  //!< ss_megawrap.enet2.RGMII_TXC
+#define SC_P_ENET1_RGMII_TD0           448  //!< ss_megawrap.enet2.RGMII_TD0
+#define SC_P_ENET1_RGMII_TD1           449  //!< ss_megawrap.enet2.RGMII_TD1
+#define SC_P_ENET1_RGMII_TD2           450  //!< ss_megawrap.enet2.RGMII_TD2
+#define SC_P_ENET1_RGMII_TD3           451  //!< ss_megawrap.enet2.RGMII_TD3
+#define SC_P_ENET1_1588_EVENT0_IN      452  //!< ss_megawrap.enet2.1588_EVENT0_IN
+#define SC_P_ENET1_1588_EVENT1_IN      453  //!< ss_megawrap.enet2.1588_EVENT1_IN
+#define SC_P_ENET1_1588_EVENT0_OUT     454  //!< ss_megawrap.enet2.1588_EVENT0_OUT
+#define SC_P_ENET1_1588_EVENT1_OUT     455  //!< ss_megawrap.enet2.1588_EVENT1_OUT
 /*@}*/
 
 #endif /* _SC_PINS_H */

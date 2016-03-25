@@ -40,6 +40,7 @@ typedef enum misc_func_e
     MISC_FUNC_UNKNOWN, //!< Unknown function
     MISC_FUNC_SET_CONTROL, //!< Index for misc_set_control() RPC call
     MISC_FUNC_GET_CONTROL, //!< Index for misc_get_control() RPC call
+    MISC_FUNC_SET_ARI, //!< Index for misc_set_ari() RPC call
 } misc_func_t;
 
 /* Functions */

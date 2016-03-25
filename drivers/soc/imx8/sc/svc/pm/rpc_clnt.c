@@ -26,7 +26,6 @@
 
 /* Includes */
 
-#include <linux/kernel.h>
 #include <soc/imx8/sc/types.h>
 #include <soc/imx8/sc/svc/rm/api.h>
 #include <soc/imx8/sc/svc/pm/api.h>

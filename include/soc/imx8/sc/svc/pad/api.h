@@ -123,6 +123,8 @@ typedef enum sc_pad_wakeup_e
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_set_mux(sc_ipc_t ipc, sc_pin_t pin,
     uint8_t mux, sc_pad_config_t config, sc_pad_iso_t iso);
@@ -142,6 +144,8 @@ sc_err_t sc_pad_set_mux(sc_ipc_t ipc, sc_pin_t pin,
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_set_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t ctrl);
 
@@ -161,6 +165,8 @@ sc_err_t sc_pad_set_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t ctrl);
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_set_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin,
     sc_pad_28lpp_dse_t dse, bool sre, bool hys, bool pe,
@@ -178,6 +184,8 @@ sc_err_t sc_pad_set_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin,
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_set_wakeup(sc_ipc_t ipc, sc_pin_t pin,
     sc_pad_wakeup_t wakeup);
@@ -201,6 +209,8 @@ sc_err_t sc_pad_set_wakeup(sc_ipc_t ipc, sc_pin_t pin,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  *
  * @return Returns an error code (SC_ERR_NONE = success).
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_set_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t mux,
     sc_pad_config_t config, sc_pad_iso_t iso, uint32_t ctrl,
@@ -221,6 +231,8 @@ sc_err_t sc_pad_set_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t mux,
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_get_mux(sc_ipc_t ipc, sc_pin_t pin,
     uint8_t *mux, sc_pad_config_t *config, sc_pad_iso_t *iso);
@@ -240,6 +252,8 @@ sc_err_t sc_pad_get_mux(sc_ipc_t ipc, sc_pin_t pin,
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_get_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t *ctrl);
 
@@ -259,6 +273,8 @@ sc_err_t sc_pad_get_gp(sc_ipc_t ipc, sc_pin_t pin, uint32_t *ctrl);
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_get_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin,
     sc_pad_28lpp_dse_t *dse, bool *sre, bool *hys, bool *pe,
@@ -276,6 +292,8 @@ sc_err_t sc_pad_get_gp_28lpp(sc_ipc_t ipc, sc_pin_t pin,
  * Return errors:
  * - SC_PARM if arguments out of range or invalid,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_get_wakeup(sc_ipc_t ipc, sc_pin_t pin,
     sc_pad_wakeup_t *wakeup);
@@ -299,6 +317,8 @@ sc_err_t sc_pad_get_wakeup(sc_ipc_t ipc, sc_pin_t pin,
  * - SC_ERR_NOACCESS if caller's partition is not the pin owner
  *
  * @return Returns an error code (SC_ERR_NONE = success).
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
  */
 sc_err_t sc_pad_get_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t *mux,
     sc_pad_config_t *config, sc_pad_iso_t *iso, uint32_t *ctrl,

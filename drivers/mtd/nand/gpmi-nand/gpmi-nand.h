@@ -1,7 +1,7 @@
 /*
  * Freescale GPMI NAND Flash Driver
  *
- * Copyright (C) 2010-2015 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2016 Freescale Semiconductor, Inc.
  * Copyright (C) 2008 Embedded Alley Solutions, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -195,6 +195,9 @@ struct gpmi_nand_data {
 
 	void			*auxiliary_virt;
 	dma_addr_t		auxiliary_phys;
+
+	/* legacy bch geometry flag */
+	bool			legacy_bch_geometry;
 
 	/* DMA channels */
 #define DMA_CHANS		8

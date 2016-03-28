@@ -1,7 +1,7 @@
 /*
  * Freescale GPMI NAND Flash Driver
  *
- * Copyright (C) 2010-2015 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2016 Freescale Semiconductor, Inc.
  * Copyright (C) 2008 Embedded Alley Solutions, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -559,8 +559,9 @@ int common_nfc_set_geometry(struct gpmi_nand_data *this)
 		return -EINVAL;
 	}
 
-	if (!(chip->ecc_strength_ds > 0 && chip->ecc_step_ds > 0) &&
-			!(mtd->oobsize > 1024))
+	if ((!(chip->ecc_strength_ds > 0 && chip->ecc_step_ds > 0) &&
+			(mtd->oobsize < 1024)) || this->legacy_bch_geometry)
+		dev_warn(this->dev, "use legacy bch geometry\n");
 		return legacy_set_geometry(this);
 
 	if (mtd->oobsize > 1024 || chip->ecc_step_ds < mtd->oobsize)
@@ -2036,6 +2037,9 @@ static int gpmi_nand_init(struct gpmi_nand_data *this)
 	chip->options		|= NAND_NO_SUBPAGE_WRITE;
 	if (of_get_nand_on_flash_bbt(this->dev->of_node))
 		chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
+	if (of_property_read_bool(this->dev->of_node,
+				"fsl,legacy-bch-geometry"))
+		this->legacy_bch_geometry = true;
 
 	/*
 	 * Allocate a temporary DMA buffer for reading ID in the

@@ -515,7 +515,7 @@
 		width = <640>;
 		height = <480>;
 		stride = <(640*4)>;
-		format = "r8b8g8a8";
+		format = "b8g8r8a8";
 		status = "disabled";
 	};
 

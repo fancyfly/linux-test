@@ -20,9 +20,10 @@
 /* format array, use it to initialize a "struct imxdpufb_format" array */
 #define IMXDPUFB_FORMATS \
 { \
-	{ "a8r8g8b8", 32, {16, 8}, {8, 8}, {0, 8}, {24, 8}, DRM_FORMAT_ARGB8888 }, \
-	{ "a8b8g8r8", 32, {0, 8}, {8, 8}, {16, 8}, {24, 8}, DRM_FORMAT_ABGR8888 }, \
-	{ "r8b8g8a8", 32, {24, 8}, {16, 8}, {8, 8}, {0, 8}, DRM_FORMAT_RGBA8888}, \
+	{ "a8r8g8b8", 32, {8, 8}, {16, 8}, {24, 8}, {0, 8}, DRM_FORMAT_ARGB8888 }, \
+	{ "a8b8g8r8", 32, {24, 8}, {16, 8}, {8, 8}, {0, 8}, DRM_FORMAT_ABGR8888 }, \
+	{ "r8g8b8a8", 32, {0, 8}, {8, 8}, {16, 8}, {24, 8}, DRM_FORMAT_RGBA8888 }, \
+	{ "b8g8r8a8", 32, {16, 8}, {8, 8}, {0, 8}, {24, 8}, DRM_FORMAT_BGRA8888 }, \
 	{ "nv12", 12, {0, 0}, {0, 0}, {0, 0}, {0, 0}, DRM_FORMAT_NV12 }, \
 	{ "ayuv", 32, {16, 8}, {8, 8}, {0, 8}, {24, 8}, DRM_FORMAT_AYUV }, \
 }

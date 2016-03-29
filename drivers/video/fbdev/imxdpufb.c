@@ -403,6 +403,7 @@ static uint32_t imxdpu_convert_format(uint32_t format)
 		case DRM_FORMAT_ARGB8888: ret = IMXDPU_PIX_FMT_ARGB32; break;
 		case DRM_FORMAT_ABGR8888: ret = IMXDPU_PIX_FMT_ABGR32; break;
 		case DRM_FORMAT_RGBA8888: ret = IMXDPU_PIX_FMT_RGBA32; break;
+		case DRM_FORMAT_BGRA8888: ret = IMXDPU_PIX_FMT_BGRA32; break;
 		case DRM_FORMAT_RGB565: ret = IMXDPU_PIX_FMT_RGB565; break;
 
 		case DRM_FORMAT_XRGB1555:

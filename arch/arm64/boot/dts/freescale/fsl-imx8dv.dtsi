@@ -190,6 +190,54 @@
 				#power-domain-cells = <0>;
 				power-domains = <&pd_lsio>;
 			};
+			pd_lsio_gpio0: lsio-gpio0 {
+				name = "lsio-gpio0";
+				reg = <SC_R_GPIO_0>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpio1: lsio-gpio1 {
+				name = "lsio-gpio1";
+				reg = <SC_R_GPIO_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpio2: lsio-gpio2 {
+				name = "lsio-gpio2";
+				reg = <SC_R_GPIO_2>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpio3: lsio-gpio3 {
+				name = "lsio-gpio3";
+				reg = <SC_R_GPIO_3>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpio4: lsio-gpio4 {
+				name = "lsio-gpio4";
+				reg = <SC_R_GPIO_4>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpio5: lsio-gpio5 {
+				name = "lsio-gpio5";
+				reg = <SC_R_GPIO_5>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpio6: lsio-gpio6 {
+				name = "lsio-gpio6";
+				reg = <SC_R_GPIO_6>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
+			pd_lsio_gpio7: lsio-gpio7 {
+				name = "lsio-gpio7";
+				reg = <SC_R_GPIO_7>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_lsio>;
+			};
 			pd_lsio_gpt0: lsio-gpt0 {
 				name = "lsio-gpt0";
 				reg = <SC_R_GPT_0>;

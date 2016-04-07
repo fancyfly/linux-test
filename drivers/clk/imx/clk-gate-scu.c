@@ -75,7 +75,6 @@ static void clk_gate_scu_disable(struct clk_hw *hw)
 {
 	struct clk_gate_scu *gate = to_clk_gate_scu(hw);
 	u32 reg;
-	sc_err_t sciErr;
 
 	if (!ccm_ipcHandle) {
 			return;

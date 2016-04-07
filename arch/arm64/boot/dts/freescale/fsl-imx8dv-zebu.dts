@@ -64,6 +64,17 @@
 		bootargs = "console=ttymxc0,115200 earlycon=imxuart,0x5a060000,115200";
 		stdout-path = &uart1;
 	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_leds>;
+		user {
+			label = "debug";
+			gpios = <&gpio0 4 0>;
+			default-state = "on";
+		};
+	};
 };
 
 &iomuxc {
@@ -90,6 +101,11 @@
             424 5 0 0 0 0 0x10
             425 5 0 0 0 0 0x10
             426 5 0 0 0 0 0x10
+			>;
+		};
+		pinctrl_gpio_leds: gpioledsgrp {
+			fsl,pins = <
+			146 5 0 0 0 0 0x10
 			>;
 		};
 	};

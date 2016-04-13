@@ -411,6 +411,12 @@
 				#power-domain-cells = <0>;
 				power-domains = <&pd_mw>;
 			};
+			pd_mw_sdma: sdma-power-domain {
+				compatible = "nxp, imx8-pd";
+				reg = <SC_R_SDMA>;
+				#power-domain-cells = <0>;
+				power-domains =<&pd_mw>;
+			};
 		};
 
 		pd_gpu: gpu-power-domain {
@@ -825,6 +831,18 @@
 		clock-names = "clk_vpu_ddr", "clk_vpu_cabac","clk_vpu_xuvi", "clk_vpu_uart";
 		status = "disabled";
 		power-domains = <&pd_vpu_core>;
+	};
+
+	sdma: sdma@5a2a0000 {
+		compatible = "fsl,imx8dv-sdma", "fsl,imx7d-sdma";
+		reg = <0x0 0x5a2a0000 0x0 0x10000>;
+		interrupts = <0 218 4>;
+		clocks = <&clk IMX8DV_CLK_DUMMY>,
+			<&clk IMX8DV_CLK_DUMMY>;
+		clock-names = "ipg", "ahb";
+		#dma-cells = <3>;
+		fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
+		power-domains = <&pd_mw_sdma>;
 	};
 
 	usdhc1: usdhc@5a240000 {

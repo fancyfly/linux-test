@@ -273,7 +273,7 @@ config PCH_DMA
 
 config IMX_SDMA
 	tristate "i.MX SDMA support"
-	depends on ARCH_MXC
+	depends on ARCH_MXC || ARCH_FSL_IMX8DV
 	select DMA_ENGINE
 	help
 	  Support the i.MX SDMA engine. This engine is integrated into

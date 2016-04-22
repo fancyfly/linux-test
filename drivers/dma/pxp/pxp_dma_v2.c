@@ -1128,14 +1128,12 @@ static void pxp_clk_disable(struct pxps *pxp)
 		if (pxp->clk_disp_axi)
 			clk_disable_unprepare(pxp->clk_disp_axi);
 		pxp->clk_stat = CLK_STAT_OFF;
+		pm_runtime_put_sync_suspend(pxp->dev);
+		release_bus_freq(BUS_FREQ_HIGH);
 	} else
 		spin_unlock_irqrestore(&pxp->lock, flags);
 
-	pm_runtime_put_sync_suspend(pxp->dev);
-
 	mutex_unlock(&pxp->clk_mutex);
-
-	release_bus_freq(BUS_FREQ_HIGH);
 }
 
 static inline void clkoff_callback(struct work_struct *w)

@@ -28,6 +28,10 @@
 
 #include <asm/cacheflush.h>
 
+EXPORT_SYMBOL(__dma_map_area);
+EXPORT_SYMBOL(__dma_unmap_area);
+EXPORT_SYMBOL(__dma_flush_range);
+
 struct dma_map_ops *dma_ops;
 EXPORT_SYMBOL(dma_ops);
 

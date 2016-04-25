@@ -573,6 +573,16 @@ config I2C_IMX
 	  This driver can also be built as a module.  If so, the module
 	  will be called i2c-imx.
 
+config I2C_LP_IMX
+	tristate "NXP IMX8 Low Power I2C interface"
+	depends on ARCH_NXP_IMX8
+	help
+	  Say Y here if you want to use the Low Power I2C bus controller
+	  on the NXP IMX8 processors.
+
+	  This driver can also be build as a module.  If som the module
+	  will be clalled i2c-lp-imx.
+
 config I2C_IOP3XX
 	tristate "Intel IOPx3xx and IXP4xx on-chip I2C interface"
 	depends on ARCH_IOP32X || ARCH_IOP33X || ARCH_IXP4XX || ARCH_IOP13XX

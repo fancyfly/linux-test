@@ -35,462 +35,294 @@
  * @name Pin Definitions
  */
 /*@{*/
-#define SC_P_LVDS0_LVDS1_TS_SCL        0    //!< ss_di_lvds_0.lpi2c0.SCL
-#define SC_P_LVDS0_LVDS1_TS_SDA        1    //!< ss_di_lvds_0.lpi2c0.SDA
-#define SC_P_LVDS0_LVDS1_BL_PWM        2    //!< ss_di_lvds_0.pwm.OUT
-#define SC_P_LVDS0_LVDS1_GPIO0         3    //!< ss_di_lvds_0.gpio.IO[0]
-#define SC_P_LVDS0_LVDS1_GPIO1         4    //!< ss_di_lvds_0.gpio.IO[1]
-#define SC_P_LVDS2_LVDS3_TS_SCL        5    //!< ss_di_lvds_1.lpi2c0.SCL
-#define SC_P_LVDS2_LVDS3_TS_SDA        6    //!< ss_di_lvds_1.lpi2c0.SDA
-#define SC_P_LVDS2_LVDS3_BL_PWM        7    //!< ss_di_lvds_1.pwm.OUT
-#define SC_P_LVDS2_LVDS3_GPIO_0        8    //!< ss_di_lvds_1.gpio.IO[0]
-#define SC_P_LVDS2_LVDS3_GPIO_1        9    //!< ss_di_lvds_1.gpio.IO[1]
-#define SC_P_LVDS4_LVDS5_TS_SCL        10   //!< ss_di_lvds_2.lpi2c0.SCL
-#define SC_P_LVDS4_LVDS5_TS_SDA        11   //!< ss_di_lvds_2.lpi2c0.SDA
-#define SC_P_LVDS4_LVDS5_BL_PWM        12   //!< ss_di_lvds_2.pwm.OUT
-#define SC_P_LVDS4_LVDS5_GPIO_0        13   //!< ss_di_lvds_2.gpio.IO[0]
-#define SC_P_LVDS4_LVDS5_GPIO_1        14   //!< ss_di_lvds_2.gpio.IO[1]
-#define SC_P_USDHC2_DATA2              15   //!< ss_megawrap.usdhc3.DATA[2]
-#define SC_P_USDHC2_DATA3              16   //!< ss_megawrap.usdhc3.DATA[3]
-#define SC_P_USDHC2_CMD                17   //!< ss_megawrap.usdhc3.CMD
-#define SC_P_USDHC2_CLK                18   //!< ss_megawrap.usdhc3.CLK
-#define SC_P_USDHC2_DATA0              19   //!< ss_megawrap.usdhc3.DATA[0]
-#define SC_P_USDHC2_DATA1              20   //!< ss_megawrap.usdhc3.DATA[1]
-#define SC_P_USDHC2_CD_B               21   //!< ss_megawrap.usdhc3.CD_B
-#define SC_P_USDHC2_WP                 22   //!< ss_megawrap.usdhc3.WP
-#define SC_P_USDHC2_LCTRL              23   //!< ss_megawrap.usdhc3.LCTRL
-#define SC_P_USDHC2_RESET_B            24   //!< ss_megawrap.usdhc3.RESET_B
-#define SC_P_USDHC2_VSELECT            25   //!< ss_megawrap.usdhc3.VSELECT
-#define SC_P_USB_OTG0_OC               26   //!< ss_megawrap.usb_otg1.OC
-#define SC_P_USB_OTG0_PWR_ON           27   //!< ss_megawrap.usb_otg1.PWR
-#define SC_P_USB_OTG1_OC               28   //!< ss_megawrap.usb_otg2.OC
-#define SC_P_USB_OTG1_PWR_ON           29   //!< ss_megawrap.usb_otg2.PWR
-#define SC_P_UART0_RX                  30   //!< ss_megawrap.uart1.RX_DATA
-#define SC_P_UART0_TX                  31   //!< ss_megawrap.uart1.TX_DATA
-#define SC_P_UART0_RTS_B               32   //!< ss_megawrap.uart1.RTS_B
-#define SC_P_UART0_CTS_B               33   //!< ss_megawrap.uart1.CTS_B
-#define SC_P_UART1_RX                  34   //!< ss_megawrap.uart2.RX_DATA
-#define SC_P_UART1_TX                  35   //!< ss_megawrap.uart2.TX_DATA
-#define SC_P_UART1_RTS_B               36   //!< ss_megawrap.uart2.RTS_B
-#define SC_P_UART1_CTS_B               37   //!< ss_megawrap.uart2.CTS_B
-#define SC_P_UART2_RX                  38   //!< ss_megawrap.uart3.RX_DATA
-#define SC_P_UART2_TX                  39   //!< ss_megawrap.uart3.TX_DATA
-#define SC_P_UART2_RTS_B               40   //!< ss_megawrap.uart3.RTS_B
-#define SC_P_UART2_CTS_B               41   //!< ss_megawrap.uart3.CTS_B
-#define SC_P_DM_SPI0_CS0               42   //!< ss_megawrap.ecspi1.SS0
-#define SC_P_DM_SPI0_CS1               43   //!< ss_megawrap.ecspi1.SS1
-#define SC_P_DM_SPI0_CS2               44   //!< ss_megawrap.ecspi1.SS2
-#define SC_P_DM_SPI0_CS3               45   //!< ss_megawrap.ecspi1.SS3
-#define SC_P_DM_SPI0_SCLK              46   //!< ss_megawrap.ecspi1.SCLK
-#define SC_P_DM_SPI0_MOSI              47   //!< ss_megawrap.ecspi1.MOSI
-#define SC_P_DM_SPI0_MISO              48   //!< ss_megawrap.ecspi1.MISO
-#define SC_P_DM_SPI1_CS0               49   //!< ss_megawrap.ecspi2.SS0
-#define SC_P_DM_SPI1_CS1               50   //!< ss_megawrap.ecspi2.SS1
-#define SC_P_DM_SPI1_CS2               51   //!< ss_megawrap.ecspi2.SS2
-#define SC_P_DM_SPI1_CS3               52   //!< ss_megawrap.ecspi2.SS3
-#define SC_P_DM_SPI1_SCLK              53   //!< ss_megawrap.ecspi2.SCLK
-#define SC_P_DM_SPI1_MOSI              54   //!< ss_megawrap.ecspi2.MOSI
-#define SC_P_DM_SPI1_MISO              55   //!< ss_megawrap.ecspi2.MISO
-#define SC_P_DM_SPI2_CS0               56   //!< ss_megawrap.ecspi3.SS0
-#define SC_P_DM_SPI2_CS1               57   //!< ss_megawrap.ecspi3.SS1
-#define SC_P_DM_SPI2_CS2               58   //!< ss_megawrap.ecspi3.SS2
-#define SC_P_DM_SPI2_CS3               59   //!< ss_megawrap.ecspi3.SS3
-#define SC_P_DM_SPI2_SCLK              60   //!< ss_megawrap.ecspi3.SCLK
-#define SC_P_DM_SPI2_MOSI              61   //!< ss_megawrap.ecspi3.MOSI
-#define SC_P_DM_SPI2_MISO              62   //!< ss_megawrap.ecspi3.MISO
-#define SC_P_SDMA_EXT_EVENT0           63   //!< ss_megawrap.sdma.EXT_EVENT[0]
-#define SC_P_SDMA_EXT_EVENT1           64   //!< ss_megawrap.sdma.EXT_EVENT[1]
-#define SC_P_CAN_TX0                   65   //!< ss_megawrap.can1.TX
-#define SC_P_CAN_RX0                   66   //!< ss_megawrap.can1.RX
-#define SC_P_CAN_TX1                   67   //!< ss_megawrap.can2.TX
-#define SC_P_CAN_RX1                   68   //!< ss_megawrap.can2.RX
-#define SC_P_AUD_SAI0_RX_DATA0         69   //!< ss_megawrap.sai1.RX_DATA[0]
-#define SC_P_AUD_SAI0_RX_BCLK          70   //!< ss_megawrap.sai1.RX_BCLK
-#define SC_P_AUD_SAI0_RX_SYNC          71   //!< ss_megawrap.sai1.RX_SYNC
-#define SC_P_AUD_SAI0_TX_DATA0         72   //!< ss_megawrap.sai1.TX_DATA[0]
-#define SC_P_AUD_SAI0_TX_BCLK          73   //!< ss_megawrap.sai1.TX_BCLK
-#define SC_P_AUD_SAI0_TX_SYNC          74   //!< ss_megawrap.sai1.TX_SYNC
-#define SC_P_AUD_SAI0_EXT_MCLK         75   //!< ss_megawrap.sai1.MCLK
-#define SC_P_AUD_SAI1_RX_DATA0         76   //!< ss_megawrap.sai2.RX_DATA[0]
-#define SC_P_AUD_SAI1_RX_BCLK          77   //!< ss_megawrap.sai2.RX_BCLK
-#define SC_P_AUD_SAI1_RX_SYNC          78   //!< ss_megawrap.sai2.RX_SYNC
-#define SC_P_AUD_SAI1_TX_DATA0         79   //!< ss_megawrap.sai2.TX_DATA[0]
-#define SC_P_AUD_SAI1_TX_BCLK          80   //!< ss_megawrap.sai2.TX_BCLK
-#define SC_P_AUD_SAI1_TX_SYNC          81   //!< ss_megawrap.sai2.TX_SYNC
-#define SC_P_AUD_SAI1_EXT_MCLK         82   //!< ss_megawrap.sai2.MCLK
-#define SC_P_AUD_SAI2_RX_DATA0         83   //!< ss_megawrap.sai3.RX_DATA[0]
-#define SC_P_AUD_SAI2_RX_BCLK          84   //!< ss_megawrap.sai3.RX_BCLK
-#define SC_P_AUD_SAI2_RX_SYNC          85   //!< ss_megawrap.sai3.RX_SYNC
-#define SC_P_AUD_SAI2_TX_DATA0         86   //!< ss_megawrap.sai3.TX_DATA[0]
-#define SC_P_AUD_SAI2_TX_BCLK          87   //!< ss_megawrap.sai3.TX_BCLK
-#define SC_P_AUD_SAI2_TX_SYNC          88   //!< ss_megawrap.sai3.TX_SYNC
-#define SC_P_AUD_SAI2_EXT_MCLK         89   //!< ss_megawrap.sai3.MCLK
-#define SC_P_VID0_CLK                  90   //!< ss_zpu.pts0.CLK
-#define SC_P_VID0_D7                   91   //!< ss_zpu.pts0.DATA[7]
-#define SC_P_VID0_D6                   92   //!< ss_zpu.pts0.DATA[6]
-#define SC_P_VID0_D5                   93   //!< ss_zpu.pts0.DATA[5]
-#define SC_P_VID0_D4                   94   //!< ss_zpu.pts0.DATA[4]
-#define SC_P_VID0_D3                   95   //!< ss_zpu.pts0.DATA[3]
-#define SC_P_VID0_D2                   96   //!< ss_zpu.pts0.DATA[2]
-#define SC_P_VID0_D1                   97   //!< ss_zpu.pts0.DATA[1]
-#define SC_P_VID0_D0                   98   //!< ss_zpu.pts0.DATA[0]
-#define SC_P_VID0_VLD                  99   //!< ss_zpu.pts0.VLD
-#define SC_P_VID0_SYNC                 100  //!< ss_zpu.pts0.SYNC
-#define SC_P_VID0_FUNC                 101  //!< ss_zpu.pts0.FUNC
-#define SC_P_VIDS0_CLK                 102  //!< ss_zpu.sts0.CLK
-#define SC_P_VIDS0_DATA                103  //!< ss_zpu.sts0.DATA
-#define SC_P_VIDS0_SYNC                104  //!< ss_zpu.sts0.SYNC
-#define SC_P_VIDS0_VLD                 105  //!< ss_zpu.sts0.VLD
-#define SC_P_VID1_CLK                  106  //!< ss_zpu.pts1.CLK
-#define SC_P_VID1_D7                   107  //!< ss_zpu.pts1.DATA[7]
-#define SC_P_VID1_D6                   108  //!< ss_zpu.pts1.DATA[6]
-#define SC_P_VID1_D5                   109  //!< ss_zpu.pts1.DATA[5]
-#define SC_P_VID1_D4                   110  //!< ss_zpu.pts1.DATA[4]
-#define SC_P_VID1_D3                   111  //!< ss_zpu.pts1.DATA[3]
-#define SC_P_VID1_D2                   112  //!< ss_zpu.pts1.DATA[2]
-#define SC_P_VID1_D1                   113  //!< ss_zpu.pts1.DATA[1]
-#define SC_P_VID1_D0                   114  //!< ss_zpu.pts1.DATA[0]
-#define SC_P_VID1_VLD                  115  //!< ss_zpu.pts1.VLD
-#define SC_P_VID1_SYNC                 116  //!< ss_zpu.pts1.SYNC
-#define SC_P_VID1_FUNC                 117  //!< ss_zpu.pts1.FUNC
-#define SC_P_VIDS1_CLK                 118  //!< ss_zpu.lpuart.RXD
-#define SC_P_VIDS1_DATA                119  //!< ss_zpu.lpuart.TXD
-#define SC_P_VIDS1_SYNC                120  //!< ss_zpu.lpuart.RTS_B
-#define SC_P_VIDS1_VLD                 121  //!< ss_zpu.lpuart.CTS_B
-#define SC_P_LSIO_I2C0_SCL             122  //!< ss_lsio.lpi2c0.SCL
-#define SC_P_LSIO_I2C0_SDA             123  //!< ss_lsio.lpi2c0.SDA
-#define SC_P_LSIO_I2C0_SCLS            124  //!< ss_lsio.lpi2c0.SCLS
-#define SC_P_LSIO_I2C0_SDAS            125  //!< ss_lsio.lpi2c0.SDAS
-#define SC_P_LSIO_I2C0_HREQ            126  //!< ss_lsio.lpi2c0.HREQ
-#define SC_P_LSIO_I2C1_SCL             127  //!< ss_lsio.lpi2c1.SCL
-#define SC_P_LSIO_I2C1_SDA             128  //!< ss_lsio.lpi2c1.SDA
-#define SC_P_LSIO_I2C1_SCLS            129  //!< ss_lsio.lpi2c1.SCLS
-#define SC_P_LSIO_I2C1_SDAS            130  //!< ss_lsio.lpi2c1.SDAS
-#define SC_P_LSIO_I2C1_HREQ            131  //!< ss_lsio.lpi2c1.HREQ
-#define SC_P_LSIO_I2C2_SCL             132  //!< ss_lsio.lpi2c2.SCL
-#define SC_P_LSIO_I2C2_SDA             133  //!< ss_lsio.lpi2c2.SDA
-#define SC_P_LSIO_I2C2_SCLS            134  //!< ss_lsio.lpi2c2.SCLS
-#define SC_P_LSIO_I2C2_SDAS            135  //!< ss_lsio.lpi2c2.SDAS
-#define SC_P_LSIO_I2C2_HREQ            136  //!< ss_lsio.lpi2c2.HREQ
-#define SC_P_LSIO_I2C3_SCL             137  //!< ss_lsio.lpi2c3.SCL
-#define SC_P_LSIO_I2C3_SDA             138  //!< ss_lsio.lpi2c3.SDA
-#define SC_P_LSIO_I2C3_SCLS            139  //!< ss_lsio.lpi2c3.SCLS
-#define SC_P_LSIO_I2C3_SDAS            140  //!< ss_lsio.lpi2c3.SDAS
-#define SC_P_LSIO_I2C3_HREQ            141  //!< ss_lsio.lpi2c3.HREQ
-#define SC_P_LSIO_GPIO0_00             142  //!< ss_lsio.gpio0.IO[0]
-#define SC_P_LSIO_GPIO0_01             143  //!< ss_lsio.gpio0.IO[1]
-#define SC_P_LSIO_GPIO0_02             144  //!< ss_lsio.gpio0.IO[2]
-#define SC_P_LSIO_GPIO0_03             145  //!< ss_lsio.gpio0.IO[3]
-#define SC_P_LSIO_GPIO0_04             146  //!< ss_lsio.gpio0.IO[4]
-#define SC_P_LSIO_GPIO0_05             147  //!< ss_lsio.gpio0.IO[5]
-#define SC_P_LSIO_GPIO0_06             148  //!< ss_lsio.gpio0.IO[6]
-#define SC_P_LSIO_GPIO0_07             149  //!< ss_lsio.gpio0.IO[7]
-#define SC_P_LSIO_GPIO0_08             150  //!< ss_lsio.gpio0.IO[8]
-#define SC_P_LSIO_GPIO0_09             151  //!< ss_lsio.gpio0.IO[9]
-#define SC_P_LSIO_GPIO0_10             152  //!< ss_lsio.gpio0.IO[10]
-#define SC_P_LSIO_GPIO0_11             153  //!< ss_lsio.gpio0.IO[11]
-#define SC_P_LSIO_GPIO0_12             154  //!< ss_lsio.gpio0.IO[12]
-#define SC_P_LSIO_GPIO0_13             155  //!< ss_lsio.gpio0.IO[13]
-#define SC_P_LSIO_GPIO0_14             156  //!< ss_lsio.gpio0.IO[14]
-#define SC_P_LSIO_GPIO0_15             157  //!< ss_lsio.gpio0.IO[15]
-#define SC_P_LSIO_GPIO0_16             158  //!< ss_lsio.gpio0.IO[16]
-#define SC_P_LSIO_GPIO0_17             159  //!< ss_lsio.gpio0.IO[17]
-#define SC_P_LSIO_GPIO0_18             160  //!< ss_lsio.gpio0.IO[18]
-#define SC_P_LSIO_GPIO0_19             161  //!< ss_lsio.gpio0.IO[19]
-#define SC_P_LSIO_GPIO0_20             162  //!< ss_lsio.gpio0.IO[20]
-#define SC_P_LSIO_GPIO0_21             163  //!< ss_lsio.gpio0.IO[21]
-#define SC_P_LSIO_GPIO0_22             164  //!< ss_lsio.gpio0.IO[22]
-#define SC_P_LSIO_GPIO0_23             165  //!< ss_lsio.gpio0.IO[23]
-#define SC_P_LSIO_GPIO0_24             166  //!< ss_lsio.gpio0.IO[24]
-#define SC_P_LSIO_GPIO0_25             167  //!< ss_lsio.gpio0.IO[25]
-#define SC_P_LSIO_GPIO0_26             168  //!< ss_lsio.gpio0.IO[26]
-#define SC_P_LSIO_GPIO0_27             169  //!< ss_lsio.gpio0.IO[27]
-#define SC_P_LSIO_GPIO0_28             170  //!< ss_lsio.gpio0.IO[28]
-#define SC_P_LSIO_GPIO0_29             171  //!< ss_lsio.gpio0.IO[29]
-#define SC_P_LSIO_GPIO0_30             172  //!< ss_lsio.gpio0.IO[30]
-#define SC_P_LSIO_GPIO0_31             173  //!< ss_lsio.gpio0.IO[31]
-#define SC_P_LSIO_GPT0_CLK             174  //!< ss_lsio.gpt0.CLK
-#define SC_P_LSIO_GPT0_CA0             175  //!< ss_lsio.gpt0.CAPTURE[0]
-#define SC_P_LSIO_GPT0_CA1             176  //!< ss_lsio.gpt0.CAPTURE[1]
-#define SC_P_LSIO_GPT0_CO0             177  //!< ss_lsio.gpt0.COMPARE[0]
-#define SC_P_LSIO_GPT0_CO1             178  //!< ss_lsio.gpt0.COMPARE[1]
-#define SC_P_LSIO_GPT0_CO2             179  //!< ss_lsio.gpt0.COMPARE[2]
-#define SC_P_LSIO_GPT1_CLK             180  //!< ss_lsio.gpt1.CLK
-#define SC_P_LSIO_GPT1_CA0             181  //!< ss_lsio.gpt1.CAPTURE[0]
-#define SC_P_LSIO_GPT1_CA1             182  //!< ss_lsio.gpt1.CAPTURE[1]
-#define SC_P_LSIO_GPT1_CO0             183  //!< ss_lsio.gpt1.COMPARE[0]
-#define SC_P_LSIO_GPT1_CO1             184  //!< ss_lsio.gpt1.COMPARE[1]
-#define SC_P_LSIO_GPT1_CO2             185  //!< ss_lsio.gpt1.COMPARE[2]
-#define SC_P_LSIO_PWM0_OUT             186  //!< ss_lsio.pwm0.OUT
-#define SC_P_LSIO_PWM1_OUT             187  //!< ss_lsio.pwm1.OUT
-#define SC_P_LSIO_PWM2_OUT             188  //!< ss_lsio.pwm2.OUT
-#define SC_P_LSIO_PWM3_OUT             189  //!< ss_lsio.pwm3.OUT
-#define SC_P_M4_0_UART_RX              190  //!< ss_cm4_0.lpuart1.RXD
-#define SC_P_M4_0_UART_TX              191  //!< ss_cm4_0.lpuart1.TXD
-#define SC_P_M4_0_GPIO00               192  //!< ss_cm4_0.gpio.IO[0]
-#define SC_P_M4_0_GPIO01               193  //!< ss_cm4_0.gpio.IO[1]
-#define SC_P_M4_0_GPIO02               194  //!< ss_cm4_0.gpio.IO[2]
-#define SC_P_M4_0_GPIO03               195  //!< ss_cm4_0.gpio.IO[3]
-#define SC_P_M4_1_UART_RX              196  //!< ss_cm4_1.lpuart1.RXD
-#define SC_P_M4_1_UART_TX              197  //!< ss_cm4_1.lpuart1.TXD
-#define SC_P_M4_1_GPIO00               198  //!< ss_cm4_1.gpio.IO[0]
-#define SC_P_M4_1_GPIO01               199  //!< ss_cm4_1.gpio.IO[1]
-#define SC_P_M4_1_GPIO02               200  //!< ss_cm4_1.gpio.IO[2]
-#define SC_P_M4_1_GPIO03               201  //!< ss_cm4_1.gpio.IO[3]
-#define SC_P_SCU_XTAL_32K_OUT          202  //!< ss_scu.dsc.XTAL32K_OUT
-#define SC_P_SCU_PMIC_I2C_D            203  //!< ss_scu.lpi2c1.SDA
-#define SC_P_SCU_PMIC_I2C_C            204  //!< ss_scu.lpi2c1.SCL
-#define SC_P_SCU_GEN_GPIO00            205  //!< ss_scu.gpio.IO[0]
-#define SC_P_SCU_GEN_GPIO01            206  //!< ss_scu.gpio.IO[1]
-#define SC_P_SCU_GEN_GPIO02            207  //!< ss_scu.gpio.IO[2]
-#define SC_P_SCU_GEN_GPIO03            208  //!< ss_scu.gpio.IO[3]
-#define SC_P_SCU_GEN_GPIO04            209  //!< ss_scu.gpio.IO[4]
-#define SC_P_SCU_GEN_GPIO05            210  //!< ss_scu.gpio.IO[5]
-#define SC_P_SCU_GEN_GPIO06            211  //!< ss_scu.gpio.IO[6]
-#define SC_P_SCU_GEN_GPIO07            212  //!< ss_scu.gpio.IO[7]
-#define SC_P_SCU_GEN_GPIO08            213  //!< ss_scu.gpio.IO[8]
-#define SC_P_SCU_GEN_GPIO09            214  //!< ss_scu.gpio.IO[9]
-#define SC_P_SCU_GEN_GPIO10            215  //!< ss_scu.gpio.IO[10]
-#define SC_P_SCU_GEN_GPIO11            216  //!< ss_scu.gpio.IO[11]
-#define SC_P_SCU_GEN_GPIO12            217  //!< ss_scu.gpio.IO[12]
-#define SC_P_SCU_GEN_GPIO13            218  //!< ss_scu.gpio.IO[13]
-#define SC_P_SCU_GEN_GPIO14            219  //!< ss_scu.gpio.IO[14]
-#define SC_P_SCU_GEN_GPIO15            220  //!< ss_scu.gpio.IO[15]
-#define SC_P_SCU_UART_RX               221  //!< ss_scu.lpuart1.RXD
-#define SC_P_SCU_UART_TX               222  //!< ss_scu.lpuart1.TXD
-#define SC_P_SCU_UART_RTS_B            223  //!< ss_scu.lpuart1.RTS_B
-#define SC_P_SCU_UART_CTS_B            224  //!< ss_scu.lpuart1.CTS_B
-#define SC_P_SCU_FB_CS_B               225  //!< ss_scu.flexbus.CS[0]
-#define SC_P_SCU_FB_TBST_B             226  //!< ss_scu.flexbus.TBST_B
-#define SC_P_SCU_FB_AD_INOUT01         227  //!< ss_scu.flexbus.D[1]
-#define SC_P_SCU_FB_AD_INOUT08         228  //!< ss_scu.flexbus.D[8]
-#define SC_P_SCU_FB_AD_INOUT09         229  //!< ss_scu.flexbus.D[9]
-#define SC_P_SCU_FB_AD_INOUT00         230  //!< ss_scu.flexbus.D[0]
-#define SC_P_SCU_FB_AD_INOUT10         231  //!< ss_scu.flexbus.D[10]
-#define SC_P_SCU_FB_AD_INOUT11         232  //!< ss_scu.flexbus.D[11]
-#define SC_P_SCU_FB_AD_INOUT22         233  //!< ss_scu.flexbus.D[22]
-#define SC_P_SCU_FB_AD_INOUT02         234  //!< ss_scu.flexbus.D[2]
-#define SC_P_SCU_FB_AD_INOUT03         235  //!< ss_scu.flexbus.D[3]
-#define SC_P_SCU_FB_AD_INOUT04         236  //!< ss_scu.flexbus.D[4]
-#define SC_P_SCU_FB_AD_INOUT13         237  //!< ss_scu.flexbus.D[13]
-#define SC_P_SCU_FB_AD_INOUT05         238  //!< ss_scu.flexbus.D[5]
-#define SC_P_SCU_FB_AD_INOUT12         239  //!< ss_scu.flexbus.D[12]
-#define SC_P_SCU_FB_AD_INOUT06         240  //!< ss_scu.flexbus.D[6]
-#define SC_P_SCU_FB_TS_B               241  //!< ss_scu.flexbus.TS_B
-#define SC_P_SCU_FB_AD_INOUT07         242  //!< ss_scu.flexbus.D[7]
-#define SC_P_SCU_FB_AD_INOUT14         243  //!< ss_scu.flexbus.D[14]
-#define SC_P_SCU_FB_AD_INOUT23         244  //!< ss_scu.flexbus.D[23]
-#define SC_P_SCU_FB_R_WB               245  //!< ss_scu.flexbus.RWB
-#define SC_P_SCU_FB_TA_B               246  //!< ss_scu.flexbus.TA_B
-#define SC_P_SCU_FB_OE_B               247  //!< ss_scu.flexbus.OE_B
-#define SC_P_SCU_FB_CLK                248  //!< ss_scu.flexbus.BCLK
-#define SC_P_SCU_FB_AD_INOUT15         249  //!< ss_scu.flexbus.D[15]
-#define SC_P_SCU_FB_AD_INOUT16         250  //!< ss_scu.flexbus.D[16]
-#define SC_P_SCU_FB_AD_INOUT19         251  //!< ss_scu.flexbus.D[19]
-#define SC_P_SCU_FB_AD_INOUT20         252  //!< ss_scu.flexbus.D[20]
-#define SC_P_SCU_FB_AD_INOUT18         253  //!< ss_scu.flexbus.D[18]
-#define SC_P_SCU_FB_AD_INOUT17         254  //!< ss_scu.flexbus.D[17]
-#define SC_P_SCU_FB_AD_INOUT21         255  //!< ss_scu.flexbus.D[21]
-#define SC_P_SCU_FB_BCLKEN             256  //!< ss_scu.flexbus.BCLKEN
-#define SC_P_SCU_FB_TEA_B              257  //!< ss_scu.flexbus.TS_B
-#define SC_P_SCU_FB_ALE                258  //!< ss_scu.flexbus.ALE
-#define SC_P_SCU_TPIU_TRACE_CLK        259  //!< ss_scu.cxtpiu.TRACE_CLK
-#define SC_P_SCU_TPIU_TRACE_D07        260  //!< ss_scu.cxtpiu.TRACE[7]
-#define SC_P_SCU_TPIU_TRACE_D06        261  //!< ss_scu.cxtpiu.TRACE[6]
-#define SC_P_SCU_TPIU_TRACE_D05        262  //!< ss_scu.cxtpiu.TRACE[5]
-#define SC_P_SCU_TPIU_TRACE_D04        263  //!< ss_scu.cxtpiu.TRACE[4]
-#define SC_P_SCU_TPIU_TRACE_D03        264  //!< ss_scu.cxtpiu.TRACE[3]
-#define SC_P_SCU_TPIU_TRACE_D02        265  //!< ss_scu.cxtpiu.TRACE[2]
-#define SC_P_SCU_TPIU_TRACE_D01        266  //!< ss_scu.cxtpiu.TRACE[1]
-#define SC_P_SCU_TPIU_TRACE_D00        267  //!< ss_scu.cxtpiu.TRACE[0]
-#define SC_P_SCU_TPIU_TRACE_D15        268  //!< ss_scu.cxtpiu.TRACE[15]
-#define SC_P_SCU_TPIU_TRACE_D14        269  //!< ss_scu.cxtpiu.TRACE[14]
-#define SC_P_SCU_TPIU_TRACE_D13        270  //!< ss_scu.cxtpiu.TRACE[13]
-#define SC_P_SCU_TPIU_TRACE_D12        271  //!< ss_scu.cxtpiu.TRACE[12]
-#define SC_P_SCU_TPIU_TRACE_D11        272  //!< ss_scu.cxtpiu.TRACE[11]
-#define SC_P_SCU_TPIU_TRACE_D10        273  //!< ss_scu.cxtpiu.TRACE[10]
-#define SC_P_SCU_TPIU_TRACE_D09        274  //!< ss_scu.cxtpiu.TRACE[9]
-#define SC_P_SCU_TPIU_TRACE_D08        275  //!< ss_scu.cxtpiu.TRACE[8]
-#define SC_P_SCU_TPIU_TRACE_CTL        276  //!< ss_scu.cxtpiu.TRACE_CTL
-#define SC_P_LCD_PAR_RESET             277  //!< ss_di_lcd.gpio.IO[0]
-#define SC_P_LCD_PAR_CLK               278  //!< ss_di_lcd.pixel_link_slv_top.CLK
-#define SC_P_LCD_PAR_DATA00            279  //!< ss_di_lcd.pixel_link_slv_top.DATA[0]
-#define SC_P_LCD_PAR_DATA01            280  //!< ss_di_lcd.pixel_link_slv_top.DATA[1]
-#define SC_P_LCD_PAR_DATA02            281  //!< ss_di_lcd.pixel_link_slv_top.DATA[2]
-#define SC_P_LCD_PAR_DATA03            282  //!< ss_di_lcd.pixel_link_slv_top.DATA[3]
-#define SC_P_LCD_PAR_DATA04            283  //!< ss_di_lcd.pixel_link_slv_top.DATA[4]
-#define SC_P_LCD_PAR_DATA05            284  //!< ss_di_lcd.pixel_link_slv_top.DATA[5]
-#define SC_P_LCD_PAR_DATA06            285  //!< ss_di_lcd.pixel_link_slv_top.DATA[6]
-#define SC_P_LCD_PAR_DATA07            286  //!< ss_di_lcd.pixel_link_slv_top.DATA[7]
-#define SC_P_LCD_PAR_DATA08            287  //!< ss_di_lcd.pixel_link_slv_top.DATA[8]
-#define SC_P_LCD_PAR_ENABLE            288  //!< ss_di_lcd.pixel_link_slv_top.ENABLE
-#define SC_P_LCD_PAR_DATA09            289  //!< ss_di_lcd.pixel_link_slv_top.DATA[9]
-#define SC_P_LCD_PAR_DATA10            290  //!< ss_di_lcd.pixel_link_slv_top.DATA[10]
-#define SC_P_LCD_PAR_DATA11            291  //!< ss_di_lcd.pixel_link_slv_top.DATA[11]
-#define SC_P_LCD_PAR_DATA12            292  //!< ss_di_lcd.pixel_link_slv_top.DATA[12]
-#define SC_P_LCD_PAR_DATA13            293  //!< ss_di_lcd.pixel_link_slv_top.DATA[13]
-#define SC_P_LCD_PAR_DATA14            294  //!< ss_di_lcd.pixel_link_slv_top.DATA[14]
-#define SC_P_LCD_PAR_DATA15            295  //!< ss_di_lcd.pixel_link_slv_top.DATA[15]
-#define SC_P_LCD_PAR_DATA16            296  //!< ss_di_lcd.pixel_link_slv_top.DATA[16]
-#define SC_P_LCD_PAR_DATA17            297  //!< ss_di_lcd.pixel_link_slv_top.DATA[17]
-#define SC_P_LCD_PAR_DATA18            298  //!< ss_di_lcd.pixel_link_slv_top.DATA[18]
-#define SC_P_LCD_PAR_DATA19            299  //!< ss_di_lcd.pixel_link_slv_top.DATA[19]
-#define SC_P_LCD_PAR_DATA20            300  //!< ss_di_lcd.pixel_link_slv_top.DATA[20]
-#define SC_P_LCD_PAR_DATA21            301  //!< ss_di_lcd.pixel_link_slv_top.DATA[21]
-#define SC_P_LCD_PAR_DATA22            302  //!< ss_di_lcd.pixel_link_slv_top.DATA[22]
-#define SC_P_LCD_PAR_DATA23            303  //!< ss_di_lcd.pixel_link_slv_top.DATA[23]
-#define SC_P_LCD_PAR_DATA24            304  //!< ss_di_lcd.pixel_link_slv_top.DATA[24]
-#define SC_P_LCD_PAR_DATA25            305  //!< ss_di_lcd.pixel_link_slv_top.DATA[25]
-#define SC_P_LCD_PAR_DATA26            306  //!< ss_di_lcd.pixel_link_slv_top.DATA[26]
-#define SC_P_LCD_PAR_DATA27            307  //!< ss_di_lcd.pixel_link_slv_top.DATA[27]
-#define SC_P_LCD_PAR_DATA28            308  //!< ss_di_lcd.pixel_link_slv_top.DATA[28]
-#define SC_P_LCD_PAR_DATA29            309  //!< ss_di_lcd.pixel_link_slv_top.DATA[29]
-#define SC_P_LCD_PAR_VSYNC             310  //!< ss_di_lcd.pixel_link_slv_top.VSYNC
-#define SC_P_LCD_PAR_HSYNC             311  //!< ss_di_lcd.pixel_link_slv_top.HSYNC
-#define SC_P_IMG0_PAR_CLK              312  //!< ss_di_pi_0.pixel_link_mst.CLK
-#define SC_P_IMG0_PAR_VSYNC            313  //!< ss_di_pi_0.pixel_link_mst.VSYNC
-#define SC_P_IMG0_PAR_HSYNC            314  //!< ss_di_pi_0.pixel_link_mst.HSYNC
-#define SC_P_IMG0_PAR_DATA23           315  //!< ss_di_pi_0.pixel_link_mst.DATA[23]
-#define SC_P_IMG0_PAR_DATA22           316  //!< ss_di_pi_0.pixel_link_mst.DATA[22]
-#define SC_P_IMG0_PAR_DATA21           317  //!< ss_di_pi_0.pixel_link_mst.DATA[21]
-#define SC_P_IMG0_PAR_DATA20           318  //!< ss_di_pi_0.pixel_link_mst.DATA[20]
-#define SC_P_IMG0_PAR_DATA19           319  //!< ss_di_pi_0.pixel_link_mst.DATA[19]
-#define SC_P_IMG0_PAR_DATA18           320  //!< ss_di_pi_0.pixel_link_mst.DATA[18]
-#define SC_P_IMG0_PAR_DATA17           321  //!< ss_di_pi_0.pixel_link_mst.DATA[17]
-#define SC_P_IMG0_PAR_DATA16           322  //!< ss_di_pi_0.pixel_link_mst.DATA[16]
-#define SC_P_IMG0_PAR_DATA15           323  //!< ss_di_pi_0.pixel_link_mst.DATA[15]
-#define SC_P_IMG0_PAR_DATA14           324  //!< ss_di_pi_0.pixel_link_mst.DATA[14]
-#define SC_P_IMG0_PAR_DATA13           325  //!< ss_di_pi_0.pixel_link_mst.DATA[13]
-#define SC_P_IMG0_PAR_DATA12           326  //!< ss_di_pi_0.pixel_link_mst.DATA[12]
-#define SC_P_IMG0_PAR_DATA11           327  //!< ss_di_pi_0.pixel_link_mst.DATA[11]
-#define SC_P_IMG0_PAR_DATA10           328  //!< ss_di_pi_0.pixel_link_mst.DATA[10]
-#define SC_P_IMG0_PAR_DATA9            329  //!< ss_di_pi_0.pixel_link_mst.DATA[9]
-#define SC_P_IMG0_PAR_DATA8            330  //!< ss_di_pi_0.pixel_link_mst.DATA[8]
-#define SC_P_IMG0_PAR_DATA7            331  //!< ss_di_pi_0.pixel_link_mst.DATA[7]
-#define SC_P_IMG0_PAR_DATA6            332  //!< ss_di_pi_0.pixel_link_mst.DATA[6]
-#define SC_P_IMG0_PAR_DATA5            333  //!< ss_di_pi_0.pixel_link_mst.DATA[5]
-#define SC_P_IMG0_PAR_DATA4            334  //!< ss_di_pi_0.pixel_link_mst.DATA[4]
-#define SC_P_IMG0_PAR_DATA3            335  //!< ss_di_pi_0.pixel_link_mst.DATA[3]
-#define SC_P_IMG0_PAR_DATA2            336  //!< ss_di_pi_0.pixel_link_mst.DATA[2]
-#define SC_P_IMG0_PAR_DATA1            337  //!< ss_di_pi_0.pixel_link_mst.DATA[1]
-#define SC_P_IMG0_PAR_DATA0            338  //!< ss_di_pi_0.pixel_link_mst.DATA[0]
-#define SC_P_IMG0_PAR_MCLK             339  //!< ss_di_pi_0.pixel_link_mst.MCLK
-#define SC_P_IMG0_PAR_FPOL             340  //!< ss_di_pi_0.pixel_link_mst.DATA[32]
-#define SC_P_IMG0_PAR_ENABLE           341  //!< ss_di_pi_0.pixel_link_mst.ENABLE
-#define SC_P_IMG0_PAR_RESET            342  //!< ss_di_pi_0.gpio.IO[0]
-#define SC_P_IMG0_PAR_GPIO             343  //!< ss_di_pi_0.gpio.IO[1]
-#define SC_P_IMG0_PAR_SCL              344  //!< ss_di_pi_0.lpi2c.SCL
-#define SC_P_IMG0_PAR_SDA              345  //!< ss_di_pi_0.lpi2c.SDA
-#define SC_P_IMG1_PAR_CLK              346  //!< ss_di_pi_1.pixel_link_mst.CLK
-#define SC_P_IMG1_PAR_VSYNC            347  //!< ss_di_pi_1.pixel_link_mst.VSYNC
-#define SC_P_IMG1_PAR_HSYNC            348  //!< ss_di_pi_1.pixel_link_mst.HSYNC
-#define SC_P_IMG1_PAR_DATA23           349  //!< ss_di_pi_1.pixel_link_mst.DATA[23]
-#define SC_P_IMG1_PAR_DATA22           350  //!< ss_di_pi_1.pixel_link_mst.DATA[22]
-#define SC_P_IMG1_PAR_DATA21           351  //!< ss_di_pi_1.pixel_link_mst.DATA[21]
-#define SC_P_IMG1_PAR_DATA20           352  //!< ss_di_pi_1.pixel_link_mst.DATA[20]
-#define SC_P_IMG1_PAR_DATA19           353  //!< ss_di_pi_1.pixel_link_mst.DATA[19]
-#define SC_P_IMG1_PAR_DATA18           354  //!< ss_di_pi_1.pixel_link_mst.DATA[18]
-#define SC_P_IMG1_PAR_DATA17           355  //!< ss_di_pi_1.pixel_link_mst.DATA[17]
-#define SC_P_IMG1_PAR_DATA16           356  //!< ss_di_pi_1.pixel_link_mst.DATA[16]
-#define SC_P_IMG1_PAR_DATA15           357  //!< ss_di_pi_1.pixel_link_mst.DATA[15]
-#define SC_P_IMG1_PAR_DATA14           358  //!< ss_di_pi_1.pixel_link_mst.DATA[14]
-#define SC_P_IMG1_PAR_DATA13           359  //!< ss_di_pi_1.pixel_link_mst.DATA[13]
-#define SC_P_IMG1_PAR_DATA12           360  //!< ss_di_pi_1.pixel_link_mst.DATA[12]
-#define SC_P_IMG1_PAR_DATA11           361  //!< ss_di_pi_1.pixel_link_mst.DATA[11]
-#define SC_P_IMG1_PAR_DATA10           362  //!< ss_di_pi_1.pixel_link_mst.DATA[10]
-#define SC_P_IMG1_PAR_DATA9            363  //!< ss_di_pi_1.pixel_link_mst.DATA[9]
-#define SC_P_IMG1_PAR_DATA8            364  //!< ss_di_pi_1.pixel_link_mst.DATA[8]
-#define SC_P_IMG1_PAR_DATA7            365  //!< ss_di_pi_1.pixel_link_mst.DATA[7]
-#define SC_P_IMG1_PAR_DATA6            366  //!< ss_di_pi_1.pixel_link_mst.DATA[6]
-#define SC_P_IMG1_PAR_DATA5            367  //!< ss_di_pi_1.pixel_link_mst.DATA[5]
-#define SC_P_IMG1_PAR_DATA4            368  //!< ss_di_pi_1.pixel_link_mst.DATA[4]
-#define SC_P_IMG1_PAR_DATA3            369  //!< ss_di_pi_1.pixel_link_mst.DATA[3]
-#define SC_P_IMG1_PAR_DATA2            370  //!< ss_di_pi_1.pixel_link_mst.DATA[2]
-#define SC_P_IMG1_PAR_DATA1            371  //!< ss_di_pi_1.pixel_link_mst.DATA[1]
-#define SC_P_IMG1_PAR_DATA0            372  //!< ss_di_pi_1.pixel_link_mst.DATA[0]
-#define SC_P_IMG1_PAR_MCLK             373  //!< ss_di_pi_1.pixel_link_mst.MCLK
-#define SC_P_IMG1_PAR_FPOL             374  //!< ss_di_pi_1.pixel_link_mst.DATA[32]
-#define SC_P_IMG1_PAR_ENABLE           375  //!< ss_di_pi_1.pixel_link_mst.ENABLE
-#define SC_P_IMG1_PAR_RESET            376  //!< ss_di_pi_1.gpio.IO[0]
-#define SC_P_IMG1_PAR_GPIO             377  //!< ss_di_pi_1.gpio.IO[1]
-#define SC_P_IMG1_PAR_SCL              378  //!< ss_di_pi_1.lpi2c.SCL
-#define SC_P_IMG1_PAR_SDA              379  //!< ss_di_pi_1.lpi2c.SDA
-#define SC_P_QSPI0A_DATA0              380  //!< ss_megawrap.qspi.A_DATA[0]
-#define SC_P_QSPI0A_DATA1              381  //!< ss_megawrap.qspi.A_DATA[1]
-#define SC_P_QSPI0A_DATA2              382  //!< ss_megawrap.qspi.A_DATA[2]
-#define SC_P_QSPI0A_DATA3              383  //!< ss_megawrap.qspi.A_DATA[3]
-#define SC_P_QSPI0A_DQS                384  //!< ss_megawrap.qspi.A_DQS
-#define SC_P_QSPI0A_SCLK               385  //!< ss_megawrap.qspi.A_SCLK
-#define SC_P_QSPI0A_SS1                386  //!< ss_megawrap.qspi.A_SS1_B
-#define SC_P_QSPI0A_SS0                387  //!< ss_megawrap.qspi.A_SS0_B
-#define SC_P_QSPI0B_DATA0              388  //!< ss_megawrap.qspi.B_DATA[0]
-#define SC_P_QSPI0B_DATA1              389  //!< ss_megawrap.qspi.B_DATA[1]
-#define SC_P_QSPI0B_DATA2              390  //!< ss_megawrap.qspi.B_DATA[2]
-#define SC_P_QSPI0B_DATA3              391  //!< ss_megawrap.qspi.B_DATA[3]
-#define SC_P_QSPI0B_DQS                392  //!< ss_megawrap.qspi.B_DQS
-#define SC_P_QSPI0B_SCLK               393  //!< ss_megawrap.qspi.B_SCLK
-#define SC_P_QSPI0B_SS0                394  //!< ss_megawrap.qspi.B_SS0_B
-#define SC_P_QSPI0B_SS1                395  //!< ss_megawrap.qspi.B_SS1_B
-#define SC_P_USDHC0_DATA2              396  //!< ss_megawrap.usdhc1.DATA[2]
-#define SC_P_USDHC0_DATA3              397  //!< ss_megawrap.usdhc1.DATA[3]
-#define SC_P_USDHC0_DATA4              398  //!< ss_megawrap.usdhc1.DATA[4]
-#define SC_P_USDHC0_CMD                399  //!< ss_megawrap.usdhc1.CMD
-#define SC_P_USDHC0_DATA5              400  //!< ss_megawrap.usdhc1.DATA[5]
-#define SC_P_USDHC0_CLK                401  //!< ss_megawrap.usdhc1.CLK
-#define SC_P_USDHC0_DATA6              402  //!< ss_megawrap.usdhc1.DATA[6]
-#define SC_P_USDHC0_DATA7              403  //!< ss_megawrap.usdhc1.DATA[7]
-#define SC_P_USDHC0_DATA0              404  //!< ss_megawrap.usdhc1.DATA[0]
-#define SC_P_USDHC0_DATA1              405  //!< ss_megawrap.usdhc1.DATA[1]
-#define SC_P_USDHC0_CD_B               406  //!< ss_megawrap.usdhc1.CD_B
-#define SC_P_USDHC0_WP                 407  //!< ss_megawrap.usdhc1.WP
-#define SC_P_USDHC0_RESET_B            408  //!< ss_megawrap.usdhc1.RESET_B
-#define SC_P_USDHC1_DATA2              409  //!< ss_megawrap.usdhc2.DATA[2]
-#define SC_P_USDHC1_DATA3              410  //!< ss_megawrap.usdhc2.DATA[3]
-#define SC_P_USDHC1_CMD                411  //!< ss_megawrap.usdhc2.CMD
-#define SC_P_USDHC1_CLK                412  //!< ss_megawrap.usdhc2.CLK
-#define SC_P_USDHC1_DATA0              413  //!< ss_megawrap.usdhc2.DATA[0]
-#define SC_P_USDHC1_DATA1              414  //!< ss_megawrap.usdhc2.DATA[1]
-#define SC_P_USDHC1_CD_B               415  //!< ss_megawrap.usdhc2.CD_B
-#define SC_P_USDHC1_WP                 416  //!< ss_megawrap.usdhc2.WP
-#define SC_P_USDHC1_LCTRL              417  //!< ss_megawrap.usdhc2.LCTRL
-#define SC_P_USDHC1_RESET_B            418  //!< ss_megawrap.usdhc2.RESET_B
-#define SC_P_USDHC1_VSELECT            419  //!< ss_megawrap.usdhc2.VSELECT
-#define SC_P_ENET0_MDC                 420  //!< ss_megawrap.enet1.MDC
-#define SC_P_ENET0_MDIO                421  //!< ss_megawrap.enet1.MDIO
-#define SC_P_ENET0_RGMII_RD3           422  //!< ss_megawrap.enet1.RGMII_RD3
-#define SC_P_ENET0_RGMII_RD2           423  //!< ss_megawrap.enet1.RGMII_RD2
-#define SC_P_ENET0_RGMII_RD1           424  //!< ss_megawrap.enet1.RGMII_RD1
-#define SC_P_ENET0_RGMII_RD0           425  //!< ss_megawrap.enet1.RGMII_RD0
-#define SC_P_ENET0_RGMII_RXC           426  //!< ss_megawrap.enet1.RGMII_RXC
-#define SC_P_ENET0_RGMII_RX_CTL        427  //!< ss_megawrap.enet1.RGMII_RX_CTL
-#define SC_P_ENET0_RGMII_TX_CTL        428  //!< ss_megawrap.enet1.RGMII_TX_CTL
-#define SC_P_ENET0_RGMII_TXC           429  //!< ss_megawrap.enet1.RGMII_TXC
-#define SC_P_ENET0_RGMII_TD0           430  //!< ss_megawrap.enet1.RGMII_TD0
-#define SC_P_ENET0_RGMII_TD1           431  //!< ss_megawrap.enet1.RGMII_TD1
-#define SC_P_ENET0_RGMII_TD2           432  //!< ss_megawrap.enet1.RGMII_TD2
-#define SC_P_ENET0_RGMII_TD3           433  //!< ss_megawrap.enet1.RGMII_TD3
-#define SC_P_ENET0_1588_EVENT0_IN      434  //!< ss_megawrap.enet1.1588_EVENT0_IN
-#define SC_P_ENET0_1588_EVENT1_IN      435  //!< ss_megawrap.enet1.1588_EVENT1_IN
-#define SC_P_ENET0_1588_EVENT0_OUT     436  //!< ss_megawrap.enet1.1588_EVENT0_OUT
-#define SC_P_ENET0_1588_EVENT1_OUT     437  //!< ss_megawrap.enet1.1588_EVENT1_OUT
-#define SC_P_ENET1_MDC                 438  //!< ss_megawrap.enet2.MDC
-#define SC_P_ENET1_MDIO                439  //!< ss_megawrap.enet2.MDIO
-#define SC_P_ENET1_RGMII_RD3           440  //!< ss_megawrap.enet2.RGMII_RD3
-#define SC_P_ENET1_RGMII_RD2           441  //!< ss_megawrap.enet2.RGMII_RD2
-#define SC_P_ENET1_RGMII_RD1           442  //!< ss_megawrap.enet2.RGMII_RD1
-#define SC_P_ENET1_RGMII_RD0           443  //!< ss_megawrap.enet2.RGMII_RD0
-#define SC_P_ENET1_RGMII_RXC           444  //!< ss_megawrap.enet2.RGMII_RXC
-#define SC_P_ENET1_RGMII_RX_CTL        445  //!< ss_megawrap.enet2.RGMII_RX_CTL
-#define SC_P_ENET1_RGMII_TX_CTL        446  //!< ss_megawrap.enet2.RGMII_TX_CTL
-#define SC_P_ENET1_RGMII_TXC           447  //!< ss_megawrap.enet2.RGMII_TXC
-#define SC_P_ENET1_RGMII_TD0           448  //!< ss_megawrap.enet2.RGMII_TD0
-#define SC_P_ENET1_RGMII_TD1           449  //!< ss_megawrap.enet2.RGMII_TD1
-#define SC_P_ENET1_RGMII_TD2           450  //!< ss_megawrap.enet2.RGMII_TD2
-#define SC_P_ENET1_RGMII_TD3           451  //!< ss_megawrap.enet2.RGMII_TD3
-#define SC_P_ENET1_1588_EVENT0_IN      452  //!< ss_megawrap.enet2.1588_EVENT0_IN
-#define SC_P_ENET1_1588_EVENT1_IN      453  //!< ss_megawrap.enet2.1588_EVENT1_IN
-#define SC_P_ENET1_1588_EVENT0_OUT     454  //!< ss_megawrap.enet2.1588_EVENT0_OUT
-#define SC_P_ENET1_1588_EVENT1_OUT     455  //!< ss_megawrap.enet2.1588_EVENT1_OUT
+#define SC_P_SIM0_CLK                            0    //!< DMA.SIM0.CLK, LSIO.GPIO0.IO00
+#define SC_P_SIM0_RST                            1    //!< DMA.SIM0.RST, LSIO.GPIO0.IO01
+#define SC_P_SIM0_IO                             2    //!< DMA.SIM0.IO, LSIO.GPIO0.IO02
+#define SC_P_SIM0_PD                             3    //!< DMA.SIM0.PD, DMA.I2C3.SCL, LSIO.GPIO0.IO03
+#define SC_P_SIM0_POWER_EN                       4    //!< DMA.SIM0.POWER_EN, DMA.I2C3.SDA, LSIO.GPIO0.IO04
+#define SC_P_SIM0_GPIO0_00                       5    //!< DMA.SIM0.POWER_EN, LSIO.GPIO0.IO05
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_SIM           6    //!<
+#define SC_P_M40_I2C0_SCL                        7    //!< M40.I2C0.SCL, M40.UART0.RX, M40.GPIO0.IO02, LSIO.GPIO0.IO06
+#define SC_P_M40_I2C0_SDA                        8    //!< M40.I2C0.SDA, M40.UART0.TX, M40.GPIO0.IO03, LSIO.GPIO0.IO07
+#define SC_P_M40_GPIO0_00                        9    //!< M40.GPIO0.IO00, M40.TPM0.CH0, DMA.UART4.RX, LSIO.GPIO0.IO08
+#define SC_P_M40_GPIO0_01                        10   //!< M40.GPIO0.IO01, M40.TPM0.CH1, DMA.UART4.TX, LSIO.GPIO0.IO09
+#define SC_P_M41_I2C0_SCL                        11   //!< M41.I2C0.SCL, M41.UART0.RX, M41.GPIO0.IO02, LSIO.GPIO0.IO10
+#define SC_P_M41_I2C0_SDA                        12   //!< M41.I2C0.SDA, M41.UART0.TX, M41.GPIO0.IO03, LSIO.GPIO0.IO11
+#define SC_P_M41_GPIO0_00                        13   //!< M41.GPIO0.IO00, M41.TPM0.CH0, DMA.UART3.RX, LSIO.GPIO0.IO12
+#define SC_P_M41_GPIO0_01                        14   //!< M41.GPIO0.IO01, M41.TPM0.CH1, DMA.UART3.TX, LSIO.GPIO0.IO13
+#define SC_P_GPT0_CLK                            15   //!< LSIO.GPT0.CLK, DMA.I2C1.SCL, LSIO.KPP0.COL4, LSIO.GPIO0.IO14
+#define SC_P_GPT0_CAPTURE                        16   //!< LSIO.GPT0.CAPTURE, DMA.I2C1.SDA, LSIO.KPP0.COL5, LSIO.GPIO0.IO15
+#define SC_P_GPT0_COMPARE                        17   //!< LSIO.GPT0.COMPARE, LSIO.PWM3.OUT, LSIO.KPP0.COL6, LSIO.GPIO0.IO16
+#define SC_P_GPT1_CLK                            18   //!< LSIO.GPT1.CLK, DMA.I2C2.SCL, LSIO.KPP0.COL7, LSIO.GPIO0.IO17
+#define SC_P_GPT1_CAPTURE                        19   //!< LSIO.GPT1.CAPTURE, DMA.I2C2.SDA, LSIO.KPP0.ROW4, LSIO.GPIO0.IO18
+#define SC_P_GPT1_COMPARE                        20   //!< LSIO.GPT1.COMPARE, LSIO.PWM2.OUT, LSIO.KPP0.ROW5, LSIO.GPIO0.IO19
+#define SC_P_UART0_RX                            21   //!< DMA.UART0.RX, LSIO.GPIO0.IO20
+#define SC_P_UART0_TX                            22   //!< DMA.UART0.TX, LSIO.GPIO0.IO21
+#define SC_P_UART0_RTS_B                         23   //!< DMA.UART0.RTS_B, LSIO.PWM0.OUT, DMA.UART2.RX, LSIO.GPIO0.IO22
+#define SC_P_UART0_CTS_B                         24   //!< DMA.UART0.CTS_B, LSIO.PWM1.OUT, DMA.UART2.TX, LSIO.GPIO0.IO23
+#define SC_P_UART1_TX                            25   //!< DMA.UART1.TX, DMA.SPI3.SCK, LSIO.GPIO0.IO24
+#define SC_P_UART1_RX                            26   //!< DMA.UART1.RX, DMA.SPI3.SDO, LSIO.GPIO0.IO25
+#define SC_P_UART1_RTS_B                         27   //!< DMA.UART1.RTS_B, DMA.SPI3.SDI, DMA.UART1.CTS_B, LSIO.GPIO0.IO26
+#define SC_P_UART1_CTS_B                         28   //!< DMA.UART1.CTS_B, DMA.SPI3.CS0, DMA.UART1.RTS_B, LSIO.GPIO0.IO27
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_GPIOLH        29   //!<
+#define SC_P_SCU_PMIC_MEMC_ON                    30   //!< SCU.GPIO0.IOXX_PMIC_MEMC_ON
+#define SC_P_SCU_WDOG_OUT                        31   //!< SCU.WDOG0.WDOG_OUT
+#define SC_P_JTAG_TMS                            32   //!< SCU.JTAG.TMS
+#define SC_P_JTAG_TCK                            33   //!< SCU.JTAG.TCK
+#define SC_P_JTAG_TDO                            34   //!< SCU.JTAG.TDO
+#define SC_P_JTAG_TDI                            35   //!< SCU.JTAG.TDI
+#define SC_P_JTAG_TRST_B                         36   //!< SCU.JTAG.TRST_B
+#define SC_P_TEST_MODE_SELECT                    37   //!< SCU.TCU.TEST_MODE_SELECT
+#define SC_P_SCU_PMIC_STANDBY                    38   //!< SCU.DSC.PMIC_STANDBY
+#define SC_P_PMIC_I2C_SDA                        39   //!< SCU.PMIC_I2C.SDA
+#define SC_P_PMIC_I2C_SCL                        40   //!< SCU.PMIC_I2C.SCL
+#define SC_P_PMIC_EARLY_WARNING                  41   //!< SCU.PMIC_EARLY_WARNING
+#define SC_P_POR_B                               42   //!< SCU.DSC.POR_B
+#define SC_P_PMIC_INT_B                          43   //!< SCU.DSC.PMIC_INT_B
+#define SC_P_SCU_GPIO0_00                        44   //!< SCU.GPIO0.IO00, SCU.UART0.RX, LSIO.GPIO0.IO28
+#define SC_P_SCU_GPIO0_01                        45   //!< SCU.GPIO0.IO01, SCU.UART0.TX, LSIO.GPIO0.IO29
+#define SC_P_SCU_GPIO0_02                        46   //!< SCU.GPIO0.IO02, SCU.GPIO0.IOXX_PMIC_GPU0_ON, LSIO.GPIO0.IO30
+#define SC_P_SCU_GPIO0_03                        47   //!< SCU.GPIO0.IO03, SCU.GPIO0.IOXX_PMIC_GPU1_ON, LSIO.GPIO0.IO31
+#define SC_P_SCU_GPIO0_04                        48   //!< SCU.GPIO0.IO04, SCU.GPIO0.IOXX_PMIC_A72_ON, LSIO.GPIO1.IO00
+#define SC_P_SCU_GPIO0_05                        49   //!< SCU.GPIO0.IO05, SCU.GPIO0.IOXX_PMIC_A53_ON, LSIO.GPIO1.IO01
+#define SC_P_SCU_GPIO0_06                        50   //!< SCU.GPIO0.IO06, SCU.TPM0.CH0, LSIO.GPIO1.IO02
+#define SC_P_SCU_GPIO0_07                        51   //!< SCU.GPIO0.IO07, SCU.TPM0.CH1, SCU.DSC.RTC_CLOCK_OUTPUT_32K, LSIO.GPIO1.IO03
+#define SC_P_SCU_BOOT_MODE0                      52   //!< SCU.DSC.BOOT_MODE0
+#define SC_P_SCU_BOOT_MODE1                      53   //!< SCU.DSC.BOOT_MODE1
+#define SC_P_SCU_BOOT_MODE2                      54   //!< SCU.DSC.BOOT_MODE2
+#define SC_P_SCU_BOOT_MODE3                      55   //!< SCU.DSC.BOOT_MODE3
+#define SC_P_SCU_BOOT_MODE4                      56   //!< SCU.DSC.BOOT_MODE4, SCU.PMIC_I2C.SCL
+#define SC_P_SCU_BOOT_MODE5                      57   //!< SCU.DSC.BOOT_MODE5, SCU.PMIC_I2C.SDA
+#define SC_P_LVDS0_GPIO00                        58   //!< LVDS0.GPIO0.IO00, LVDS0.PWM0.OUT, LSIO.GPIO1.IO04
+#define SC_P_LVDS0_GPIO01                        59   //!< LVDS0.GPIO0.IO01, LSIO.GPIO1.IO05
+#define SC_P_LVDS0_I2C0_SCL                      60   //!< LVDS0.I2C0.SCL, LVDS0.GPIO0.IO02, LSIO.GPIO1.IO06
+#define SC_P_LVDS0_I2C0_SDA                      61   //!< LVDS0.I2C0.SDA, LVDS0.GPIO0.IO03, LSIO.GPIO1.IO07
+#define SC_P_LVDS0_I2C1_SCL                      62   //!< LVDS0.I2C1.SCL, DMA.UART2.TX, LSIO.GPIO1.IO08
+#define SC_P_LVDS0_I2C1_SDA                      63   //!< LVDS0.I2C1.SDA, DMA.UART2.RX, LSIO.GPIO1.IO09
+#define SC_P_LVDS1_GPIO00                        64   //!< LVDS1.GPIO0.IO00, LVDS1.PWM0.OUT, LSIO.GPIO1.IO10
+#define SC_P_LVDS1_GPIO01                        65   //!< LVDS1.GPIO0.IO01, LSIO.GPIO1.IO11
+#define SC_P_LVDS1_I2C0_SCL                      66   //!< LVDS1.I2C0.SCL, LVDS1.GPIO0.IO02, LSIO.GPIO1.IO12
+#define SC_P_LVDS1_I2C0_SDA                      67   //!< LVDS1.I2C0.SDA, LVDS1.GPIO0.IO03, LSIO.GPIO1.IO13
+#define SC_P_LVDS1_I2C1_SCL                      68   //!< LVDS1.I2C1.SCL, DMA.UART3.TX, LSIO.GPIO1.IO14
+#define SC_P_LVDS1_I2C1_SDA                      69   //!< LVDS1.I2C1.SDA, DMA.UART3.RX, LSIO.GPIO1.IO15
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_LVDSGPIO      70   //!<
+#define SC_P_MIPI_DSI0_I2C0_SCL                  71   //!< MIPI_DSI0.I2C0.SCL, LSIO.GPIO1.IO16
+#define SC_P_MIPI_DSI0_I2C0_SDA                  72   //!< MIPI_DSI0.I2C0.SDA, LSIO.GPIO1.IO17
+#define SC_P_MIPI_DSI0_GPIO0_00                  73   //!< MIPI_DSI0.GPIO0.IO00, MIPI_DSI0.PWM0.OUT, LSIO.GPIO1.IO18
+#define SC_P_MIPI_DSI0_GPIO0_01                  74   //!< MIPI_DSI0.GPIO0.IO01, LSIO.GPIO1.IO19
+#define SC_P_MIPI_DSI1_I2C0_SCL                  75   //!< MIPI_DSI1.I2C0.SCL, LSIO.GPIO1.IO20
+#define SC_P_MIPI_DSI1_I2C0_SDA                  76   //!< MIPI_DSI1.I2C0.SDA, LSIO.GPIO1.IO21
+#define SC_P_MIPI_DSI1_GPIO0_00                  77   //!< MIPI_DSI1.GPIO0.IO00, MIPI_DSI1.PWM0.OUT, LSIO.GPIO1.IO22
+#define SC_P_MIPI_DSI1_GPIO0_01                  78   //!< MIPI_DSI1.GPIO0.IO01, LSIO.GPIO1.IO23
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_MIPIDSIGPIO   79   //!<
+#define SC_P_MIPI_CSI0_MCLK_OUT                  80   //!< MIPI_CSI0.ACM.MCLK_OUT, LSIO.GPIO1.IO24
+#define SC_P_MIPI_CSI0_I2C0_SCL                  81   //!< MIPI_CSI0.I2C0.SCL, LSIO.GPIO1.IO25
+#define SC_P_MIPI_CSI0_I2C0_SDA                  82   //!< MIPI_CSI0.I2C0.SDA, LSIO.GPIO1.IO26
+#define SC_P_MIPI_CSI0_GPIO0_00                  83   //!< MIPI_CSI0.GPIO0.IO00, DMA.I2C0.SCL, LSIO.GPIO1.IO27
+#define SC_P_MIPI_CSI0_GPIO0_01                  84   //!< MIPI_CSI0.GPIO0.IO01, DMA.I2C0.SDA, LSIO.GPIO1.IO28
+#define SC_P_MIPI_CSI1_MCLK_OUT                  85   //!< MIPI_CSI1.ACM.MCLK_OUT, LSIO.GPIO1.IO29
+#define SC_P_MIPI_CSI1_GPIO0_00                  86   //!< MIPI_CSI1.GPIO0.IO00, DMA.UART4.RX, LSIO.GPIO1.IO30
+#define SC_P_MIPI_CSI1_GPIO0_01                  87   //!< MIPI_CSI1.GPIO0.IO01, DMA.UART4.TX, LSIO.GPIO1.IO31
+#define SC_P_MIPI_CSI1_I2C0_SCL                  88   //!< MIPI_CSI1.I2C0.SCL, LSIO.GPIO2.IO00
+#define SC_P_MIPI_CSI1_I2C0_SDA                  89   //!< MIPI_CSI1.I2C0.SDA, LSIO.GPIO2.IO01
+#define SC_P_HDMI_TX0_TS_SCL                     90   //!< HDMI_TX0.I2C0.SCL, DMA.I2C0.SCL, LSIO.GPIO2.IO02
+#define SC_P_HDMI_TX0_TS_SDA                     91   //!< HDMI_TX0.I2C0.SDA, DMA.I2C0.SDA, LSIO.GPIO2.IO03
+#define SC_P_COMP_CTL_GPIO_3V3_HDMIGPIO          92   //!<
+#define SC_P_ESAI1_FSR                           93   //!< AUD.ESAI1.FSR, LSIO.GPIO2.IO04
+#define SC_P_ESAI1_FST                           94   //!< AUD.ESAI1.FST, LSIO.GPIO2.IO05
+#define SC_P_ESAI1_SCKR                          95   //!< AUD.ESAI1.SCKR, LSIO.GPIO2.IO06
+#define SC_P_ESAI1_SCKT                          96   //!< AUD.ESAI1.SCKT, AUD.SAI2.RXC, LSIO.GPIO2.IO07
+#define SC_P_ESAI1_TX0                           97   //!< AUD.ESAI1.TX0, AUD.SAI2.RXD, LSIO.GPIO2.IO08
+#define SC_P_ESAI1_TX1                           98   //!< AUD.ESAI1.TX1, AUD.SAI2.RXFS, LSIO.GPIO2.IO09
+#define SC_P_ESAI1_TX2_RX3                       99   //!< AUD.ESAI1.TX2_RX3, LSIO.GPIO2.IO10
+#define SC_P_ESAI1_TX3_RX2                       100  //!< AUD.ESAI1.TX3_RX2, LSIO.GPIO2.IO11
+#define SC_P_ESAI1_TX4_RX1                       101  //!< AUD.ESAI1.TX4_RX1, LSIO.GPIO2.IO12
+#define SC_P_ESAI1_TX5_RX0                       102  //!< AUD.ESAI1.TX5_RX0, LSIO.GPIO2.IO13
+#define SC_P_SPDIF0_RX                           103  //!< AUD.SPDIF0.RX, AUD.MQS.R, AUD.ACM.MCLK_IN1, LSIO.GPIO2.IO14
+#define SC_P_SPDIF0_TX                           104  //!< AUD.SPDIF0.TX, AUD.MQS.L, AUD.ACM.MCLK_OUT1, LSIO.GPIO2.IO15
+#define SC_P_SPDIF0_EXT_CLK                      105  //!< AUD.SPDIF0.EXT_CLK, DMA.DMA0.REQ_IN0, LSIO.GPIO2.IO16
+#define SC_P_SPI3_SCK                            106  //!< DMA.SPI3.SCK, LSIO.GPIO2.IO17
+#define SC_P_SPI3_SDO                            107  //!< DMA.SPI3.SDO, DMA.FTM.CH0, LSIO.GPIO2.IO18
+#define SC_P_SPI3_SDI                            108  //!< DMA.SPI3.SDI, DMA.FTM.CH1, LSIO.GPIO2.IO19
+#define SC_P_SPI3_CS0                            109  //!< DMA.SPI3.CS0, DMA.FTM.CH2, LSIO.GPIO2.IO20
+#define SC_P_SPI3_CS1                            110  //!< DMA.SPI3.CS1, LSIO.GPIO2.IO21
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_GPIORHB       111  //!<
+#define SC_P_ESAI0_FSR                           112  //!< AUD.ESAI0.FSR, LSIO.GPIO2.IO22
+#define SC_P_ESAI0_FST                           113  //!< AUD.ESAI0.FST, LSIO.GPIO2.IO23
+#define SC_P_ESAI0_SCKR                          114  //!< AUD.ESAI0.SCKR, LSIO.GPIO2.IO24
+#define SC_P_ESAI0_SCKT                          115  //!< AUD.ESAI0.SCKT, LSIO.GPIO2.IO25
+#define SC_P_ESAI0_TX0                           116  //!< AUD.ESAI0.TX0, LSIO.GPIO2.IO26
+#define SC_P_ESAI0_TX1                           117  //!< AUD.ESAI0.TX1, LSIO.GPIO2.IO27
+#define SC_P_ESAI0_TX2_RX3                       118  //!< AUD.ESAI0.TX2_RX3, LSIO.GPIO2.IO28
+#define SC_P_ESAI0_TX3_RX2                       119  //!< AUD.ESAI0.TX3_RX2, LSIO.GPIO2.IO29
+#define SC_P_ESAI0_TX4_RX1                       120  //!< AUD.ESAI0.TX4_RX1, LSIO.GPIO2.IO30
+#define SC_P_ESAI0_TX5_RX0                       121  //!< AUD.ESAI0.TX5_RX0, LSIO.GPIO2.IO31
+#define SC_P_MCLK_IN0                            122  //!< AUD.ACM.MCLK_IN0, AUD.ESAI0.RX_HF_CLK, LSIO.GPIO3.IO00
+#define SC_P_MCLK_OUT0                           123  //!< AUD.ACM.MCLK_OUT0, AUD.ESAI0.TX_HF_CLK, LSIO.GPIO3.IO01
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_GPIORHC       124  //!<
+#define SC_P_SPI0_SCK                            125  //!< DMA.SPI0.SCK, AUD.SAI0.RXC, LSIO.GPIO3.IO02
+#define SC_P_SPI0_SDO                            126  //!< DMA.SPI0.SDO, AUD.SAI0.TXD, LSIO.GPIO3.IO03
+#define SC_P_SPI0_SDI                            127  //!< DMA.SPI0.SDI, AUD.SAI0.RXD, LSIO.GPIO3.IO04
+#define SC_P_SPI0_CS0                            128  //!< DMA.SPI0.CS0, AUD.SAI0.RXFS, LSIO.GPIO3.IO05
+#define SC_P_SPI0_CS1                            129  //!< DMA.SPI0.CS1, AUD.SAI0.TXC, LSIO.GPIO3.IO06
+#define SC_P_SPI2_SCK                            130  //!< DMA.SPI2.SCK, LSIO.GPIO3.IO07
+#define SC_P_SPI2_SDO                            131  //!< DMA.SPI2.SDO, LSIO.GPIO3.IO08
+#define SC_P_SPI2_SDI                            132  //!< DMA.SPI2.SDI, LSIO.GPIO3.IO09
+#define SC_P_SPI2_CS0                            133  //!< DMA.SPI2.CS0, LSIO.GPIO3.IO10
+#define SC_P_SPI2_CS1                            134  //!< DMA.SPI2.CS1, AUD.SAI0.TXFS, LSIO.GPIO3.IO11
+#define SC_P_SAI1_RXC                            135  //!< AUD.SAI1.RXC, AUD.SAI0.TXD, LSIO.GPIO3.IO12
+#define SC_P_SAI1_RXD                            136  //!< AUD.SAI1.RXD, AUD.SAI0.TXFS, LSIO.GPIO3.IO13
+#define SC_P_SAI1_RXFS                           137  //!< AUD.SAI1.RXFS, AUD.SAI0.RXD, LSIO.GPIO3.IO14
+#define SC_P_SAI1_TXC                            138  //!< AUD.SAI1.TXC, AUD.SAI0.TXC, LSIO.GPIO3.IO15
+#define SC_P_SAI1_TXD                            139  //!< AUD.SAI1.TXD, AUD.SAI1.RXC, LSIO.GPIO3.IO16
+#define SC_P_SAI1_TXFS                           140  //!< AUD.SAI1.TXFS, AUD.SAI1.RXFS, LSIO.GPIO3.IO17
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_GPIORHT       141  //!<
+#define SC_P_ADC_IN7                             142  //!< DMA.ADC1.IN3, DMA.SPI1.CS1, LSIO.KPP0.ROW3, LSIO.GPIO3.IO25
+#define SC_P_ADC_IN6                             143  //!< DMA.ADC1.IN2, DMA.SPI1.CS0, LSIO.KPP0.ROW2, LSIO.GPIO3.IO24
+#define SC_P_ADC_IN5                             144  //!< DMA.ADC1.IN1, DMA.SPI1.SDI, LSIO.KPP0.ROW1, LSIO.GPIO3.IO23
+#define SC_P_ADC_IN4                             145  //!< DMA.ADC1.IN0, DMA.SPI1.SDO, LSIO.KPP0.ROW0, LSIO.GPIO3.IO22
+#define SC_P_ADC_IN3                             146  //!< DMA.ADC0.IN3, DMA.SPI1.SCK, LSIO.KPP0.COL3, LSIO.GPIO3.IO21
+#define SC_P_ADC_IN2                             147  //!< DMA.ADC0.IN2, LSIO.KPP0.COL2, LSIO.GPIO3.IO20
+#define SC_P_ADC_IN1                             148  //!< DMA.ADC0.IN1, LSIO.KPP0.COL1, LSIO.GPIO3.IO19
+#define SC_P_ADC_IN0                             149  //!< DMA.ADC0.IN0, LSIO.KPP0.COL0, LSIO.GPIO3.IO18
+#define SC_P_MLB_SIG                             150  //!< CONN.MLB.SIG, AUD.SAI3.RXC, LSIO.GPIO3.IO26
+#define SC_P_MLB_CLK                             151  //!< CONN.MLB.CLK, AUD.SAI3.RXFS, LSIO.GPIO3.IO27
+#define SC_P_MLB_DATA                            152  //!< CONN.MLB.DATA, AUD.SAI3.RXD, LSIO.GPIO3.IO28
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_GPIOLHT       153  //!<
+#define SC_P_FLEXCAN0_RX                         154  //!< DMA.FLEXCAN0.RX, LSIO.GPIO3.IO29
+#define SC_P_FLEXCAN0_TX                         155  //!< DMA.FLEXCAN0.TX, LSIO.GPIO3.IO30
+#define SC_P_FLEXCAN1_RX                         156  //!< DMA.FLEXCAN1.RX, LSIO.GPIO3.IO31
+#define SC_P_FLEXCAN1_TX                         157  //!< DMA.FLEXCAN1.TX, LSIO.GPIO4.IO00
+#define SC_P_FLEXCAN2_RX                         158  //!< DMA.FLEXCAN2.RX, LSIO.GPIO4.IO01
+#define SC_P_FLEXCAN2_TX                         159  //!< DMA.FLEXCAN2.TX, LSIO.GPIO4.IO02
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_GPIOTHR       160  //!<
+#define SC_P_USB_SS3_TC0                         161  //!< DMA.I2C1.SCL, CONN.USB_OTG1.PWR, LSIO.GPIO4.IO03
+#define SC_P_USB_SS3_TC1                         162  //!< DMA.I2C1.SCL, CONN.USB_OTG2.PWR, LSIO.GPIO4.IO04
+#define SC_P_USB_SS3_TC2                         163  //!< DMA.I2C1.SDA, CONN.USB_OTG1.OC, LSIO.GPIO4.IO05
+#define SC_P_USB_SS3_TC3                         164  //!< DMA.I2C1.SDA, CONN.USB_OTG2.OC, LSIO.GPIO4.IO06
+#define SC_P_COMP_CTL_GPIO_3V3_USB3IO            165  //!<
+#define SC_P_USDHC1_RESET_B                      166  //!< CONN.USDHC1.RESET_B, LSIO.GPIO4.IO07
+#define SC_P_USDHC1_VSELECT                      167  //!< CONN.USDHC1.VSELECT, LSIO.GPIO4.IO08
+#define SC_P_USDHC2_RESET_B                      168  //!< CONN.USDHC2.RESET_B, LSIO.GPIO4.IO09
+#define SC_P_USDHC2_VSELECT                      169  //!< CONN.USDHC2.VSELECT, LSIO.GPIO4.IO10
+#define SC_P_USDHC2_WP                           170  //!< CONN.USDHC2.WP, LSIO.GPIO4.IO11
+#define SC_P_USDHC2_CD_B                         171  //!< CONN.USDHC2.CD_B, LSIO.GPIO4.IO12
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_VSELSEP       172  //!<
+#define SC_P_ENET0_MDIO                          173  //!< CONN.ENET0.MDIO, DMA.I2C4.SDA, LSIO.GPIO4.IO13
+#define SC_P_ENET0_MDC                           174  //!< CONN.ENET0.MDC, DMA.I2C4.SCL, LSIO.GPIO4.IO14
+#define SC_P_ENET0_REFCLK_125M_25M               175  //!< CONN.ENET0.REFCLK_125M_25M, CONN.ENET1.PPS, LSIO.GPIO4.IO15
+#define SC_P_ENET1_REFCLK_125M_25M               176  //!< CONN.ENET1.REFCLK_125M_25M, CONN.ENET0.PPS, LSIO.GPIO4.IO16
+#define SC_P_ENET1_MDIO                          177  //!< CONN.ENET1.MDIO, DMA.I2C4.SDA, LSIO.GPIO4.IO17
+#define SC_P_ENET1_MDC                           178  //!< CONN.ENET1.MDC, DMA.I2C4.SCL, LSIO.GPIO4.IO18
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_GPIOCT        179  //!<
+#define SC_P_QSPI1A_SS0_B                        180  //!< LSIO.QSPI1A.SS0_B, LSIO.GPIO4.IO19
+#define SC_P_QSPI1A_SS1_B                        181  //!< LSIO.QSPI1A.SS1_B, LSIO.GPIO4.IO20
+#define SC_P_QSPI1A_SCLK                         182  //!< LSIO.QSPI1A.SCLK, LSIO.GPIO4.IO21
+#define SC_P_QSPI1A_DQS                          183  //!< LSIO.QSPI1A.DQS, LSIO.GPIO4.IO22
+#define SC_P_QSPI1A_DATA3                        184  //!< LSIO.QSPI1A.DATA3, LSIO.GPIO4.IO23
+#define SC_P_QSPI1A_DATA2                        185  //!< LSIO.QSPI1A.DATA2, LSIO.GPIO4.IO24
+#define SC_P_QSPI1A_DATA1                        186  //!< LSIO.QSPI1A.DATA1, LSIO.GPIO4.IO25
+#define SC_P_QSPI1A_DATA0                        187  //!< LSIO.QSPI1A.DATA0, LSIO.GPIO4.IO26
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_QSPI1         188  //!<
+#define SC_P_QSPI0A_DATA0                        189  //!< LSIO.QSPI0A.DATA0
+#define SC_P_QSPI0A_DATA1                        190  //!< LSIO.QSPI0A.DATA1
+#define SC_P_QSPI0A_DATA2                        191  //!< LSIO.QSPI0A.DATA2
+#define SC_P_QSPI0A_DATA3                        192  //!< LSIO.QSPI0A.DATA3
+#define SC_P_QSPI0A_DQS                          193  //!< LSIO.QSPI0A.DQS
+#define SC_P_QSPI0A_SS0_B                        194  //!< LSIO.QSPI0A.SS0_B
+#define SC_P_QSPI0A_SS1_B                        195  //!< LSIO.QSPI0A.SS1_B
+#define SC_P_QSPI0A_SCLK                         196  //!< LSIO.QSPI0A.SCLK
+#define SC_P_QSPI0B_SCLK                         197  //!< LSIO.QSPI0B.SCLK
+#define SC_P_QSPI0B_DATA0                        198  //!< LSIO.QSPI0B.DATA0
+#define SC_P_QSPI0B_DATA1                        199  //!< LSIO.QSPI0B.DATA1
+#define SC_P_QSPI0B_DATA2                        200  //!< LSIO.QSPI0B.DATA2
+#define SC_P_QSPI0B_DATA3                        201  //!< LSIO.QSPI0B.DATA3
+#define SC_P_QSPI0B_DQS                          202  //!< LSIO.QSPI0B.DQS
+#define SC_P_QSPI0B_SS0_B                        203  //!< LSIO.QSPI0B.SS0_B
+#define SC_P_QSPI0B_SS1_B                        204  //!< LSIO.QSPI0B.SS1_B
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_QSPI0         205  //!<
+#define SC_P_PCIE_CTRL0_CLKREQ_B                 206  //!< HSIO.PCIE0.CLKREQ_B, LSIO.GPIO4.IO27
+#define SC_P_PCIE_CTRL0_WAKE_B                   207  //!< HSIO.PCIE0.WAKE_B, LSIO.GPIO4.IO28
+#define SC_P_PCIE_CTRL0_PERST_B                  208  //!< HSIO.PCIE0.PERST_B, LSIO.GPIO4.IO29
+#define SC_P_PCIE_CTRL1_CLKREQ_B                 209  //!< HSIO.PCIE1.CLKREQ_B, LSIO.GPIO4.IO30
+#define SC_P_PCIE_CTRL1_WAKE_B                   210  //!< HSIO.PCIE1.WAKE_B, LSIO.GPIO4.IO31
+#define SC_P_PCIE_CTRL1_PERST_B                  211  //!< HSIO.PCIE1.PERST_B, LSIO.GPIO5.IO00
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_PCIESEP       212  //!<
+#define SC_P_USB_HSIC0_DATA                      213  //!< CONN.USB_HSIC0.DATA, DMA.I2C1.SDA, LSIO.GPIO5.IO01
+#define SC_P_USB_HSIC0_STROBE                    214  //!< CONN.USB_HSIC0.STROBE, DMA.I2C1.SCL, LSIO.GPIO5.IO02
+#define SC_P_CALIBRATION_0_HSIC                  215  //!<
+#define SC_P_CALIBRATION_1_HSIC                  216  //!<
+#define SC_P_EMMC0_CLK                           217  //!< CONN.EMMC0.CLK, CONN.NAND.READY_B
+#define SC_P_EMMC0_CMD                           218  //!< CONN.EMMC0.CMD, CONN.NAND.DQS, LSIO.GPIO5.IO03
+#define SC_P_EMMC0_DATA0                         219  //!< CONN.EMMC0.DATA0, CONN.NAND.DATA00, LSIO.GPIO5.IO04
+#define SC_P_EMMC0_DATA1                         220  //!< CONN.EMMC0.DATA1, CONN.NAND.DATA01, LSIO.GPIO5.IO05
+#define SC_P_EMMC0_DATA2                         221  //!< CONN.EMMC0.DATA2, CONN.NAND.DATA02, LSIO.GPIO5.IO06
+#define SC_P_EMMC0_DATA3                         222  //!< CONN.EMMC0.DATA3, CONN.NAND.DATA03, LSIO.GPIO5.IO07
+#define SC_P_EMMC0_DATA4                         223  //!< CONN.EMMC0.DATA4, CONN.NAND.DATA04, LSIO.GPIO5.IO08
+#define SC_P_EMMC0_DATA5                         224  //!< CONN.EMMC0.DATA5, CONN.NAND.DATA05, LSIO.GPIO5.IO09
+#define SC_P_EMMC0_DATA6                         225  //!< CONN.EMMC0.DATA6, CONN.NAND.DATA06, LSIO.GPIO5.IO10
+#define SC_P_EMMC0_DATA7                         226  //!< CONN.EMMC0.DATA7, CONN.NAND.DATA07, LSIO.GPIO5.IO11
+#define SC_P_EMMC0_STROBE                        227  //!< CONN.EMMC0.STROBE, CONN.NAND.CLE, LSIO.GPIO5.IO12
+#define SC_P_EMMC0_RESET_B                       228  //!< CONN.EMMC0.RESET_B, CONN.NAND.WP_B, LSIO.GPIO5.IO13
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_SD1FIX        229  //!<
+#define SC_P_USDHC1_CLK                          230  //!< CONN.USDHC1.CLK
+#define SC_P_USDHC1_CMD                          231  //!< CONN.USDHC1.CMD, LSIO.GPIO5.IO14
+#define SC_P_USDHC1_DATA0                        232  //!< CONN.USDHC1.DATA0, CONN.NAND.RE_N, LSIO.GPIO5.IO15
+#define SC_P_USDHC1_DATA1                        233  //!< CONN.USDHC1.DATA1, CONN.NAND.RE_P, LSIO.GPIO5.IO16
+#define SC_P_USDHC1_DATA2                        234  //!< CONN.USDHC1.DATA2, CONN.NAND.DQS_N, LSIO.GPIO5.IO17
+#define SC_P_USDHC1_DATA3                        235  //!< CONN.USDHC1.DATA3, CONN.NAND.DQS_P, LSIO.GPIO5.IO18
+#define SC_P_USDHC1_DATA4                        236  //!< CONN.USDHC1.DATA4, CONN.NAND.CE0_B, LSIO.GPIO5.IO19
+#define SC_P_USDHC1_DATA5                        237  //!< CONN.USDHC1.DATA5, CONN.NAND.RE_B, LSIO.GPIO5.IO20
+#define SC_P_USDHC1_DATA6                        238  //!< CONN.USDHC1.DATA6, CONN.NAND.WE_B, CONN.USDHC1.WP, LSIO.GPIO5.IO21
+#define SC_P_USDHC1_DATA7                        239  //!< CONN.USDHC1.DATA7, CONN.NAND.ALE, CONN.USDHC1.CD_B, LSIO.GPIO5.IO22
+#define SC_P_USDHC1_STROBE                       240  //!< CONN.USDHC1.STROBE, CONN.NAND.CE1_B, LSIO.GPIO5.IO23
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_VSEL2         241  //!<
+#define SC_P_USDHC2_CLK                          242  //!< CONN.USDHC2.CLK, AUD.MQS.R, LSIO.GPIO5.IO24
+#define SC_P_USDHC2_CMD                          243  //!< CONN.USDHC2.CMD, AUD.MQS.L, LSIO.GPIO5.IO25
+#define SC_P_USDHC2_DATA0                        244  //!< CONN.USDHC2.DATA0, DMA.UART4.RX, LSIO.GPIO5.IO26
+#define SC_P_USDHC2_DATA1                        245  //!< CONN.USDHC2.DATA1, DMA.UART4.TX, LSIO.GPIO5.IO27
+#define SC_P_USDHC2_DATA2                        246  //!< CONN.USDHC2.DATA2, DMA.UART4.CTS_B, LSIO.GPIO5.IO28
+#define SC_P_USDHC2_DATA3                        247  //!< CONN.USDHC2.DATA3, DMA.UART4.RTS_B, LSIO.GPIO5.IO29
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_VSEL3         248  //!<
+#define SC_P_ENET0_RGMII_TXC                     249  //!< CONN.ENET0.RGMII_TXC, CONN.ENET0.RCLK50M_OUT, LSIO.GPIO5.IO30
+#define SC_P_ENET0_RGMII_TX_CTL                  250  //!< CONN.ENET0.RGMII_TX_CTL, LSIO.GPIO5.IO31
+#define SC_P_ENET0_RGMII_TXD0                    251  //!< CONN.ENET0.RGMII_TXD0, LSIO.GPIO6.IO00
+#define SC_P_ENET0_RGMII_TXD1                    252  //!< CONN.ENET0.RGMII_TXD1, LSIO.GPIO6.IO01
+#define SC_P_ENET0_RGMII_TXD2                    253  //!< CONN.ENET0.RGMII_TXD2, LSIO.GPIO6.IO02
+#define SC_P_ENET0_RGMII_TXD3                    254  //!< CONN.ENET0.RGMII_TXD3, LSIO.GPIO6.IO03
+#define SC_P_ENET0_RGMII_RXC                     255  //!< CONN.ENET0.RGMII_RXC, LSIO.GPIO6.IO04
+#define SC_P_ENET0_RGMII_RX_CTL                  256  //!< CONN.ENET0.RGMII_RX_CTL, LSIO.GPIO6.IO05
+#define SC_P_ENET0_RGMII_RXD0                    257  //!< CONN.ENET0.RGMII_RXD0, LSIO.GPIO6.IO06
+#define SC_P_ENET0_RGMII_RXD1                    258  //!< CONN.ENET0.RGMII_RXD1, LSIO.GPIO6.IO07
+#define SC_P_ENET0_RGMII_RXD2                    259  //!< CONN.ENET0.RGMII_RXD2, CONN.ENET0.RMII_RX_ER, LSIO.GPIO6.IO08
+#define SC_P_ENET0_RGMII_RXD3                    260  //!< CONN.ENET0.RGMII_RXD3, LSIO.GPIO6.IO09
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_ENET_ENETB    261  //!<
+#define SC_P_ENET1_RGMII_TXC                     262  //!< CONN.ENET1.RGMII_TXC, CONN.ENET1.RCLK50M_OUT, LSIO.GPIO6.IO10
+#define SC_P_ENET1_RGMII_TX_CTL                  263  //!< CONN.ENET1.RGMII_TX_CTL, LSIO.GPIO6.IO11
+#define SC_P_ENET1_RGMII_TXD0                    264  //!< CONN.ENET1.RGMII_TXD0, LSIO.GPIO6.IO12
+#define SC_P_ENET1_RGMII_TXD1                    265  //!< CONN.ENET1.RGMII_TXD1, LSIO.GPIO6.IO13
+#define SC_P_ENET1_RGMII_TXD2                    266  //!< CONN.ENET1.RGMII_TXD2, DMA.UART3.TX, VPU.TSI_S1.VID, LSIO.GPIO6.IO14
+#define SC_P_ENET1_RGMII_TXD3                    267  //!< CONN.ENET1.RGMII_TXD3, DMA.UART3.RTS_B, VPU.TSI_S1.SYNC, LSIO.GPIO6.IO15
+#define SC_P_ENET1_RGMII_RXC                     268  //!< CONN.ENET1.RGMII_RXC, DMA.UART3.CTS_B, VPU.TSI_S1.DATA, LSIO.GPIO6.IO16
+#define SC_P_ENET1_RGMII_RX_CTL                  269  //!< CONN.ENET1.RGMII_RX_CTL, VPU.TSI_S0.VID, LSIO.GPIO6.IO17
+#define SC_P_ENET1_RGMII_RXD0                    270  //!< CONN.ENET1.RGMII_RXD0, VPU.TSI_S0.SYNC, LSIO.GPIO6.IO18
+#define SC_P_ENET1_RGMII_RXD1                    271  //!< CONN.ENET1.RGMII_RXD1, VPU.TSI_S0.DATA, LSIO.GPIO6.IO19
+#define SC_P_ENET1_RGMII_RXD2                    272  //!< CONN.ENET1.RGMII_RXD2, CONN.ENET1.RMII_RX_ER, VPU.TSI_S0.CLK, LSIO.GPIO6.IO20
+#define SC_P_ENET1_RGMII_RXD3                    273  //!< CONN.ENET1.RGMII_RXD3, DMA.UART3.RX, VPU.TSI_S1.CLK, LSIO.GPIO6.IO21
+#define SC_P_COMP_CTL_GPIO_1V8_3V3_ENET_ENETA    274  //!<
+#define SC_P_ANA_TEST_OUT_P                      275  //!< SCU.DSC.TEST_OUT_P
+#define SC_P_ANA_TEST_OUT_N                      276  //!< SCU.DSC.TEST_OUT_N
+#define SC_P_XTALI                               277  //!< SCU.DSC.XTALI
+#define SC_P_XTALO                               278  //!< SCU.DSC.XTALO
+#define SC_P_RTC_XTALI                           279  //!< SNVS.RTC_XTALI
+#define SC_P_RTC_XTALO                           280  //!< SNVS.RTC_XTALO
+#define SC_P_PMIC_ON_REQ                         281  //!< SNVS.PMIC_ON_REQ
+#define SC_P_ON_OFF_BUTTON                       282  //!< SNVS.ON_OFF_BUTTON
+#define SC_P_SNVS_TAMPER_OUT0                    283  //!< SNVS.TAMPER_OUT0
+#define SC_P_SNVS_TAMPER_OUT1                    284  //!< SNVS.TAMPER_OUT1
+#define SC_P_SNVS_TAMPER_IN0                     285  //!< SNVS.TAMPER_IN0
+#define SC_P_SNVS_TAMPER_IN1                     286  //!< SNVS.TAMPER_IN1
+#define SC_P_VDD_SNVS_1P8_IN                     287  //!< SNVS.VDD_SNVS_IN
 /*@}*/
 
 #endif /* _SC_PINS_H */

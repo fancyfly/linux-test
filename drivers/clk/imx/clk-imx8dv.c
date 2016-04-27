@@ -176,7 +176,7 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	clks[IMX8DV_GPU1_SHADER_DIV] = imx_clk_divider_scu("gpu1_shader_div", SC_R_GPU_1_PID0, SC_PM_CLK_MISC);
 
 	/* User Defined PLLs dividers */
-	clks[IMX8DV_AUDIO_PLL_DIV] = imx_clk_divider_scu("audio_pll_div", SC_R_AUD_PLL_0, SC_PM_CLK_PLL);
+	clks[IMX8DV_AUDIO_PLL_DIV] = imx_clk_divider_scu("audio_pll_div", SC_R_AUDIO_PLL_0, SC_PM_CLK_PLL);
 	clks[IMX8DV_DC_0_PLL0_DIV] = imx_clk_divider_scu("dc_0_pll_0_div", SC_R_DC_0_PLL_0, SC_PM_CLK_PLL);
 	clks[IMX8DV_DC_0_PLL1_DIV] = imx_clk_divider_scu("dc_0_pll_1_div", SC_R_DC_0_PLL_1, SC_PM_CLK_PLL);
 	clks[IMX8DV_DC_1_PLL0_DIV] = imx_clk_divider_scu("dc_1_pll_0_div", SC_R_DC_1_PLL_0, SC_PM_CLK_PLL);
@@ -311,7 +311,7 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	clks[IMX8DV_GPU1_SHADER_CLK] = imx_clk_gate_scu("gpu_shader1_clk", "gpu1_shader_div", SC_R_GPU_1_PID0, SC_PM_CLK_MISC, NULL, 0, 0);
 
 	/* User Defined PLLs gates */
-	clks[IMX8DV_AUDIO_PLL] = imx_clk_gate_scu("audio_pll", "audio_pll_div", SC_R_AUD_PLL_0, SC_PM_CLK_PLL, NULL, 0, 0);
+	clks[IMX8DV_AUDIO_PLL] = imx_clk_gate_scu("audio_pll", "audio_pll_div", SC_R_AUDIO_PLL_0, SC_PM_CLK_PLL, NULL, 0, 0);
 	clks[IMX8DV_DC_0_PLL0] = imx_clk_gate_scu("dc_0_pll_0", "dc_0_pll_0_div", SC_R_DC_0_PLL_0, SC_PM_CLK_PLL, NULL, 0, 0);
 	clks[IMX8DV_DC_0_PLL1] = imx_clk_gate_scu("dc_0_pll_1", "dc_0_pll_1_div", SC_R_DC_0_PLL_1, SC_PM_CLK_PLL, NULL, 0, 0);
 	clks[IMX8DV_DC_1_PLL0] = imx_clk_gate_scu("dc_1_pll_0", "dc_1_pll_0_div", SC_R_DC_1_PLL_0, SC_PM_CLK_PLL, NULL, 0, 0);

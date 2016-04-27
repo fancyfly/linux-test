@@ -265,5 +265,104 @@ sc_err_t sc_pad_get_all(sc_ipc_t ipc, sc_pin_t pin, uint8_t *mux,
     return result;
 }
 
+sc_err_t sc_pad_set_gp_28fdsoi(sc_ipc_t ipc, sc_pin_t pin,
+    sc_pad_28fdsoi_dse_t dse, sc_pad_28fdsoi_ps_t ps)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_PAD;
+    RPC_FUNC(&msg) = PAD_FUNC_SET_GP_28FDSOI;
+    RPC_D16(&msg, 0) = pin;
+    RPC_D8(&msg, 2) = dse;
+    RPC_D8(&msg, 3) = ps;
+    RPC_SIZE(&msg) = 2;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    result = RPC_R8(&msg);
+    return result;
+}
+
+sc_err_t sc_pad_get_gp_28fdsoi(sc_ipc_t ipc, sc_pin_t pin,
+    sc_pad_28fdsoi_dse_t *dse, sc_pad_28fdsoi_ps_t *ps)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_PAD;
+    RPC_FUNC(&msg) = PAD_FUNC_GET_GP_28FDSOI;
+    RPC_D16(&msg, 0) = pin;
+    RPC_SIZE(&msg) = 2;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    result = RPC_R8(&msg);
+    if (dse != NULL)
+        *dse = RPC_D8(&msg, 0);
+    if (ps != NULL)
+        *ps = RPC_D8(&msg, 1);
+    return result;
+}
+
+sc_err_t sc_pad_set_gp_28fdsoi_comp(sc_ipc_t ipc, sc_pin_t pin,
+    uint8_t compen, bool fastfrz, uint8_t rasrcp, uint8_t rasrcn,
+    bool nasrc_sel)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_PAD;
+    RPC_FUNC(&msg) = PAD_FUNC_SET_GP_28FDSOI_COMP;
+    RPC_D16(&msg, 0) = pin;
+    RPC_D8(&msg, 2) = compen;
+    RPC_D8(&msg, 3) = rasrcp;
+    RPC_D8(&msg, 4) = rasrcn;
+    RPC_D8(&msg, 5) = fastfrz;
+    RPC_D8(&msg, 6) = nasrc_sel;
+    RPC_SIZE(&msg) = 3;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    result = RPC_R8(&msg);
+    return result;
+}
+
+sc_err_t sc_pad_get_gp_28fdsoi_comp(sc_ipc_t ipc, sc_pin_t pin,
+    uint8_t *compen, bool *fastfrz, uint8_t *rasrcp, uint8_t *rasrcn,
+    bool *nasrc_sel, bool *compok, uint8_t *nasrc)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_PAD;
+    RPC_FUNC(&msg) = PAD_FUNC_GET_GP_28FDSOI_COMP;
+    RPC_D16(&msg, 0) = pin;
+    RPC_SIZE(&msg) = 2;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    result = RPC_R8(&msg);
+    if (compen != NULL)
+        *compen = RPC_D8(&msg, 0);
+    if (rasrcp != NULL)
+        *rasrcp = RPC_D8(&msg, 1);
+    if (rasrcn != NULL)
+        *rasrcn = RPC_D8(&msg, 2);
+    if (nasrc != NULL)
+        *nasrc = RPC_D8(&msg, 3);
+    if (fastfrz != NULL)
+        *fastfrz = RPC_D8(&msg, 4);
+    if (nasrc_sel != NULL)
+        *nasrc_sel = RPC_D8(&msg, 5);
+    if (compok != NULL)
+        *compok = RPC_D8(&msg, 6);
+    return result;
+}
+
 /**@}*/
 

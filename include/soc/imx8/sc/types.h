@@ -35,9 +35,12 @@
 /*@{*/
 #define SC_10MHZ         10000000   //!< 10MHz
 #define SC_12MHZ         24000000   //!< 12MHz
+#define SC_20MHZ         20000000   //!< 20MHz
 #define SC_24MHZ         24000000   //!< 24MHz
 #define SC_25MHZ         25000000   //!< 25MHz
 #define SC_40MHZ         40000000   //!< 40MHz
+#define SC_50MHZ         50000000   //!< 50MHz
+#define SC_60MHZ         60000000   //!< 60MHz
 #define SC_66MHZ         66666666   //!< 66MHz
 #define SC_80MHZ         80000000   //!< 80MHz
 #define SC_83MHZ         83333333   //!< 83MHz
@@ -49,20 +52,24 @@
 #define SC_150MHZ       150000000   //!< 150MHz
 #define SC_160MHZ       160000000   //!< 160MHz
 #define SC_166MHZ       166666666   //!< 160MHz
+#define SC_175MHZ       175000000   //!< 175MHz
 #define SC_192MHZ       192000000   //!< 192MHz
 #define SC_200MHZ       200000000   //!< 200MHz
 #define SC_240MHZ       240000000   //!< 240MHz
 #define SC_250MHZ       250000000   //!< 250MHz
 #define SC_266MHZ       266666666   //!< 266MHz
+#define SC_300MHZ       300000000   //!< 300MHz
 #define SC_320MHZ       320000000   //!< 320MHz
 #define SC_333MHZ       333333333   //!< 333MHz
 #define SC_350MHZ       350000000   //!< 350MHz
+#define SC_360MHZ       360000000   //!< 360MHz
 #define SC_375MHZ       375000000   //!< 375MHz
 #define SC_384MHZ       384000000   //!< 384MHz
 #define SC_400MHZ       400000000   //!< 400MHz
 #define SC_480MHZ       480000000   //!< 480MHz
 #define SC_500MHZ       500000000   //!< 500MHz
 #define SC_600MHZ       600000000   //!< 600MHz
+#define SC_700MHZ       700000000   //!< 700MHz
 #define SC_750MHZ       750000000   //!< 750MHz
 #define SC_800MHZ       800000000   //!< 800MHz
 #define SC_1000MHZ     1000000000   //!< 1GHz
@@ -440,7 +447,7 @@ typedef enum sc_rsrc_e
     SC_R_QSPI_0             = 322,
     SC_R_SDMA               = 323,
     SC_R_IRQSTR_MW          = 324,
-    SC_R_AUD_PLL_0          = 325,
+    SC_R_AUDIO_PLL_0        = 325,
     SC_R_PI_0               = 326,
     SC_R_PI_0_PWM_0         = 327,
     SC_R_PI_0_PWM_1         = 328,
@@ -487,22 +494,131 @@ typedef enum sc_rsrc_e
     SC_R_VPUCORE_1          = 369,
     SC_R_VPUCORE_2          = 370,
     SC_R_VPUCORE_3          = 371,
-    SC_R_ISI_CH0            = 372,
-    SC_R_ISI_CH1            = 373,
-    SC_R_ISI_CH2            = 374,
-    SC_R_ISI_CH3            = 375,
-    SC_R_ISI_CH4            = 376,
-    SC_R_ISI_CH5            = 377,
-    SC_R_ISI_CH6            = 378,
-    SC_R_ISI_CH7            = 379,
-    SC_R_MJPEG_DEC_S0       = 380,
-    SC_R_MJPEG_DEC_S1       = 381,
-    SC_R_MJPEG_DEC_S2       = 382,
-    SC_R_MJPEG_DEC_S3       = 383,
-    SC_R_MJPEG_ENC_S0       = 384,
-    SC_R_MJPEG_ENC_S1       = 385,
-    SC_R_MJPEG_ENC_S2       = 386,
-    SC_R_MJPEG_ENC_S3       = 387,
+    SC_R_DMA_4_CH0          = 372,
+    SC_R_DMA_4_CH1          = 373,
+    SC_R_DMA_4_CH2          = 374,
+    SC_R_DMA_4_CH3          = 375,
+    SC_R_DMA_4_CH4          = 376,
+    SC_R_ISI_CH0            = 377,
+    SC_R_ISI_CH1            = 378,
+    SC_R_ISI_CH2            = 379,
+    SC_R_ISI_CH3            = 380,
+    SC_R_ISI_CH4            = 381,
+    SC_R_ISI_CH5            = 382,
+    SC_R_ISI_CH6            = 383,
+    SC_R_ISI_CH7            = 384,
+    SC_R_MJPEG_DEC_S0       = 385,
+    SC_R_MJPEG_DEC_S1       = 386,
+    SC_R_MJPEG_DEC_S2       = 387,
+    SC_R_MJPEG_DEC_S3       = 388,
+    SC_R_MJPEG_ENC_S0       = 389,
+    SC_R_MJPEG_ENC_S1       = 390,
+    SC_R_MJPEG_ENC_S2       = 391,
+    SC_R_MJPEG_ENC_S3       = 392,
+    SC_R_MIPI_0             = 393,
+    SC_R_MIPI_0_PWM_0       = 394,
+    SC_R_MIPI_0_I2C_0       = 395,
+    SC_R_MIPI_0_I2C_1       = 396,
+    SC_R_MIPI_1             = 397,
+    SC_R_MIPI_1_PWM_0       = 398,
+    SC_R_MIPI_1_I2C_0       = 399,
+    SC_R_MIPI_1_I2C_1       = 400,
+    SC_R_CSI_0              = 401,
+    SC_R_CSI_0_PWM_0        = 402,
+    SC_R_CSI_0_I2C_0        = 403,
+    SC_R_CSI_1              = 404,
+    SC_R_CSI_1_PWM_0        = 405,
+    SC_R_CSI_1_I2C_0        = 406,
+    SC_R_HDMI               = 407,
+    SC_R_HDMI_BYPASS        = 408,
+    SC_R_HDMI_I2C_0         = 409,
+    SC_R_AUDIO_PLL_2        = 410,
+    SC_R_HDMI_RX            = 411,
+    SC_R_HDMI_RX_BYPASS     = 412,
+    SC_R_HDMI_RX_I2C_0      = 413,
+    SC_R_ASRC_0             = 414,
+    SC_R_ESAI_0             = 415,
+    SC_R_SPDIF_0            = 416,
+    SC_R_SPDIF_1            = 417,
+    SC_R_SAI_3              = 418,
+    SC_R_SAI_4              = 419,
+    SC_R_SAI_5              = 420,
+    SC_R_GPT_5              = 421,
+    SC_R_GPT_6              = 422,
+    SC_R_GPT_7              = 423,
+    SC_R_GPT_8              = 424,
+    SC_R_GPT_9              = 425,
+    SC_R_GPT_10             = 426,
+    SC_R_DMA_2_CH5          = 427,
+    SC_R_DMA_2_CH6          = 428,
+    SC_R_DMA_2_CH7          = 429,
+    SC_R_DMA_2_CH8          = 430,
+    SC_R_DMA_2_CH9          = 431,
+    SC_R_DMA_2_CH10         = 432,
+    SC_R_DMA_2_CH11         = 433,
+    SC_R_DMA_2_CH12         = 434,
+    SC_R_DMA_2_CH13         = 435,
+    SC_R_DMA_2_CH14         = 436,
+    SC_R_DMA_2_CH15         = 437,
+    SC_R_DMA_2_CH16         = 438,
+    SC_R_DMA_2_CH17         = 439,
+    SC_R_DMA_2_CH18         = 440,
+    SC_R_DMA_2_CH19         = 441,
+    SC_R_DMA_2_CH20         = 442,
+    SC_R_DMA_2_CH21         = 443,
+    SC_R_DMA_2_CH22         = 444,
+    SC_R_DMA_2_CH23         = 445,
+    SC_R_DMA_2_CH24         = 446,
+    SC_R_DMA_2_CH25         = 447,
+    SC_R_DMA_2_CH26         = 448,
+    SC_R_DMA_2_CH27         = 449,
+    SC_R_DMA_2_CH28         = 450,
+    SC_R_DMA_2_CH29         = 451,
+    SC_R_DMA_2_CH30         = 452,
+    SC_R_DMA_2_CH31         = 453,
+    SC_R_ASRC_1             = 454,
+    SC_R_ESAI_1             = 455,
+    SC_R_SAI_6              = 456,
+    SC_R_SAI_7              = 457,
+    SC_R_AMIX               = 458,
+    SC_R_MQS_0              = 459,
+    SC_R_DMA_3_CH0          = 460,
+    SC_R_DMA_3_CH1          = 461,
+    SC_R_DMA_3_CH2          = 462,
+    SC_R_DMA_3_CH3          = 463,
+    SC_R_DMA_3_CH4          = 464,
+    SC_R_DMA_3_CH5          = 465,
+    SC_R_DMA_3_CH6          = 466,
+    SC_R_DMA_3_CH7          = 467,
+    SC_R_DMA_3_CH8          = 468,
+    SC_R_DMA_3_CH9          = 469,
+    SC_R_DMA_3_CH10         = 470,
+    SC_R_DMA_3_CH11         = 471,
+    SC_R_DMA_3_CH12         = 472,
+    SC_R_DMA_3_CH13         = 473,
+    SC_R_DMA_3_CH14         = 474,
+    SC_R_DMA_3_CH15         = 475,
+    SC_R_DMA_3_CH16         = 476,
+    SC_R_DMA_3_CH17         = 477,
+    SC_R_DMA_3_CH18         = 478,
+    SC_R_DMA_3_CH19         = 479,
+    SC_R_DMA_3_CH20         = 480,
+    SC_R_DMA_3_CH21         = 481,
+    SC_R_DMA_3_CH22         = 482,
+    SC_R_DMA_3_CH23         = 483,
+    SC_R_DMA_3_CH24         = 484,
+    SC_R_DMA_3_CH25         = 485,
+    SC_R_DMA_3_CH26         = 486,
+    SC_R_DMA_3_CH27         = 487,
+    SC_R_DMA_3_CH28         = 488,
+    SC_R_DMA_3_CH29         = 489,
+    SC_R_DMA_3_CH30         = 490,
+    SC_R_DMA_3_CH31         = 491,
+    SC_R_AUDIO_PLL_1        = 492,
+    SC_R_AUDIO_CLK_0        = 493,
+    SC_R_AUDIO_CLK_1        = 494,
+    SC_R_MCLK_OUT_0         = 495,
+    SC_R_MCLK_OUT_1         = 496,
     SC_R_LAST
 } sc_rsrc_t;
 
@@ -529,6 +645,9 @@ typedef enum sc_ctrl_e
     SC_C_ID                 = 14,
     SC_C_PXL_CLK_POLARITY   = 15,
     SC_C_LINESTATE          = 16,
+    SC_C_PCIE_G_RST         = 17,
+    SC_C_PCIE_BUTTON_RST    = 18,
+    SC_C_PCIE_PERST         = 19,
     SC_C_LAST
 } sc_ctrl_t;
 

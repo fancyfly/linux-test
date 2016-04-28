@@ -77,6 +77,13 @@
 	};
 };
 
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c0>;
+	clock-frequency = <100000>;
+	status = "okay";
+};
+
 &iomuxc {
 	imx8dv-zebu {
         /*pin flag mux config iso wakeup gp*/
@@ -122,6 +129,12 @@
 		pinctrl_gpio_leds: gpioledsgrp {
 			fsl,pins = <
 			146 5 0 0 0 0 0x10
+			>;
+		};
+		pinctrl_i2c0: i2c0grp {
+			fsl,pins = <
+			122 5 0 0 0 0 0x10 	/* scl */
+			123 5 0 0 0 0 0x10 	/* sda */
 			>;
 		};
 	};

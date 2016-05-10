@@ -62,6 +62,7 @@
 	aliases {
 		serial0 = &uart1;
 		serial1 = &uart2;
+		serial2 = &uart3;
 		mmc0 = &usdhc1;
         ethernet0 = &fec1;
 	};
@@ -530,6 +531,13 @@
 		reg = <0x0 0x5a090000 0x0 0x4000>;
 		interrupts = <0 220 4>;
 		power-domains = <&pd_mw_uart1>;
+	};
+
+	uart3: serial@5a080000 {
+		compatible = "fsl,imx6q-uart", "fsl,imx21-uart";
+		reg = <0x0 0x5a080000 0x0 0x4000>;
+		interrupts = <0 221 4>;
+		power-domains = <&pd_mw_uart2>;
 	};
 
 	imxdpu0:  imxdpu0@0x56180000 {

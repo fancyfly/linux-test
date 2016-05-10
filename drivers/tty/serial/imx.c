@@ -1160,7 +1160,7 @@ static int imx_startup(struct uart_port *port)
 
 	if (!is_imx1_uart(sport)) {
 		temp = readl(sport->port.membase + UCR3);
-		temp |= UCR3_ADNIMP;
+		temp |= IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP;
 		writel(temp, sport->port.membase + UCR3);
 	}
 
@@ -1419,11 +1419,11 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 	ufcr = (ufcr & (~UFCR_RFDIV)) | UFCR_RFDIV_REG(div);
 	if (sport->dte_mode)
 		ufcr |= UFCR_DCEDTE;
-/*	writel(ufcr, sport->port.membase + UFCR);
+	writel(ufcr, sport->port.membase + UFCR);
 
 	writel(num, sport->port.membase + UBIR);
 	writel(denom, sport->port.membase + UBMR);
-*/
+
 	if (!is_imx1_uart(sport))
 		writel(sport->port.uartclk / div / 1000,
 				sport->port.membase + IMX21_ONEMS);
@@ -1629,6 +1629,12 @@ imx_early_write(struct console *con, const char *s, unsigned n)
 	while(n--) {
 		while (readl(port->membase + IMX21_UTS) & UTS_TXFULL)
 			barrier();
+
+		if(*s == '\n') {
+			writel(13, port->membase + URTX0);
+			while (readl(port->membase + IMX21_UTS) & UTS_TXFULL)
+				barrier();
+		}
 
 		writel((int)*(s++), port->membase + URTX0);
 	}

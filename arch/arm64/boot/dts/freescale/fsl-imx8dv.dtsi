@@ -99,6 +99,7 @@
 	mu: mu@5e1b0000 {
 		compatible = "fsl,imx8dv-mu","fsl,imx7d-mu", "fsl,imx6sx-mu";
 		reg = <0x0 0x5e1b0000 0x0 0x10000>;
+		interrupts = <0 176 0x4>;
 		fsl,scu_ap_mu_id = <0>;
 		status = "okay";
 	};
@@ -501,11 +502,11 @@
 		#clock-cells = <1>;
 	};
 
-    clkdummy: dummy {
-        #clock-cells = <0>;
-        compatible = "fixed-clock";
-        clock-frequency = <0>;
-    };
+	clkdummy: dummy {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <0>;
+	};
 
     iomuxc: iomuxc {
 		compatible = "fsl,imx8dv-iomuxc";
@@ -761,9 +762,8 @@
 		interrupts = <0 212 4>;
 		clocks = <&clk IMX8DV_ENET_BUS_CLK>, <&clk IMX8DV_ANATOP_CLK>,
 			<&clk IMX8DV_ENET0_CLK>, <&clk IMX8DV_ENET0_TIME_CLK>;
-		clock-names = "ipg", "ahb",
-                "enet_clk_ref", "ptp";
-        assigned-clocks = <&clk IMX8DV_ENET0_CLK>, <&clk IMX8DV_ENET0_TIME_CLK>;
+		clock-names = "ipg", "ahb", "enet_clk_ref", "ptp";
+		assigned-clocks = <&clk IMX8DV_ENET0_CLK>, <&clk IMX8DV_ENET0_TIME_CLK>;
 		assigned-clock-rates = <125000000>, <25000000>;
 		fsl,num-tx-queues=<3>;
 		fsl,num-rx-queues=<3>;

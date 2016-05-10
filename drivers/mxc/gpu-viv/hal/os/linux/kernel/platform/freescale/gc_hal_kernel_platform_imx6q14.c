@@ -99,11 +99,17 @@ static sc_ipc_t gpu_ipcHandle;
 
 #include <linux/regulator/consumer.h>
 
-#ifdef CONFIG_DEVICE_THERMAL
+//#ifdef CONFIG_DEVICE_THERMAL
+#if 1
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#if IMX8_SCU_CONTROL
+#define REG_SCU_THERMAL_NOTIFIER(a) register_scu_notifier(a);
+#define UNREG_SCU_THERMAL_NOTIFIER(a) unregister_scu_notifier(a);
+#else
 #include <linux/device_cooling.h>
 #define REG_THERMAL_NOTIFIER(a) register_devfreq_cooling_notifier(a);
 #define UNREG_THERMAL_NOTIFIER(a) unregister_devfreq_cooling_notifier(a);
+#endif
 #else
 extern int register_thermal_notifier(struct notifier_block *nb);
 extern int unregister_thermal_notifier(struct notifier_block *nb);
@@ -269,7 +275,8 @@ _ShrinkMemory(
 }
 #endif
 
-#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+//#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+#if 1
 static int thermal_hot_pm_notify(struct notifier_block *nb, unsigned long event,
        void *dummy)
 {
@@ -1154,9 +1161,10 @@ _GetPower_imx8x(
     }
 #endif
 
-#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+//#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+#if 1
     pdevice = Platform->device;
-    REG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
+    REG_SCU_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
     {
         int ret = 0;
         ret = driver_create_file(pdevice->dev.driver, &driver_attr_gpu3DMinClock);
@@ -1190,8 +1198,10 @@ _PutPower_imx8x(
         }
     }
 
-#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
-    UNREG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
+#if 1 
+
+//#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+    UNREG_SCU_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 
     driver_remove_file(pdevice->dev.driver, &driver_attr_gpu3DMinClock);
 #endif
@@ -1213,7 +1223,6 @@ _SetPower_imx8x(
 #if IMX8_SCU_CONTROL
     struct imx_priv* priv = Platform->priv;
     sc_err_t sciErr = 0;
-
     if (Enable) {
         switch (GPU) {
         case gcvCORE_MAJOR:
@@ -1261,6 +1270,7 @@ _SetClock_imx8x(
     struct clk *clk_core_3d_1 = priv->clk_core_3d[1];
     struct clk *clk_shader_3d_1 = priv->clk_shader_3d[1];
 
+    sc_err_t sciErr;
     if (Enable) {
         switch (GPU) {
         case gcvCORE_MAJOR:
@@ -1304,6 +1314,7 @@ _SetClock_imx8x(
             break;
         }
     }
+    sciErr = sc_misc_set_control(gpu_ipcHandle, SC_R_PMIC_0, SC_C_TEMP_HI, 95);
 
     return gcvSTATUS_OK;
 }

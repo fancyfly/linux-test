@@ -619,6 +619,8 @@ typedef enum sc_rsrc_e
     SC_R_AUDIO_CLK_1        = 494,
     SC_R_MCLK_OUT_0         = 495,
     SC_R_MCLK_OUT_1         = 496,
+    SC_R_PMIC_0             = 497,
+    SC_R_PMIC_1             = 498,
     SC_R_LAST
 } sc_rsrc_t;
 

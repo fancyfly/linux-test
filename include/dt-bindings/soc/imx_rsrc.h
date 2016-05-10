@@ -521,7 +521,9 @@
 #define SC_R_AUDIO_CLK_1                494
 #define SC_R_MCLK_OUT_0                 495
 #define SC_R_MCLK_OUT_1                 496
-#define SC_R_LAST                       497
+#define SC_R_PMIC_0                     497
+#define SC_R_PMIC_1                     498
+#define SC_R_LAST                       499
 
 #endif /* __DT_BINDINGS_RSCRC_IMX_H */
 

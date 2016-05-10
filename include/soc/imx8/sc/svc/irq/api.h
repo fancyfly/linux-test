@@ -58,7 +58,9 @@ typedef enum sc_irq_alarm_e
     SC_IRQ_ALARM_CPU0_TEMP  = (1 << 2), //!< CPU0 temp alarm interrupt
     SC_IRQ_ALARM_CPU1_TEMP  = (1 << 3), //!< CPU1 temp alarm interrupt
     SC_IRQ_ALARM_GPU0_TEMP  = (1 << 4), //!< GPU0 temp alarm interrupt
-    SC_IRQ_ALARM_GPU1_TEMP  = (1 << 5)  //!< GPU1 temp alarm interrupt
+    SC_IRQ_ALARM_GPU1_TEMP   = (1 << 5), //!< GPU1 temp alarm interrupt
+    SC_IRQ_ALARM_PMIC0_TEMP  = (1 << 6), //!< PMIC0 temp alarm interrupt
+    SC_IRQ_ALARM_PMIC1_TEMP  = (1 << 7)  //!< PMIC1 temp alarm interrupt
 } sc_irq_alarm_t;
 
 /* Functions */

@@ -154,6 +154,39 @@ typedef enum _mu_power_mode
     kMuPowerModeDsm       = 0x03U,   /*!< DSM mode.    */
 } mu_power_mode_t;
 
+/*!
+ * @brief MU interrupt source to enable.
+ */
+enum _mu_interrupt_enable
+{
+    kMU_Tx0EmptyInterruptEnable = (1U << (MU_CR_TIEn_SHIFT + 3U)), /*!< TX0 empty. */
+    kMU_Tx1EmptyInterruptEnable = (1U << (MU_CR_TIEn_SHIFT + 2U)), /*!< TX1 empty. */
+    kMU_Tx2EmptyInterruptEnable = (1U << (MU_CR_TIEn_SHIFT + 1U)), /*!< TX2 empty. */
+    kMU_Tx3EmptyInterruptEnable = (1U << (MU_CR_TIEn_SHIFT + 0U)), /*!< TX3 empty. */
+
+    kMU_Rx0FullInterruptEnable = (1U << (MU_CR_RIEn_SHIFT + 3U)), /*!< RX0 full.  */
+    kMU_Rx1FullInterruptEnable = (1U << (MU_CR_RIEn_SHIFT + 2U)), /*!< RX1 full.  */
+    kMU_Rx2FullInterruptEnable = (1U << (MU_CR_RIEn_SHIFT + 1U)), /*!< RX2 full.  */
+    kMU_Rx3FullInterruptEnable = (1U << (MU_CR_RIEn_SHIFT + 0U)), /*!< RX3 full.  */
+
+    kMU_GenInt0InterruptEnable = (1U << (MU_CR_GIEn_SHIFT + 3U)), /*!< General purpose interrupt 0. */
+    kMU_GenInt1InterruptEnable = (1U << (MU_CR_GIEn_SHIFT + 2U)), /*!< General purpose interrupt 1. */
+    kMU_GenInt2InterruptEnable = (1U << (MU_CR_GIEn_SHIFT + 1U)), /*!< General purpose interrupt 2. */
+    kMU_GenInt3InterruptEnable = (1U << (MU_CR_GIEn_SHIFT + 0U))  /*!< General purpose interrupt 3. */
+};
+
+/*!
+ * @brief MU interrupt that could be triggered to the other core.
+ */
+enum _mu_interrupt_trigger
+{
+    kMU_NmiInterruptTrigger = MU_CR_NMI_MASK,                      /*!< NMI interrupt.               */
+    kMU_GenInt0InterruptTrigger = (1U << (MU_CR_GIRn_SHIFT + 3U)), /*!< General purpose interrupt 0. */
+    kMU_GenInt1InterruptTrigger = (1U << (MU_CR_GIRn_SHIFT + 2U)), /*!< General purpose interrupt 1. */
+    kMU_GenInt2InterruptTrigger = (1U << (MU_CR_GIRn_SHIFT + 1U)), /*!< General purpose interrupt 2. */
+    kMU_GenInt3InterruptTrigger = (1U << (MU_CR_GIRn_SHIFT + 0U))  /*!< General purpose interrupt 3. */
+};
+
 /*******************************************************************************
  * API
  ******************************************************************************/

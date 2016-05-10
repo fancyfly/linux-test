@@ -20,11 +20,14 @@
 #include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/of.h>
+#include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 #include <linux/of_fdt.h>
-#include <linux/of_irq.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
 
+#include <soc/imx8/sc/svc/irq/api.h>
 #include <soc/imx8/sc/ipc.h>
 #include <soc/imx8/sc/sci.h>
 #include "../../mu/fsl_mu_hal.h"
@@ -35,8 +38,9 @@
 
 /* Local Types */
 unsigned int scu_mu_id;
-static unsigned long mu_base_physaddr;
 static void __iomem *mu_base_virtaddr;
+static struct delayed_work scu_mu_work;
+static sc_ipc_t mu_ipcHandle;
 
 /* Local functions */
 
@@ -45,6 +49,8 @@ static uint32_t gIPCport;
 static bool scu_mu_init;
 
 DEFINE_MUTEX(scu_mu_mutex);
+
+static BLOCKING_NOTIFIER_HEAD(SCU_notifier_chain);
 
 EXPORT_SYMBOL(sc_pm_set_resource_power_mode);
 EXPORT_SYMBOL(sc_pm_get_resource_power_mode);
@@ -107,6 +113,14 @@ int sc_ipc_getMuID(uint32_t *mu_id)
 /*--------------------------------------------------------------------------*/
 /* Open an IPC channel                                                      */
 /*--------------------------------------------------------------------------*/
+sc_err_t sc_ipc_requestInt(sc_ipc_t *handle, uint32_t id)
+{
+	return SC_ERR_NONE;
+}
+
+/*--------------------------------------------------------------------------*/
+/* Open an IPC channel                                                      */
+/*--------------------------------------------------------------------------*/
 sc_err_t sc_ipc_open(sc_ipc_t *handle, uint32_t id)
 {
 	MU_Type *base;
@@ -124,6 +138,7 @@ sc_err_t sc_ipc_open(sc_ipc_t *handle, uint32_t id)
 		mutex_unlock(&scu_mu_mutex);
 		return SC_ERR_IPC;
 	}
+
 	*handle = (sc_ipc_t)task_pid_vnr(current);
 
 	mutex_unlock(&scu_mu_mutex);
@@ -228,58 +243,121 @@ void sc_ipc_write(sc_ipc_t handle, void *data)
 	}
 }
 
-static const char * const mu_data[] __initconst = {
-	"fsl,imx8dv-mu",
-	NULL
-	};
-
-static int __init imx8dv_dt_find_muaddr(unsigned long node, const char *uname,
-    int depth, void *data)
+int register_scu_notifier(struct notifier_block *nb)
 {
-	const __be64 *prop64;
-	const __be32 *prop32;
+		return blocking_notifier_chain_register(
+		&SCU_notifier_chain, nb);
+}
+EXPORT_SYMBOL(register_scu_notifier);
 
-	if (of_flat_dt_match(node, mu_data)) {
-		prop64 = of_get_flat_dt_prop(node, (const char *)"reg", NULL);
+int unregister_scu_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_unregister(
+	&SCU_notifier_chain, nb);
+}
+EXPORT_SYMBOL(unregister_scu_notifier);
 
-		if (!prop64)
-			return -EINVAL;
-		mu_base_physaddr = be64_to_cpup(prop64);
+static int SCU_notifier_call_chain(unsigned long val)
+{
+	return (blocking_notifier_call_chain(
+		&SCU_notifier_chain, val, NULL)
+		== NOTIFY_BAD) ? -EINVAL : 0;
+}
 
-		prop32 = of_get_flat_dt_prop(node, (const char *)"fsl,scu_ap_mu_id", NULL);
-		if (!prop32)
-			return -EINVAL;
-		scu_mu_id = be32_to_cpup(prop32);
+
+static void scu_mu_work_handler(struct work_struct *work)
+{
+	uint32_t irq_status;
+	sc_err_t sciErr;
+	int ret;
+
+	/* Figure out what caused the interrupt. */
+	sciErr = sc_irq_status(mu_ipcHandle, SC_R_MU_0A, SC_IRQ_GROUP_ALARM,
+					&irq_status);
+
+	if (irq_status & SC_IRQ_ALARM_PMIC0_TEMP)
+		ret = SCU_notifier_call_chain(1);
+}
+
+static irqreturn_t imx8_scu_mu_isr(int irq, void *param)
+{
+	u32 irqs;
+
+	irqs = (readl_relaxed(mu_base_virtaddr + 0x20) & (0xf << 28));
+	if (irqs) {
+		/* Clear the General Interrupt */
+		writel_relaxed(irqs, mu_base_virtaddr + 0x20);
+		/* Setup a bottom-half to handle the irq work. */
+		schedule_delayed_work(&scu_mu_work, 0);
 	}
-	return 0;
+	return IRQ_HANDLED;
 }
 
 /*Initialization of the MU code. */
 int __init imx8dv_mu_init()
 {
+	struct device_node *np;
+	u32 irq;
+	int err;
+	sc_err_t sciErr;
+
 	/*
 	 * Get the address of MU to be used for communication with the SCU
 	 */
-	WARN_ON(of_scan_flat_dt(imx8dv_dt_find_muaddr, NULL));
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx8dv-mu");
+	if (!np)
+		pr_info("Cannot find MU entry in device tree\n");
+	mu_base_virtaddr = of_iomap(np, 0);
+	WARN_ON(!mu_base_virtaddr);
 
-	if (!mu_base_physaddr) {
-		pr_info("Cannot find MU ADDR in device tree \n");
-		return -EINVAL;
+	err = of_property_read_u32_index(np, "fsl,scu_ap_mu_id", 0, &scu_mu_id);
+	if (err)
+		pr_info("imx8dv_mu_init: Cannot get mu_id err = %d\n", err);
+	
+	irq = of_irq_get(np, 0);
+
+	err = request_irq(irq, imx8_scu_mu_isr,
+		IRQF_EARLY_RESUME, "imx8_mu_isr", NULL);
+
+	if (err) {
+		pr_info("imx8dv mu_init :request_irq failed %d, err = %d\n",
+			irq, err);
 	}
-	mu_base_virtaddr = ioremap(mu_base_physaddr, SZ_64K);
 
 	if (!scu_mu_init) {
 		uint32_t i;
 		/* Init MU */
 		MU_HAL_Init(mu_base_virtaddr);
 
+		INIT_DELAYED_WORK(&scu_mu_work, scu_mu_work_handler);
+
 		/* Enable all RX interrupts */
 		for (i = 0; i < MU_RR_COUNT; i++)
-		    MU_HAL_EnableRxFullInt(mu_base_virtaddr, i);
+		    MU_HAL_EnableGeneralInt(mu_base_virtaddr, i);
 
 		gIPCport = scu_mu_id;
 		scu_mu_init = true;
 	}
+
+	sciErr = sc_ipc_open(&mu_ipcHandle, scu_mu_id);
+	if (sciErr != SC_ERR_NONE) {
+		pr_info("Cannot open MU channel to SCU\n");
+		return sciErr;
+	};
+
+	/* Request for the high temp interrupt. */
+	sciErr = sc_irq_enable(mu_ipcHandle, SC_R_MU_0A, SC_IRQ_GROUP_ALARM,
+					SC_IRQ_ALARM_PMIC0_TEMP, true);
+
+	if (sciErr)
+		pr_info("Cannot request PMIC0_TEMP interrupt\n");
+
+		/* Request for the high temp interrupt. */
+	sciErr = sc_irq_enable(mu_ipcHandle, SC_R_MU_0A, SC_IRQ_GROUP_ALARM,
+					SC_IRQ_ALARM_PMIC1_TEMP, true);
+
+	if (sciErr)
+		pr_info("Cannot request PMIC1_TEMP interrupt\n");
 
 	pr_info("*****Initialized MU\n");
 	return scu_mu_id;

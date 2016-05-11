@@ -45,16 +45,15 @@ static unsigned long clk_divider_scu_recalc_rate(struct clk_hw *hw,
 {
 	struct clk_divider_scu *clk = to_clk_divider_scu(hw);
 	sc_err_t sciErr;
-	sc_pm_clock_rate_t rate;
+	sc_pm_clock_rate_t rate = 0;
 
-	if (!ccm_ipcHandle) {
+	if (!ccm_ipcHandle)
 		return -EAGAIN;
-	}
+
 	sciErr = sc_pm_get_clock_rate(ccm_ipcHandle, clk->rsrc_id,
 									clk->clk_type, &rate);
-	if (!sciErr)
-		return rate;
-	return sciErr;
+
+	return rate;
 }
 
 static long clk_divider_scu_round_rate(struct clk_hw *hw, unsigned long rate,

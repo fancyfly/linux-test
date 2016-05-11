@@ -333,6 +333,7 @@ void notify_imx8_clk(void)
 {
 	uint32_t mu_id;
 	sc_err_t sciErr;
+	int i;
 
 	printk("MU and Power domains initialized\n");
 
@@ -348,6 +349,10 @@ void notify_imx8_clk(void)
 		pr_info("Cannot open MU channel to SCU\n");
 		return;
 	};
+
+	/* Initialize the clk rate for all the possible clocks now. */
+	for (i = 0; i < IMX8DV_CLK_END; i++)
+		clk_get_rate(clks[i]);
 }
 EXPORT_SYMBOL(notify_imx8_clk);
 

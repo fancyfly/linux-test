@@ -1,0 +1,147 @@
+/*
+ * Device Tree file for Freescale i.MX8dv sabreauto
+ *
+ * Copyright (C) 2016, Freescale Semiconductor Inc
+ *
+ *
+ * This file is dual-licensed: you can use it either under the terms
+ * of the GPL or the X11 license, at your option. Note that this dual
+ * licensing only applies to this file, and not this project as a
+ * whole.
+ *
+ *  a) This library is free software; you can redistribute it and/or
+ *     modify it under the terms of the GNU General Public License as
+ *     published by the Free Software Foundation; either version 2 of the
+ *     License, or (at your option) any later version.
+ *
+ *     This library is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public
+ *     License along with this library; if not, write to the Free
+ *     Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
+ *     MA 02110-1301 USA
+ *
+ * Or, alternatively,
+ *
+ *  b) Permission is hereby granted, free of charge, to any person
+ *     obtaining a copy of this software and associated documentation
+ *     files (the "Software"), to deal in the Software without
+ *     restriction, including without limitation the rights to use,
+ *     copy, modify, merge, publish, distribute, sublicense, and/or
+ *     sell copies of the Software, and to permit persons to whom the
+ *     Software is furnished to do so, subject to the following
+ *     conditions:
+ *
+ *     The above copyright notice and this permission notice shall be
+ *     included in all copies or substantial portions of the Software.
+ *
+ *     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *     OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ *     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ *     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ *     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ *     OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/dts-v1/;
+
+/* First 4KB has trampoline code for secondary cores. */
+/memreserve/ 0x80000000 0x00010000;
+
+#include "fsl-imx8dv.dtsi"
+
+/ {
+	model = "Freescale i.MX8DV Sabreauto";
+	compatible = "fsl,imx8dv-sabreauto", "fsl,imx8dv";
+
+	chosen {
+		bootargs = "console=ttymxc2,115200 earlycon=imxuart,0x5a080000,115200";
+		stdout-path = &uart3;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_leds>;
+		user {
+			label = "debug";
+			gpios = <&gpio0 4 0>;
+			default-state = "on";
+		};
+	};
+};
+
+&iomuxc {
+	imx8dv-sabreauto {
+		pinctrl_usdhc1: usdhc1grp {
+			fsl,pins = <
+			0x191 5 0 3 0 0 0x10
+			>;
+		};
+        /*pin flag mux config iso wakeup gp*/
+    	pinctrl_fec1: fec1grp {
+            fsl,pins = <
+            420 5 0 0 0 0 0x70
+            421 5 0 0 0 0 0x70
+            428 5 0 0 0 0 0x70
+            429 5 0 0 0 0 0x70
+            430 5 0 0 0 0 0x70
+            431 5 0 0 0 0 0x70
+            432 5 0 0 0 0 0x70
+            433 5 0 0 0 0 0x70
+
+            422 5 0 0 0 0 0x10
+            423 5 0 0 0 0 0x10
+            424 5 0 0 0 0 0x10
+            425 5 0 0 0 0 0x10
+            426 5 0 0 0 0 0x10
+			>;
+		};
+		pinctrl_gpio_leds: gpioledsgrp {
+			fsl,pins = <
+			146 5 0 0 0 0 0x10
+			>;
+		};
+	};
+};
+
+&usdhc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc1>;
+	bus-width = <4>;
+	non-removable;
+	no-1-8-v;
+	status = "okay";
+};
+
+&usdhc2 {
+	bus-width = <4>;
+	non-removable;
+	no-1-8-v;
+	status = "okay";
+};
+
+&pwm1 {
+	status = "okay";
+};
+
+&pwm2 {
+	status = "okay";
+};
+
+&fec1 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_fec1>;
+    phy-mode = "rgmii";
+    status = "okay";
+
+    fixed-link {
+        speed = <1000>;
+        full-duplex;
+    };
+};

@@ -82,7 +82,7 @@
                 linux,cma {
                         compatible = "shared-dma-pool";
                         reusable;
-                        size = <0 0x08000000>;
+			reg = <0 0xa0000000 0 0x8000000>;
                         linux,cma-default;
                 };
         };

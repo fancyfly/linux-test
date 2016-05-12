@@ -173,7 +173,7 @@ static int imxdpu_runtime_resume(struct device *dev)
 	return 0;
 }
 
-#if 0
+#if CONFIG_PM
 static int imxdpu_suspend(struct device *dev)
 {
 	return 0;
@@ -184,6 +184,7 @@ static int imxdpu_resume(struct device *dev)
 	return 0;
 }
 #endif
+
 static const struct dev_pm_ops imxdpu_pm_ops = {
 	SET_RUNTIME_PM_OPS(imxdpu_runtime_suspend, imxdpu_runtime_resume, NULL)
 	    SET_SYSTEM_SLEEP_PM_OPS(imxdpu_suspend, imxdpu_resume)

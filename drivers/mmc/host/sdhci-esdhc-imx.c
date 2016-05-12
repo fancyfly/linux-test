@@ -832,7 +832,9 @@ static void esdhc_set_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 	struct pltfm_imx_data *imx_data = pltfm_host->priv;
 
 	/* use maximum timeout counter */
-	sdhci_writeb(host, esdhc_is_usdhc(imx_data) ? 0xF : 0xE,
+	/* TODO : need better solution */
+	/* Keep IPP_RST_N is 1, otherwise RST_B keep low */
+	sdhci_writeb(host, (esdhc_is_usdhc(imx_data) ? 0xF : 0xE) | 0x80,
 			SDHCI_TIMEOUT_CONTROL);
 }
 

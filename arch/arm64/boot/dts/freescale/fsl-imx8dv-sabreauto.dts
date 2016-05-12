@@ -134,6 +134,7 @@
 	bus-width = <4>;
 	non-removable;
 	no-1-8-v;
+	max-frequency = <25000000>;
 	status = "okay";
 };
 

@@ -524,6 +524,10 @@
 		compatible = "fsl,imx6q-uart", "fsl,imx21-uart";
 		reg = <0x0 0x5a060000 0x0 0x4000>;
 		interrupts = <0 219 4>;
+		clocks = <&clkdummy>, <&clk IMX8DV_UART0_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clock-names = <&clk IMX8DV_UART0_CLK>;
+		assigned-clock-rates = <80000000>;
 		power-domains = <&pd_mw_uart0>;
 	};
 
@@ -531,6 +535,10 @@
 		compatible = "fsl,imx6q-uart", "fsl,imx21-uart";
 		reg = <0x0 0x5a090000 0x0 0x4000>;
 		interrupts = <0 220 4>;
+		clocks = <&clkdummy>, <&clk IMX8DV_UART1_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clock-names = <&clk IMX8DV_UART1_CLK>;
+		assigned-clock-rates = <80000000>;
 		power-domains = <&pd_mw_uart1>;
 	};
 
@@ -538,6 +546,10 @@
 		compatible = "fsl,imx6q-uart", "fsl,imx21-uart";
 		reg = <0x0 0x5a080000 0x0 0x4000>;
 		interrupts = <0 221 4>;
+		clocks = <&clkdummy>, <&clk IMX8DV_UART2_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clock-names = <&clk IMX8DV_UART2_CLK>;
+		assigned-clock-rates = <80000000>;
 		power-domains = <&pd_mw_uart2>;
 	};
 

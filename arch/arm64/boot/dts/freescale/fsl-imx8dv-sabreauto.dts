@@ -75,6 +75,24 @@
 		};
 	};
 };
+&framebuffer0 {
+	status = "okay";
+};
+&framebuffer1 {
+	status = "disabled";
+};
+&framebuffer2 {
+	status = "disabled";
+};
+&framebuffer3 {
+	status = "disabled";
+};
+&imxdpu0 {
+	status = "okay";
+};
+&imxdpu1 {
+	status = "disabled";
+};
 
 &iomuxc {
 	imx8dv-sabreauto {

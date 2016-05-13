@@ -296,6 +296,18 @@
 				#power-domain-cells = <0>;
 				power-domains = <&pd_mw>;
 			};
+			pd_mw_usbotg0: megawrap-usbotg0 {
+				name = "megawrap-usbotg0";
+				reg = <SC_R_USB_0>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
+			pd_mw_usbotg1: megawrap-usbotg1 {
+				name = "megawrap-usbotg1";
+				reg = <SC_R_USB_1>;
+				#power-domain-cells = <0>;
+				power-domains = <&pd_mw>;
+			};
 			pd_mw_sdch0: megawrap-sdhc0 {
 				name = "megawrap-sdhc0";
 				reg = <SC_R_SDHC_0>;
@@ -553,6 +565,48 @@
 		power-domains = <&pd_mw_uart2>;
 	};
 
+	usbmisc1: usbmisc@5a210200 {
+		#index-cells = <1>;
+		compatible = "fsl,imx7d-usbmisc", "fsl,imx6q-usbmisc";
+		reg = <0x0 0x5a210200 0x0 0x200>;
+	};
+    usbphy_nop1: usbphy_nop1 {
+		compatible = "usb-nop-xceiv";
+		clocks = <&clk IMX8DV_USB_PHY_CLK>;
+		clock-names = "main_clk";
+	};
+    usbotg1: usb@5a210000 {
+		compatible = "fsl,imx7d-usb", "fsl,imx27-usb";
+		reg = <0x0 0x5a210000 0x0 0x200>;
+		interrupts = <0 225 4>;
+		fsl,usbphy = <&usbphy_nop1>;
+		fsl,usbmisc = <&usbmisc1 0>;
+		phy-clkgate-delay-us = <400>;
+		status = "disabled";
+		power-domains = <&pd_mw_usbotg0>;
+	};
+
+	usbmisc2: usbmisc@5a220200 {
+		#index-cells = <1>;
+		compatible = "fsl,imx7d-usbmisc", "fsl,imx6q-usbmisc";
+		reg = <0x0 0x5a220200 0x0 0x200>;
+	};
+    usbphy_nop2: usbphy_nop2 {
+		compatible = "usb-nop-xceiv";
+		clocks = <&clk IMX8DV_USB_PHY_CLK>;
+		clock-names = "main_clk";
+	};
+    usbotg2: usb@5a220000 {
+		compatible = "fsl,imx7d-usb", "fsl,imx27-usb";
+		reg = <0x0 0x5a220000 0x0 0x200>;
+		interrupts = <0 226 4>;
+		fsl,usbphy = <&usbphy_nop2>;
+		fsl,usbmisc = <&usbmisc2 0>;
+		phy-clkgate-delay-us = <400>;
+		status = "disabled";
+		power-domains = <&pd_mw_usbotg1>;
+	};
+
 	imxdpu0:  imxdpu0@0x56180000 {
 		compatible = "fsl,imx8dv-imxdpu";
 		reg = <0x0 0x56000000 0x0 0x1000000>;
@@ -730,7 +784,8 @@
 		reg = <0x0 0x5a240000 0x0 0x10000>;
 		clocks = <&clk IMX8DV_SDHC_BUS_CLK>, <&clk IMX8DV_SDHC0_CLK>, <&clkdummy>;
 		clock-names = "ipg", "per", "ahb";
-		power-domains = <&pd_mw_sdch0>;
+	    assigned-clock-rates = <266000000>, <200000000>, <0>;
+        power-domains = <&pd_mw_sdch0>;
 	};
 
 	usdhc2: usdhc@5a250000 {
@@ -741,6 +796,7 @@
 		reg = <0x0 0x5a250000 0x0 0x10000>;
 		clocks = <&clk IMX8DV_SDHC_BUS_CLK>, <&clk IMX8DV_SDHC1_CLK>, <&clkdummy>;
 		clock-names = "ipg", "per", "ahb";
+	    assigned-clock-rates = <266000000>, <200000000>, <0>;
 		power-domains = <&pd_mw_sdch1>;
 	};
 

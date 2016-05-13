@@ -98,6 +98,27 @@
             426 5 0 0 0 0 0x10
 			>;
 		};
+
+       pinctrl_usdhc1: usdhc1grp {
+            fsl,pins = <
+            0x191 5 0 3 0 0 0x10
+            >;
+       };
+       pinctrl_usdhc2: usdhc2grp {
+            fsl,pins = <
+            409 5 0 3 0 0 0x4C
+            410 5 0 3 0 0 0x4C
+            411 5 0 3 0 0 0x4C
+            412 5 0 3 0 0 0x4C
+            413 5 0 3 0 0 0x4C
+            414 5 0 3 0 0 0x4C
+            415 5 0 3 0 0 0x4C
+            416 5 0 3 0 0 0x4C
+            417 5 0 3 0 0 0x4C
+            418 5 0 3 0 0 0x4C
+            419 5 0 3 0 0 0x4C
+            >;
+       };
 		pinctrl_gpio_leds: gpioledsgrp {
 			fsl,pins = <
 			146 5 0 0 0 0 0x10
@@ -119,6 +140,14 @@
 	non-removable;
 	no-1-8-v;
 	max-frequency = <25000000>;
+	status = "okay";
+};
+
+&usbotg1 {
+/*	vbus-supply = <&reg_usb_otg1_vbus>;*/
+	srp-disable;
+	hnp-disable;
+	adp-disable;
 	status = "okay";
 };
 

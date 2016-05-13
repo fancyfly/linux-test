@@ -52,6 +52,7 @@
 #include "fsl-imx8dv-ca53.dtsi"
 #include <dt-bindings/clock/imx8dv-clock.h>
 #include <dt-bindings/soc/imx_rsrc.h>
+#include <dt-bindings/pinctrl/pins-imx8dv.h>
 
 / {
 	compatible = "fsl,imx8dv";

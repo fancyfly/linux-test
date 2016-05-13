@@ -98,7 +98,16 @@
 	imx8dv-sabreauto {
 		pinctrl_usdhc1: usdhc1grp {
 			fsl,pins = <
-			0x191 5 0 3 0 0 0x10
+			SC_P_USDHC0_CLK 5 0 3 0 0 0x4c
+			SC_P_USDHC0_CMD 5 0 3 0 0 0x4c
+			SC_P_USDHC0_DATA0 5 0 3 0 0 0x4c
+			SC_P_USDHC0_DATA1 5 0 3 0 0 0x4c
+			SC_P_USDHC0_DATA2 5 0 3 0 0 0x4c
+			SC_P_USDHC0_DATA3 5 0 3 0 0 0x4c
+			SC_P_USDHC0_DATA4 5 0 3 0 0 0x4c
+			SC_P_USDHC0_DATA5 5 0 3 0 0 0x4c
+			SC_P_USDHC0_DATA6 5 0 3 0 0 0x4c
+			SC_P_USDHC0_DATA7 5 0 3 0 0 0x4c			
 			>;
 		};
         /*pin flag mux config iso wakeup gp*/
@@ -147,7 +156,7 @@
 &usdhc1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc1>;
-	bus-width = <4>;
+	bus-width = <1>;
 	non-removable;
 	no-1-8-v;
 	max-frequency = <25000000>;
@@ -170,6 +179,7 @@
 	hnp-disable;
 	adp-disable;
 	status = "okay";
+	max-frequency = <25000000>;
 };
 
 &pwm1 {

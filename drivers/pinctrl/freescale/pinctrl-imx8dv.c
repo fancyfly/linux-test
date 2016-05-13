@@ -15,7 +15,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/pinctrl/pinctrl.h>
-#include <soc/imx8/imx8dv/pins.h>
+#include <dt-bindings/pinctrl/pins-imx8dv.h>
 
 #include "pinctrl-imx.h"
 

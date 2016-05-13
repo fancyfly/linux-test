@@ -129,7 +129,7 @@
 
 &usdhc1 {
 	pinctrl-names = "default";
-	bus-width = <4>;
+	bus-width = <1>;
 	non-removable;
 	no-1-8-v;
 	status = "okay";

@@ -25,7 +25,6 @@
 
 /* Includes */
 
-#include <soc/imx8/sc/scfw.h>
 
 /* Defines */
 

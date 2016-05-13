@@ -120,6 +120,22 @@
             426 5 0 0 0 0 0x10
 			>;
 		};
+
+        pinctrl_usdhc2: usdhc2grp {
+            fsl,pins = <
+            409 5 0 3 0 0 0x4C
+            410 5 0 3 0 0 0x4C
+            411 5 0 3 0 0 0x4C
+            412 5 0 3 0 0 0x4C
+            413 5 0 3 0 0 0x4C
+            414 5 0 3 0 0 0x4C
+            415 5 0 3 0 0 0x4C
+            416 5 0 3 0 0 0x4C
+            417 5 0 3 0 0 0x4C
+            418 5 0 3 0 0 0x4C
+            419 5 0 3 0 0 0x4C
+            >;
+       };
 		pinctrl_gpio_leds: gpioledsgrp {
 			fsl,pins = <
 			146 5 0 0 0 0 0x10
@@ -139,9 +155,20 @@
 };
 
 &usdhc2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc2>;
 	bus-width = <4>;
 	non-removable;
 	no-1-8-v;
+	max-frequency = <25000000>;
+	status = "okay";
+};
+
+&usbotg1 {
+/*	vbus-supply = <&reg_usb_otg1_vbus>;*/
+	srp-disable;
+	hnp-disable;
+	adp-disable;
 	status = "okay";
 };
 
@@ -159,8 +186,22 @@
     phy-mode = "rgmii";
     status = "okay";
 
-    fixed-link {
-        speed = <1000>;
-        full-duplex;
-    };
+	phy-handle = <&ethphy0>;
+	fsl,magic-packet;
+	status = "okay";
+
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ethphy0: ethernet-phy@0 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <0>;
+		};
+
+		ethphy1: ethernet-phy@1 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <1>;
+		};
+	};
 };

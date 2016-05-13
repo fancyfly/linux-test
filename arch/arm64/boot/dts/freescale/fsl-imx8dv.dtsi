@@ -686,9 +686,9 @@
 	framebuffer0: framebuffer@0 {
 		compatible = "imxdpu-framebuffer";
 		reg = <0x0 0x56220000 0x0 0x10000>;
-		width = <640>;
-		height = <480>;
-		stride = <(640*4)>;
+		width = <1280>;
+		height = <720>;
+		stride = <(1280*4)>;
 		format = "b8g8r8a8";
 		status = "disabled";
 	};
@@ -696,9 +696,9 @@
 	framebuffer1: framebuffer@1 {
 		compatible = "imxdpu-framebuffer";
 		reg = <0x0 0x56240000 0x0 0x10000>;
-		width = <640>;
-		height = <480>;
-		stride = <(640 * 4)>;
+		width = <1280>;
+		height = <720>;
+		stride = <(1280 * 4)>;
 		format = "ayuv";
 		status = "disabled";
 	};
@@ -706,9 +706,9 @@
 	framebuffer2: framebuffer@2 {
 		compatible = "imxdpu-framebuffer";
 		reg = <0x0 0x57220000 0x0 0x10000>;
-		width = <640>;
-		height = <480>;
-		stride = <(640 * 4)>;
+		width = <1280>;
+		height = <720>;
+		stride = <(1280 * 4)>;
 		format = "nv12";
 		status = "disabled";
 	};
@@ -716,9 +716,9 @@
 	framebuffer3: framebuffer@3 {
 		compatible = "imxdpu-framebuffer";
 		reg = <0x0 0x57240000 0x0 0x10000>;
-		width = <640>;
-		height = <480>;
-		stride = <640>;
+		width = <1280>;
+		height = <720>;
+		stride = <1280>;
 		format = "nv12";
 		status = "disabled";
 	};

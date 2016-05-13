@@ -538,6 +538,7 @@ static int imxdpufb_probe(struct platform_device *pdev)
 	}
 
 	/* need to get video mode from DI driver device tree */
+#if 0
 	vmode.pixelclock = 25175000;
 	vmode.hlen = info->var.xres;
 	vmode.hfp = 16;		//16;
@@ -552,7 +553,22 @@ static int imxdpufb_probe(struct platform_device *pdev)
 	    IMXDPU_DISP_FLAGS_HSYNC_HIGH |
 	    IMXDPU_DISP_FLAGS_VSYNC_HIGH |
 	    IMXDPU_DISP_FLAGS_DE_HIGH | IMXDPU_DISP_FLAGS_POSEDGE;
+#else
+	vmode.pixelclock = 74250000;
+	vmode.hlen = info->var.xres;
+	vmode.hfp = 110;
+	vmode.hbp = 40;		//48;
+	vmode.hsync = 220;
 
+	vmode.vlen = info->var.yres;
+	vmode.vfp = 5;		//2
+	vmode.vbp = 20;
+	vmode.vsync = 5;	//2;
+	vmode.flags =
+	    IMXDPU_DISP_FLAGS_HSYNC_HIGH |
+	    IMXDPU_DISP_FLAGS_VSYNC_HIGH |
+	    IMXDPU_DISP_FLAGS_DE_HIGH | IMXDPU_DISP_FLAGS_POSEDGE;
+#endif
 	imxdpu_start((uint64_t) info->fix.smem_start,
 		     &vmode,
 		     &params);

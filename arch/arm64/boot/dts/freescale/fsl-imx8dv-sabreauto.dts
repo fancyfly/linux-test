@@ -94,6 +94,13 @@
 	status = "disabled";
 };
 
+&i2c2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2>;
+	clock-frequency = <100000>;
+	status = "okay";
+};
+
 &iomuxc {
 	imx8dv-sabreauto {
 		pinctrl_usdhc1: usdhc1grp {
@@ -127,6 +134,13 @@
             424 5 0 0 0 0 0x10
             425 5 0 0 0 0 0x10
             426 5 0 0 0 0 0x10
+			>;
+		};
+
+		pinctrl_i2c2: i2c2grp {
+			fsl,pins = <
+			SC_P_LSIO_I2C2_SDA 5 0 3 0 0 0x4c
+			SC_P_LSIO_I2C2_SCL 5 0 3 0 0 0x4c
 			>;
 		};
 

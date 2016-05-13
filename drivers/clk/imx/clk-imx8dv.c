@@ -48,6 +48,7 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	clks[IMX8DV_SDHC_BUS_CLK] = imx_clk_fixed("sdhc_bus_clk_fixed", SC_266MHZ);
 	clks[IMX8DV_ENET_BUS_CLK] = imx_clk_fixed("enet_bus_clk_fixed", SC_266MHZ);
 	clks[IMX8DV_ANATOP_CLK] = imx_clk_fixed("anatop_bus_clk_fixed", SC_125MHZ);
+	clks[IMX8DV_GPT_3M]    = imx_clk_fixed("gpt_3m", 3000000);
 
 	/* Clocks dividers. */
 	/* Megawrap */

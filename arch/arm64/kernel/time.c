@@ -80,6 +80,7 @@ void __init time_init(void)
 	acpi_generic_timer_init();
 
 	arch_timer_rate = arch_timer_get_rate();
+arch_timer_rate = 3000000;
 	if (!arch_timer_rate)
 		panic("Unable to initialise architected timer.\n");
 

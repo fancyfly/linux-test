@@ -290,7 +290,9 @@
 #define IMX8DV_PI_0_PLL				224
 #define IMX8DV_PI_1_PLL				225
 
-#define IMX8DV_CLK_END				226
+#define IMX8DV_GPT_3M				226
+
+#define IMX8DV_CLK_END				227
 
 
 #endif /* __DT_BINDINGS_CLOCK_IMX8DV_H */

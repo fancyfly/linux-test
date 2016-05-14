@@ -632,6 +632,7 @@
 		interrupts = <0 225 4>;
 		fsl,usbphy = <&usbphy_nop1>;
 		fsl,usbmisc = <&usbmisc1 0>;
+		clocks = <&clk IMX8DV_CLK_DUMMY>;
 		phy-clkgate-delay-us = <400>;
 		status = "disabled";
 		power-domains = <&pd_mw_usbotg0>;

@@ -629,13 +629,12 @@
     usbotg1: usb@5a210000 {
 		compatible = "fsl,imx7d-usb", "fsl,imx27-usb";
 		reg = <0x0 0x5a210000 0x0 0x200>;
-		interrupts = <0 225 4>;
+		interrupts = <0 223 4>;
 		fsl,usbphy = <&usbphy_nop1>;
 		fsl,usbmisc = <&usbmisc1 0>;
 		clocks = <&clk IMX8DV_CLK_DUMMY>;
 		phy-clkgate-delay-us = <400>;
 		status = "disabled";
-		power-domains = <&pd_mw_usbotg0>;
 	};
 
 	usbmisc2: usbmisc@5a220200 {
@@ -651,7 +650,7 @@
     usbotg2: usb@5a220000 {
 		compatible = "fsl,imx7d-usb", "fsl,imx27-usb";
 		reg = <0x0 0x5a220000 0x0 0x200>;
-		interrupts = <0 226 4>;
+		interrupts = <0 224 4>;
 		fsl,usbphy = <&usbphy_nop2>;
 		fsl,usbmisc = <&usbmisc2 0>;
 		phy-clkgate-delay-us = <400>;

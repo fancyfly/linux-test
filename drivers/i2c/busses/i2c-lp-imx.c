@@ -65,7 +65,6 @@
 #define LPI2C_MCFGR0_HRSEL	(1u << 2)
 #define LPI2C_MCFGR0_HRPOL	(1u << 1)
 #define LPI2C_MCFGR0_HREN	(1u << 0)
-#define LPI2C_MCFGR1_PINCFG	(1u << 24)
 #define LPI2C_MCFGR1_IGNACK	(1u << 9)
 #define LPI2C_MCFGR1_AUTOSTOP	(1u << 8)
 #define LPI2C_MIER_DMIE		(1u << 14)
@@ -93,6 +92,7 @@ enum lpi2c_err_type {
 	LPI2C_ERR_DMF,
 	LPI2C_ERR_MBF,
 	LPI2C_ERR_BBF,
+	LPI2C_ERR_TIMEOUT,
 };
 
 enum lpi2c_msg_type {
@@ -108,6 +108,8 @@ enum lpi2c_msg_type {
 	(((u32)(((u32)(x))) << 8u)) & 0x700u
 #define LPI2C_MTDR_DATA(x) \
 	(((u32)(((u32)(x))) << 0u)) & 0xffu
+#define LPI2C_MCFGR1_PINCFG(x) \
+	(((u32)(((u32)(x))) << 24u)) & 0x7000000u
 
 struct lpi2c_imx_dev {
 	struct device *dev;
@@ -123,6 +125,8 @@ struct lpi2c_imx_dev {
 	size_t msg_left;
 	int msg_read;
 };
+
+static int lpi2c_imx_init(struct lpi2c_imx_dev *i2c_dev);
 
 static inline void i2c_writel(struct lpi2c_imx_dev *i2c_dev, u32 val,
 	unsigned long reg)
@@ -261,29 +265,34 @@ static int lpi2c_imx_wait_for_tx_ready(struct lpi2c_imx_dev *i2c_dev)
 {
 	u32 irq_mask, txcount;
 	unsigned long time_left;
-	int result = LPI2C_ERR_NONE;
+	int result = LPI2C_ERR_NONE, count = 100000;
 
+#if 0
 	irq_mask = i2c_readl(i2c_dev, LPI2C_MFSR);
-
-	/* lpi2c_imx_unmask_irq(i2c_dev, LPI2C_MIER_TDIE); */
+	lpi2c_imx_unmask_irq(i2c_dev, LPI2C_MIER_TDIE);
+#endif
 	do {
 		txcount = i2c_readl(i2c_dev, LPI2C_MFSR) & 0xff;
+		if (!txcount)
+			break;
 		txcount = LPI2C_FIFO_SIZE - txcount;
 		result = lpi2c_imx_check_clear_error(i2c_dev);
 		if (result) {
 			dev_info(i2c_dev->dev, "wait for tx ready: result 0x%x\n", result);
 			return result;
 		}
-
+#if 0
 		time_left = wait_for_completion_timeout(&i2c_dev->complete,
 			LPI2C_TIMEOUT);
-	/* lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_TDIE); */
+		lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_TDIE);
 
 		if (time_left == 0) {
 			dev_err(i2c_dev->dev, "wait for tx ready time out\n");
 			return -ETIMEDOUT;
 		}
-	} while(!txcount);
+#endif
+		count--;
+	} while(!txcount && count <= 0);
 
 	return 0;
 }
@@ -296,24 +305,26 @@ static int lpi2c_imx_start(struct lpi2c_imx_dev *i2c_dev,
 
 	result = lpi2c_imx_check_busy_bus(i2c_dev);
 	if (result) {
-		dev_err(&i2c_dev->adapter.dev, "start check busy bus\n");
+		dev_info(&i2c_dev->adapter.dev, "start check busy bus\n");
 		return result;
 	}
 
 	/* clear all flags */
 	i2c_writel(i2c_dev, 0x7f00, LPI2C_MSR);
 	/* turn off auto stop condition */
-	reg = i2c_readl(i2c_dev, LPI2C_MCFGR1) & ~LPI2C_MCFGR1_AUTOSTOP;
+	reg = i2c_readl(i2c_dev, LPI2C_MCFGR1);
+	reg &= ~LPI2C_MCFGR1_AUTOSTOP;
 	i2c_writel(i2c_dev, reg, LPI2C_MCFGR1);
 	/* wait for tx fifo ready */
 	result = lpi2c_imx_wait_for_tx_ready(i2c_dev);
 	if (result) {
-		dev_err(&i2c_dev->adapter.dev, "start wait for tx ready\n");
+		dev_info(&i2c_dev->adapter.dev, "start wait for tx ready\n");
 		return result;
 	}
 	/* issue start command */
 	reg = LPI2C_MTDR_CMD(0x4);
-	reg |= (address << 0x1) | direction;
+	reg |= (address << 0x1);
+	reg |= direction;
 	i2c_writel(i2c_dev, reg, LPI2C_MTDR);
 
 	return 0;
@@ -323,6 +334,7 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 {
 	u32 reg;
 	int result = LPI2C_ERR_NONE;
+	int count = 100000;
 	/* unsigned long time_left; */
 
 	result = lpi2c_imx_wait_for_tx_ready(i2c_dev);
@@ -337,14 +349,18 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 
 	while (result == LPI2C_ERR_NONE)
 	{
+		count--;
 		reg = i2c_readl(i2c_dev, LPI2C_MSR);
 		result = lpi2c_imx_check_clear_error(i2c_dev);
 		/* clear stop detect flag */
-		if (reg & LPI2C_MSR_NDF) {
-			reg &= LPI2C_MSR_NDF;
+		if (reg & LPI2C_MSR_SDF) {
+			reg &= LPI2C_MSR_SDF;
 			i2c_writel(i2c_dev, reg, LPI2C_MSR);
 			break;
 		}
+
+		if (count <= 0)
+			result = LPI2C_ERR_TIMEOUT;
 	}
 #if 0
 	lpi2c_imx_unmask_irq(i2c_dev, LPI2C_MIER_SDIE);
@@ -358,7 +374,7 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 	}
 #endif
 
-	return 0;
+	return result;
 }
 
 static int lpi2c_imx_send(struct lpi2c_imx_dev *i2c_dev, u8 *txbuf, int len)
@@ -420,6 +436,28 @@ static int lpi2c_imx_receive(struct lpi2c_imx_dev *i2c_dev, u8 *rxbuf, int len)
 	return 0;
 }
 
+static int lpi2c_imx_detect(struct lpi2c_imx_dev *i2c_dev,  u8 chip)
+{
+	int result = LPI2C_ERR_NONE;
+
+	result = lpi2c_imx_start(i2c_dev, chip, 0);
+	if (result) {
+		dev_info(i2c_dev->dev, "detect: start error: %d\n", result);
+		lpi2c_imx_stop(i2c_dev);
+		lpi2c_imx_init(i2c_dev);
+		return result;
+	}
+
+	result = lpi2c_imx_stop(i2c_dev);
+	if (result) {
+		dev_info(i2c_dev->dev, "detect: stop error: %d\n", result);
+		lpi2c_imx_init(i2c_dev);
+		return result;
+	}
+
+	return 0;
+}
+
 static int lpi2c_imx_read(struct lpi2c_imx_dev *i2c_dev, u8 chip, u32 addr,
 		int alen, u8 *buf, int len)
 {
@@ -427,21 +465,27 @@ static int lpi2c_imx_read(struct lpi2c_imx_dev *i2c_dev, u8 chip, u32 addr,
 
 	result = lpi2c_imx_start(i2c_dev, chip, 0);
 	if (result)
-		return result;
+		goto read_err;
 	result = lpi2c_imx_send(i2c_dev, (u8 *)&addr, 1);
 	if (result)
-		return result;
+		goto read_err;
 	result = lpi2c_imx_start(i2c_dev, chip, 1);
 	if (result)
-		return result;
+		goto read_err;
 	result = lpi2c_imx_receive(i2c_dev, buf, len);
 	if (result)
-		return result;
+		goto read_err;
 	result = lpi2c_imx_stop(i2c_dev);
 	if (result)
-		return result;
+		goto read_err;
 
 	return 0;
+
+read_err:
+	dev_info(&i2c_dev->adapter.dev, "read error: %d\n", result);
+	lpi2c_imx_init(i2c_dev);
+	lpi2c_imx_stop(i2c_dev);
+	return result;
 }
 
 static int lpi2c_imx_write(struct lpi2c_imx_dev *i2c_dev, u8 chip, u32 addr,
@@ -478,36 +522,47 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 	struct lpi2c_imx_dev *i2c_dev = i2c_get_adapdata(adap);
 	enum lpi2c_msg_type end_msg = LPI2C_MSG_STOP;
 	int i, ret = 0;
+	int result = LPI2C_ERR_NONE;
+	u32 addr = 0;
 
+#if 0
 	ret = clk_prepare_enable(i2c_dev->clk);
 
 	if (ret < 0) {
 		dev_err(i2c_dev->dev, "Clock enable failed: %d\n", ret);
 		return ret;
 	}
-
 	/* start i2c transfer */
 	ret = lpi2c_imx_start(i2c_dev, (u8)msgs[0].addr, 1);
+#endif
+
+	dev_info(&i2c_dev->adapter.dev, "msgs num: %d\n", num);
 
 	for (i = 0; i < num; i++) {
-		if (i < (num - 1)) {
-			if (msgs[i + 1].flags & I2C_M_NOSTART)
-				end_msg = LPI2C_MSG_CONTINUE;
-			else
-				end_msg = LPI2C_MSG_REPEAT_STAR;
+		ret = lpi2c_imx_detect(i2c_dev, msgs[i].addr);
+		if (ret) {
+			dev_info(&i2c_dev->adapter.dev, "txfer detect 0x%x error: %d\n", msgs[i].addr, ret);
+			return -ret;
 		}
-
+	}
+#if 0
+	ret = lpi2c_imx_read(i2c_dev, (u8)msgs[0].addr, msgs->buf[0],
+		0, (u8 *)&msgs[1].buf, msgs[1].len);
+	if (ret) {
+		dev_info(&i2c_dev->adapter.dev, "read error: 0x%x\n", ret);
+	}
+#endif
+#if 0
 		ret = lpi2c_imx_xfer_msg(i2c_dev, &msgs[i], end_msg);
 		if (ret)
-			goto xfer_error;
+			return result;
 	}
 	/* stop i2c transfer */
 	ret = lpi2c_imx_stop(i2c_dev);
-
 xfer_error:
 	clk_disable_unprepare(i2c_dev->clk);
-
-	return ret;
+#endif
+	return 0;
 }
 
 static u32 lpi2c_imx_func(struct i2c_adapter *adap)
@@ -530,14 +585,15 @@ MODULE_DEVICE_TABLE(of, lpi2c_imx_of_match);
 static void lpi2c_imx_reset(struct lpi2c_imx_dev *i2c_dev)
 {
 	u32 reg;
-
 	/* set and clear for peripherial reset */
 	reg = i2c_readl(i2c_dev, LPI2C_MCR);
-	reg |= LPI2C_MCR_RST;
+	/* reset fifos and master reset */
+	reg |= LPI2C_MCR_RRF | LPI2C_MCR_RTF | LPI2C_MCR_RST;
 	i2c_writel(i2c_dev, reg, LPI2C_MCR);
-
-	reg = i2c_readl(i2c_dev, LPI2C_MCR);
-	reg &= ~LPI2C_MCR_RST;
+	/* wait for controller */
+	udelay(50);
+	/* disable dozen mode */
+	reg = LPI2C_MCR_DOZEN;
 	i2c_writel(i2c_dev, reg, LPI2C_MCR);
 }
 
@@ -547,22 +603,24 @@ static int lpi2c_imx_init(struct lpi2c_imx_dev *i2c_dev)
 
 	/* reset i2c controller */
 	lpi2c_imx_reset(i2c_dev);
-	/* disable debug and dozen mode */
-	reg = i2c_readl(i2c_dev, LPI2C_MCR);
-	reg &= ~LPI2C_MCR_DBGEN | LPI2C_MCR_DOZEN | ~LPI2C_MCR_MEN;
-	i2c_writel(i2c_dev, reg, LPI2C_MCR);
 	/* host request disable, active high, external pin */
 	reg = i2c_readl(i2c_dev, LPI2C_MCFGR0);
-	reg &= ~LPI2C_MCFGR0_HREN | ~LPI2C_MCFGR0_HRPOL | LPI2C_MCFGR0_HRSEL;
+	reg &= ~LPI2C_MCFGR0_HREN;
+	reg &= ~LPI2C_MCFGR0_HRSEL;
+	reg |= LPI2C_MCFGR0_HRPOL;
 	i2c_writel(i2c_dev, reg, LPI2C_MCFGR0);
+
 	/* pincfg 2 pin open drain and ignore nack */
 	reg = i2c_readl(i2c_dev, LPI2C_MCFGR1);
-	reg &= ~LPI2C_MCFGR1_PINCFG | ~LPI2C_MCFGR1_IGNACK;
+	reg &= ~LPI2C_MCFGR1_IGNACK;
+	reg |= LPI2C_MCFGR1_PINCFG(0x0);
 	i2c_writel(i2c_dev, reg, LPI2C_MCFGR1);
 
+	/* hardcode bus speed */
+        i2c_writel(i2c_dev, 0x09131326, LPI2C_MCCR0);
 	/* enable i2c controller in master mode */
 	reg = i2c_readl(i2c_dev, LPI2C_MCR);
-	reg &= LPI2C_MCR_MEN;
+	reg |= LPI2C_MCR_MEN;
 	i2c_writel(i2c_dev, reg, LPI2C_MCR);
 
 	return 0;
@@ -621,12 +679,14 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 		return PTR_ERR(i2c_dev->clk);
 	}
 
+#if 0
 	ret = clk_prepare_enable(i2c_dev->clk);
 	if (ret) {
 		dev_err(&pdev->dev, "can't enable I2C clock root\n");
 		clk_disable_unprepare(i2c_dev->clk);
 		return ret;
 	}
+#endif
 
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
 
@@ -640,13 +700,15 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 			dev_name(&pdev->dev), i2c_dev);
 	if (ret) {
 		dev_err(&pdev->dev, "Fail to request irq %i\n", i2c_dev->irq);
+#if 0
 		clk_disable_unprepare(i2c_dev->clk);
+#endif
 		return ret;
 	}
-
+#if 0
 	/* init tranfer complete notifier */
 	init_completion(&i2c_dev->complete);
-
+#endif
 	reg = i2c_readl(i2c_dev, LPI2C_VERID);
 	dev_info(&pdev->dev,  "verid: 0x%x\n", reg);
 

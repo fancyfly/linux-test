@@ -69,6 +69,7 @@ no_printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
 #endif
 
 /* todo: this need to come from device tree */
+#define IMXDPU_TCON0_MAP_24BIT_0_23
 #if 1
 #ifdef IMXDPU_FPGA_BUILD
 #define IMXDPU_MAX_NUM		1

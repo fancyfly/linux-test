@@ -2598,7 +2598,7 @@ int imxdpu_disp_init(int8_t imxdpu_id, int8_t disp)
 	imxdpu = &imxdpu_array[imxdpu_id];
 
 	if (disp == 0) {
-#ifdef IMXDPU_FPGA_BUILD
+#ifdef IMXDPU_TCON0_MAP_24BIT_0_23
 		/* Static  24-bit TCON bit mapping for FPGA */
 		imxdpu_write(imxdpu, IMXDPU_TCON0_MAPBIT7_4, 0x1d1c1b1a);
 		imxdpu_write(imxdpu, IMXDPU_TCON0_MAPBIT3_0, 0x19181716);
@@ -2628,7 +2628,7 @@ int imxdpu_disp_init(int8_t imxdpu_id, int8_t disp)
 			     IMXDPU_DISENGCFG_POLARITYCTRL0_POLEN0_MASK);
 
 	} else if (disp == 1) {
-#ifdef IMXDPU_FPGA_BUILD
+#ifdef IMXDPU_TCON1_MAP_24BIT_0_23
 		/* Static TCON bit mapping */
 		imxdpu_write(imxdpu, IMXDPU_TCON1_MAPBIT7_4, 0x1d1c1b1a);
 		imxdpu_write(imxdpu, IMXDPU_TCON1_MAPBIT3_0, 0x19181716);

@@ -55,6 +55,7 @@
 #define MX53_USB_PLL_DIV_24_MHZ		0x01
 
 #define MX6_BM_OVER_CUR_DIS		BIT(7)
+#define MX6_BM_PRW_POL			BIT(9)
 #define MX6_BM_WAKEUP_ENABLE		BIT(10)
 #define MX6_BM_ID_WAKEUP		BIT(16)
 #define MX6_BM_VBUS_WAKEUP		BIT(17)
@@ -316,6 +317,31 @@ static int usbmisc_vf610_init(struct imx_usbmisc_data *data)
 	return 0;
 }
 
+
+static int usbmisc_imx7d_init(struct imx_usbmisc_data *data)
+{
+        struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+        unsigned long flags;
+        u32 reg;
+
+        if (data->index >= 1)
+                return -EINVAL;
+
+        spin_lock_irqsave(&usbmisc->lock, flags);
+        if (data->disable_oc) {
+                reg = readl(usbmisc->base);
+                writel(reg | MX6_BM_OVER_CUR_DIS, usbmisc->base);
+        }
+
+        /* Enable MX6_BM_PRW_POL*/
+        reg = readl(usbmisc->base);
+        writel(reg | MX6_BM_PRW_POL, usbmisc->base);
+
+        spin_unlock_irqrestore(&usbmisc->lock, flags);
+
+        return 0;
+}
+
 static const struct usbmisc_ops imx25_usbmisc_ops = {
 	.init = usbmisc_imx25_init,
 	.post = usbmisc_imx25_post,
@@ -341,6 +367,10 @@ static const struct usbmisc_ops vf610_usbmisc_ops = {
 static const struct usbmisc_ops imx6sx_usbmisc_ops = {
 	.set_wakeup = usbmisc_imx6q_set_wakeup,
 	.init = usbmisc_imx6sx_init,
+};
+
+static const struct usbmisc_ops imx7d_usbmisc_ops = {
+        .init = usbmisc_imx7d_init,
 };
 
 int imx_usbmisc_init(struct imx_usbmisc_data *data)
@@ -418,6 +448,10 @@ static const struct of_device_id usbmisc_imx_dt_ids[] = {
 		.compatible = "fsl,imx6sx-usbmisc",
 		.data = &imx6sx_usbmisc_ops,
 	},
+	{
+                .compatible = "fsl,imx7d-usbmisc",
+                .data = &imx7d_usbmisc_ops,
+        },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, usbmisc_imx_dt_ids);

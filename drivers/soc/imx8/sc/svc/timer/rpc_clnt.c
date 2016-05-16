@@ -204,5 +204,23 @@ sc_err_t sc_timer_set_rtc_alarm(sc_ipc_t ipc, uint16_t year, uint8_t mon,
     return result;
 }
 
+sc_err_t sc_timer_get_rtc_sec1970(sc_ipc_t ipc, uint32_t *sec)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_TIMER;
+    RPC_FUNC(&msg) = TIMER_FUNC_GET_RTC_SEC1970;
+    RPC_SIZE(&msg) = 1;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    if (sec != NULL)
+        *sec = RPC_D32(&msg, 0);
+    result = RPC_R8(&msg);
+    return result;
+}
+
 /**@}*/
 

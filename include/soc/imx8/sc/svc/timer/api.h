@@ -124,8 +124,8 @@ sc_err_t sc_timer_get_wdog_status(sc_ipc_t ipc,
  */
 
 /*!
- * This function sets the RTC time. Only the owner of the RTC resource can
- * set the time.
+ * This function sets the RTC time. Only the owner of the SC_R_SYSTEM
+ * resource can set the time.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     year        year (min 1970)
@@ -161,8 +161,8 @@ sc_err_t sc_timer_get_rtc_time(sc_ipc_t ipc, uint16_t *year, uint8_t *mon,
     uint8_t *day, uint8_t *hour, uint8_t *min, uint8_t *sec);
 
 /*!
- * This function sets the RTC alarm. Only the owner of the RTC resource can
- * set the alarm.
+ * This function sets the RTC alarm. Only the owner of the SC_R_SYSTEM
+ * resource can set the alarm.
  *
  * @param[in]     ipc         IPC handle
  * @param[in]     year        year (min 1970)

@@ -225,7 +225,7 @@ void sc_pm_reset_reason(sc_ipc_t ipc, sc_pm_reset_reason_t *reason)
     RPC_FUNC(&msg) = PM_FUNC_RESET_REASON;
     RPC_SIZE(&msg) = 1;
 
-    sc_call_rpc(ipc, &msg, false);
+    sc_call_rpc(ipc, &msg, true);
 
     if (reason != NULL)
         *reason = RPC_D8(&msg, 0);
@@ -246,6 +246,42 @@ sc_err_t sc_pm_cpu_start(sc_ipc_t ipc, sc_rsrc_t resource, bool enable,
     RPC_D16(&msg, 8) = resource;
     RPC_D8(&msg, 10) = enable;
     RPC_SIZE(&msg) = 4;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    result = RPC_R8(&msg);
+    return result;
+}
+
+sc_err_t sc_pm_reboot_partition(sc_ipc_t ipc, sc_rm_pt_t pt,
+    sc_pm_reset_type_t type)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_PM;
+    RPC_FUNC(&msg) = PM_FUNC_REBOOT_PARTITION;
+    RPC_D8(&msg, 0) = pt;
+    RPC_D8(&msg, 1) = type;
+    RPC_SIZE(&msg) = 2;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    result = RPC_R8(&msg);
+    return result;
+}
+
+sc_err_t sc_pm_reset(sc_ipc_t ipc, sc_pm_reset_type_t type)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_PM;
+    RPC_FUNC(&msg) = PM_FUNC_RESET;
+    RPC_D8(&msg, 0) = type;
+    RPC_SIZE(&msg) = 2;
 
     sc_call_rpc(ipc, &msg, false);
 

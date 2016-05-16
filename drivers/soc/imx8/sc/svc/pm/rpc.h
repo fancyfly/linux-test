@@ -49,6 +49,8 @@ typedef enum pm_func_e
     PM_FUNC_REBOOT, //!< Index for pm_reboot() RPC call
     PM_FUNC_RESET_REASON, //!< Index for pm_reset_reason() RPC call
     PM_FUNC_CPU_START, //!< Index for pm_cpu_start() RPC call
+    PM_FUNC_REBOOT_PARTITION, //!< Index for pm_reboot_partition() RPC call
+    PM_FUNC_RESET, //!< Index for pm_reset() RPC call
 } pm_func_t;
 
 /* Functions */

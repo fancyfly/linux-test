@@ -379,7 +379,7 @@
 #define SC_R_SYSCNT_RD                  352
 #define SC_R_SYSCNT_CMP                 353
 #define SC_R_DEBUG                      354
-#define SC_R_RTC                        355
+#define SC_R_SYSTEM                     355
 #define SC_R_SNVS                       356
 #define SC_R_OTP                        357
 #define SC_R_VPU_PID0                   358

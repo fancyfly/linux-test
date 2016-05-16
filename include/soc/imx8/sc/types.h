@@ -477,7 +477,7 @@ typedef enum sc_rsrc_e
     SC_R_SYSCNT_RD          = 352,
     SC_R_SYSCNT_CMP         = 353,
     SC_R_DEBUG              = 354,
-    SC_R_RTC                = 355,
+    SC_R_SYSTEM             = 355,
     SC_R_SNVS               = 356,
     SC_R_OTP                = 357,
     SC_R_VPU_PID0           = 358,

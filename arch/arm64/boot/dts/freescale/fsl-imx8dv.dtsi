@@ -869,6 +869,10 @@
 		power-domains = <&pd_mw_sdch1>;
 	};
 
+	rtc: rtc@00000000 {
+		compatible = "fsl,imx8dv-rtc";
+	};
+
 	pwm1: pwm@5e000000 {
 		#pwm-cells = <2>;
 		compatible = "fsl,imx8dv-pwm", "fsl,imx27-pwm";

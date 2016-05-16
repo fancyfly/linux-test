@@ -275,7 +275,7 @@ static void scu_mu_work_handler(struct work_struct *work)
 	sciErr = sc_irq_status(mu_ipcHandle, SC_R_MU_0A, SC_IRQ_GROUP_ALARM,
 					&irq_status);
 
-	if (irq_status & SC_IRQ_ALARM_PMIC0_TEMP)
+	if (irq_status & (SC_IRQ_ALARM_PMIC0_TEMP | SC_IRQ_ALARM_RTC))
 		ret = SCU_notifier_call_chain(1);
 }
 
@@ -358,6 +358,13 @@ int __init imx8dv_mu_init()
 
 	if (sciErr)
 		pr_info("Cannot request PMIC1_TEMP interrupt\n");
+
+	/* Request for the rtc alarm interrupt. */
+	sciErr = sc_irq_enable(mu_ipcHandle, SC_R_MU_0A, SC_IRQ_GROUP_ALARM,
+					SC_IRQ_ALARM_RTC, true);
+
+	if (sciErr)
+		pr_info("Cannot request ALARM_RTC interrupt\n");
 
 	pr_info("*****Initialized MU\n");
 	return scu_mu_id;

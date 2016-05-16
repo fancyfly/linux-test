@@ -676,12 +676,19 @@ struct imxdpu_videomode {
 	uint32_t hsync;
 
 	/* vtotal (lines) = vlen + vfp + vsync + vbp */
+	/* field0  */
 	uint32_t vlen;
 	uint32_t vfp;
 	uint32_t vbp;
 	uint32_t vsync;
 
-	enum imxdpu_disp_flags flags;
+	/* field1  */
+	uint32_t vlen1;
+	uint32_t vfp1;
+	uint32_t vbp1;
+	uint32_t vsync1;
+
+	uint32_t flags;
 };
 
 #define IMXDPU_ENABLE  1

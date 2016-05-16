@@ -99,6 +99,87 @@ struct imxdpufb_params {
 	u32 stride;
 	struct imxdpufb_format *format;
 	s8 instance;
+	int current_mode;
+};
+
+#define NUM_MODES 4
+struct imxdpu_videomode mode_db[NUM_MODES] = {
+	{
+		"480P60",  // name[64]
+		27000000,  //pixelclock Hz
+		720,       // hlen;
+		16,        // hfp;
+		60,        // hbp;
+		62,        // hsync;
+		/* field0  */
+		480,       // vlen;
+		9,         // vfp;
+		30,        // vbp;
+		6,         // vsync;
+		/* field1  */
+		0,         // vlen;
+		0,         // vfp;
+		0,         // vbp;
+		0,         // vsync;
+		IMXDPU_DISP_FLAGS_HSYNC_LOW | IMXDPU_DISP_FLAGS_VSYNC_LOW | IMXDPU_DISP_FLAGS_DE_HIGH, //flags;
+	},
+	{
+		"576P50",  // name[64]
+		27000000,  //pixelclock Hz
+		720,       // hlen;
+		12,        // hfp;
+		68,        // hbp;
+		64,        // hsync;
+		/* field0  */
+		576,       // vlen;
+		5,         // vfp;
+		39,        // vbp;
+		5,         // vsync;
+		/* field1  */
+		0,         // vlen;
+		0,         // vfp;
+		0,         // vbp;
+		0,         // vsync;
+		IMXDPU_DISP_FLAGS_HSYNC_LOW | IMXDPU_DISP_FLAGS_VSYNC_LOW | IMXDPU_DISP_FLAGS_DE_HIGH, //flags;
+	},
+	{
+		"720P60",  // name[64]
+		74250000,  //pixelclock Hz
+		1280,      // hlen;
+		110,       // hfp;
+		220,       // hbp;
+		40,        // hsync;
+		/* field0  */
+		720,       // vlen;
+		5,         // vfp;
+		20,        // vbp;
+		5,         // vsync;
+		/* field1  */
+		0,         // vlen;
+		0,         // vfp;
+		0,         // vbp;
+		0,         // vsync;
+		IMXDPU_DISP_FLAGS_HSYNC_HIGH | IMXDPU_DISP_FLAGS_VSYNC_HIGH | IMXDPU_DISP_FLAGS_DE_HIGH, //flags;
+	},
+	{
+		"1080P60", // name[64]
+		148500000, //pixelclock Hz
+		1920,      // hlen;
+		88,        // hfp;
+		148,       // hbp;
+		44,        // hsync;
+		/* field0  */
+		1080,      // vlen;
+		4,         // vfp;
+		36,        // vbp;
+		5,         // vsync;
+		/* field1  */
+		0,         // vlen;
+		0,         // vfp;
+		0,         // vbp;
+		0,         // vsync;
+		IMXDPU_DISP_FLAGS_HSYNC_HIGH | IMXDPU_DISP_FLAGS_VSYNC_HIGH | IMXDPU_DISP_FLAGS_DE_HIGH, //flags;
+	},
 };
 
 static int imxdpufb_parse_dt(struct platform_device *pdev,
@@ -157,11 +238,25 @@ static int imxdpufb_parse_dt(struct platform_device *pdev,
 		break;
 	}
 
+	for (i = 0; i < ARRAY_SIZE(mode_db); i++) {
+		if ((params->width == mode_db[i].hlen) &&
+		    (params->height == mode_db[i].vlen)) {
+			params->current_mode = i;
+			break;
+		}
+	}
+
+	if (i == ARRAY_SIZE(mode_db)) {
+		dev_err(&pdev->dev, "Can't find mode - using default\n");
+		params->current_mode = 2;
+	}
+	dev_dbg(&pdev->dev, "Using video mode: %s\n", &(mode_db[params->current_mode].name[0]));
+
 	if (!params->format) {
 		dev_err(&pdev->dev, "Invalid format value\n");
 		return -EINVAL;
 	} else {
-		dev_err(&pdev->dev, "format name %s fourcc 0x%08x\n", params->format->name, params->format->fourcc); 
+		dev_err(&pdev->dev, "format name %s fourcc 0x%08x\n", params->format->name, params->format->fourcc);
 	}
 	dev_dbg(&pdev->dev, "%s(): %s registered.\n", __func__, temp);
 	return 0;
@@ -172,7 +267,7 @@ static int imxdpufb_parse_pd(struct platform_device *pdev,
 {
 	struct imxdpufb_platform_data *pd = dev_get_platdata(&pdev->dev);
 	int i;
-
+	dev_err(&pdev->dev, "%s()\n",__func__);
 	params->width = pd->width;
 	params->height = pd->height;
 	params->stride = pd->stride;
@@ -323,7 +418,7 @@ static void imxdpu_start(uint64_t disp_phys_addr,
 	const int imxdpu_id = params->instance/2;
 	const int imxdpu_display_id = params->instance%2;
 
-	pr_debug("Starting display imxdpu id %d, display %d\n", 
+	pr_debug("Starting display imxdpu id %d, display %d\n",
 		imxdpu_id, imxdpu_display_id);
 
 	imxdpu_disp_setup_frame_gen(imxdpu_id, imxdpu_display_id,
@@ -413,7 +508,7 @@ static uint32_t imxdpu_convert_format(uint32_t format)
 		default:
 			ret = 0;
 	}
-	pr_debug("%s(): format in 0x%08x out 0x%08x\n", __func__, format, ret); 
+	pr_debug("%s(): format in 0x%08x out 0x%08x\n", __func__, format, ret);
  	return ret;
 }
 static int imxdpufb_probe(struct platform_device *pdev)
@@ -423,7 +518,6 @@ static int imxdpufb_probe(struct platform_device *pdev)
 	struct fb_info *info;
 	struct imxdpufb_par *par;
 	struct resource *mem;
-	struct imxdpu_videomode vmode;
 
 	if (fb_get_options("imxdpufb", NULL))
 		return -ENODEV;
@@ -466,7 +560,7 @@ static int imxdpufb_probe(struct platform_device *pdev)
 		if (params.stride == 0 ) {
 			params.stride = params.width;
 		}
-		info->fix.smem_len = 
+		info->fix.smem_len =
 			params.width * (params.height + params.height/2);
 		info->var.nonstd = DRM_FORMAT_NV12;
 	} else {
@@ -537,40 +631,8 @@ static int imxdpufb_probe(struct platform_device *pdev)
 		goto error_clocks;
 	}
 
-	/* need to get video mode from DI driver device tree */
-#if 0
-	vmode.pixelclock = 25175000;
-	vmode.hlen = info->var.xres;
-	vmode.hfp = 16;		//16;
-	vmode.hbp = 48;		//48;
-	vmode.hsync = 96;
-
-	vmode.vlen = info->var.yres;
-	vmode.vfp = 10;		//2
-	vmode.vbp = 33;
-	vmode.vsync = 2;	//2;
-	vmode.flags =
-	    IMXDPU_DISP_FLAGS_HSYNC_HIGH |
-	    IMXDPU_DISP_FLAGS_VSYNC_HIGH |
-	    IMXDPU_DISP_FLAGS_DE_HIGH | IMXDPU_DISP_FLAGS_POSEDGE;
-#else
-	vmode.pixelclock = 74250000;
-	vmode.hlen = info->var.xres;
-	vmode.hfp = 110;
-	vmode.hbp = 40;		//48;
-	vmode.hsync = 220;
-
-	vmode.vlen = info->var.yres;
-	vmode.vfp = 5;		//2
-	vmode.vbp = 20;
-	vmode.vsync = 5;	//2;
-	vmode.flags =
-	    IMXDPU_DISP_FLAGS_HSYNC_HIGH |
-	    IMXDPU_DISP_FLAGS_VSYNC_HIGH |
-	    IMXDPU_DISP_FLAGS_DE_HIGH | IMXDPU_DISP_FLAGS_POSEDGE;
-#endif
 	imxdpu_start((uint64_t) info->fix.smem_start,
-		     &vmode,
+		     &mode_db[params.current_mode],
 		     &params);
 
 	dev_info(&pdev->dev, "fb%d imxdpufb registered!\n", info->node);

@@ -686,9 +686,9 @@
 	framebuffer0: framebuffer@0 {
 		compatible = "imxdpu-framebuffer";
 		reg = <0x0 0x56220000 0x0 0x10000>;
-		width = <1280>;
-		height = <720>;
-		stride = <(1280*4)>;
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
 		format = "b8g8r8a8";
 		status = "disabled";
 	};

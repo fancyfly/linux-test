@@ -110,6 +110,16 @@ enum lpi2c_msg_type {
 	(((u32)(((u32)(x))) << 0u)) & 0xffu
 #define LPI2C_MCFGR1_PINCFG(x) \
 	(((u32)(((u32)(x))) << 24u)) & 0x7000000u
+#define LPI2C_MCCR0_CLKHI(x) \
+	(((u32)(((u32)(x))) << 8u)) & 0x3f00u
+#define LPI2C_MCCR0_CLKLO(x) \
+	(((u32)(((u32)(x))) << 0u)) & 0x3fu
+#define LPI2C_MCCR0_SETHOLD(x) \
+	(((u32)(((u32)(x))) << 16u)) & 0x3f0000u
+#define LPI2C_MCCR0_DATAVD(x) \
+	(((u32)(((u32)(x))) << 24u)) & 0x3f000000u
+#define LPI2C_MCFGR1_PRESCALE(x) \
+	(((u32)(((u32)(x))) << 0u)) & 0x7u
 
 struct lpi2c_imx_dev {
 	struct device *dev;
@@ -219,6 +229,77 @@ error:
 
 	return IRQ_HANDLED;
 }
+
+static int lpi2c_imx_set_bus_speed(struct lpi2c_imx_dev *i2c_dev)
+{
+	u32 reg;
+	u32 preescale = 0, best_pre = 0, clkhi = 0;
+	u32 best_clkhi = 0, abs_error = 0, rate;
+	u32 error = 0xffffffff;
+	u32 clock_rate = 24000000;
+	bool mode;
+	int i;
+
+	reg = i2c_readl(i2c_dev, LPI2C_MCR);
+	mode = reg & LPI2C_MCR_MEN;
+	/* disable master mode */
+	i2c_writel(i2c_dev, reg & ~LPI2C_MCR_MEN, LPI2C_MCR);
+
+	for (preescale = 1; (preescale <= 128) &&
+		(error != 0); preescale = 2 * preescale)
+	{
+		for (clkhi = 1; clkhi < 32; clkhi++) {
+			if (clkhi == 1)
+				rate = (clock_rate / preescale) /
+					(1 + 3 + 2 + 2 / preescale);
+			else
+				rate = (clock_rate / preescale /
+					(3 * clkhi + 2 + 2 / preescale));
+
+			abs_error = i2c_dev->bitrate > rate ?
+				i2c_dev->bitrate - rate: rate - i2c_dev->bitrate;
+
+			if (abs_error < error) {
+				best_pre = preescale;
+				best_clkhi = clkhi;
+				error = abs_error;
+				if (abs_error == 0)
+					break;
+			}
+		}
+	}
+
+	reg = LPI2C_MCCR0_CLKHI(best_clkhi);
+	if (best_clkhi < 2) {
+		reg |= LPI2C_MCCR0_CLKLO(3);
+		reg |= LPI2C_MCCR0_SETHOLD(2);
+		reg |= LPI2C_MCCR0_DATAVD(1);
+	} else {
+		reg |= LPI2C_MCCR0_CLKLO(2 * best_clkhi);
+		reg |= LPI2C_MCCR0_SETHOLD(best_clkhi);
+		reg |= LPI2C_MCCR0_DATAVD(best_clkhi / 2);
+	}
+	i2c_writel(i2c_dev, reg, LPI2C_MCCR0);
+
+	for (i = 0; i < 8; i++) {
+		if (best_pre == (1 << i)) {
+			best_pre = i;
+			break;
+		}
+	}
+
+	reg = i2c_readl(i2c_dev, LPI2C_MCFGR1);
+	reg |= LPI2C_MCFGR1_PRESCALE(best_pre);
+	i2c_writel(i2c_dev, reg, LPI2C_MCFGR1);
+
+	if (mode) {
+		reg = i2c_readl(i2c_dev, LPI2C_MCR) | LPI2C_MCR_MEN;
+		i2c_writel(i2c_dev, reg, LPI2C_MCR);
+	}
+
+	return 0;
+}
+
 
 static int lpi2c_imx_check_busy_bus(struct lpi2c_imx_dev *i2c_dev)
 {
@@ -616,8 +697,9 @@ static int lpi2c_imx_init(struct lpi2c_imx_dev *i2c_dev)
 	reg |= LPI2C_MCFGR1_PINCFG(0x0);
 	i2c_writel(i2c_dev, reg, LPI2C_MCFGR1);
 
-	/* hardcode bus speed */
-        i2c_writel(i2c_dev, 0x09131326, LPI2C_MCCR0);
+	/* set bus speed */
+	lpi2c_imx_set_bus_speed(i2c_dev);
+
 	/* enable i2c controller in master mode */
 	reg = i2c_readl(i2c_dev, LPI2C_MCR);
 	reg |= LPI2C_MCR_MEN;

@@ -130,6 +130,27 @@
 			SC_P_USDHC0_DATA7 5 0 3 0 0 0x4c			
 			>;
 		};
+
+		pinctrl_qspi: qspi {
+			fsl,pins = <
+			SC_P_QSPI0A_DATA0 5 0 3 0 0 0x4c
+			SC_P_QSPI0A_DATA1 5 0 3 0 0 0x4c
+			SC_P_QSPI0A_DATA2 5 0 3 0 0 0x4c
+			SC_P_QSPI0A_DATA3 5 0 3 0 0 0x4c
+			SC_P_QSPI0A_DQS   5 0 3 0 0 0x4c
+			SC_P_QSPI0A_SCLK  5 0 3 0 0 0x4c
+			SC_P_QSPI0A_SS1   5 0 3 0 0 0x4c
+			SC_P_QSPI0A_SS0   5 0 3 0 0 0x4c
+			SC_P_QSPI0B_DATA0 5 0 3 0 0 0x4c
+			SC_P_QSPI0B_DATA1 5 0 3 0 0 0x4c
+			SC_P_QSPI0B_DATA2 5 0 3 0 0 0x4c
+			SC_P_QSPI0B_DATA3 5 0 3 0 0 0x4c
+			SC_P_QSPI0B_DQS   5 0 3 0 0 0x4c
+			SC_P_QSPI0B_SCLK  5 0 3 0 0 0x4c
+			SC_P_QSPI0B_SS0   5 0 3 0 0 0x4c
+			>;
+		};
+
         /*pin flag mux config iso wakeup gp*/
     	pinctrl_fec1: fec1grp {
             fsl,pins = <
@@ -198,6 +219,25 @@
 	no-1-8-v;
 	max-frequency = <25000000>;
 	status = "okay";
+};
+
+&qspi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_qspi>;
+	status = "okay";
+	ddrsmp=<0>;
+
+	flash0: n25q256a@0 {
+                compatible = "micron,n25q256a";
+                spi-max-frequency = <29000000>;
+                reg = <0>;
+        };
+
+        flash1: n25q256a@1 {
+                compatible = "micron,n25q256a";
+                spi-max-frequency = <29000000>;
+                reg = <1>;
+        };
 };
 
 &usbotg1 {

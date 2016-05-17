@@ -913,4 +913,16 @@
 		power-domains = <&pd_mw_enet0>;
 	};
 
+	qspi1: qspi@5a270000 {
+		#address-cells=<1>;
+		#size-cells=<0>;
+		compatible = "fsl,imx7d-qspi", "fsl,imx6sx-qspi";
+		reg = <0x0 0x5a270000 0x0 0x10000>, <0x0 0x0a000000 0x0 0x10000000>;
+		reg-names = "QuadSPI", "QuadSPI-memory";
+		interrupts = <0 214 4>;
+		clocks = <&clk IMX8DV_QSPI_CLK>,
+			 <&clk IMX8DV_QSPI_CLK>;
+		clock-names = "qspi_en", "qspi";
+		status = "disabled";
+       };
 };

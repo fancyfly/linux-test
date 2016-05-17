@@ -139,13 +139,13 @@ struct lpi2c_imx_dev {
 static int lpi2c_imx_init(struct lpi2c_imx_dev *i2c_dev);
 
 static inline void i2c_writel(struct lpi2c_imx_dev *i2c_dev, u32 val,
-	unsigned long reg)
+	u32 reg)
 {
 	writel(val, i2c_dev->base + reg);
 }
 
-static inline unsigned char i2c_readl(struct lpi2c_imx_dev *i2c_dev,
-	unsigned long reg)
+static inline u32 i2c_readl(struct lpi2c_imx_dev *i2c_dev,
+	u32 reg)
 {
 	return readl(i2c_dev->base + reg);
 }
@@ -616,8 +616,6 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 	/* start i2c transfer */
 	ret = lpi2c_imx_start(i2c_dev, (u8)msgs[0].addr, 1);
 #endif
-
-	dev_info(&i2c_dev->adapter.dev, "msgs num: %d\n", num);
 
 	for (i = 0; i < num; i++) {
 		ret = lpi2c_imx_detect(i2c_dev, msgs[i].addr);

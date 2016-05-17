@@ -480,7 +480,7 @@ void __init mxc_timer_init(unsigned long pbase, int irq, int ver)
 	timer->timer_base = (void __iomem *)pbase;
 	timer->version = ver;
 	timer->evt.name = "mxc_timer1";
-	timer->evt.rating = 450;
+	timer->evt.rating = 99;
 	timer->evt.features = CLOCK_EVT_FEAT_ONESHOT;
 	timer->evt.set_mode = mxc_set_mode;
 	timer->evt.set_next_event = v2_set_next_event;
@@ -553,7 +553,7 @@ static void __init mxc_timer_init_dt(struct device_node *np)
 
 	timer->version = ver;
 	timer->evt.name = np->name;
-	timer->evt.rating = 200;
+	timer->evt.rating = 99;
 	timer->evt.features = CLOCK_EVT_FEAT_ONESHOT;
 	timer->evt.set_mode = mxc_set_mode;
 	timer->evt.set_next_event = v2_set_next_event;

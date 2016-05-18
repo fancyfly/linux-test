@@ -14,13 +14,13 @@
 #include "../core.h"
 #include "pinctrl-imx.h"
 
-/* Here use ccm_ipcHandle just for hack, later need to use its own handle */
-extern sc_ipc_t ccm_ipcHandle;
+extern sc_ipc_t pinctrl_ipcHandle;
+
 int imx_pmx_set_one_pin(struct imx_pinctrl *ipctl, struct imx_pin *pin)
 {
 	unsigned int pin_flags;
 	sc_err_t err = SC_ERR_NONE;
-	sc_ipc_t ipc = ccm_ipcHandle;
+	sc_ipc_t ipc = pinctrl_ipcHandle;
 	unsigned int pin_id = pin->pin;
 	struct imx_pin_scu *pin_scu = &pin->pin_conf.pin_scu;
 
@@ -69,7 +69,7 @@ int imx_pinconf_backend_set(struct pinctrl_dev *pctldev, unsigned pin_id,
 	unsigned int *conf = (unsigned int *)configs;
 	unsigned int flags, wakeup, gp;
 	sc_err_t err = SC_ERR_NONE;
-	sc_ipc_t ipc = ccm_ipcHandle;
+	sc_ipc_t ipc = pinctrl_ipcHandle;
 
 	if (ipc == -1) {
 		printk("IPC handle not initialized!\n");

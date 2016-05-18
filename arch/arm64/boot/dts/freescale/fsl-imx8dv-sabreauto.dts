@@ -127,7 +127,7 @@
 			SC_P_USDHC0_DATA4 5 0 3 0 0 0x4c
 			SC_P_USDHC0_DATA5 5 0 3 0 0 0x4c
 			SC_P_USDHC0_DATA6 5 0 3 0 0 0x4c
-			SC_P_USDHC0_DATA7 5 0 3 0 0 0x4c			
+			SC_P_USDHC0_DATA7 5 0 3 0 0 0x4c
 			>;
 		};
 
@@ -154,20 +154,21 @@
         /*pin flag mux config iso wakeup gp*/
     	pinctrl_fec1: fec1grp {
             fsl,pins = <
-            420 5 0 0 0 0 0x70
-            421 5 0 0 0 0 0x70
-            428 5 0 0 0 0 0x70
-            429 5 0 0 0 0 0x70
-            430 5 0 0 0 0 0x70
-            431 5 0 0 0 0 0x70
-            432 5 0 0 0 0 0x70
-            433 5 0 0 0 0 0x70
+            420 5 0 0 0 0 0x62
+            421 5 0 0 0 0 0x62
+            428 5 0 0 0 0 0x62
+            429 5 0 0 0 0 0x62
+            430 5 0 0 0 0 0x62
+            431 5 0 0 0 0 0x62
+            432 5 0 0 0 0 0x62
+            433 5 0 0 0 0 0x62
 
-            422 5 0 0 0 0 0x10
-            423 5 0 0 0 0 0x10
-            424 5 0 0 0 0 0x10
-            425 5 0 0 0 0 0x10
-            426 5 0 0 0 0 0x10
+            422 5 0 0 0 0 0x00
+            423 5 0 0 0 0 0x00
+            424 5 0 0 0 0 0x00
+            425 5 0 0 0 0 0x00
+            426 5 0 0 0 0 0x00
+            427 5 0 0 0 0 0x00
 			>;
 		};
 
@@ -215,7 +216,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	bus-width = <4>;
-	non-removable;
 	no-1-8-v;
 	max-frequency = <25000000>;
 	status = "okay";

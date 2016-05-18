@@ -168,7 +168,6 @@ static void lpi2c_imx_mask_irq(struct lpi2c_imx_dev *i2c_dev, u32 mask)
 	i2c_writel(i2c_dev, reg, LPI2C_MIER);
 }
 
-
 static int lpi2c_imx_empty_rx_fifo(struct lpi2c_imx_dev *i2c_dev)
 {
 	dev_info(i2c_dev->dev, "i2c: on %s\n", __func__);
@@ -523,7 +522,6 @@ static int lpi2c_imx_detect(struct lpi2c_imx_dev *i2c_dev,  u8 chip)
 
 	result = lpi2c_imx_start(i2c_dev, chip, 0);
 	if (result) {
-		dev_info(i2c_dev->dev, "detect: start error: %d\n", result);
 		lpi2c_imx_stop(i2c_dev);
 		lpi2c_imx_init(i2c_dev);
 		return result;
@@ -531,7 +529,6 @@ static int lpi2c_imx_detect(struct lpi2c_imx_dev *i2c_dev,  u8 chip)
 
 	result = lpi2c_imx_stop(i2c_dev);
 	if (result) {
-		dev_info(i2c_dev->dev, "detect: stop error: %d\n", result);
 		lpi2c_imx_init(i2c_dev);
 		return result;
 	}
@@ -618,9 +615,8 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 #endif
 
 	for (i = 0; i < num; i++) {
-		ret = lpi2c_imx_detect(i2c_dev, msgs[i].addr);
+		ret = lpi2c_imx_detect(i2c_dev, (u8)msgs[i].addr);
 		if (ret) {
-			dev_info(&i2c_dev->adapter.dev, "txfer detect 0x%x error: %d\n", msgs[i].addr, ret);
 			return -ret;
 		}
 	}
@@ -664,16 +660,12 @@ MODULE_DEVICE_TABLE(of, lpi2c_imx_of_match);
 static void lpi2c_imx_reset(struct lpi2c_imx_dev *i2c_dev)
 {
 	u32 reg;
-	/* set and clear for peripherial reset */
-	reg = i2c_readl(i2c_dev, LPI2C_MCR);
 	/* reset fifos and master reset */
-	reg |= LPI2C_MCR_RRF | LPI2C_MCR_RTF | LPI2C_MCR_RST;
-	i2c_writel(i2c_dev, reg, LPI2C_MCR);
+	i2c_writel(i2c_dev, LPI2C_MCR_RST, LPI2C_MCR);
 	/* wait for controller */
 	udelay(50);
 	/* disable dozen mode */
-	reg = LPI2C_MCR_DOZEN;
-	i2c_writel(i2c_dev, reg, LPI2C_MCR);
+	i2c_writel(i2c_dev, LPI2C_MCR_DOZEN, LPI2C_MCR);
 }
 
 static int lpi2c_imx_init(struct lpi2c_imx_dev *i2c_dev)
@@ -851,5 +843,5 @@ subsys_initcall(lpi2c_imx_init_driver);
 module_exit(lpi2c_imx_exit_driver);
 
 MODULE_LICENSE("GPL v2");
-MODULE_AUTHOR("Adrian Alonso");
+MODULE_AUTHOR("Freescale Semiconductor Inc.");
 MODULE_DESCRIPTION("IMX Low Power I2C Bus Controller driver");

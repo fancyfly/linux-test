@@ -484,7 +484,7 @@ static const struct pinctrl_pin_desc imx8dv_pinctrl_pads[] = {
 static struct imx_pinctrl_soc_info imx8dv_pinctrl_info = {
 	.pins = imx8dv_pinctrl_pads,
 	.npins = ARRAY_SIZE(imx8dv_pinctrl_pads),
-	.flags = IMX8_USE_SCU,
+	.flags = IMX8_USE_SCU | SHARE_MUX_CONF_REG,
 };
 
 static struct of_device_id imx8dv_pinctrl_of_match[] = {

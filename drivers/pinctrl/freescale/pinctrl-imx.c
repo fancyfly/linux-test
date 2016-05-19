@@ -146,8 +146,8 @@ static int imx_dt_node_to_map(struct pinctrl_dev *pctldev,
 			new_map[j].data.configs.group_or_pin =
 					pin_get_name(pctldev, grp->pins[i].pin);
 			new_map[j].data.configs.configs =
-				(unsigned long *)&grp->pins[i].pin_conf.pin_scu.flags;
-			new_map[j].data.configs.num_configs = 6;
+				(unsigned long *)&grp->pins[i].pin_conf.pin_scu.all;
+			new_map[j].data.configs.num_configs = 1;
 			j++;
 		
 		} else if (!(grp->pins[i].pin_conf.pin_memmap.config & IMX_NO_PAD_CTL)) {
@@ -278,23 +278,15 @@ static int imx_pinconf_set(struct pinctrl_dev *pctldev,
 static void imx_pinconf_dbg_show(struct pinctrl_dev *pctldev,
 				   struct seq_file *s, unsigned pin_id)
 {
-	struct imx_pinctrl *ipctl = pinctrl_dev_get_drvdata(pctldev);
-	const struct imx_pinctrl_soc_info *info = ipctl->info;
-	unsigned long config[6];
+	unsigned long config;
 	int ret;
-	ret = imx_pinconf_backend_get(pctldev, pin_id, config);
+	ret = imx_pinconf_backend_get(pctldev, pin_id, &config);
 	if (ret) {
 		seq_printf(s, "N/A");
 		return;
 	}
 
-	if (info->flags &  IMX8_USE_SCU) {
-		seq_printf(s, "0x%lx 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx", config[0],
-			   config[1], config[2], config[3], config[4],
-			   config[5]);
-	} else {
-		seq_printf(s, "0x%lx", config[0]);
-	}
+	seq_printf(s, "0x%lx", config);
 }
 
 static void imx_pinconf_group_dbg_show(struct pinctrl_dev *pctldev,
@@ -318,13 +310,7 @@ static void imx_pinconf_group_dbg_show(struct pinctrl_dev *pctldev,
 		ret = imx_pinconf_get(pctldev, pin->pin, config);
 		if (ret)
 			return;
-		if (info->flags &  IMX8_USE_SCU) {
-			seq_printf(s, "0x%lx 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx",
-				   config[0], config[1], config[2], config[3],
-				   config[4], config[5]);
-		} else {
-			seq_printf(s, "0x%lx", config[0]);
-		}
+		seq_printf(s, "0x%lx", config[0]);
 	}
 }
 
@@ -346,7 +332,7 @@ static struct pinctrl_desc imx_pinctrl_desc = {
  * Each pin represented in fsl,pins consists of 5 u32 PIN_FUNC_ID and
  * 1 u32 CONFIG, so 24 types in total for each pin.
  */
-#define FSL_IMX8_PIN_SIZE 28
+#define FSL_IMX8_PIN_SIZE 8
 #define FSL_PIN_SIZE 24
 #define SHARE_FSL_PIN_SIZE 20
 

@@ -35,12 +35,7 @@ struct imx_pin_memmap {
 };
 
 struct imx_pin_scu {
-	unsigned int flags;
-	unsigned int mux;
-	unsigned int config;
-	unsigned int iso;
-	unsigned int wakeup;
-	unsigned int gp;
+	unsigned int all;
 };
 
 struct imx_pin {
@@ -113,12 +108,6 @@ struct imx_pinctrl {
 
 #define SHARE_MUX_CONF_REG	0x1
 #define IMX8_USE_SCU			(1 << 31)
-#define IMX_SCU_PIN_MUX_SET_MASK	(1 << 0)
-#define IMX_SCU_PIN_WAKEUP_SET_MASK	(1 << 1)
-#define IMX_SCU_PIN_GP_SET_MASK		(1 << 2)
-#define IMX_SCU_PIN_ALL_SET_MASK	(IMX_SCU_PIN_MUX_SET_MASK |	\
-					 IMX_SCU_PIN_WAKEUP_SET_MASK |	\
-					 IMX_SCU_PIN_GP_SET_MASK)
 
 #define NO_MUX		0x0
 #define NO_PAD		0x0

@@ -97,7 +97,7 @@ enum lpi2c_err_type {
 
 enum lpi2c_msg_type {
 	LPI2C_MSG_STOP,
-	LPI2C_MSG_REPEAT_STAR,
+	LPI2C_MSG_REPEAT_START,
 	LPI2C_MSG_CONTINUE,
 };
 
@@ -473,7 +473,7 @@ static int lpi2c_imx_send(struct lpi2c_imx_dev *i2c_dev, u8 *txbuf, int len)
 				"send wait fot tx ready: %d\n", result);
 			return result;
 		}
-		i2c_writel(i2c_dev, *txbuf++, LPI2C_MTDR);
+		i2c_writel(i2c_dev, *txbuf, LPI2C_MTDR);
 	}
 
 	return 0;
@@ -510,7 +510,7 @@ static int lpi2c_imx_receive(struct lpi2c_imx_dev *i2c_dev, u8 *rxbuf, int len)
 			}
 			reg = i2c_readl(i2c_dev, LPI2C_MRDR);
 		} while (reg & LPI2C_MRDR_RXEMPTY);
-		*rxbuf++ = LPI2C_MTDR_DATA(reg);
+		*rxbuf = LPI2C_MTDR_DATA(reg);
 	}
 
 	return 0;
@@ -590,6 +590,29 @@ static int lpi2c_imx_write(struct lpi2c_imx_dev *i2c_dev, u8 chip, u32 addr,
 static int lpi2c_imx_xfer_msg(struct lpi2c_imx_dev *i2c_dev,
 		struct i2c_msg *msg, enum lpi2c_msg_type end_msg)
 {
+	int i, ret;
+
+	for (i = 0; i < msg->len; i++) {
+		if (msg->flags & I2C_M_RD)
+		{
+			ret = lpi2c_imx_start(i2c_dev, (u8)msg[i].addr, 1);
+			if (ret) {
+				dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
+				return ret;
+			}
+			ret = lpi2c_imx_receive(i2c_dev, &msg->buf[i], 1);
+			if (ret) {
+				dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
+				return ret;
+			}
+		} else {
+			ret = lpi2c_imx_send(i2c_dev, &msg->buf[i], 1);
+			if (ret) {
+				dev_info(&i2c_dev->adapter.dev, "write error: %d\n", ret);
+				return ret;
+			}
+		}
+	}
 
 	return 0;
 }
@@ -599,51 +622,78 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 {
 	struct lpi2c_imx_dev *i2c_dev = i2c_get_adapdata(adap);
 	enum lpi2c_msg_type end_msg = LPI2C_MSG_STOP;
-	int i, ret = 0;
+	int i, j, ret = 0;
 	int result = LPI2C_ERR_NONE;
 	u32 addr = 0;
+	u8 direction;
 
 #if 0
 	ret = clk_prepare_enable(i2c_dev->clk);
 
-	if (ret < 0) {
-		dev_err(i2c_dev->dev, "Clock enable failed: %d\n", ret);
-		return ret;
+	for (i = 0; i < num; i++) {
+		printk("msgs[%d].addr = %04x\n", i, msgs[i].addr);
+		printk("msgs[%d].flags = %04x\n", i, msgs[i].flags);
+		printk("msgs[%d].len = %04x\n", i, msgs[i].len);
+		for (j = 0; j < msgs[i].len; j++)
+			printk("msgs->buf[%d] = %04x\n", j, msgs->buf[j]);
 	}
-	/* start i2c transfer */
-	ret = lpi2c_imx_start(i2c_dev, (u8)msgs[0].addr, 1);
 #endif
 
-	for (i = 0; i < num; i++) {
-		ret = lpi2c_imx_detect(i2c_dev, (u8)msgs[i].addr);
-		if (ret) {
-			return -ret;
-		}
-	}
-#if 0
-	ret = lpi2c_imx_read(i2c_dev, (u8)msgs[0].addr, msgs->buf[0],
-		0, (u8 *)&msgs[1].buf, msgs[1].len);
+	direction = msgs[0].flags & 0x1;
+	/* start i2c transfer */
+	ret = lpi2c_imx_start(i2c_dev, (u8)msgs[0].addr, direction);
 	if (ret) {
-		dev_info(&i2c_dev->adapter.dev, "read error: 0x%x\n", ret);
+		dev_err(i2c_dev->dev, "xfer start error: %d\n", ret);
+		goto xfer_error;
 	}
-#endif
-#if 0
+	/* send device addr */
+	ret = lpi2c_imx_send(i2c_dev, &msgs->buf[0], 1);
+	if (ret) {
+		dev_err(i2c_dev->dev, "xfer send error: %d\n", ret);
+		goto xfer_error;
+	}
+
+	for (i = 1; i < num; i++) {
+		end_msg = LPI2C_MSG_STOP;
+		if (i < (num -1)) {
+			if (msgs[i + 1].flags & I2C_M_NOSTART)
+				end_msg = LPI2C_MSG_CONTINUE;
+			else
+				end_msg = LPI2C_MSG_REPEAT_START;
+		}
 		ret = lpi2c_imx_xfer_msg(i2c_dev, &msgs[i], end_msg);
-		if (ret)
-			return result;
+		if (ret) {
+			dev_err(i2c_dev->dev, "xfer error: %d\n", ret);
+			goto xfer_error;
+		}
+		/*
+		ret = lpi2c_imx_detect(i2c_dev, (u8)msgs[i].addr);
+		*/
 	}
+
 	/* stop i2c transfer */
 	ret = lpi2c_imx_stop(i2c_dev);
-xfer_error:
+	if (ret && ret != LPI2C_ERR_NDF) {
+		dev_err(i2c_dev->dev, "xfer stop error: %d\n", ret);
+		goto xfer_error;
+	}
+
+	/* nack detected */
+	if (ret == LPI2C_ERR_NDF)
+		return -ret;
+#if 0
 	clk_disable_unprepare(i2c_dev->clk);
 #endif
 	return 0;
+
+xfer_error:
+	lpi2c_imx_init(i2c_dev);
+	return -ret;
 }
 
 static u32 lpi2c_imx_func(struct i2c_adapter *adap)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL |
-		I2C_FUNC_SMBUS_READ_BLOCK_DATA;
+	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
 }
 
 static const struct i2c_algorithm lpi2c_imx_algo = {

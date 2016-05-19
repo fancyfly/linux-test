@@ -40,11 +40,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/sched.h>
 #include <linux/uaccess.h>
 #include <linux/miscdevice.h>
+#include <linux/dma-mapping.h>
+#include <linux/delay.h>
 
 #include "imxdpu_private.h"
 #include "imxdpu_registers.h"
 #include "imxdpu_events.h"
 #include "imxdpu_be.h"
+
+#define USE_COMMAND_SEQUENCER   1
+#define COMMAND_BUFFER_SIZE     1024
+#define MINUS_CMDSEQ_FIFO_SPACE_THRESHOLD   128
+
+#if USE_COMMAND_SEQUENCER
+unsigned int buffer_addr_virt;
+dma_addr_t buffer_addr_phy;
+#endif
 
 static struct imxdpu_info imxdpu_instance[2];
 static DECLARE_WAIT_QUEUE_HEAD(imxdpu_0_be_wq_idle);
@@ -94,7 +105,31 @@ void imxdpu_be_setup_decode(struct imxdpu_info *imxdpu,
 {
 	IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
 	if (fetch->in_pipeline) {
-		imxdpu_be_write(imxdpu, IMXDPU_FETCHDECODE9_CONTROL,
+#if USE_COMMAND_SEQUENCER
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_FETCHDECODE9_CONTROL);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->control);
+
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_FETCHDECODE9_BURSTBUFFERMANAGEMENT);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->burst_buf);
+
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x1400000C);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_FETCHDECODE9_BASEADDRESS0);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->buf_address);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->buf_attributes);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->buf_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->color_bits);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->color_shift);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->layer_offset);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->clip_offset);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->clip_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->const_color);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->layer_property);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->frame_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->frame_resample);
+#else
+        imxdpu_be_write(imxdpu, IMXDPU_FETCHDECODE9_CONTROL,
 				fetch->control);
 		imxdpu_be_write(imxdpu,
 				IMXDPU_FETCHDECODE9_BURSTBUFFERMANAGEMENT,
@@ -127,13 +162,35 @@ void imxdpu_be_setup_decode(struct imxdpu_info *imxdpu,
 				fetch->frame_dimension);
 		imxdpu_be_write(imxdpu, IMXDPU_FETCHDECODE9_FRAMERESAMPLING,
 				fetch->frame_resample);
-	}
+#endif
+    }
 }
 
 void imxdpu_be_setup_persp(struct imxdpu_info *imxdpu, struct fetch_unit *fetch)
 {
 	IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
 	if (fetch->in_pipeline) {
+#if USE_COMMAND_SEQUENCER
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_FETCHPERSP9_CONTROL);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->control);
+
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x1400000d);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_FETCHPERSP9_BURSTBUFFERMANAGEMENT);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->burst_buf);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->buf_address);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->buf_attributes);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->buf_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->color_bits);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->color_shift);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->layer_offset);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->clip_offset);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->clip_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->const_color);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->layer_property);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->frame_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->frame_resample);
+#else
 		imxdpu_be_write(imxdpu, IMXDPU_FETCHPERSP9_CONTROL,
 				fetch->control);
 		imxdpu_be_write(imxdpu,
@@ -166,13 +223,35 @@ void imxdpu_be_setup_persp(struct imxdpu_info *imxdpu, struct fetch_unit *fetch)
 				fetch->frame_dimension);
 		imxdpu_be_write(imxdpu, IMXDPU_FETCHPERSP9_FRAMERESAMPLING,
 				fetch->frame_resample);
-	}
+#endif
+    }
 }
 
 void imxdpu_be_setup_eco(struct imxdpu_info *imxdpu,struct fetch_unit* fetch)
 {
 	IMXDPU_TRACE("%s:%d\n",__FUNCTION__,__LINE__);
 	if(fetch->in_pipeline){
+#if USE_COMMAND_SEQUENCER
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_FETCHECO9_CONTROL);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF,fetch->control);
+
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x1400000D);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_FETCHECO9_BURSTBUFFERMANAGEMENT);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->burst_buf);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->buf_address);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->buf_attributes);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->buf_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->color_bits);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->color_shift);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->layer_offset);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->clip_offset);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->clip_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->const_color);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->layer_property);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->frame_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, fetch->frame_resample);
+#else
 		imxdpu_be_write(imxdpu,IMXDPU_FETCHECO9_CONTROL,
 				fetch->control);
 		imxdpu_be_write(imxdpu,IMXDPU_FETCHECO9_BURSTBUFFERMANAGEMENT,
@@ -201,13 +280,32 @@ void imxdpu_be_setup_eco(struct imxdpu_info *imxdpu,struct fetch_unit* fetch)
 				fetch->frame_dimension);
 		imxdpu_be_write(imxdpu,IMXDPU_FETCHECO9_FRAMERESAMPLING,
 				fetch->frame_resample);
-	}
+#endif
+    }
 }
 
 void imxdpu_be_setup_store(struct imxdpu_info *imxdpu, struct store_unit *store)
 {
 	IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
 	if (store->in_pipeline) {
+#if USE_COMMAND_SEQUENCER
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_STORE9_CONTROL);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, store->control);
+
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_STORE9_BURSTBUFFERMANAGEMENT);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, store->burst_buf);
+
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000006);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_STORE9_BASEADDRESS);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, store->buf_address);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, store->buf_attributes);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, store->buf_dimension);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, store->frame_offset);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, store->color_bits);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, store->color_shift);
+#else
 		imxdpu_be_write(imxdpu, IMXDPU_STORE9_CONTROL, store->control);
 		imxdpu_be_write(imxdpu, IMXDPU_STORE9_BURSTBUFFERMANAGEMENT,
 				store->burst_buf);
@@ -225,15 +323,23 @@ void imxdpu_be_setup_store(struct imxdpu_info *imxdpu, struct store_unit *store)
 				store->color_bits);
 		imxdpu_be_write(imxdpu, IMXDPU_STORE9_COLORCOMPONENTSHIFT,
 				store->color_shift);
-	}
+#endif
+    }
 }
 
 void imxdpu_be_setup_rop(struct imxdpu_info *imxdpu, struct rop_unit *rop)
 {
 	IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
 	if (rop->in_pipeline) {
+#if USE_COMMAND_SEQUENCER
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_ROP9_CONTROL);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, rop->control);
+#else
+
 		imxdpu_be_write(imxdpu, IMXDPU_ROP9_CONTROL, rop->control);
-	}
+#endif
+    }
 }
 
 void imxdpu_be_setup_matrix(struct imxdpu_info *imxdpu,
@@ -241,9 +347,16 @@ void imxdpu_be_setup_matrix(struct imxdpu_info *imxdpu,
 {
 	IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
 	if (matrix->in_pipeline) {
+#if USE_COMMAND_SEQUENCER
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_MATRIX9_CONTROL);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, matrix->control);
+#else
+
 		imxdpu_be_write(imxdpu, IMXDPU_MATRIX9_CONTROL,
 				matrix->control);
-	}
+#endif
+    }
 }
 
 void imxdpu_be_setup_hscaler(struct imxdpu_info *imxdpu,
@@ -251,13 +364,25 @@ void imxdpu_be_setup_hscaler(struct imxdpu_info *imxdpu,
 {
 	IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
 	if (hscaler->in_pipeline) {
+#if USE_COMMAND_SEQUENCER
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_HSCALER9_CONTROL);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, hscaler->control);
+
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000002);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_HSCALER9_SETUP1);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, hscaler->setup1);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, hscaler->setup2);
+#else
+
 		imxdpu_be_write(imxdpu, IMXDPU_HSCALER9_CONTROL,
 				hscaler->control);
 		imxdpu_be_write(imxdpu, IMXDPU_HSCALER9_SETUP1,
 				hscaler->setup1);
 		imxdpu_be_write(imxdpu, IMXDPU_HSCALER9_SETUP2,
 				hscaler->setup2);
-	}
+#endif
+    }
 }
 
 void imxdpu_be_setup_vscaler(struct imxdpu_info *imxdpu,
@@ -265,6 +390,19 @@ void imxdpu_be_setup_vscaler(struct imxdpu_info *imxdpu,
 {
 	IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
 	if (vscaler->in_pipeline) {
+#if USE_COMMAND_SEQUENCER
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_VSCALER9_CONTROL);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, vscaler->control);
+
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000005);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_VSCALER9_SETUP1);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, vscaler->setup1);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, vscaler->setup2);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, vscaler->setup3);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, vscaler->setup4);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, vscaler->setup5);
+#else
 		imxdpu_be_write(imxdpu, IMXDPU_VSCALER9_CONTROL,
 				vscaler->control);
 		imxdpu_be_write(imxdpu, IMXDPU_VSCALER9_SETUP1,
@@ -277,7 +415,8 @@ void imxdpu_be_setup_vscaler(struct imxdpu_info *imxdpu,
 				vscaler->setup4);
 		imxdpu_be_write(imxdpu, IMXDPU_VSCALER9_SETUP5,
 				vscaler->setup5);
-	}
+#endif
+    }
 }
 
 void imxdpu_be_setup_blitblend(struct imxdpu_info *imxdpu,
@@ -285,6 +424,21 @@ void imxdpu_be_setup_blitblend(struct imxdpu_info *imxdpu,
 {
 	IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
 	if (bb->in_pipeline) {
+#if USE_COMMAND_SEQUENCER
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_BLITBLEND9_CONTROL);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, bb->control);
+
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000007);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_BLITBLEND9_CONSTANTCOLOR);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, bb->const_color);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, bb->red_func);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, bb->green_func);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, bb->blue_func);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, bb->alpha_func);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, bb->blend_mode1);
+        imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, bb->blend_mode2);
+#else
 		imxdpu_be_write(imxdpu, IMXDPU_BLITBLEND9_CONTROL, bb->control);
 		imxdpu_be_write(imxdpu, IMXDPU_BLITBLEND9_CONSTANTCOLOR,
 				bb->const_color);
@@ -302,14 +456,49 @@ void imxdpu_be_setup_blitblend(struct imxdpu_info *imxdpu,
 				bb->blend_mode1);
 		imxdpu_be_write(imxdpu,IMXDPU_BLITBLEND9_BLENDMODE2,
 				bb->blend_mode2);
-	}
+#endif
+    }
 }
 
 void imxdpu_be_setup_engcfg(struct imxdpu_info *imxdpu,
 			    struct engcfg_unit *engcfg)
 {
 	IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
-	imxdpu_be_write(imxdpu, IMXDPU_PIXENGCFG_FETCHPERSP9_DYNAMIC,
+
+#if USE_COMMAND_SEQUENCER
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_PIXENGCFG_FETCHPERSP9_DYNAMIC);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, engcfg->fetchpersp9_dynamic);
+
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_PIXENGCFG_FETCHDECODE9_DYNAMIC);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, engcfg->fetchdecode9_dynamic);
+
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_PIXENGCFG_ROP9_DYNAMIC);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, engcfg->rop9_dynamic);
+
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_PIXENGCFG_MATRIX9_DYNAMIC);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, engcfg->matrix9_dynamic);
+
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_PIXENGCFG_HSCALER9_DYNAMIC);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, engcfg->hscaler9_dynamic);
+
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_PIXENGCFG_VSCALER9_DYNAMIC);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, engcfg->vscaler9_dynamic);
+
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_PIXENGCFG_BLITBLEND9_DYNAMIC);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, engcfg->blitblend9_dynamic);
+
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_PIXENGCFG_STORE9_DYNAMIC);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, engcfg->store9_dynamic);
+#else
+    imxdpu_be_write(imxdpu, IMXDPU_PIXENGCFG_FETCHPERSP9_DYNAMIC,
 			engcfg->fetchpersp9_dynamic);
 	imxdpu_be_write(imxdpu, IMXDPU_PIXENGCFG_FETCHDECODE9_DYNAMIC,
 			engcfg->fetchdecode9_dynamic);
@@ -325,6 +514,7 @@ void imxdpu_be_setup_engcfg(struct imxdpu_info *imxdpu,
 			engcfg->blitblend9_dynamic);
 	imxdpu_be_write(imxdpu, IMXDPU_PIXENGCFG_STORE9_DYNAMIC,
 			engcfg->store9_dynamic);
+#endif
 }
 
 int imxdpu_be_blit(struct imxdpu_info *imxdpu, struct be_blit_cfg *cfg)
@@ -340,9 +530,33 @@ int imxdpu_be_blit(struct imxdpu_info *imxdpu, struct be_blit_cfg *cfg)
 	imxdpu_be_setup_vscaler(imxdpu, &cfg->vscaler);
 	imxdpu_be_setup_blitblend(imxdpu, &cfg->blitblend);
 	imxdpu_be_setup_engcfg(imxdpu, &cfg->engcfg);
-	imxdpu_be_write(imxdpu, IMXDPU_PIXENGCFG_STORE9_TRIGGER, 0x1);
+
+#if USE_COMMAND_SEQUENCER
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_PIXENGCFG_STORE9_TRIGGER);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x00000001);
+
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_STORE9_START);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x00000001);
+
+    /* Use SYNC, Wait for hardware event */
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x20000100);
+
+    imxdpu_be_read(imxdpu,IMXDPU_COMCTRL_INTERRUPTSTATUS0);
+    /* clear shadow load irq */
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x14000001);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, IMXDPU_COMCTRL_INTERRUPTCLEAR0);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_HIF, 0x00000001);
+
+    imxdpu_be_read(imxdpu,IMXDPU_COMCTRL_INTERRUPTSTATUS0);
+
+#else
+    imxdpu_be_write(imxdpu, IMXDPU_PIXENGCFG_STORE9_TRIGGER, 0x1);
 	imxdpu_be_write(imxdpu, IMXDPU_STORE9_START, 0x1);
-	return 0;
+#endif
+
+    return 0;
 }
 
 static uint32_t imxdpu_be_check_irq(uint32_t irq_mask)
@@ -402,17 +616,34 @@ int imxdpu_be_load(struct imxdpu_info *imxdpu, void __user * p)
 	if (copy_from_user(&blit_cfg, p, sizeof(struct be_blit_cfg)))
 		return -EFAULT;
 	mutex_lock(&imxdpu_be_mutex);
-	imxdpu_be_blit(NULL, &blit_cfg);
-	imxdpu_be_wait_shadow_load(NULL);
-	mutex_unlock(&imxdpu_be_mutex);
+
+#if USE_COMMAND_SEQUENCER
+    imxdpu_cs_wait_fifo_space(NULL);
+#endif
+
+    imxdpu_be_blit(NULL, &blit_cfg);
+
+#if USE_COMMAND_SEQUENCER
+    /* need no shadow load wait by software if use command sequencer */
+#else
+    imxdpu_be_wait_shadow_load(NULL);
+#endif
+
+    mutex_unlock(&imxdpu_be_mutex);
 	return 0;
 }
 
 int imxdpu_be_wait(struct imxdpu_info *imxdpu)
 {
 	mutex_lock(&imxdpu_be_mutex);
-	imxdpu_be_wait_complete(NULL);
-	mutex_unlock(&imxdpu_be_mutex);
+
+#if USE_COMMAND_SEQUENCER
+    imxdpu_cs_wait_idle(NULL);
+#else
+    imxdpu_be_wait_complete(NULL);
+#endif
+
+    mutex_unlock(&imxdpu_be_mutex);
 	return 0;
 }
 
@@ -457,11 +688,16 @@ static int imxdpu_be_register_dev(int8_t imxdpu_id)
 static int imxdpu_be_request_irq(int8_t imxdpu_id)
 {
 	/* Clear and enable the IRQ */
-	imxdpu_clear_irq(imxdpu_id, IMXDPU_STORE9_SHDLOAD_IRQ);
+#if USE_COMMAND_SEQUENCER
+    imxdpu_clear_irq(imxdpu_id, IMXDPU_STORE9_SEQCOMPLETE_IRQ);
+    imxdpu_enable_irq(imxdpu_id, IMXDPU_STORE9_SEQCOMPLETE_IRQ);
+#else
+    imxdpu_clear_irq(imxdpu_id, IMXDPU_STORE9_SHDLOAD_IRQ);
 	imxdpu_enable_irq(imxdpu_id, IMXDPU_STORE9_SHDLOAD_IRQ);
 
 	imxdpu_clear_irq(imxdpu_id, IMXDPU_STORE9_SEQCOMPLETE_IRQ);
 	imxdpu_enable_irq(imxdpu_id, IMXDPU_STORE9_SEQCOMPLETE_IRQ);
+#endif
 
 	return 0;
 }
@@ -621,8 +857,75 @@ int imxdpu_be_init(int8_t imxdpu_id, void __iomem * imxdpu_base)
 			IMXDPU_SET_FIELD(IMXDPU_PIXENGCFG_CLKEN,
 					 IMXDPU_PIXENGCFG_CLKEN__AUTOMATIC));
 
+#if USE_COMMAND_SEQUENCER
+    //Command sequencer static setup
+    imxdpu_cs_alloc_command_buffer(NULL);
+    imxdpu_cs_static_setup(NULL, NULL);
+#endif
+
 	imxdpu_be_register_dev(imxdpu_id);
 	imxdpu_be_request_irq(imxdpu_id);
 
 	return ret;
 }
+
+#if USE_COMMAND_SEQUENCER
+int imxdpu_cs_alloc_command_buffer(struct imxdpu_info *imxdpu)
+{
+    IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
+    imxdpu = &imxdpu_instance[0];
+
+    buffer_addr_virt = (unsigned int)dma_alloc_coherent(NULL, COMMAND_BUFFER_SIZE, (dma_addr_t *)&buffer_addr_phy,GFP_DMA | GFP_KERNEL);
+    //buffer_addr_phy -= 0x10000000;
+
+    return 0;
+}
+
+int imxdpu_cs_static_setup(struct imxdpu_info *imxdpu, struct cmdSeq_unit *cmdSeq)
+{
+    int ret = 0;
+
+    IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
+    imxdpu = &imxdpu_instance[0];
+
+    imxdpu_cs_wait_idle(NULL);
+
+    /* LockUnlock and LockUnlockHIF */
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_LOCKUNLOCKHIF, IMXDPU_CMDSEQ_LOCKUNLOCKHIF_LOCKUNLOCKHIF__UNLOCK_KEY);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_LOCKUNLOCK, IMXDPU_CMDSEQ_LOCKUNLOCK_LOCKUNLOCK__UNLOCK_KEY);
+
+    /* BufferAddress and BufferSize */
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_BUFFERADDRESS, buffer_addr_phy);
+    imxdpu_be_write(imxdpu, IMXDPU_CMDSEQ_BUFFERSIZE, (COMMAND_BUFFER_SIZE/32)<<3);
+
+    return ret;
+}
+
+int imxdpu_cs_wait_fifo_space(struct imxdpu_info *imxdpu)
+{
+    int ret = 0;
+    IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
+    imxdpu = &imxdpu_instance[0];
+
+    while((imxdpu_be_read(imxdpu, IMXDPU_CMDSEQ_STATUS) & IMXDPU_CMDSEQ_STATUS_FIFOSPACE_MASK) < MINUS_CMDSEQ_FIFO_SPACE_THRESHOLD)
+    {
+        mdelay(10);
+    }
+
+    return ret;
+}
+
+int imxdpu_cs_wait_idle(struct imxdpu_info *imxdpu)
+{
+    int ret = 0;
+    IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
+    imxdpu = &imxdpu_instance[0];
+
+    while((imxdpu_be_read(imxdpu, IMXDPU_CMDSEQ_STATUS) & IMXDPU_CMDSEQ_STATUS_IDLE_MASK) == 0x0)
+    {
+        mdelay(10);
+    }
+
+    return ret;
+}
+#endif

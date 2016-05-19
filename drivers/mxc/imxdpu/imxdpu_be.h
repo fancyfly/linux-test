@@ -116,6 +116,21 @@ struct be_blit_cfg {
 	struct engcfg_unit engcfg;
 };
 
+struct cmdSeq_unit{
+    uint32_t in_use;
+    uint32_t hif;
+    uint32_t lock_unlock_hif;
+    uint32_t lock_status_hif;
+    uint32_t lock_unlock;
+    uint32_t lock_status;
+    uint32_t buffer_address;
+    uint32_t buffer_size;
+    uint32_t watermark_control;
+    uint32_t control;
+    uint32_t status;
+    uint32_t reserved;
+};
+
 /* PRIVATE DATA */
 struct imxdpu_info {
 	/*reg */
@@ -133,5 +148,10 @@ int imxdpu_be_wait_shadow_load(struct imxdpu_info *imxdpu);
 int imxdpu_be_wait_complete(struct imxdpu_info *imxdpu);
 int imxdpu_be_load(struct imxdpu_info *imxdpu, void __user * p);
 int imxdpu_be_wait(struct imxdpu_info *imxdpu);
+
+int imxdpu_cs_alloc_command_buffer(struct imxdpu_info *imxdpu);
+int imxdpu_cs_static_setup(struct imxdpu_info *imxdpu, struct cmdSeq_unit *cmdSeq);
+int imxdpu_cs_wait_fifo_space(struct imxdpu_info *imxdpu);
+int imxdpu_cs_wait_idle(struct imxdpu_info *imxdpu);
 
 #endif

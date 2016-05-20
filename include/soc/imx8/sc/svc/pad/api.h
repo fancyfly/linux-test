@@ -450,6 +450,42 @@ sc_err_t sc_pad_get_gp_28fdsoi_comp(sc_ipc_t ipc, sc_pin_t pin,
     uint8_t *compen, bool *fastfrz, uint8_t *rasrcp, uint8_t *rasrcn,
     bool *nasrc_sel, bool *compok, uint8_t *nasrc);
 
+/*!
+ * This function configures the settings for a pin. This setting is SoC
+ * specific.
+ *
+ * @param[in]     ipc         IPC handle
+ * @param[in]     pin         pin to configure
+ * @param[in]     val         value to set
+ *
+ * @return Returns an error code (SC_ERR_NONE = success).
+ *
+ * Return errors:
+ * - SC_PARM if arguments out of range or invalid,
+ * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
+ */
+sc_err_t sc_pad_set(sc_ipc_t ipc, sc_pin_t pin, uint32_t val);
+
+/*!
+ * This function gets the settings for a pin. This setting is SoC
+ * specific.
+ *
+ * @param[in]     ipc         IPC handle
+ * @param[in]     pin         pin to query
+ * @param[out]    val         pointer to return setting
+ *
+ * @return Returns an error code (SC_ERR_NONE = success).
+ *
+ * Return errors:
+ * - SC_PARM if arguments out of range or invalid,
+ * - SC_ERR_NOACCESS if caller's partition is not the pin owner
+ *
+ * Refer to the SoC [Pin List](@ref PINS) for valid pin values.
+ */
+sc_err_t sc_pad_get(sc_ipc_t ipc, sc_pin_t pin, uint32_t *val);
+
 #endif /* _SC_PAD_API_H */
 
 /**@}*/

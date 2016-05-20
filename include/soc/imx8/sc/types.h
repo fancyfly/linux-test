@@ -650,6 +650,7 @@ typedef enum sc_ctrl_e
     SC_C_PCIE_G_RST         = 17,
     SC_C_PCIE_BUTTON_RST    = 18,
     SC_C_PCIE_PERST         = 19,
+    SC_C_PHY_RESET          = 20,
     SC_C_LAST
 } sc_ctrl_t;
 

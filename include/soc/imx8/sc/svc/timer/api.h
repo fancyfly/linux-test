@@ -189,7 +189,6 @@ sc_err_t sc_timer_set_rtc_alarm(sc_ipc_t ipc, uint16_t year, uint8_t mon,
  *
  * @return Returns an error code (SC_ERR_NONE = success).
  */
-/* IDL: E8 GET_RTC_SEC1970(O32 sec) */
 sc_err_t sc_timer_get_rtc_sec1970(sc_ipc_t ipc, uint32_t *sec);
 
 /* @} */

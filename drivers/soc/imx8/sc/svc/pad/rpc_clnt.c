@@ -364,5 +364,42 @@ sc_err_t sc_pad_get_gp_28fdsoi_comp(sc_ipc_t ipc, sc_pin_t pin,
     return result;
 }
 
+sc_err_t sc_pad_set(sc_ipc_t ipc, sc_pin_t pin, uint32_t val)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_PAD;
+    RPC_FUNC(&msg) = PAD_FUNC_SET;
+    RPC_D32(&msg, 0) = val;
+    RPC_D16(&msg, 4) = pin;
+    RPC_SIZE(&msg) = 3;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    result = RPC_R8(&msg);
+    return result;
+}
+
+sc_err_t sc_pad_get(sc_ipc_t ipc, sc_pin_t pin, uint32_t *val)
+{
+    sc_rpc_msg_t msg;
+    uint8_t result;
+
+    RPC_VER(&msg) = SC_RPC_VERSION;
+    RPC_SVC(&msg) = SC_RPC_SVC_PAD;
+    RPC_FUNC(&msg) = PAD_FUNC_GET;
+    RPC_D16(&msg, 0) = pin;
+    RPC_SIZE(&msg) = 2;
+
+    sc_call_rpc(ipc, &msg, false);
+
+    if (val != NULL)
+        *val = RPC_D32(&msg, 0);
+    result = RPC_R8(&msg);
+    return result;
+}
+
 /**@}*/
 

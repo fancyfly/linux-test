@@ -52,6 +52,8 @@ typedef enum pad_func_e
     PAD_FUNC_GET_GP_28FDSOI, //!< Index for pad_get_gp_28fdsoi() RPC call
     PAD_FUNC_SET_GP_28FDSOI_COMP, //!< Index for pad_set_gp_28fdsoi_comp() RPC call
     PAD_FUNC_GET_GP_28FDSOI_COMP, //!< Index for pad_get_gp_28fdsoi_comp() RPC call
+    PAD_FUNC_SET, //!< Index for pad_set() RPC call
+    PAD_FUNC_GET, //!< Index for pad_get() RPC call
 } pad_func_t;
 
 /* Functions */

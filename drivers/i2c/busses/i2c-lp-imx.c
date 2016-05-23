@@ -622,39 +622,46 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 {
 	struct lpi2c_imx_dev *i2c_dev = i2c_get_adapdata(adap);
 	enum lpi2c_msg_type end_msg = LPI2C_MSG_STOP;
-	int i, ret = 0;
-	u8 direction;
+	int i, j, ret = 0;
 
 #if 0
-	ret = clk_prepare_enable(i2c_dev->clk);
+	dev_info(i2c_dev->dev, "xfer num: %d\n", num);
+	for (i = 0; i < num; i++) {
+		dev_info(i2c_dev->dev, "msgs[%d].addr = 0x%x\n", i, msgs[i].addr);
+		dev_info(i2c_dev->dev, "msgs[%d].flags = 0x%x\n", i, msgs[i].flags);
+		dev_info(i2c_dev->dev, "msgs[%d].len = 0x%x\n", i, msgs[i].len);
+		for (j = 0; j < msgs[i].len; j++)
+			dev_info(i2c_dev->dev, "msgs[%d].buf[%d] = 0x%x\n", i, j, msgs[i].buf[j]);
+	}
 #endif
 
-	direction = msgs[0].flags & 0x1;
 	/* start i2c transfer */
-	ret = lpi2c_imx_start(i2c_dev, (u8)msgs[0].addr, direction);
+	ret = lpi2c_imx_start(i2c_dev, (u8)msgs[0].addr, 0);
 	if (ret) {
 		dev_err(i2c_dev->dev, "xfer start error: %d\n", ret);
 		goto xfer_error;
 	}
 	/* send device addr */
-	ret = lpi2c_imx_send(i2c_dev, &msgs->buf[0], 1);
-	if (ret) {
-		dev_err(i2c_dev->dev, "xfer send error: %d\n", ret);
-		goto xfer_error;
+	for (i = 0; i < num; i++) {
+		for (j = 0; j < msgs[i].len; j++) {
+			if (msgs[i].flags & I2C_M_RD)
+				break;
+			ret = lpi2c_imx_send(i2c_dev, &msgs->buf[j], 1);
+			if (ret) {
+				dev_err(i2c_dev->dev, "xfer send error: %d\n", ret);
+				goto xfer_error;
+			}
+		}
 	}
 
+	end_msg = LPI2C_MSG_STOP;
 	for (i = 1; i < num; i++) {
-		end_msg = LPI2C_MSG_STOP;
-		if (i < (num -1)) {
-			if (msgs[i + 1].flags & I2C_M_NOSTART)
-				end_msg = LPI2C_MSG_CONTINUE;
-			else
-				end_msg = LPI2C_MSG_REPEAT_START;
-		}
-		ret = lpi2c_imx_xfer_msg(i2c_dev, &msgs[i], end_msg);
-		if (ret) {
-			dev_err(i2c_dev->dev, "xfer error: %d\n", ret);
-			goto xfer_error;
+		if (msgs[i].flags & I2C_M_RD) {
+			ret = lpi2c_imx_xfer_msg(i2c_dev, &msgs[i], end_msg);
+			if (ret) {
+				dev_err(i2c_dev->dev, "xfer error: %d\n", ret);
+				goto xfer_error;
+			}
 		}
 	}
 
@@ -668,9 +675,7 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 	/* nack detected */
 	if (ret == LPI2C_ERR_NDF)
 		return -ret;
-#if 0
-	clk_disable_unprepare(i2c_dev->clk);
-#endif
+
 	return 0;
 
 xfer_error:
@@ -680,7 +685,7 @@ xfer_error:
 
 static u32 lpi2c_imx_func(struct i2c_adapter *adap)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
+	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE_DATA;
 }
 
 static const struct i2c_algorithm lpi2c_imx_algo = {
@@ -725,7 +730,8 @@ static int lpi2c_imx_init(struct lpi2c_imx_dev *i2c_dev)
 
 	/* set bus speed */
 	lpi2c_imx_set_bus_speed(i2c_dev);
-
+	/* clear status flags */
+	i2c_writel(i2c_dev, 0x7F00, LPI2C_MSR);
 	/* enable i2c controller in master mode */
 	reg = i2c_readl(i2c_dev, LPI2C_MCR);
 	reg |= LPI2C_MCR_MEN;
@@ -787,14 +793,12 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 		return PTR_ERR(i2c_dev->clk);
 	}
 
-#if 0
 	ret = clk_prepare_enable(i2c_dev->clk);
 	if (ret) {
 		dev_err(&pdev->dev, "can't enable I2C clock root\n");
 		clk_disable_unprepare(i2c_dev->clk);
 		return ret;
 	}
-#endif
 
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
 
@@ -808,15 +812,13 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 			dev_name(&pdev->dev), i2c_dev);
 	if (ret) {
 		dev_err(&pdev->dev, "Fail to request irq %i\n", i2c_dev->irq);
-#if 0
 		clk_disable_unprepare(i2c_dev->clk);
-#endif
 		return ret;
 	}
-#if 0
+
 	/* init tranfer complete notifier */
 	init_completion(&i2c_dev->complete);
-#endif
+
 	reg = i2c_readl(i2c_dev, LPI2C_VERID);
 	dev_info(&pdev->dev,  "verid: 0x%x\n", reg);
 

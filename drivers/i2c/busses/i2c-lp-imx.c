@@ -622,21 +622,11 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 {
 	struct lpi2c_imx_dev *i2c_dev = i2c_get_adapdata(adap);
 	enum lpi2c_msg_type end_msg = LPI2C_MSG_STOP;
-	int i, j, ret = 0;
-	int result = LPI2C_ERR_NONE;
-	u32 addr = 0;
+	int i, ret = 0;
 	u8 direction;
 
 #if 0
 	ret = clk_prepare_enable(i2c_dev->clk);
-
-	for (i = 0; i < num; i++) {
-		printk("msgs[%d].addr = %04x\n", i, msgs[i].addr);
-		printk("msgs[%d].flags = %04x\n", i, msgs[i].flags);
-		printk("msgs[%d].len = %04x\n", i, msgs[i].len);
-		for (j = 0; j < msgs[i].len; j++)
-			printk("msgs->buf[%d] = %04x\n", j, msgs->buf[j]);
-	}
 #endif
 
 	direction = msgs[0].flags & 0x1;
@@ -666,9 +656,6 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 			dev_err(i2c_dev->dev, "xfer error: %d\n", ret);
 			goto xfer_error;
 		}
-		/*
-		ret = lpi2c_imx_detect(i2c_dev, (u8)msgs[i].addr);
-		*/
 	}
 
 	/* stop i2c transfer */
@@ -709,7 +696,6 @@ MODULE_DEVICE_TABLE(of, lpi2c_imx_of_match);
 
 static void lpi2c_imx_reset(struct lpi2c_imx_dev *i2c_dev)
 {
-	u32 reg;
 	/* reset fifos and master reset */
 	i2c_writel(i2c_dev, LPI2C_MCR_RST, LPI2C_MCR);
 	/* wait for controller */

@@ -1158,7 +1158,11 @@ static int imx_startup(struct uart_port *port)
 
 	if (!is_imx1_uart(sport)) {
 		temp = readl(sport->port.membase + UCR3);
-		temp |= IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP;
+#ifdef CONFIG_ARCH_NXP_IMX8DV_ZEBU
+		temp |= UCR3_ADNIMP;
+#else
+                temp |= IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP;
+#endif
 		writel(temp, sport->port.membase + UCR3);
 	}
 
@@ -1415,11 +1419,12 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 	ufcr = (ufcr & (~UFCR_RFDIV)) | UFCR_RFDIV_REG(div);
 	if (sport->dte_mode)
 		ufcr |= UFCR_DCEDTE;
-	writel(ufcr, sport->port.membase + UFCR);
+#ifndef CONFIG_ARCH_NXP_IMX8DV_ZEBU
+        writel(ufcr, sport->port.membase + UFCR);
 
 	writel(num, sport->port.membase + UBIR);
 	writel(denom, sport->port.membase + UBMR);
-
+#endif
 	if (!is_imx1_uart(sport))
 		writel(sport->port.uartclk / div / 1000,
 				sport->port.membase + IMX21_ONEMS);

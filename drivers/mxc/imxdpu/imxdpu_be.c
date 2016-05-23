@@ -53,7 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MINUS_CMDSEQ_FIFO_SPACE_THRESHOLD   128
 
 #if USE_COMMAND_SEQUENCER
-unsigned int buffer_addr_virt;
+void * buffer_addr_virt;
 dma_addr_t buffer_addr_phy;
 #endif
 
@@ -875,7 +875,7 @@ int imxdpu_cs_alloc_command_buffer(struct imxdpu_info *imxdpu)
     IMXDPU_TRACE("%s:%d\n", __FUNCTION__, __LINE__);
     imxdpu = &imxdpu_instance[0];
 
-    buffer_addr_virt = (unsigned int)dma_alloc_coherent(NULL, COMMAND_BUFFER_SIZE, (dma_addr_t *)&buffer_addr_phy,GFP_DMA | GFP_KERNEL);
+    buffer_addr_virt = dma_alloc_coherent(&imxdpu_dev, COMMAND_BUFFER_SIZE, (dma_addr_t *)&buffer_addr_phy,GFP_DMA | GFP_KERNEL);
     //buffer_addr_phy -= 0x10000000;
 
     return 0;

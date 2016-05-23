@@ -95,21 +95,22 @@
 };
 
 &i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c0>;
 	clock-frequency = <100000>;
 	status = "okay";
 };
 
 &i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c1>;
 	clock-frequency = <100000>;
 	status = "okay";
 };
 
 &i2c2 {
-	clock-frequency = <100000>;
-	status = "okay";
-};
-
-&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2>;
 	clock-frequency = <100000>;
 	status = "okay";
 };
@@ -169,6 +170,20 @@
 				SC_P_ENET0_RGMII_RD0		0x00
 				SC_P_ENET0_RGMII_RXC		0x00
 				SC_P_ENET0_RGMII_RX_CTL		0x00
+			>;
+		};
+
+		pinctrl_i2c0: i2c0grp {
+			fsl,pins = <
+				SC_P_LSIO_I2C0_SDA		0x600004c
+				SC_P_LSIO_I2C0_SCL		0x600004c
+			>;
+		};
+
+		pinctrl_i2c1: i2c1grp {
+			fsl,pins = <
+				SC_P_LSIO_I2C1_SDA		0x600004c
+				SC_P_LSIO_I2C1_SCL		0x600004c
 			>;
 		};
 

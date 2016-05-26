@@ -130,7 +130,7 @@ struct lpi2c_imx_dev {
 	int irq;
 	bool irq_disabled;
 	struct completion complete;
-	int status;
+	u32 status;
 	u8 *msg_buf;
 	size_t msg_left;
 	int msg_read;
@@ -183,19 +183,12 @@ static int lpi2c_imx_fill_tx_fifo(struct lpi2c_imx_dev *i2c_dev)
 static irqreturn_t lpi2c_imx_isr(int irq, void *dev_id)
 {
 	u32 status;
-	const u32 irq_error = LPI2C_MSR_NDF | LPI2C_MSR_ALF;
+	const u32 irq_error = LPI2C_MSR_ALF;
 	struct lpi2c_imx_dev *i2c_dev = dev_id;
 
 	status = i2c_readl(i2c_dev, LPI2C_MSR);
 
-	if (unlikely(status & irq_error)) {
-		if (status & LPI2C_MSR_NDF)
-			i2c_dev->status |= LPI2C_ERR_NDF;
-		if (status & LPI2C_MSR_ALF)
-			i2c_dev->status |= LPI2C_ERR_ALF;
-		goto error;
-	}
-
+#if 0
 	/* receive */
 	if ((status & LPI2C_MSR_RDF) && i2c_dev->msg_read) {
 		if (i2c_dev->msg_left)
@@ -210,13 +203,14 @@ static irqreturn_t lpi2c_imx_isr(int irq, void *dev_id)
 			lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_TDIE);
 	}
 
+#endif
+	i2c_dev->status = status;
 	/* clear irq */
-
 	i2c_writel(i2c_dev, status, LPI2C_MSR);
 	complete(&i2c_dev->complete);
 
 	return IRQ_HANDLED;
-
+#if 0
 error:
 	/* mask all interrupts */
 	lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_DMIE | LPI2C_MIER_PLTIE |
@@ -227,6 +221,7 @@ error:
 	complete(&i2c_dev->complete);
 
 	return IRQ_HANDLED;
+#endif
 }
 
 static int lpi2c_imx_set_bus_speed(struct lpi2c_imx_dev *i2c_dev)
@@ -362,14 +357,14 @@ static int lpi2c_imx_wait_for_tx_ready(struct lpi2c_imx_dev *i2c_dev)
 			return result;
 		}
 #if 0
-		time_left = wait_for_completion_timeout(&i2c_dev->complete,
-			LPI2C_TIMEOUT);
-		lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_TDIE);
+	time_left = wait_for_completion_timeout(&i2c_dev->complete,
+		LPI2C_TIMEOUT);
+	lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_TDIE);
 
-		if (time_left == 0) {
-			dev_err(i2c_dev->dev, "wait for tx ready time out\n");
-			return -ETIMEDOUT;
-		}
+	if (time_left == 0) {
+		dev_err(i2c_dev->dev, "wait for tx ready time out\n");
+		return -ETIMEDOUT;
+	}
 #endif
 		count--;
 	} while(!txcount && count <= 0);
@@ -415,7 +410,7 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 	u32 reg;
 	int result = LPI2C_ERR_NONE;
 	int count = 100000;
-	/* unsigned long time_left; */
+	unsigned long time_left;
 
 	result = lpi2c_imx_wait_for_tx_ready(i2c_dev);
 	if (result) {
@@ -423,27 +418,11 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 		return result;
 	}
 
+	lpi2c_imx_unmask_irq(i2c_dev, LPI2C_MIER_SDIE);
 	/* issue stop commad */
 	reg = LPI2C_MTDR_CMD(0x2);
 	i2c_writel(i2c_dev, reg, LPI2C_MTDR);
 
-	while (result == LPI2C_ERR_NONE)
-	{
-		count--;
-		reg = i2c_readl(i2c_dev, LPI2C_MSR);
-		result = lpi2c_imx_check_clear_error(i2c_dev);
-		/* clear stop detect flag */
-		if (reg & LPI2C_MSR_SDF) {
-			reg &= LPI2C_MSR_SDF;
-			i2c_writel(i2c_dev, reg, LPI2C_MSR);
-			break;
-		}
-
-		if (count <= 0)
-			result = LPI2C_ERR_TIMEOUT;
-	}
-#if 0
-	lpi2c_imx_unmask_irq(i2c_dev, LPI2C_MIER_SDIE);
 	time_left = wait_for_completion_timeout(&i2c_dev->complete,
 			LPI2C_TIMEOUT);
 	lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_SDIE);
@@ -452,9 +431,23 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 		dev_err(i2c_dev->dev, "wait for stop detect time out\n");
 		return -ETIMEDOUT;
 	}
-#endif
 
-	return result;
+	/* clear stop and end of packet flags */
+	reg = i2c_readl(i2c_dev, LPI2C_MSR);
+
+	if (i2c_dev->status & LPI2C_MSR_SDF) {
+		reg &= LPI2C_MSR_SDF;
+		i2c_dev->status &= ~LPI2C_MSR_SDF;
+	}
+
+	if (i2c_dev->status & LPI2C_MSR_EPF) {
+		reg &= LPI2C_MSR_EPF;
+		i2c_dev->status &= ~LPI2C_MSR_EPF;
+	}
+
+	i2c_writel(i2c_dev, reg, LPI2C_MSR);
+
+	return 0;
 }
 
 static int lpi2c_imx_send(struct lpi2c_imx_dev *i2c_dev, u8 *txbuf, int len)

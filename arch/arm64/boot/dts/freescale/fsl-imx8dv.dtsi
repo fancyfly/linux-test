@@ -702,30 +702,30 @@
 	framebuffer1: framebuffer@1 {
 		compatible = "imxdpu-framebuffer";
 		reg = <0x0 0x56240000 0x0 0x10000>;
-		width = <1280>;
-		height = <720>;
-		stride = <(1280 * 4)>;
-		format = "ayuv";
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
 		status = "disabled";
 	};
 
 	framebuffer2: framebuffer@2 {
 		compatible = "imxdpu-framebuffer";
 		reg = <0x0 0x57220000 0x0 0x10000>;
-		width = <1280>;
-		height = <720>;
-		stride = <(1280 * 4)>;
-		format = "nv12";
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
 		status = "disabled";
 	};
 
 	framebuffer3: framebuffer@3 {
 		compatible = "imxdpu-framebuffer";
 		reg = <0x0 0x57240000 0x0 0x10000>;
-		width = <1280>;
-		height = <720>;
-		stride = <1280>;
-		format = "nv12";
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
 		status = "disabled";
 	};
 

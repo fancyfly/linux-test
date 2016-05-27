@@ -79,19 +79,19 @@
 	status = "okay";
 };
 &framebuffer1 {
-	status = "disabled";
+	status = "okay";
 };
 &framebuffer2 {
-	status = "disabled";
+	status = "okay";
 };
 &framebuffer3 {
-	status = "disabled";
+	status = "okay";
 };
 &imxdpu0 {
 	status = "okay";
 };
 &imxdpu1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &i2c0 {

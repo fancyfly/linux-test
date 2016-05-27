@@ -2146,6 +2146,7 @@ gckHARDWARE_InitializeHardware(
      || _IsHardwareMatch(Hardware, gcv320, 0x5303)
      || _IsHardwareMatch(Hardware, gcv880, 0x5106)
      || _IsHardwareMatch(Hardware, gcv400, 0x4645)
+     || _IsHardwareMatch(Hardware, gcv7000, 0x6008)
     )
     {
         /* Update GPU AXI cache atttribute. */

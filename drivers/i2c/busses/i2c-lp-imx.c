@@ -409,7 +409,6 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 {
 	u32 reg;
 	int result = LPI2C_ERR_NONE;
-	int count = 100000;
 	unsigned long time_left;
 
 	result = lpi2c_imx_wait_for_tx_ready(i2c_dev);
@@ -418,14 +417,17 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 		return result;
 	}
 
-	lpi2c_imx_unmask_irq(i2c_dev, LPI2C_MIER_SDIE);
+	/* unmask stop and nack detect interrupts */
+	lpi2c_imx_unmask_irq(i2c_dev, LPI2C_MIER_SDIE | LPI2C_MIER_NDIE);
 	/* issue stop commad */
 	reg = LPI2C_MTDR_CMD(0x2);
 	i2c_writel(i2c_dev, reg, LPI2C_MTDR);
 
 	time_left = wait_for_completion_timeout(&i2c_dev->complete,
 			LPI2C_TIMEOUT);
-	lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_SDIE);
+
+	/* mask stop and nack detect interrupts */
+	lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_SDIE | LPI2C_MIER_NDIE);
 
 	if (time_left == 0) {
 		dev_err(i2c_dev->dev, "wait for stop detect time out\n");
@@ -444,6 +446,9 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 		reg &= LPI2C_MSR_EPF;
 		i2c_dev->status &= ~LPI2C_MSR_EPF;
 	}
+
+	if (i2c_dev->status & LPI2C_MSR_NDF)
+		reg &= LPI2C_MSR_NDF;
 
 	i2c_writel(i2c_dev, reg, LPI2C_MSR);
 
@@ -581,18 +586,20 @@ static int lpi2c_imx_write(struct lpi2c_imx_dev *i2c_dev, u8 chip, u32 addr,
 }
 
 static int lpi2c_imx_xfer_msg(struct lpi2c_imx_dev *i2c_dev,
-		struct i2c_msg *msg, enum lpi2c_msg_type end_msg)
+		struct i2c_msg *msg, int stop)
 {
 	int i, ret;
 
 	for (i = 0; i < msg->len; i++) {
 		if (msg->flags & I2C_M_RD)
 		{
+#if 0
 			ret = lpi2c_imx_start(i2c_dev, (u8)msg[i].addr, 1);
 			if (ret) {
 				dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
 				return ret;
 			}
+#endif
 			ret = lpi2c_imx_receive(i2c_dev, &msg->buf[i], 1);
 			if (ret) {
 				dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
@@ -616,7 +623,6 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 	struct lpi2c_imx_dev *i2c_dev = i2c_get_adapdata(adap);
 	enum lpi2c_msg_type end_msg = LPI2C_MSG_STOP;
 	int i, j, ret = 0;
-
 #if 0
 	dev_info(i2c_dev->dev, "xfer num: %d\n", num);
 	for (i = 0; i < num; i++) {
@@ -629,45 +635,33 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 #endif
 
 	/* start i2c transfer */
-	ret = lpi2c_imx_start(i2c_dev, (u8)msgs[0].addr, 0);
+	ret = lpi2c_imx_start(i2c_dev, (u8)msgs[0].addr,
+			(u8)(msgs[0].flags & I2C_M_RD));
 	if (ret) {
 		dev_err(i2c_dev->dev, "xfer start error: %d\n", ret);
 		goto xfer_error;
 	}
-	/* send device addr */
-	for (i = 0; i < num; i++) {
-		for (j = 0; j < msgs[i].len; j++) {
-			if (msgs[i].flags & I2C_M_RD)
-				break;
-			ret = lpi2c_imx_send(i2c_dev, &msgs->buf[j], 1);
-			if (ret) {
-				dev_err(i2c_dev->dev, "xfer send error: %d\n", ret);
-				goto xfer_error;
-			}
-		}
-	}
 
-	end_msg = LPI2C_MSG_STOP;
-	for (i = 1; i < num; i++) {
-		if (msgs[i].flags & I2C_M_RD) {
-			ret = lpi2c_imx_xfer_msg(i2c_dev, &msgs[i], end_msg);
-			if (ret) {
-				dev_err(i2c_dev->dev, "xfer error: %d\n", ret);
-				goto xfer_error;
-			}
+	for (i = 0; i < num; i++) {
+		ret = lpi2c_imx_xfer_msg(i2c_dev, &msgs[i], (i == (num - 1)));
+		if (ret) {
+			dev_err(i2c_dev->dev, "xfer error: %d\n", ret);
+			goto xfer_error;
 		}
 	}
 
 	/* stop i2c transfer */
 	ret = lpi2c_imx_stop(i2c_dev);
-	if (ret && ret != LPI2C_ERR_NDF) {
+	if (ret) {
 		dev_err(i2c_dev->dev, "xfer stop error: %d\n", ret);
 		goto xfer_error;
 	}
 
-	/* nack detected */
-	if (ret == LPI2C_ERR_NDF)
-		return -ret;
+	/* detect nak and clear */
+	if (i2c_dev->status & LPI2C_MSR_NDF) {
+		i2c_dev->status &= ~LPI2C_MSR_NDF;
+		return -LPI2C_ERR_NDF;
+	}
 
 	return 0;
 
@@ -678,7 +672,7 @@ xfer_error:
 
 static u32 lpi2c_imx_func(struct i2c_adapter *adap)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE_DATA;
+	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE_DATA | I2C_FUNC_SMBUS_QUICK;
 }
 
 static const struct i2c_algorithm lpi2c_imx_algo = {

@@ -187,7 +187,6 @@ static irqreturn_t lpi2c_imx_isr(int irq, void *dev_id)
 	struct lpi2c_imx_dev *i2c_dev = dev_id;
 
 	status = i2c_readl(i2c_dev, LPI2C_MSR);
-
 #if 0
 	/* receive */
 	if ((status & LPI2C_MSR_RDF) && i2c_dev->msg_read) {
@@ -338,14 +337,9 @@ static int lpi2c_imx_check_clear_error(struct lpi2c_imx_dev *i2c_dev)
 
 static int lpi2c_imx_wait_for_tx_ready(struct lpi2c_imx_dev *i2c_dev)
 {
-	u32 irq_mask, txcount;
-	unsigned long time_left;
-	int result = LPI2C_ERR_NONE, count = 100000;
+	u32 reg, txcount;
+	int result = LPI2C_ERR_NONE;
 
-#if 0
-	irq_mask = i2c_readl(i2c_dev, LPI2C_MFSR);
-	lpi2c_imx_unmask_irq(i2c_dev, LPI2C_MIER_TDIE);
-#endif
 	do {
 		txcount = i2c_readl(i2c_dev, LPI2C_MFSR) & 0xff;
 		if (!txcount)
@@ -353,21 +347,14 @@ static int lpi2c_imx_wait_for_tx_ready(struct lpi2c_imx_dev *i2c_dev)
 		txcount = LPI2C_FIFO_SIZE - txcount;
 		result = lpi2c_imx_check_clear_error(i2c_dev);
 		if (result) {
-			dev_info(i2c_dev->dev, "wait for tx ready: result 0x%x\n", result);
+			dev_info(i2c_dev->dev,
+				"wait for tx ready: result 0x%x\n", result);
 			return result;
 		}
-#if 0
-	time_left = wait_for_completion_timeout(&i2c_dev->complete,
-		LPI2C_TIMEOUT);
-	lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_TDIE);
-
-	if (time_left == 0) {
-		dev_err(i2c_dev->dev, "wait for tx ready time out\n");
-		return -ETIMEDOUT;
-	}
-#endif
-		count--;
-	} while(!txcount && count <= 0);
+		reg = i2c_readl(i2c_dev, LPI2C_MSR);
+		if (reg & ~LPI2C_MSR_TDF && txcount)
+			break;
+	} while (!txcount);
 
 	return 0;
 }

@@ -275,8 +275,8 @@ CONFIG_USB_USBNET=y
 CONFIG_USB_NET_CDC_EEM=y
 CONFIG_BCMDHD=y
 CONFIG_BCMDHD_SDIO=y
-CONFIG_BCMDHD_FW_PATH="/system/etc/firmware/bcm/fw_bcmdhd.bin"
-CONFIG_BCMDHD_NVRAM_PATH="/system/etc/firmware/bcm/bcmdhd.cal"
+CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/wlan/bcm4339/fw_bcmdhd.bin"
+CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/wlan/bcm4339/bcmdhd.cal"
 # CONFIG_INPUT_MOUSEDEV_PSAUX is not set
 CONFIG_INPUT_EVDEV=y
 CONFIG_INPUT_KEYRESET=y

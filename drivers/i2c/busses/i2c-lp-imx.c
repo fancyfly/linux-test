@@ -108,6 +108,8 @@ enum lpi2c_msg_type {
 	(((u32)(((u32)(x))) << 8u)) & 0x700u
 #define LPI2C_MTDR_DATA(x) \
 	(((u32)(((u32)(x))) << 0u)) & 0xffu
+#define LPI2C_MRDR_DATA(x) \
+	(((u32)(((u32)(x))) << 0u)) & 0xffu
 #define LPI2C_MCFGR1_PINCFG(x) \
 	(((u32)(((u32)(x))) << 24u)) & 0x7000000u
 #define LPI2C_MCCR0_CLKHI(x) \
@@ -442,7 +444,7 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 	return 0;
 }
 
-static int lpi2c_imx_send(struct lpi2c_imx_dev *i2c_dev, u8 *txbuf, int len)
+static int lpi2c_imx_send(struct lpi2c_imx_dev *i2c_dev, u8 *txbuf, u16 len)
 {
 	u32 reg;
 	int result = LPI2C_ERR_NONE;
@@ -458,13 +460,13 @@ static int lpi2c_imx_send(struct lpi2c_imx_dev *i2c_dev, u8 *txbuf, int len)
 				"send wait fot tx ready: %d\n", result);
 			return result;
 		}
-		i2c_writel(i2c_dev, *txbuf, LPI2C_MTDR);
+		i2c_writel(i2c_dev, *txbuf++, LPI2C_MTDR);
 	}
 
 	return 0;
 }
 
-static int lpi2c_imx_receive(struct lpi2c_imx_dev *i2c_dev, u8 *rxbuf, int len)
+static int lpi2c_imx_receive(struct lpi2c_imx_dev *i2c_dev, u8 *rxbuf, u16 len)
 {
 	u32 reg;
 	int result = LPI2C_ERR_NONE;
@@ -475,7 +477,8 @@ static int lpi2c_imx_receive(struct lpi2c_imx_dev *i2c_dev, u8 *rxbuf, int len)
 
 	result = lpi2c_imx_wait_for_tx_ready(i2c_dev);
 	if (result) {
-		dev_err(i2c_dev->dev, "receive wait fot tx ready: %d\n", result);
+		dev_err(i2c_dev->dev,
+			"receive wait fot tx ready: %d\n", result);
 		return result;
 	}
 
@@ -490,12 +493,13 @@ static int lpi2c_imx_receive(struct lpi2c_imx_dev *i2c_dev, u8 *rxbuf, int len)
 		do {
 			result = lpi2c_imx_check_clear_error(i2c_dev);
 			if (result) {
-				dev_err(i2c_dev->dev, "receive check clear error: %d\n", result);
+				dev_err(i2c_dev->dev,
+					"receive check clear error: %d\n", result);
 				return result;
 			}
 			reg = i2c_readl(i2c_dev, LPI2C_MRDR);
 		} while (reg & LPI2C_MRDR_RXEMPTY);
-		*rxbuf = LPI2C_MTDR_DATA(reg);
+		*rxbuf++ = LPI2C_MRDR_DATA(reg);
 	}
 
 	return 0;
@@ -506,27 +510,24 @@ static int lpi2c_imx_xfer_msg(struct lpi2c_imx_dev *i2c_dev,
 {
 	int i, ret;
 
-	for (i = 0; i < msg->len; i++) {
-		if (msg->flags & I2C_M_RD)
-		{
+	if (msg->flags & I2C_M_RD) {
 #if 0
-			ret = lpi2c_imx_start(i2c_dev, (u8)msg[i].addr, 1);
-			if (ret) {
-				dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
-				return ret;
-			}
+		ret = lpi2c_imx_start(i2c_dev, (u8)msg[i].addr, 1);
+		if (ret) {
+			dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
+			return ret;
+		}
 #endif
-			ret = lpi2c_imx_receive(i2c_dev, &msg->buf[i], 1);
-			if (ret) {
-				dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
-				return ret;
-			}
-		} else {
-			ret = lpi2c_imx_send(i2c_dev, &msg->buf[i], 1);
-			if (ret) {
-				dev_info(&i2c_dev->adapter.dev, "write error: %d\n", ret);
-				return ret;
-			}
+		ret = lpi2c_imx_receive(i2c_dev, &msg->buf, msg->len);
+		if (ret) {
+			dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
+			return ret;
+		}
+	} else {
+		ret = lpi2c_imx_send(i2c_dev, &msg->buf, msg->len);
+		if (ret) {
+			dev_info(&i2c_dev->adapter.dev, "write error: %d\n", ret);
+			return ret;
 		}
 	}
 

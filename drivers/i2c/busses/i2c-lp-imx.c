@@ -397,7 +397,7 @@ static int lpi2c_imx_start(struct lpi2c_imx_dev *i2c_dev,
 		return result;
 	}
 	/* issue start command */
-	reg = LPI2C_MTDR_CMD(0x4);
+	reg = LPI2C_MTDR_CMD(0x5);
 	reg |= (address << 0x1);
 	reg |= direction;
 	i2c_writel(i2c_dev, reg, LPI2C_MTDR);
@@ -657,17 +657,19 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 		goto xfer_error;
 	}
 
-	/* detect nak and clear */
+	/* detect ACK and clear */
 	if (i2c_dev->status & LPI2C_MSR_NDF) {
 		i2c_dev->status &= ~LPI2C_MSR_NDF;
-		return -LPI2C_ERR_NDF;
+		return num;
 	}
 
-	return 0;
+	/* start command expects NACK */
+	return -ENXIO;
 
 xfer_error:
+	dev_err(i2c_dev->dev, "xfer error: ret: %d\n", ret);
 	lpi2c_imx_init(i2c_dev);
-	return -ret;
+	return -EIO;
 }
 
 static u32 lpi2c_imx_func(struct i2c_adapter *adap)

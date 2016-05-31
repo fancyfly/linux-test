@@ -731,44 +731,37 @@ static int lpi2c_imx_init(struct lpi2c_imx_dev *i2c_dev)
 
 static int lpi2c_imx_probe(struct platform_device *pdev)
 {
-	const struct of_device_id *of_id = of_match_device(lpi2c_imx_of_match,
-			&pdev->dev);
+	struct device_node *np = pdev->dev.of_node;
 	struct lpi2c_imx_dev *i2c_dev;
 	struct resource *res;
-	void __iomem *base;
-	int ret, irq;
+	int ret;
 	u32 reg;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	base = devm_ioremap_resource(&pdev->dev, res);
-
-	if (IS_ERR(base))
-		return PTR_ERR(base);
-
 	i2c_dev = devm_kzalloc(&pdev->dev, sizeof(*i2c_dev), GFP_KERNEL);
-
 	if (!i2c_dev)
 		return -ENOMEM;
 
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0) {
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	i2c_dev->base = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(i2c_dev->base))
+		return PTR_ERR(i2c_dev->base);
+
+	i2c_dev->irq = platform_get_irq(pdev, 0);
+	if (i2c_dev->irq < 0) {
 		dev_err(&pdev->dev, "can't get I2C irq number id\n");
-		return irq;
+		return i2c_dev->irq;
 	}
 
 	i2c_dev->dev = &pdev->dev;
-	i2c_dev->base = base;
-	i2c_dev->irq = irq;
-
 	strlcpy(i2c_dev->adapter.name, pdev->name,
 			sizeof(i2c_dev->adapter.name));
 	i2c_dev->adapter.owner = THIS_MODULE;
 	i2c_dev->adapter.algo = &lpi2c_imx_algo;
 	i2c_dev->adapter.dev.parent = &pdev->dev;
 	i2c_dev->adapter.nr = pdev->id;
-	i2c_dev->adapter.dev.of_node = pdev->dev.of_node;
+	i2c_dev->adapter.dev.of_node = np;
 
-	ret = of_property_read_u32(pdev->dev.of_node, "clock-frequency",
+	ret = of_property_read_u32(np, "clock-frequency",
 			&i2c_dev->bitrate);
 	if (ret) {
 		i2c_dev->bitrate = LPI2C_BITRATE;
@@ -791,12 +784,6 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
 
-	ret = lpi2c_imx_init(i2c_dev);
-	if (ret) {
-		dev_err(&pdev->dev, "Fail to init I2C interface\n");
-		return ret;
-	}
-
 	ret = devm_request_irq(&pdev->dev, i2c_dev->irq, lpi2c_imx_isr, 0,
 			dev_name(&pdev->dev), i2c_dev);
 	if (ret) {
@@ -807,16 +794,21 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 
 	/* init tranfer complete notifier */
 	init_completion(&i2c_dev->complete);
-
-	reg = i2c_readl(i2c_dev, LPI2C_VERID);
-	dev_info(&pdev->dev,  "verid: 0x%x\n", reg);
-
 	/* add numered adapter */
 	ret = i2c_add_numbered_adapter(&i2c_dev->adapter);
 	if (ret) {
 		dev_err(&pdev->dev, "Fail to add I2C adapter\n");
 		return ret;
 	}
+
+	ret = lpi2c_imx_init(i2c_dev);
+	if (ret) {
+		dev_err(&pdev->dev, "Fail to init I2C interface\n");
+		return ret;
+	}
+
+	reg = i2c_readl(i2c_dev, LPI2C_VERID);
+	dev_info(&pdev->dev,  "verid: 0x%x\n", reg);
 
 	return 0;
 }

@@ -732,7 +732,7 @@
 	gpio0: gpio@5E080000 {
 		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
 		reg = <0x0 0x5E080000 0x0 0x4000>;
-		interrupts = <0 168 4>;
+		interrupts = <0 136 4>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
@@ -742,7 +742,7 @@
 	gpio1: gpio@5E090000 {
 		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
 		reg = <0x0 0x5E090000 0x0 0x4000>;
-		interrupts = <0 169 4>;
+		interrupts = <0 137 4>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
@@ -752,7 +752,7 @@
 	gpio2: gpio@5E0A0000 {
 		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
 		reg = <0x0 0x5E0A0000 0x0 0x4000>;
-		interrupts = <0 170 4>;
+		interrupts = <0 138 4>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
@@ -762,7 +762,7 @@
 	gpio3: gpio@5E0B0000 {
 		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
 		reg = <0x0 0x5E0B0000 0x0 0x4000>;
-		interrupts = <0 171 4>;
+		interrupts = <0 139 4>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
@@ -772,7 +772,7 @@
 	gpio4: gpio@5E0C0000 {
 		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
 		reg = <0x0 0x5E0C0000 0x0 0x4000>;
-		interrupts = <0 172 4>;
+		interrupts = <0 140 4>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
@@ -782,7 +782,7 @@
 	gpio5: gpio@5E0D0000 {
 		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
 		reg = <0x0 0x5E0D0000 0x0 0x4000>;
-		interrupts = <0 173 4>;
+		interrupts = <0 141 4>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
@@ -792,7 +792,7 @@
 	gpio6: gpio@5E0E0000 {
 		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
 		reg = <0x0 0x5E0E0000 0x0 0x4000>;
-		interrupts = <0 174 4>;
+		interrupts = <0 142 4>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
@@ -802,7 +802,7 @@
 	gpio7: gpio@5E0F0000 {
 		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
 		reg = <0x0 0x5E0F0000 0x0 0x4000>;
-		interrupts = <0 171 4>;
+		interrupts = <0 143 4>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;

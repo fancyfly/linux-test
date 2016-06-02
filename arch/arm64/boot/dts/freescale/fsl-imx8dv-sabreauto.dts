@@ -129,6 +129,13 @@
 	status = "okay";
 };
 
+&i2c0_lvds0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c0_lvds0>;
+	clock-frequency = <100000>;
+	status = "okay";
+};
+
 &iomuxc {
 	imx8dv-sabreauto {
 
@@ -205,6 +212,13 @@
 			fsl,pins = <
 				SC_P_LSIO_I2C2_SDA		0x600004c
 				SC_P_LSIO_I2C2_SCL		0x600004c
+			>;
+		};
+
+		pinctrl_i2c0_lvds0: i2c0lvds0grp {
+			fsl,pins = <
+				SC_P_LVDS0_LVDS1_TS_SCL 0x600004c
+				SC_P_LVDS0_LVDS1_TS_SDA 0x600004c
 			>;
 		};
 

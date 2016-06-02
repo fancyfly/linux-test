@@ -577,6 +577,30 @@
 		status = "disabled";
 	};
 
+	i2c0_lcd: i2c@56226000 {
+		compatible = "fsl,imx8dv-lpi2c";
+		reg = <0x0 0x56226000 0x0 0x1000>;
+		interrupts = <0 56 4>;
+		fsl,irq-steer = <0x56220000>;
+		fsl,irq-num = <0x100>;
+		clocks = <&clk IMX8DV_LCD_I2C0_CLK>;
+		clock-names = "per";
+		power-domains = <&pd_lcd>;
+		status = "disabled";
+	};
+
+	i2c1_lcd: i2c@56227000 {
+		compatible = "fsl,imx8dv-lpi2c";
+		reg = <0x0 0x56227000 0x0 0x1000>;
+		interrupts = <0 56 4>;
+		fsl,irq-steer = <0x56220000>;
+		fsl,irq-num = <0x200>;
+		clocks = <&clk IMX8DV_LCD_I2C1_CLK>;
+		clock-names = "per";
+		power-domains = <&pd_lcd>;
+		status = "disabled";
+	};
+
 	i2c0_lvds0: i2c@56246000 {
 		compatible = "fsl,imx8dv-lpi2c";
 		reg = <0x0 0x56246000 0x0 0x1000>;

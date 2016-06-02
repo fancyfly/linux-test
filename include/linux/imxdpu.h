@@ -191,7 +191,7 @@ typedef enum {
  * Enumeration of IMXDPU display streams
  */
 typedef enum {
-	IMXDPU_DISPLAY_STREAM_NONE = (1U<<0),
+	IMXDPU_DISPLAY_STREAM_NONE = (0),
 	IMXDPU_DISPLAY_STREAM_0 = (1U<<0),
 	IMXDPU_DISPLAY_STREAM_1 = (1U<<1),
 	IMXDPU_DISPLAY_STREAM_4 = (1U<<4),
@@ -423,8 +423,8 @@ typedef enum {
 #define IMXDPU_CHAN_VIDEO_0        IMXDPU_CHAN_01
 #define IMXDPU_CHAN_VIDEO_1        IMXDPU_CHAN_19
 
-#define IMXDPU_CHAN_INTERGRAL_0    IMXDPU_CHAN_00
-#define IMXDPU_CHAN_INTERGRAL_1    IMXDPU_CHAN_18
+#define IMXDPU_CHAN_INTEGRAL_0    IMXDPU_CHAN_00
+#define IMXDPU_CHAN_INTEGRAL_1    IMXDPU_CHAN_18
 
 #define IMXDPU_CHAN_FRACTIONAL_0_1 IMXDPU_CHAN_02
 #define IMXDPU_CHAN_FRACTIONAL_0_2 IMXDPU_CHAN_03
@@ -539,6 +539,8 @@ typedef union {
 		uint16_t dest_width;
 		uint16_t dest_height;
 		uint32_t const_color;
+		bool use_global_alpha;
+		bool use_local_alpha;
 	} common;
 	struct {
 		imxdpu_chan_t chan;
@@ -559,6 +561,8 @@ typedef union {
 		uint16_t dest_width;
 		uint16_t dest_height;
 		uint32_t const_color;
+		bool use_global_alpha;
+		bool use_local_alpha;
 		uint32_t h_scale_factor;	/* downscaling  out/in */
 		uint32_t h_phase;
 		uint32_t v_scale_factor;	/* downscaling  out/in */
@@ -585,6 +589,8 @@ typedef union {
 		uint16_t dest_width;
 		uint16_t dest_height;
 		uint32_t const_color;
+		bool use_global_alpha;
+		bool use_local_alpha;
 		uint32_t h_scale_factor;	/* downscaling  out/in */
 		uint32_t h_phase;
 		uint32_t v_scale_factor;	/* downscaling  out/in */
@@ -611,6 +617,8 @@ typedef union {
 		uint32_t dest_width;
 		uint32_t dest_height;
 		uint32_t const_color;
+		bool use_global_alpha;
+		bool use_local_alpha;
 	} fetch_layer;
 	struct {
 		imxdpu_chan_t chan;
@@ -631,6 +639,8 @@ typedef union {
 		uint32_t dest_width;
 		uint32_t dest_height;
 		uint32_t const_color;
+		bool use_global_alpha;
+		bool use_local_alpha;
 		// todo: add warp parameters
 	} fetch_warp;
 } imxdpu_channel_params_t;
@@ -752,8 +762,9 @@ int imxdpu_disp_setup_constframe(int8_t imxdpu_id,
 	uint8_t bg_blue,
 	uint8_t bg_alpha);
 int imxdpu_disp_setup_layer(int8_t imxdpu_id,
-	const imxdpu_layer_t *layer,
-	imxdpu_layer_idx_t layer_idx);
+			    const imxdpu_layer_t *layer,
+			    imxdpu_layer_idx_t layer_idx,
+			    bool is_top_layer);
 void imxdpu_disp_dump_mode(const struct imxdpu_videomode *mode);
 int imxdpu_bytes_per_pixel(uint32_t fmt);
 int imxdpu_init_channel_buffer(int8_t imxdpu_id,
@@ -799,24 +810,27 @@ int imxdpu_disp_set_chan_crop(int8_t imxdpu_id,
 void dump_pixencfg_status(int8_t imxdpu_id);
 int dump_channel(int8_t imxdpu_id, imxdpu_chan_t chan);
 uint32_t imxdpu_get_planes(uint32_t fmt);
-
 int imxdpu_disp_setup_channel(int8_t imxdpu_id,
-			      imxdpu_chan_t chan,
-			      uint32_t src_pixel_fmt,
-			      uint16_t src_width,
-			      uint16_t src_height,
-			      int16_t clip_top,
-			      int16_t clip_left,
-			      uint16_t clip_width,
-			      uint16_t clip_height, uint16_t stride,
-			      //      uint32_t dest_pixel_fmt,
-			      //      uint8_t  blend_mode,
-			      //      uint8_t  blend_layer,
-			      uint8_t disp_id,
-			      int16_t dest_top,
-			      int16_t dest_left,
-			      uint16_t dest_width,
-			      uint16_t dest_height,
-			      uint32_t const_color, unsigned int disp_addr);
+	imxdpu_chan_t chan,
+	uint32_t src_pixel_fmt,
+	uint16_t src_width,
+	uint16_t src_height,
+	int16_t clip_top,
+	int16_t clip_left,
+	uint16_t clip_width,
+	uint16_t clip_height,
+	uint16_t stride,
+	//      uint32_t dest_pixel_fmt,
+	//      uint8_t  blend_mode,
+	//      uint8_t  blend_layer,
+	uint8_t disp_id,
+	int16_t dest_top,
+	int16_t dest_left,
+	uint16_t dest_width,
+	uint16_t dest_height,
+	uint32_t const_color,
+	bool use_global_alpha,
+	bool use_local_alpha,
+	unsigned int disp_addr);
 int imxdpu_disp_check_shadow_loads(int8_t imxdpu_id, int8_t disp);
 #endif				/* IMXDPU_H */

@@ -3244,7 +3244,8 @@ int imxdpu_disp_setup_constframe(
  */
 int imxdpu_disp_setup_layer(int8_t imxdpu_id,
 			    const imxdpu_layer_t *layer,
-			    imxdpu_layer_idx_t layer_idx)
+			    imxdpu_layer_idx_t layer_idx,
+	bool is_top_layer)
 {
 	int ret = 0;
 	uint32_t dynamic_offset;
@@ -3258,7 +3259,11 @@ int imxdpu_disp_setup_layer(int8_t imxdpu_id,
 		return -EINVAL;
 	}
 	imxdpu = &imxdpu_array[imxdpu_id];
-
+	IMXDPU_TRACE("%s():  enable %d, primary %d, secondary %d, stream 0x%08x\n", __func__,
+		layer->enable,
+		layer->primary,
+		layer->secondary,
+		layer->stream);
 	imxdpu->blend_layer[layer_idx] = *layer;
 
 	dynamic_offset = id2dynamicoffset(layer_idx + IMXDPU_ID_LAYERBLEND0);
@@ -3282,11 +3287,12 @@ int imxdpu_disp_setup_layer(int8_t imxdpu_id,
 	imxdpu_write(imxdpu, dynamic_offset, reg);
 
 	if (imxdpu->blend_layer[layer_idx].stream & IMXDPU_DISPLAY_STREAM_0) {
-
 		IMXDPU_TRACE("%s():  IMXDPU_DISPLAY_STREAM_0\n", __func__);
-		reg = IMXDPU_SET_FIELD(IMXDPU_PIXENGCFG_EXTDST0_DYNAMIC_EXTDST0_SRC_SEL,
-			 	layer_idx + IMXDPU_ID_LAYERBLEND0);
-		imxdpu_write(imxdpu, IMXDPU_PIXENGCFG_EXTDST0_DYNAMIC, reg);
+		if (is_top_layer) {
+			reg = IMXDPU_SET_FIELD(IMXDPU_PIXENGCFG_EXTDST0_DYNAMIC_EXTDST0_SRC_SEL,
+					layer_idx + IMXDPU_ID_LAYERBLEND0);
+			imxdpu_write(imxdpu, IMXDPU_PIXENGCFG_EXTDST0_DYNAMIC, reg);
+		}
 
 		/* trigger configuration of the pipeline */
 		imxdpu_write(imxdpu, IMXDPU_PIXENGCFG_EXTDST0_TRIGGER,
@@ -3296,11 +3302,12 @@ int imxdpu_disp_setup_layer(int8_t imxdpu_id,
 	}
 	if (imxdpu->blend_layer[layer_idx].stream & IMXDPU_DISPLAY_STREAM_1) {
 		IMXDPU_TRACE_IRQ("%s():  IMXDPU_DISPLAY_STREAM_1\n", __func__);
-		reg =
-			IMXDPU_SET_FIELD(IMXDPU_PIXENGCFG_EXTDST0_DYNAMIC_EXTDST0_SRC_SEL,
-			 layer_idx + IMXDPU_ID_LAYERBLEND0);
-		imxdpu_write(imxdpu, IMXDPU_PIXENGCFG_EXTDST1_DYNAMIC, reg);
-
+		if (is_top_layer) {
+			reg =
+				IMXDPU_SET_FIELD(IMXDPU_PIXENGCFG_EXTDST0_DYNAMIC_EXTDST0_SRC_SEL,
+					layer_idx + IMXDPU_ID_LAYERBLEND0);
+			imxdpu_write(imxdpu, IMXDPU_PIXENGCFG_EXTDST1_DYNAMIC, reg);
+		}
 		/* trigger configuration of the pipeline */
 		imxdpu_write(imxdpu, IMXDPU_PIXENGCFG_EXTDST1_TRIGGER,
 			     IMXDPU_PIXENGCFG_EXTDST1_TRIGGER_EXTDST1_SYNC_TRIGGER_MASK);
@@ -3719,6 +3726,8 @@ int imxdpu_disp_setup_channel(int8_t imxdpu_id,
 	uint16_t dest_width,
 	uint16_t dest_height,
 	uint32_t const_color,
+	bool use_global_alpha,
+	bool use_local_alpha,
 	unsigned int disp_addr)
 {
 	int ret = 0;
@@ -3744,6 +3753,8 @@ int imxdpu_disp_setup_channel(int8_t imxdpu_id,
 	channel.common.dest_width = dest_width;
 	channel.common.dest_height = dest_height;
 	channel.common.const_color = const_color;
+	channel.common.use_global_alpha = use_global_alpha;
+	channel.common.use_local_alpha = use_local_alpha;
 	//channel.common.stride = FW * imxdpu_bytes_per_pixel(IMXDPU_PIX_FMT_BGRA32);
 	//channel.common.use_video_proc = IMXDPU_FALSE;
 	//channel.common.disp_id = 0;
@@ -4253,10 +4264,10 @@ int imxdpu_init_channel_buffer(
 	} else {
 		imxdpu->chan_data[chan_idx].fetch_layer_prop.clipwindowdimensions0 = 0;
 	}
-		
+
 #endif
 
-		
+
 	imxdpu->chan_data[chan_idx].fetch_layer_prop.constantcolor0 =
 		imxdpu->chan_data[chan_idx].const_color;
 
@@ -4304,11 +4315,15 @@ int imxdpu_init_channel_buffer(
 		} /* else need to handle Alpha, Warp, CLUT ... */
 		imxdpu->chan_data[chan_idx].fetch_layer_prop.layerproperty0 =
 			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_SOURCEBUFFERENABLE,
-			enable_buffer) |
+				enable_buffer) |
 			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_YUVCONVERSIONMODE,
-			enable_yuv) |
+				enable_yuv) |
 			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_CLIPWINDOWENABLE,
-			enable_clip);
+				enable_clip) |
+			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_ALPHACONSTENABLE,
+				imxdpu->chan_data[chan_idx].use_global_alpha) |
+			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_ALPHASRCENABLE,
+				imxdpu->chan_data[chan_idx].use_local_alpha);
 
 		/* todo: handle all cases for control register */
 		imxdpu_write(imxdpu,
@@ -4376,7 +4391,12 @@ int imxdpu_init_channel_buffer(
 			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_YUVCONVERSIONMODE,
 				enable_yuv) |
 			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_CLIPWINDOWENABLE,
-				enable_clip);
+				enable_clip) |
+			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_ALPHACONSTENABLE,
+				imxdpu->chan_data[chan_idx].use_global_alpha) |
+			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_ALPHASRCENABLE,
+				imxdpu->chan_data[chan_idx].use_local_alpha);
+
 		imxdpu_write_block(imxdpu,
 			b_off +
 			IMXDPU_FETCHLAYER0_BASEADDRESS0_OFFSET +
@@ -4428,7 +4448,11 @@ int imxdpu_init_channel_buffer(
 			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_YUVCONVERSIONMODE,
 				enable_yuv) |
 			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_CLIPWINDOWENABLE,
-				enable_clip);
+				enable_clip) |
+			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_ALPHACONSTENABLE,
+				imxdpu->chan_data[chan_idx].use_global_alpha) |
+			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_ALPHASRCENABLE,
+				imxdpu->chan_data[chan_idx].use_local_alpha);
 		imxdpu_write_block(imxdpu,
 			b_off +
 			IMXDPU_FETCHWARP2_BASEADDRESS0_OFFSET +
@@ -4476,8 +4500,12 @@ int imxdpu_init_channel_buffer(
 				enable_buffer) |
 				//IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_YUVCONVERSIONMODE,
 				//enable_yuv) |
+				//IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_ALPHACONSTENABLE,
+				//	imxdpu->chan_data[chan_idx].use_global_alpha) |
+				//IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_ALPHASRCENABLE,
+				//	imxdpu->chan_data[chan_idx].use_local_alpha) |
 				IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_CLIPWINDOWENABLE,
-				enable_clip);
+					enable_clip);
 
 			imxdpu_write(imxdpu,
 				b_off + IMXDPU_FETCHECO0_FRAMERESAMPLING_OFFSET,
@@ -4501,7 +4529,7 @@ int imxdpu_init_channel_buffer(
 					imxdpu->chan_data[chan_idx].dest_width -
 					1 /*fwidth-1 */));
 
-		} /* else need to handle Alpha, Warp, CLUT ... */ 
+		} /* else need to handle Alpha, Warp, CLUT ... */
 		imxdpu->chan_data[chan_idx].fetch_layer_prop.layerproperty0 =
 			IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_SOURCEBUFFERENABLE,
 			//IMXDPU_SET_FIELD(IMXDPU_LAYERPROPERTY_YUVCONVERSIONMODE,
@@ -4720,6 +4748,10 @@ int imxdpu_init_channel(int8_t imxdpu_id, imxdpu_channel_params_t *params)
 			params->fetch_decode.dest_height;
 		imxdpu->chan_data[chan_idx].const_color =
 			params->fetch_decode.const_color;
+		imxdpu->chan_data[chan_idx].use_global_alpha =
+			params->fetch_decode.use_global_alpha;
+		imxdpu->chan_data[chan_idx].use_local_alpha =
+			params->fetch_decode.use_local_alpha;
 		imxdpu->chan_data[chan_idx].disp_id =
 			params->fetch_decode.disp_id;
 
@@ -4783,6 +4815,10 @@ int imxdpu_init_channel(int8_t imxdpu_id, imxdpu_channel_params_t *params)
 			params->fetch_layer.dest_height;
 		imxdpu->chan_data[chan_idx].const_color =
 			params->fetch_layer.const_color;
+		imxdpu->chan_data[chan_idx].use_global_alpha =
+			params->fetch_layer.use_global_alpha;
+		imxdpu->chan_data[chan_idx].use_local_alpha =
+			params->fetch_layer.use_local_alpha;
 		imxdpu->chan_data[chan_idx].disp_id =
 			params->fetch_layer.disp_id;
 
@@ -4817,6 +4853,10 @@ int imxdpu_init_channel(int8_t imxdpu_id, imxdpu_channel_params_t *params)
 			params->fetch_warp.dest_height;
 		imxdpu->chan_data[chan_idx].const_color =
 			params->fetch_warp.const_color;
+		imxdpu->chan_data[chan_idx].use_global_alpha =
+			params->fetch_warp.use_global_alpha;
+		imxdpu->chan_data[chan_idx].use_local_alpha =
+			params->fetch_warp.use_local_alpha;
 		imxdpu->chan_data[chan_idx].disp_id =
 			params->fetch_warp.disp_id;
 
@@ -4851,6 +4891,10 @@ int imxdpu_init_channel(int8_t imxdpu_id, imxdpu_channel_params_t *params)
 			params->fetch_decode.dest_height;
 		imxdpu->chan_data[chan_idx].const_color =
 			params->fetch_decode.const_color;
+		imxdpu->chan_data[chan_idx].use_global_alpha =
+			params->fetch_decode.use_global_alpha;
+		imxdpu->chan_data[chan_idx].use_local_alpha =
+			params->fetch_decode.use_local_alpha;
 		imxdpu->chan_data[chan_idx].disp_id =
 			params->fetch_decode.disp_id;
 
@@ -5122,7 +5166,9 @@ int dump_channel(int8_t imxdpu_id, imxdpu_chan_t chan)
 		//"fetch2_id      %d\n"
 		//"fetch3_id      %d\n"
 		"rot_mode       %d\n"
-		"in_use         %d\n",
+		"in_use         %d\n"
+		"use_global_alpha %d\n"
+		"use_local_alpha  %d\n",
 		//imxdpu->chan_data[chan_idx].h_scale_factor,
 		//imxdpu->chan_data[chan_idx].h_phase,
 		//imxdpu->chan_data[chan_idx].v_scale_factor,
@@ -5141,7 +5187,9 @@ int dump_channel(int8_t imxdpu_id, imxdpu_chan_t chan)
 		//imxdpu->chan_data[chan_idx].fetch2_id,
 		//imxdpu->chan_data[chan_idx].fetch3_id,
 		imxdpu->chan_data[chan_idx].rot_mode,
-		imxdpu->chan_data[chan_idx].in_use
+		imxdpu->chan_data[chan_idx].in_use,
+		imxdpu->chan_data[chan_idx].use_global_alpha,
+		imxdpu->chan_data[chan_idx].use_local_alpha
 		);
 
 	dump_fetch_layer(&imxdpu->chan_data[chan_idx].fetch_layer_prop);

@@ -335,6 +335,8 @@ typedef struct {
 	bool use_video_proc;
 	bool interlaced;
 	bool use_eco_fetch;
+	bool use_global_alpha;
+	bool use_local_alpha;
 
 	/* note: dma_addr_t changes for 64-bit arch */
 	dma_addr_t phyaddr_0;

@@ -662,6 +662,8 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct lpi2c_imx_dev *i2c_dev;
 	struct resource *res;
+	void __iomem *irq_steer;
+	unsigned long irq_flags;
 	int ret;
 	u32 reg;
 
@@ -678,6 +680,21 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 	if (i2c_dev->irq < 0) {
 		dev_err(&pdev->dev, "can't get I2C irq number id\n");
 		return i2c_dev->irq;
+	}
+
+	/* check for shared irq */
+	ret = of_property_read_u32(np, "fsl,irq-steer", &reg);
+	if (ret) {
+		irq_flags = 0;
+	} else {
+		irq_flags = IRQF_SHARED;
+		irq_steer = ioremap(reg, SZ_1K);
+		/* enable irq steer channel 0 */
+		writel(0x1, irq_steer + 0x0);
+		of_property_read_u32(np, "fsl,irq-num", &reg);
+		/* mask i2c interrupts */
+		writel(reg, irq_steer + 0x4);
+		iounmap(irq_steer);
 	}
 
 	i2c_dev->dev = &pdev->dev;
@@ -712,8 +729,8 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
 
-	ret = devm_request_irq(&pdev->dev, i2c_dev->irq, lpi2c_imx_isr, 0,
-			dev_name(&pdev->dev), i2c_dev);
+	ret = devm_request_irq(&pdev->dev, i2c_dev->irq, lpi2c_imx_isr,
+			irq_flags, dev_name(&pdev->dev), i2c_dev);
 	if (ret) {
 		dev_err(&pdev->dev, "Fail to request irq %i\n", i2c_dev->irq);
 		clk_disable_unprepare(i2c_dev->clk);

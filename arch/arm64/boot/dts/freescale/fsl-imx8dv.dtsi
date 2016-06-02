@@ -514,6 +514,12 @@
 			#power-domain-cells = <0>;
 			power-domains =<&pd_lvds1>;
 		};
+		pd_lvds2: LVDS2-power-domain {
+			compatible = "nxp, imx8-pd";
+			reg = <SC_R_LVDS_2>;
+			#power-domain-cells = <0>;
+			power-domains =<&pd_lvds2>;
+		};
 	};
 
 	clk: clk {
@@ -568,6 +574,78 @@
 		clocks = <&clk IMX8DV_I2C3_CLK>;
 		clock-names = "per";
 		power-domains = <&pd_lsio_i2c3>;
+		status = "disabled";
+	};
+
+	i2c0_lvds0: i2c@56246000 {
+		compatible = "fsl,imx8dv-lpi2c";
+		reg = <0x0 0x56246000 0x0 0x1000>;
+		interrupts = <0 57 4>;
+		fsl,irq-steer = <0x56240000>;
+		fsl,irq-num = <0x100>;
+		clocks = <&clk IM8DV_LVDS_0_I2C0_CLK>;
+		clock-names = "per";
+		power-domains = <&pd_lvds0>;
+		status = "disabled";
+	};
+
+	i2c1_lvds0: i2c@56247000 {
+		compatible = "fsl,imx8dv-lpi2c";
+		reg = <0x0 0x56247000 0x0 0x1000>;
+		interrupts = <0 57 4>;
+		fsl,irq-steer = <0x56240000>;
+		fsl,irq-num = <0x200>;
+		clocks = <&clk IM8DV_LVDS_0_I2C1_CLK>;
+		clock-names = "per";
+		power-domains = <&pd_lvds0>;
+		status = "disabled";
+	};
+
+	i2c0_lvds1: i2c@57226000 {
+		compatible = "fsl,imx8dv-lpi2c";
+		reg = <0x0 0x57227000 0x0 0x1000>;
+		interrupts = <0 58 4>;
+		fsl,irq-steer = <0x57220000>;
+		fsl,irq-num = <0x100>;
+		clocks = <&clk IM8DV_LVDS_1_I2C0_CLK>;
+		clock-names = "per";
+		power-domains = <&pd_lvds1>;
+		status = "disabled";
+	};
+
+	i2c1_lvds1: i2c@57227000 {
+		compatible = "fsl,imx8dv-lpi2c";
+		reg = <0x0 0x57227000 0x0 0x1000>;
+		interrupts = <0 58 4>;
+		fsl,irq-steer = <0x57220000>;
+		fsl,irq-num = <0x200>;
+		clocks = <&clk IM8DV_LVDS_1_I2C1_CLK>;
+		clock-names = "per";
+		power-domains = <&pd_lvds1>;
+		status = "disabled";
+	};
+
+	i2c0_lvds2: i2c@57246000 {
+		compatible = "fsl,imx8dv-lpi2c";
+		reg = <0x0 0x57246000 0x0 0x1000>;
+		interrupts = <0 59 4>;
+		fsl,irq-steer = <0x57240000>;
+		fsl,irq-num = <0x100>;
+		clocks = <&clk IM8DV_LVDS_2_I2C0_CLK>;
+		clock-names = "per";
+		power-domains = <&pd_lvds2>;
+		status = "disabled";
+	};
+
+	i2c1_lvds2: i2c@57247000 {
+		compatible = "fsl,imx8dv-lpi2c";
+		reg = <0x0 0x57247000 0x0 0x1000>;
+		interrupts = <0 59 4>;
+		fsl,irq-steer = <0x57240000>;
+		fsl,irq-num = <0x200>;
+		clocks = <&clk IM8DV_LVDS_2_I2C1_CLK>;
+		clock-names = "per";
+		power-domains = <&pd_lvds2>;
 		status = "disabled";
 	};
 

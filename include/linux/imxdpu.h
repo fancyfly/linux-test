@@ -563,9 +563,9 @@ typedef union {
 		uint32_t const_color;
 		bool use_global_alpha;
 		bool use_local_alpha;
-		uint32_t h_scale_factor;	/* downscaling  out/in */
+		uint32_t h_scale_factor;    /* downscaling  out/in */
 		uint32_t h_phase;
-		uint32_t v_scale_factor;	/* downscaling  out/in */
+		uint32_t v_scale_factor;    /* downscaling  out/in */
 		uint32_t v_phase[2][2];
 		bool use_video_proc;
 		bool interlaced;
@@ -591,9 +591,9 @@ typedef union {
 		uint32_t const_color;
 		bool use_global_alpha;
 		bool use_local_alpha;
-		uint32_t h_scale_factor;	/* downscaling  out/in */
+		uint32_t h_scale_factor;    /* downscaling  out/in */
 		uint32_t h_phase;
-		uint32_t v_scale_factor;	/* downscaling  out/in */
+		uint32_t v_scale_factor;    /* downscaling  out/in */
 		uint32_t v_phase[2][2];
 		bool use_video_proc;
 		bool interlaced;
@@ -614,8 +614,8 @@ typedef union {
 		uint8_t disp_id;
 		int16_t dest_top;
 		int16_t dest_left;
-		uint32_t dest_width;
-		uint32_t dest_height;
+		uint16_t dest_width;
+		uint16_t dest_height;
 		uint32_t const_color;
 		bool use_global_alpha;
 		bool use_local_alpha;
@@ -636,12 +636,11 @@ typedef union {
 		uint8_t disp_id;
 		int16_t dest_top;
 		int16_t dest_left;
-		uint32_t dest_width;
-		uint32_t dest_height;
+		uint16_t dest_width;
+		uint16_t dest_height;
 		uint32_t const_color;
 		bool use_global_alpha;
 		bool use_local_alpha;
-		// todo: add warp parameters
 	} fetch_warp;
 } imxdpu_channel_params_t;
 

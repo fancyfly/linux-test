@@ -3641,13 +3641,11 @@ int imxdpu_disp_set_chan_crop(
 
 
 	if (is_fetch_layer_chan(chan) || is_fetch_warp_chan(chan)) {
-
-
 		imxdpu_write_block(imxdpu,
 			offset +
 			IMXDPU_FETCHLAYER0_LAYEROFFSET0_OFFSET +
 			((IMXDPU_SUBCHAN_LAYER_OFFSET * sub_idx)),
-			(void *)&imxdpu->chan_data[idx].fetch_layer_prop.baseaddress0,
+			(void *)&imxdpu->chan_data[idx].fetch_layer_prop.layeroffset0,
 			5);
 
 	} else if (is_fetch_decode_chan(chan)) {
@@ -4274,10 +4272,6 @@ int imxdpu_init_channel_buffer(
 	if (imxdpu->chan_data[chan_idx].phyaddr_0 == 0) {
 		enable_buffer = IMXDPU_FALSE;
 	}
-	if (imxdpu->chan_data[chan_idx].phyaddr_0 == 0) {
-		enable_buffer = IMXDPU_FALSE;
-	}
-
 	if (imxdpu_is_yuv(imxdpu->chan_data[chan_idx].src_pixel_fmt)) {
 		/* TODO: need to get correct encoding range */
 		//enable_yuv = IMXDPU_LAYERPROPERTY_YUVCONVERSIONMODE__ITU601_FR;
@@ -4404,9 +4398,9 @@ int imxdpu_init_channel_buffer(
 			(void *)&imxdpu->chan_data[chan_idx].
 			fetch_layer_prop,
 			sizeof(fetch_layer_setup_t) / 4);
-		//imxdpu_write(imxdpu,
-		//	b_off + IMXDPU_FETCHLAYER0_TRIGGERENABLE_OFFSET,
-		//	get_channel_sub(chan));
+		imxdpu_write(imxdpu,
+			b_off + IMXDPU_FETCHLAYER0_TRIGGERENABLE_OFFSET,
+			get_channel_sub(chan));
 		imxdpu_disp_request_shadow_load(imxdpu_id,
 			imxdpu->chan_data[chan_idx].
 			disp_id,
@@ -4460,9 +4454,9 @@ int imxdpu_init_channel_buffer(
 			(void *)&imxdpu->chan_data[chan_idx].
 			fetch_layer_prop,
 			sizeof(fetch_layer_setup_t) / 4);
-		//imxdpu_write(imxdpu,
-		//	b_off + IMXDPU_FETCHWARP2_TRIGGERENABLE_OFFSET,
-		//	get_channel_sub(chan));
+		imxdpu_write(imxdpu,
+			b_off + IMXDPU_FETCHWARP2_TRIGGERENABLE_OFFSET,
+			get_channel_sub(chan));
 		imxdpu_disp_request_shadow_load(imxdpu_id,
 			imxdpu->chan_data[chan_idx].
 			disp_id,

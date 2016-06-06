@@ -693,6 +693,7 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 		writel(0x1, irq_steer + 0x0);
 		of_property_read_u32(np, "fsl,irq-num", &reg);
 		/* mask i2c interrupts */
+		reg |= readl(irq_steer + 0x4);
 		writel(reg, irq_steer + 0x4);
 		iounmap(irq_steer);
 	}

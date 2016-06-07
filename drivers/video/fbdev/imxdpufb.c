@@ -201,6 +201,26 @@ static int imxdpufb_parse_dt(struct platform_device *pdev,
 		params->instance = 2;
 	} else if (strncmp(temp, "/framebuffer@3", 14) == 0) {
 		params->instance = 3;
+	} else 	if (strncmp(temp, "/overlaybuffer@4", 16) == 0) {
+		params->instance = 4;
+	} else if (strncmp(temp, "/overlaybuffer@5", 16) == 0) {
+		params->instance = 5;
+	} else if (strncmp(temp, "/overlaybuffer@6", 16) == 0) {
+		params->instance = 6;
+	} else if (strncmp(temp, "/overlaybuffer@7", 16) == 0) {
+		params->instance = 7;
+	} else if (strncmp(temp, "/fractionalbuffer@8", 19) == 0) {
+		params->instance = 8;
+	} else if (strncmp(temp, "/fractionalbuffer@9", 19) == 0) {
+		params->instance = 9;
+	} else if (strncmp(temp, "/fractionalbuffer@10", 20) == 0) {
+		params->instance = 10;
+	} else if (strncmp(temp, "/fractionalbuffer@11", 20) == 0) {
+		params->instance = 11;
+	} else if (strncmp(temp, "/warpbuffer@12", 14) == 0) {
+		params->instance = 12;
+	} else if (strncmp(temp, "/warpbuffer@13", 14) == 0) {
+		params->instance = 13;
 	} else {
 		dev_err(&pdev->dev, "Can't parse full name property\n");
 		return -EINVAL;
@@ -411,27 +431,91 @@ static void imxdpu_start(uint64_t disp_phys_addr,
 			 const struct imxdpu_videomode *vmode,
 			 const struct imxdpufb_params *params)
 {
+#ifdef ENABLE_IMXDUFB_IRQ
 	struct imxdpu_soc *imxdpu_inst;
+#endif
 	imxdpu_layer_t layer;
 	imxdpu_chan_t chan;
-	const int stride = params->stride;
-	const int imxdpu_id = params->instance/2;
-	const int imxdpu_display_id = params->instance%2;
+	int stride = params->stride;
+	int imxdpu_id;
+	int imxdpu_display_id;
+	imxdpu_layer_idx_t layer_idx;
+	uint8_t layer_alpha;
+	bool use_local_alpha = false;
+	bool use_global_alpha = false;
 
-	pr_debug("Starting display imxdpu id %d, display %d\n",
-		imxdpu_id, imxdpu_display_id);
+	pr_debug("Starting display imxdpufb instance %d\n", params->instance); 
 
-	imxdpu_disp_setup_frame_gen(imxdpu_id, imxdpu_display_id,
-				    (const struct imxdpu_videomode *)vmode,
-				    0x80, 0, 0, 1, IMXDPU_DISABLE);
-	imxdpu_disp_init(imxdpu_id, imxdpu_display_id);
-	imxdpu_disp_setup_constframe(imxdpu_id, imxdpu_display_id, 0, 0, 0x80,
-				     0);
-#if 1
-	if (imxdpu_display_id == 0) {
-		chan = IMXDPU_CHAN_VIDEO_0;
+	/* todo: move the composition defaults to a table */
+	if (params->instance < 4) {
+		imxdpu_id = params->instance/2;
+		imxdpu_display_id = params->instance%2;
+		use_global_alpha = true;
+		if (imxdpu_display_id == 0) {
+			chan = IMXDPU_CHAN_INTEGRAL_0;
+			layer.stream = IMXDPU_DISPLAY_STREAM_0;
+			layer.primary = IMXDPU_ID_CONSTFRAME0;
+			layer_idx = IMXDPU_LAYER_0;
+			layer_alpha = 0xff;
+		} else {
+			chan = IMXDPU_CHAN_INTEGRAL_1;
+			layer.stream = IMXDPU_DISPLAY_STREAM_1;
+			layer.primary = IMXDPU_ID_CONSTFRAME1;
+			layer_idx = IMXDPU_LAYER_4;
+			layer_alpha = 0xff;
+		}
+		/* Initialize base layers fb0 - fb3*/
+		imxdpu_disp_setup_frame_gen(imxdpu_id, imxdpu_display_id,
+			(const struct imxdpu_videomode *)vmode,
+			0x3ff, 0, 0, 0, IMXDPU_DISABLE);
+		imxdpu_disp_init(imxdpu_id, imxdpu_display_id);
+		imxdpu_disp_setup_constframe(imxdpu_id, imxdpu_display_id, 0, 0, 0x0, 0);
+
+	} else if (params->instance < 8) {
+		imxdpu_id = (params->instance-4)/2;
+		imxdpu_display_id = (params->instance-4)%2;
+		use_local_alpha = true;
+		layer_alpha = 0x80;
+		if (imxdpu_display_id == 0) {
+			chan = IMXDPU_CHAN_VIDEO_0;
+			layer.stream = IMXDPU_DISPLAY_STREAM_0;
+			layer.primary = IMXDPU_ID_LAYERBLEND0;
+			layer_idx = IMXDPU_LAYER_1;
+		} else {
+			chan = IMXDPU_CHAN_VIDEO_1;
+			layer.stream = IMXDPU_DISPLAY_STREAM_1;
+			layer.primary = IMXDPU_ID_LAYERBLEND4;
+			layer_idx = IMXDPU_LAYER_5;
+		}
+	} else if (params->instance < 12) {
+		imxdpu_id = (params->instance-8)/2;
+		imxdpu_display_id = (params->instance-8)%2;
+		layer_alpha = 0x80;
+		use_local_alpha = true;
+		if (imxdpu_display_id == 0) {
+			chan = IMXDPU_CHAN_FRACTIONAL_0_1;
+			layer.stream = IMXDPU_DISPLAY_STREAM_0;
+			layer.primary = IMXDPU_ID_LAYERBLEND1;
+			layer_idx = IMXDPU_LAYER_2;
+		} else {
+			chan = IMXDPU_CHAN_FRACTIONAL_1_1;
+			layer.stream = IMXDPU_DISPLAY_STREAM_1;
+			layer.primary = IMXDPU_ID_LAYERBLEND5;
+			layer_idx = IMXDPU_LAYER_6;
+		}
+	} else if (params->instance < 14) {
+		/* Only 1 warp layer, so it is mapped to display 0 */
+		imxdpu_id = params->instance - 12;
+		imxdpu_display_id = 0;
+		layer_alpha = 0x80;
+		use_local_alpha = true;
+		chan = IMXDPU_CHAN_WARP_2_1;
+		layer.stream = IMXDPU_DISPLAY_STREAM_0;
+		layer.primary = IMXDPU_ID_LAYERBLEND2;
+		layer_idx = IMXDPU_LAYER_3;
 	} else {
-		chan = IMXDPU_CHAN_VIDEO_1;
+		pr_err("Invalid frambuffer instance\n");
+		return;
 	}
 
 	imxdpu_disp_setup_channel(
@@ -451,39 +535,32 @@ static void imxdpu_start(uint64_t disp_phys_addr,
 		vmode->hlen,	//uint16_t dest_width,
 		vmode->vlen,	//uint16_t dest_height,
 		IMXDPU_SET_FIELD(IMXDPU_COLOR_CONSTRED, 0) |
-		IMXDPU_SET_FIELD(IMXDPU_COLOR_CONSTGREEN, 0) |
+		IMXDPU_SET_FIELD(IMXDPU_COLOR_CONSTGREEN, 0x0) |
 		IMXDPU_SET_FIELD(IMXDPU_COLOR_CONSTBLUE, 0) |
-		IMXDPU_SET_FIELD(IMXDPU_COLOR_CONSTALPHA, 0),//uint32_t const_color,
+		IMXDPU_SET_FIELD(IMXDPU_COLOR_CONSTALPHA, 0x0),//uint32_t const_color,
+		use_global_alpha, /* enable global alpha */
+		use_local_alpha, /* enable local alpha */
 		disp_phys_addr);
-
-#endif
 
 	layer.enable = IMXDPU_TRUE;
 	layer.secondary = get_channel_blk(chan);
 
-	if (imxdpu_display_id == 0) {
-		layer.stream = IMXDPU_DISPLAY_STREAM_0;
-		layer.primary = IMXDPU_ID_CONSTFRAME0;
-		imxdpu_disp_setup_layer(imxdpu_id, &layer, IMXDPU_LAYER_0);
-		imxdpu_disp_set_layer_global_alpha(imxdpu_id, IMXDPU_LAYER_0,
-						   0xff);
-	} else {
-		layer.stream = IMXDPU_DISPLAY_STREAM_1;
-		layer.primary = IMXDPU_ID_CONSTFRAME1;
-		imxdpu_disp_setup_layer(imxdpu_id, &layer, IMXDPU_LAYER_1);
-		imxdpu_disp_set_layer_global_alpha(imxdpu_id, IMXDPU_LAYER_1,
-						   0xff);
-	}
+	imxdpu_disp_setup_layer(imxdpu_id, &layer, layer_idx, 1); 
+	imxdpu_disp_set_layer_position(imxdpu_id, layer_idx, 0, 0);
+	imxdpu_disp_set_layer_global_alpha(imxdpu_id, layer_idx, layer_alpha); 
 
+#ifdef ENABLE_IMXDUFB_IRQ
 	imxdpu_inst = imxdpu_get_soc(imxdpu_id);
-#if 0
 	imxdpu_request_irq(imxdpu_id,
 			   IMXDPU_FRAMEGEN0_INT0_IRQ,
 			   (void *)fb_irq_handler, 0, "imxdpufb", imxdpu_inst);
 #endif
-	imxdpu_disp_enable_frame_gen(imxdpu_id, imxdpu_display_id,
-				     IMXDPU_ENABLE);
-	imxdpu_disp_check_shadow_loads(imxdpu_id, imxdpu_display_id);
+	if (params->instance < 4) {
+		imxdpu_disp_enable_frame_gen(imxdpu_id, imxdpu_display_id,
+			IMXDPU_ENABLE);
+		imxdpu_disp_check_shadow_loads(imxdpu_id, imxdpu_display_id);
+	}
+	dump_layerblend(imxdpu_id);
 	pr_debug("imxdpufb display start ...\n");
 }
 
@@ -511,6 +588,7 @@ static uint32_t imxdpu_convert_format(uint32_t format)
 	pr_debug("%s(): format in 0x%08x out 0x%08x\n", __func__, format, ret);
  	return ret;
 }
+
 static int imxdpufb_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -632,8 +710,8 @@ static int imxdpufb_probe(struct platform_device *pdev)
 	}
 
 	imxdpu_start((uint64_t) info->fix.smem_start,
-		     &mode_db[params.current_mode],
-		     &params);
+		&mode_db[params.current_mode],
+		&params);
 
 	dev_info(&pdev->dev, "fb%d imxdpufb registered!\n", info->node);
 

@@ -831,6 +831,101 @@
 		status = "disabled";
 	};
 
+	framebuffer4: overlaybuffer@4 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x56220000 0x0 0x10000>;
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+
+	framebuffer5: overlaybuffer@5 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x56240000 0x0 0x10000>;
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+
+	framebuffer6: overlaybuffer@6 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x57220000 0x0 0x10000>;
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+
+	framebuffer7: overlaybuffer@7 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x57240000 0x0 0x10000>;
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+
+	framebuffer8: fractionalbuffer@8 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x56220000 0x0 0x10000>;
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+	framebuffer9: fractionalbuffer@9 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x56240000 0x0 0x10000>;
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+	framebuffer10: fractionalbuffer@10 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x57220000 0x0 0x10000>;
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+	framebuffer11: fractionalbuffer@11 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x57240000 0x0 0x10000>;
+		width = <1920>;
+		height = <1080>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+	framebuffer12: warpbuffer@12 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x56220000 0x0 0x10000>;
+		width = <1280>;
+		height = <720>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+	framebuffer13: warpbuffer@13 {
+		compatible = "imxdpu-framebuffer";
+		reg = <0x0 0x57220000 0x0 0x10000>;
+		width = <1280>;
+		height = <720>;
+		stride = <(1920*4)>;
+		format = "b8g8r8a8";
+		status = "disabled";
+	};
+
 	gpio0: gpio@5E080000 {
 		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
 		reg = <0x0 0x5E080000 0x0 0x4000>;

@@ -223,8 +223,8 @@ static int lpi2c_imx_set_bus_speed(struct lpi2c_imx_dev *i2c_dev)
 	u32 reg;
 	u32 preescale = 0, best_pre = 0, clkhi = 0;
 	u32 best_clkhi = 0, abs_error = 0, rate;
-	u32 error = 0xffffffff;
-	u32 clock_rate = 24000000;
+	u32 error;
+	u32 clock_rate;
 	bool mode;
 	int i;
 
@@ -232,6 +232,9 @@ static int lpi2c_imx_set_bus_speed(struct lpi2c_imx_dev *i2c_dev)
 	mode = reg & LPI2C_MCR_MEN;
 	/* disable master mode */
 	i2c_writel(i2c_dev, reg & ~LPI2C_MCR_MEN, LPI2C_MCR);
+
+	clock_rate = clk_get_rate(i2c_dev->clk);
+	error = clock_rate;
 
 	for (preescale = 1; (preescale <= 128) &&
 		(error != 0); preescale = 2 * preescale)
@@ -247,7 +250,7 @@ static int lpi2c_imx_set_bus_speed(struct lpi2c_imx_dev *i2c_dev)
 			abs_error = i2c_dev->bitrate > rate ?
 				i2c_dev->bitrate - rate: rate - i2c_dev->bitrate;
 
-			if (abs_error < error) {
+			if (error > abs_error) {
 				best_pre = preescale;
 				best_clkhi = clkhi;
 				error = abs_error;

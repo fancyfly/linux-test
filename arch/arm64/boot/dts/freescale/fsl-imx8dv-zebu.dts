@@ -220,6 +220,8 @@
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
+	assigned-clocks = <&clk IMX8DV_AUDIO_PLL_DIV>, <&clk IMX8DV_SAI0_DIV>;
+	assigned-clock-rates = <786432000>, <24576000>;
 	fsl,sai-asynchronous;
 	status = "okay";
 };

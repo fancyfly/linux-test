@@ -1131,8 +1131,6 @@
 				<&clk IMX8DV_SAI0_CLK>,
 				<&clk 0>, <&clk 0>;
 		clock-names = "bus", "mclk1", "mclk2", "mclk3";
-		assigned-clocks = <&clk IMX8DV_SAI0_CLK>, <&clk IMX8DV_SAI0_DIV>;
-		assigned-clock-rates = <24576000>, <24576000>;
 		dma-names = "rx", "tx";
 		dmas = <&sdma 8 24 0>, <&sdma 9 24 0>;
 		status = "disabled";

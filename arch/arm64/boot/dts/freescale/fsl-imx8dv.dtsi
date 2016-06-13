@@ -1122,4 +1122,48 @@
 		clock-names = "qspi_en", "qspi";
 		status = "disabled";
        };
+
+	sai1: sai@5a0a0000 {
+		compatible = "fsl,imx6ul-sai", "fsl,imx6sx-sai";
+		reg = <0x0 0x5a0a0000 0x0 0x10000>;
+		interrupts = <0 215 4>;
+		clocks = <&clk IMX8DV_SAI0_CLK>,
+				<&clk IMX8DV_SAI0_CLK>,
+				<&clk 0>, <&clk 0>;
+		clock-names = "bus", "mclk1", "mclk2", "mclk3";
+		assigned-clocks = <&clk IMX8DV_SAI0_CLK>, <&clk IMX8DV_SAI0_DIV>;
+		assigned-clock-rates = <24576000>, <24576000>;
+		dma-names = "rx", "tx";
+		dmas = <&sdma 8 24 0>, <&sdma 9 24 0>;
+		status = "disabled";
+		power-domains = <&pd_mw_sai0>;
+	};
+
+	sai2: sai@5a0b0000 {
+		compatible = "fsl,imx6ul-sai", "fsl,imx6sx-sai";
+		reg = <0x0 0x5a0b0000 0x0 0x10000>;
+		interrupts = <0 216 4>;
+		clocks = <&clk IMX8DV_SAI1_CLK>,
+				<&clk IMX8DV_SAI1_CLK>,
+				<&clk 0>, <&clk 0>;
+		clock-names = "bus", "mclk1", "mclk2", "mclk3";
+		dma-names = "rx", "tx";
+		dmas = <&sdma 10 24 0>, <&sdma 11 24 0>;
+		status = "disabled";
+		power-domains = <&pd_mw_sai1>;
+	};
+
+	sai3: sai@5a0c0000 {
+		compatible = "fsl,imx6ul-sai", "fsl,imx6sx-sai";
+		reg = <0x0 0x5a0c0000 0x0 0x10000>;
+		interrupts = <0 217 4>;
+		clocks = <&clk IMX8DV_SAI2_CLK>,
+				<&clk IMX8DV_SAI2_CLK>,
+				<&clk 0>, <&clk 0>;
+		clock-names = "bus", "mclk1", "mclk2", "mclk3";
+		dma-names = "rx", "tx";
+		dmas = <&sdma 12 24 0>, <&sdma 13 24 0>;
+		status = "disabled";
+		power-domains = <&pd_mw_sai2>;
+	};
 };

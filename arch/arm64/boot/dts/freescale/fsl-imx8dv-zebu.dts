@@ -75,6 +75,12 @@
 			default-state = "on";
 		};
 	};
+
+	sound-xtor {
+		compatible = "fsl,imx-audio-xtor";
+		model = "xtor-audio";
+		cpu-dai = <&sai1>;
+	};
 };
 
 &i2c0 {
@@ -131,12 +137,26 @@
 			146 5 0 0 0 0 0x10
 			>;
 		};
+
 		pinctrl_i2c0: i2c0grp {
 			fsl,pins = <
 			122 5 0 0 0 0 0x10 	/* scl */
 			123 5 0 0 0 0 0x10 	/* sda */
 			>;
 		};
+
+		pinctrl_sai1: gpiosai1 {
+			fsl,pins = <
+			69 5 0 0 0 0 0x10
+			70 5 0 0 0 0 0x10
+			71 5 0 0 0 0 0x10
+			72 5 0 0 0 0 0x10
+			73 5 0 0 0 0 0x10
+			74 5 0 0 0 0 0x10
+			75 5 0 0 0 0 0x10
+			>;
+		};
+
 	};
 };
 
@@ -195,4 +215,11 @@
 			reg = <1>;
 		};
 	};
+};
+
+&sai1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai1>;
+	fsl,sai-asynchronous;
+	status = "okay";
 };

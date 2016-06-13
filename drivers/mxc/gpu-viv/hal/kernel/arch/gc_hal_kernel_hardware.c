@@ -1053,7 +1053,7 @@ _QueryFeatureDatabase(
         break;
 
     case gcvFEATURE_BLT_ENGINE:
-        available = database->REG_BltEngine;
+        available = 0; /*database->REG_BltEngine;*/
        break;
 
     case gcvFEATURE_HALTI0:

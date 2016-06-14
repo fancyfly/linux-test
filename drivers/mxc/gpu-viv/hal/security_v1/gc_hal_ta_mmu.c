@@ -204,7 +204,7 @@ _AllocateStlb(
 {
     gceSTATUS status;
     gcsMMU_STLB_PTR stlb;
-    gctPOINTER pointer;
+    gctPOINTER pointer = gcvNULL;
 
     /* Allocate slave TLB record. */
     gcmkONERROR(gctaOS_Allocate(gcmSIZEOF(gcsMMU_STLB), &pointer));
@@ -233,6 +233,8 @@ _AllocateStlb(
     return gcvSTATUS_OK;
 
 OnError:
+    if(pointer != gcvNULL)
+        gcmkVERIFY_OK(gctaOS_Free(pointer));
     return status;
 }
 
@@ -245,7 +247,7 @@ gctaMMU_Construct(
     gceSTATUS status;
     gctSIZE_T bytes = 4096;
 
-    gcTA_MMU mmu;
+    gcTA_MMU mmu = gcvNULL;
 
     gcmkONERROR(gctaOS_Allocate(
         gcmSIZEOF(gcsTA_MMU),
@@ -297,6 +299,8 @@ gctaMMU_Construct(
     return gcvSTATUS_OK;
 
 OnError:
+    if(mmu != gcvNULL)
+        gcmkVERIFY_OK(gctaOS_Free((gctPOINTER)mmu));
     return status;
 }
 

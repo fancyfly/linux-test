@@ -682,6 +682,9 @@ long drv_ioctl(
             }
         }
 
+        if(i == gcvCORE_COUNT)
+            goto OnError;
+
         gckOS_GetProcessID(&processID);
 
         gcmkONERROR(gckVIDMEM_HANDLE_Lookup(device->kernels[i],

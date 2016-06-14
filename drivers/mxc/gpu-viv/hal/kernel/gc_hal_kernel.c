@@ -5899,7 +5899,7 @@ gckKERNEL_MapInTrustApplicaiton(
     )
 {
     gceSTATUS status;
-    gctUINT32 * physicalArrayLogical;
+    gctUINT32 * physicalArrayLogical = gcvNULL;
     gctSIZE_T bytes;
     gctPOINTER logical = Logical;
     gctUINT32 i;
@@ -5964,6 +5964,11 @@ gckKERNEL_MapInTrustApplicaiton(
     return gcvSTATUS_OK;
 
 OnError:
+    if(physicalArrayLogical != gcvNULL)
+        gcmkVERIFY_OK(gckOS_Free(
+            Kernel->os,
+            (gctPOINTER)physicalArrayLogical
+            ));
     gcmkFOOTER();
     return status;
 }

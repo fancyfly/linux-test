@@ -1053,7 +1053,7 @@ _QueryFeatureDatabase(
         break;
 
     case gcvFEATURE_BLT_ENGINE:
-        available = 0; /*database->REG_BltEngine;*/
+        available = database->REG_BltEngine;
        break;
 
     case gcvFEATURE_HALTI0:
@@ -2146,7 +2146,6 @@ gckHARDWARE_InitializeHardware(
      || _IsHardwareMatch(Hardware, gcv320, 0x5303)
      || _IsHardwareMatch(Hardware, gcv880, 0x5106)
      || _IsHardwareMatch(Hardware, gcv400, 0x4645)
-     || _IsHardwareMatch(Hardware, gcv7000, 0x6008)
     )
     {
         /* Update GPU AXI cache atttribute. */

@@ -589,7 +589,7 @@ This define enables the use of VM for gckCommand and fence buffers.
 #if gcdFPGA_BUILD
 #       define gcdGPU_TIMEOUT                   (3600 * 1000)
 #   else
-#       define gcdGPU_TIMEOUT                   20000
+#       define gcdGPU_TIMEOUT                   200000
 #   endif
 #endif
 

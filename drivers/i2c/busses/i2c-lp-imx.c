@@ -480,6 +480,7 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 	struct lpi2c_imx_dev *i2c_dev = i2c_get_adapdata(adap);
 	int i, j, ret = 0;
 	u8 flags;
+
 #if 0
 	dev_info(i2c_dev->dev, "xfer num: %d\n", num);
 	for (i = 0; i < num; i++) {
@@ -498,6 +499,10 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 		flags = ((u8)msgs[0].flags & I2C_M_RD) | 0x8;
 
 	for (i = 0; i < num; i++) {
+		/* update flags */
+		if (msgs[i].len)
+			flags = (u8)msgs[i].flags & I2C_M_RD;
+
 		/* start i2c transfer */
 		ret = lpi2c_imx_start(i2c_dev, (u8)msgs[i].addr, flags);
 		if (ret) {

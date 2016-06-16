@@ -96,7 +96,7 @@ enum lpi2c_err_type {
 };
 
 #define LPI2C_BITRATE		100000 /* 100KHz */
-#define LPI2C_TIMEOUT		(msecs_to_jiffies(1000))
+#define LPI2C_TIMEOUT		(msecs_to_jiffies(100))
 #define LPI2C_FIFO_SIZE 4
 #define LPI2C_MTDR_CMD(x) \
 	(((u32)(((u32)(x))) << 8u)) & 0x700u
@@ -124,12 +124,8 @@ struct lpi2c_imx_dev {
 	void __iomem *base;
 	unsigned int bitrate;
 	int irq;
-	bool irq_disabled;
 	struct completion complete;
 	u32 status;
-	u8 *msg_buf;
-	size_t msg_left;
-	int msg_read;
 };
 
 static int lpi2c_imx_init(struct lpi2c_imx_dev *i2c_dev);
@@ -164,58 +160,29 @@ static void lpi2c_imx_mask_irq(struct lpi2c_imx_dev *i2c_dev, u32 mask)
 	i2c_writel(i2c_dev, reg, LPI2C_MIER);
 }
 
-static int lpi2c_imx_empty_rx_fifo(struct lpi2c_imx_dev *i2c_dev)
-{
-	dev_info(i2c_dev->dev, "i2c: on %s\n", __func__);
-	return 0;
-}
-
-static int lpi2c_imx_fill_tx_fifo(struct lpi2c_imx_dev *i2c_dev)
-{
-	dev_info(i2c_dev->dev, "i2c: on %s\n", __func__);
-	return 0;
-}
-
 static irqreturn_t lpi2c_imx_isr(int irq, void *dev_id)
 {
-	u32 status;
 	struct lpi2c_imx_dev *i2c_dev = dev_id;
+	u32 reg, status;
 
 	status = i2c_readl(i2c_dev, LPI2C_MSR);
-#if 0
-	/* receive */
-	if ((status & LPI2C_MSR_RDF) && i2c_dev->msg_read) {
-		if (i2c_dev->msg_left)
-			lpi2c_imx_empty_rx_fifo(i2c_dev);
+
+	/* flush tx fifo */
+	if (status & LPI2C_MSR_FEF) {
+		reg = i2c_readl(i2c_dev, LPI2C_MCR);
+		reg |= LPI2C_MCR_RTF;
+		i2c_writel(i2c_dev, reg, LPI2C_MCR);
 	}
 
-	/* transmit */
-	if ((status & LPI2C_MSR_TDF) && !i2c_dev->msg_read) {
-		if (i2c_dev->msg_left)
-			lpi2c_imx_fill_tx_fifo(i2c_dev);
-		else
-			lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_TDIE);
-	}
+	/* signal nack detect */
+	if (status & LPI2C_MSR_NDF)
+		i2c_dev->status |= LPI2C_MSR_NDF;
 
-#endif
-	i2c_dev->status = status;
 	/* clear irq */
 	i2c_writel(i2c_dev, status, LPI2C_MSR);
 	complete(&i2c_dev->complete);
 
 	return IRQ_HANDLED;
-#if 0
-error:
-	/* mask all interrupts */
-	lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_DMIE | LPI2C_MIER_PLTIE |
-			LPI2C_MIER_FEIE | LPI2C_MIER_ALIE | LPI2C_MIER_NDIE |
-			LPI2C_MIER_SDIE | LPI2C_MIER_EPIE | LPI2C_MIER_RDIE |
-			LPI2C_MIER_TDIE);
-	i2c_writel(i2c_dev, status, LPI2C_MSR);
-	complete(&i2c_dev->complete);
-
-	return IRQ_HANDLED;
-#endif
 }
 
 static int lpi2c_imx_set_bus_speed(struct lpi2c_imx_dev *i2c_dev)
@@ -305,22 +272,22 @@ static int lpi2c_imx_check_busy_bus(struct lpi2c_imx_dev *i2c_dev)
 
 static int lpi2c_imx_check_clear_error(struct lpi2c_imx_dev *i2c_dev)
 {
-	u32 status, reg;
+	u32 reg;
 	int result = LPI2C_ERR_NONE;
 
-	status = i2c_readl(i2c_dev, LPI2C_MSR);
+	i2c_dev->status = i2c_readl(i2c_dev, LPI2C_MSR);
 	/* errors to check for */
-	status &= LPI2C_MSR_NDF | LPI2C_MSR_ALF |
+	i2c_dev->status &= LPI2C_MSR_NDF | LPI2C_MSR_ALF |
 		LPI2C_MSR_FEF | LPI2C_MSR_PLTF;
 
-	if (status) {
-		if (status & LPI2C_MSR_PLTF)
+	if (i2c_dev->status) {
+		if (i2c_dev->status & LPI2C_MSR_PLTF)
 			result = LPI2C_ERR_PLTF;
-		else if (status & LPI2C_MSR_ALF)
+		else if (i2c_dev->status & LPI2C_MSR_ALF)
 			result = LPI2C_ERR_ALF;
-		else if (status & LPI2C_MSR_NDF)
+		else if (i2c_dev->status & LPI2C_MSR_NDF)
 			result = LPI2C_ERR_NDF;
-		else if (status & LPI2C_MSR_FEF)
+		else if (i2c_dev->status & LPI2C_MSR_FEF)
 			result = LPI2C_ERR_FEF;
 		/* clear status flags */
 		i2c_writel(i2c_dev, 0x7F00, LPI2C_MSR);
@@ -338,6 +305,9 @@ static int lpi2c_imx_wait_for_tx_ready(struct lpi2c_imx_dev *i2c_dev)
 	u32 reg, txcount;
 	int result = LPI2C_ERR_NONE;
 
+	/* unmask fifo error interrupt */
+	lpi2c_imx_unmask_irq(i2c_dev, LPI2C_MIER_FEIE);
+
 	do {
 		txcount = i2c_readl(i2c_dev, LPI2C_MFSR) & 0xff;
 		if (!txcount)
@@ -345,7 +315,7 @@ static int lpi2c_imx_wait_for_tx_ready(struct lpi2c_imx_dev *i2c_dev)
 		txcount = LPI2C_FIFO_SIZE - txcount;
 		result = lpi2c_imx_check_clear_error(i2c_dev);
 		if (result) {
-			if (result == LPI2C_ERR_NDF)
+			if (result == LPI2C_ERR_FEF || result == LPI2C_ERR_NDF)
 				break;
 			dev_info(i2c_dev->dev,
 				"wait for tx ready: result 0x%x\n", result);
@@ -355,6 +325,9 @@ static int lpi2c_imx_wait_for_tx_ready(struct lpi2c_imx_dev *i2c_dev)
 		if (reg & ~LPI2C_MSR_TDF && txcount)
 			break;
 	} while (!txcount);
+
+	/* mask fifo error interrupt */
+	lpi2c_imx_mask_irq(i2c_dev, LPI2C_MIER_FEIE);
 
 	return 0;
 }
@@ -425,24 +398,6 @@ static int lpi2c_imx_stop(struct lpi2c_imx_dev *i2c_dev)
 		return -ETIMEDOUT;
 	}
 
-	/* clear stop and end of packet flags */
-	reg = i2c_readl(i2c_dev, LPI2C_MSR);
-
-	if (i2c_dev->status & LPI2C_MSR_SDF) {
-		reg &= LPI2C_MSR_SDF;
-		i2c_dev->status &= ~LPI2C_MSR_SDF;
-	}
-
-	if (i2c_dev->status & LPI2C_MSR_EPF) {
-		reg &= LPI2C_MSR_EPF;
-		i2c_dev->status &= ~LPI2C_MSR_EPF;
-	}
-
-	if (i2c_dev->status & LPI2C_MSR_NDF)
-		reg &= LPI2C_MSR_NDF;
-
-	i2c_writel(i2c_dev, reg, LPI2C_MSR);
-
 	return 0;
 }
 
@@ -493,15 +448,8 @@ static int lpi2c_imx_receive(struct lpi2c_imx_dev *i2c_dev, u8 *rxbuf, u16 len)
 	while(len--) {
 		do {
 			result = lpi2c_imx_check_clear_error(i2c_dev);
-			if (result) {
-#if 0
-				if (result == LPI2C_ERR_NDF)
-					break;
-#endif
-				dev_err(i2c_dev->dev,
-					"receive check clear error: %d\n", result);
+			if (result)
 				return result;
-			}
 			reg = i2c_readl(i2c_dev, LPI2C_MRDR);
 		} while (reg & LPI2C_MRDR_RXEMPTY);
 		*rxbuf++ = LPI2C_MRDR_DATA(reg);
@@ -513,30 +461,17 @@ static int lpi2c_imx_receive(struct lpi2c_imx_dev *i2c_dev, u8 *rxbuf, u16 len)
 static int lpi2c_imx_xfer_msg(struct lpi2c_imx_dev *i2c_dev,
 		struct i2c_msg *msg, int stop)
 {
-	int ret;
+	int ret = LPI2C_ERR_NONE;
 
-	if (msg->flags & I2C_M_RD) {
-#if 0
-		ret = lpi2c_imx_send(i2c_dev, (u8 *)&msg->addr, 1);
-		if (ret) {
-			dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
-			return ret;
-		}
-#endif
+	if (msg->flags & I2C_M_RD)
 		ret = lpi2c_imx_receive(i2c_dev, msg->buf, msg->len);
-		if (ret) {
-			dev_info(&i2c_dev->adapter.dev, "read error: %d\n", ret);
-			return ret;
-		}
-	} else {
+	else
 		ret = lpi2c_imx_send(i2c_dev, msg->buf, msg->len);
-		if (ret) {
-			dev_info(&i2c_dev->adapter.dev, "write error: %d\n", ret);
-			return ret;
-		}
-	}
 
-	return 0;
+	if (stop)
+		ret = lpi2c_imx_stop(i2c_dev);
+
+	return ret;
 }
 
 static int lpi2c_imx_xfer(struct i2c_adapter *adap,
@@ -562,7 +497,6 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 	else
 		flags = ((u8)msgs[0].flags & I2C_M_RD) | 0x8;
 
-
 	for (i = 0; i < num; i++) {
 		/* start i2c transfer */
 		ret = lpi2c_imx_start(i2c_dev, (u8)msgs[i].addr, flags);
@@ -571,25 +505,20 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adap,
 			goto xfer_error;
 		}
 		ret = lpi2c_imx_xfer_msg(i2c_dev, &msgs[i], (i == (num - 1)));
-		if (ret) {
+		if (ret && ret != LPI2C_ERR_NDF) {
 			dev_err(i2c_dev->dev, "xfer error: %d\n", ret);
 			goto xfer_error;
 		}
 	}
 
-	/* stop i2c transfer */
-	ret = lpi2c_imx_stop(i2c_dev);
-	if (ret) {
-		dev_err(i2c_dev->dev, "xfer stop error: %d\n", ret);
-		goto xfer_error;
-	}
-
 	/* detect ACK and clear */
-	if (flags & 0x8 && i2c_dev->status & LPI2C_MSR_NDF) {
+	if (i2c_dev->status & LPI2C_MSR_NDF) {
 		i2c_dev->status &= ~LPI2C_MSR_NDF;
-		return num;
+		if (flags & 0x8)
+			return num;
+		else
+			return -ENXIO;
 	}
-
 	/* start command expects NACK */
 	if (flags & 0x8)
 		return -ENXIO;

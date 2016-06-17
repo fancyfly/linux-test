@@ -538,8 +538,7 @@ xfer_error:
 
 static u32 lpi2c_imx_func(struct i2c_adapter *adap)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE | \
-		I2C_FUNC_SMBUS_BYTE_DATA | I2C_FUNC_SMBUS_QUICK;
+	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
 }
 
 static const struct i2c_algorithm lpi2c_imx_algo = {

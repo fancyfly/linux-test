@@ -98,7 +98,7 @@
 	};
 
 	mu: mu@5e1b0000 {
-		compatible = "fsl,imx8dv-mu","fsl,imx7d-mu", "fsl,imx6sx-mu";
+		compatible = "fsl,imx8-mu";
 		reg = <0x0 0x5e1b0000 0x0 0x10000>;
 		interrupts = <0 176 0x4>;
 		fsl,scu_ap_mu_id = <0>;

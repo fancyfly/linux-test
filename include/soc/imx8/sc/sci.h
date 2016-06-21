@@ -36,7 +36,7 @@
  *
  * @return  Returns an error code.
  */
-int imx8dv_mu_init(void);
+int imx8_mu_init(void);
 
 void notify_imx8_clk(void);
 

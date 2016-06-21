@@ -294,7 +294,7 @@ static irqreturn_t imx8_scu_mu_isr(int irq, void *param)
 }
 
 /*Initialization of the MU code. */
-int __init imx8dv_mu_init()
+int __init imx8_mu_init()
 {
 	struct device_node *np;
 	u32 irq;
@@ -304,7 +304,7 @@ int __init imx8dv_mu_init()
 	/*
 	 * Get the address of MU to be used for communication with the SCU
 	 */
-	np = of_find_compatible_node(NULL, NULL, "fsl,imx8dv-mu");
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx8-mu");
 	if (!np)
 		pr_info("Cannot find MU entry in device tree\n");
 	mu_base_virtaddr = of_iomap(np, 0);
@@ -312,7 +312,7 @@ int __init imx8dv_mu_init()
 
 	err = of_property_read_u32_index(np, "fsl,scu_ap_mu_id", 0, &scu_mu_id);
 	if (err)
-		pr_info("imx8dv_mu_init: Cannot get mu_id err = %d\n", err);
+		pr_info("imx8_mu_init: Cannot get mu_id err = %d\n", err);
 	
 	irq = of_irq_get(np, 0);
 
@@ -320,7 +320,7 @@ int __init imx8dv_mu_init()
 		IRQF_EARLY_RESUME, "imx8_mu_isr", NULL);
 
 	if (err) {
-		pr_info("imx8dv mu_init :request_irq failed %d, err = %d\n",
+		pr_info("imx8_mu_init :request_irq failed %d, err = %d\n",
 			irq, err);
 	}
 
@@ -370,4 +370,4 @@ int __init imx8dv_mu_init()
 	return scu_mu_id;
 }
 
-early_initcall(imx8dv_mu_init);
+early_initcall(imx8_mu_init);

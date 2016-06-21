@@ -1,3 +1,3 @@
-obj-$(CONFIG_ARCH_FSL_IMX8DV) += mu/
-obj-$(CONFIG_ARCH_FSL_IMX8DV) += sc/
-obj-$(CONFIG_ARCH_FSL_IMX8DV) += pm-domains.o
+obj-$(CONFIG_ARCH_NXP_IMX8) += mu/
+obj-$(CONFIG_ARCH_NXP_IMX8) += sc/
+obj-$(CONFIG_ARCH_NXP_IMX8) += pm-domains.o

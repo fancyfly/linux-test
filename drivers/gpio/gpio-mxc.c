@@ -406,6 +406,9 @@ static int mxc_gpio_probe(struct platform_device *pdev)
 	struct mxc_gpio_port *port;
 	struct resource *iores;
 	int irq_base;
+	void __iomem *irq_steer;
+	unsigned long irq_flags;
+	u32 reg;
 	int err;
 
 	mxc_gpio_get_hw(pdev);
@@ -423,6 +426,22 @@ static int mxc_gpio_probe(struct platform_device *pdev)
 	port->irq = platform_get_irq(pdev, 0);
 	if (port->irq < 0)
 		return port->irq;
+
+	/* check for shared irq */
+	err = of_property_read_u32(np, "fsl,irq-steer", &reg);
+	if (err) {
+		irq_flags = 0;
+	} else {
+		irq_flags = IRQF_SHARED;
+		irq_steer = ioremap(reg, SZ_1K);
+		/* enable irq steer output channel 0 */
+		writel(0x1, irq_steer + 0xC0);
+		of_property_read_u32(np, "fsl,irq-num", &reg);
+		/* unmask GPIO interrupts */
+		reg |= readl(irq_steer + 0x0);
+		writel(reg, irq_steer + 0x0);
+		iounmap(irq_steer);
+	}
 
 	/* disable the interrupt and clear the status */
 	writel(0, port->base + GPIO_IMR);

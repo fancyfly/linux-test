@@ -1006,6 +1006,55 @@
 		#interrupt-cells = <2>;
 	};
 
+	gpio_lcd: gpio@56222000 {
+		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
+		reg = <0x0 0x56222000 0x0 0x1000>;
+		interrupts = <0 56 4>;
+		fsl,irq-steer = <0x56220000>;
+		fsl,irq-num = <0xFF>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+	};
+
+	gpio_lvds0: gpio@56242000 {
+		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
+		reg = <0x0 0x56242000 0x0 0x1000>;
+		interrupts = <0 57 4>;
+		fsl,irq-steer = <0x56240000>;
+		fsl,irq-num = <0xFF>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+	};
+
+	gpio_lvds1: gpio@57222000 {
+		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
+		reg = <0x0 0x57222000 0x0 0x1000>;
+		interrupts = <0 58 4>;
+		fsl,irq-steer = <0x57220000>;
+		fsl,irq-num = <0xFF>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+	};
+
+
+	gpio_lvds2: gpio@57242000 {
+		compatible = "fsl,imx8dv-gpio", "fsl,imx35-gpio";
+		reg = <0x0 0x57242000 0x0 0x1000>;
+		interrupts = <0 59 4>;
+		fsl,irq-steer = <0x57240000>;
+		fsl,irq-num = <0xFF>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+	};
+
 	gpu: gpu@53100000 {
 		compatible = "fsl,imx8dv-gpu", "fsl,imx8x-gpu";
 		reg = <0x0 0x53100000 0 0x40000>, <0x0 0x54100000 0x0 0x40000>, <0x0 0x0 0x0 0x0>, <0x0 0x0 0x0 0x01000000>;

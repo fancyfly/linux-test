@@ -172,10 +172,8 @@ static int __init imx8_init_pm_domains(void)
 	}
 
 	sciErr = sc_ipc_open(&pm_ipcHandle, mu_id);
-	/* Inform the clock code that power domains init is complete. */
-	notify_imx8_clk();
+
 	return 0;
 }
 
 early_initcall(imx8_init_pm_domains);
-

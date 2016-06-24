@@ -330,7 +330,7 @@ static void __init imx8dv_clocks_init(struct device_node *ccm_node)
 	printk("*************** finished imx8dv_clocks_init\n");
 }
 
-void notify_imx8_clk(void)
+static int __init notify_imx8_clk(void)
 {
 	uint32_t mu_id;
 	sc_err_t sciErr;
@@ -341,21 +341,23 @@ void notify_imx8_clk(void)
 	sciErr = sc_ipc_getMuID(&mu_id);
 	if (sciErr != SC_ERR_NONE) {
 		pr_info("Cannot obtain MU ID\n");
-		return;
+		return sciErr;
 	}
 
 	sciErr = sc_ipc_open(&ccm_ipcHandle, mu_id);
 
 	if (sciErr != SC_ERR_NONE) {
 		pr_info("Cannot open MU channel to SCU\n");
-		return;
+		return sciErr;
 	};
 
 	/* Initialize the clk rate for all the possible clocks now. */
 	for (i = 0; i < IMX8DV_CLK_END; i++)
 		clk_get_rate(clks[i]);
+
+	return 0;
 }
-EXPORT_SYMBOL(notify_imx8_clk);
+core_initcall(notify_imx8_clk);
 
 CLK_OF_DECLARE(imx8dv,"fsl,imx8dv-clk", imx8dv_clocks_init);
 

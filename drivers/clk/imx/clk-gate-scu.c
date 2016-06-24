@@ -24,7 +24,7 @@
 #include <linux/err.h>
 #include <linux/string.h>
 #include <soc/imx8/sc/sci.h>
-#include "clk-imx8dv.h"
+#include "clk-imx8.h"
 
 /**
  * DOC: basic gatable clock which can gate and ungate it's ouput

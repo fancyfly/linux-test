@@ -29,7 +29,7 @@
 
 #include <soc/imx8/imx8dv/lpcg.h>
 #include <soc/imx8/sc/sci.h>
-#include "clk-imx8dv.h"
+#include "clk-imx8.h"
 
 DEFINE_SPINLOCK(imx_ccm_lock);
 sc_ipc_t ccm_ipcHandle;

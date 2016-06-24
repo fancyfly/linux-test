@@ -1,5 +1,5 @@
-#ifndef __IMX8DV_CLK_H
-#define __IMX8DV_CLK_H
+#ifndef __IMX8_CLK_H
+#define __IMX8_CLK_H
 
 #include <linux/spinlock.h>
 #include <linux/clk-provider.h>

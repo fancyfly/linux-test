@@ -23,7 +23,7 @@
 #include <linux/jiffies.h>
 #include <linux/err.h>
 #include <soc/imx8/sc/sci.h>
-#include "clk-imx8dv.h"
+#include "clk-imx8.h"
 
 
 struct clk_divider_scu {

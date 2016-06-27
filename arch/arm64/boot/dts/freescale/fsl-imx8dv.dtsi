@@ -1016,6 +1016,7 @@
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
+		status = "disabled";
 	};
 
 	gpio_lvds0: gpio@56242000 {
@@ -1028,6 +1029,7 @@
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
+		status = "disabled";
 	};
 
 	gpio_lvds1: gpio@57222000 {
@@ -1040,6 +1042,7 @@
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
+		status = "disabled";
 	};
 
 
@@ -1053,6 +1056,7 @@
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
+		status = "disabled";
 	};
 
 	gpu: gpu@53100000 {

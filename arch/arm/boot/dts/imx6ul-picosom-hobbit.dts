@@ -127,17 +127,21 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio>;
 		enable-gpios =  <&gpio4 19 0>,
+				<&gpio4 20 0>,
 				<&gpio4 21 0>,
 				<&gpio4 22 0>,
 				<&gpio4 23 0>,
 				<&gpio4 24 0>,
-				<&gpio1 29 0>,
+				<&gpio4 18 0>,
 				<&gpio5 2 0>;
 		status = "okay";
 	};
 
 	leds {
 		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_led>;
+
 		led0 {
 			label = "led0";
 			gpios = <&gpio1 29 GPIO_ACTIVE_HIGH>;
@@ -560,7 +564,7 @@
 			>;
 		};
 
-		pinctrl_gpio: gpio {
+		pinctrl_gpio: gpiogrp {
 			fsl,pins = <
 				MX6UL_PAD_CSI_VSYNC__GPIO4_IO19 0x79
 				MX6UL_PAD_CSI_HSYNC__GPIO4_IO20 0x79
@@ -568,8 +572,14 @@
 				MX6UL_PAD_CSI_DATA01__GPIO4_IO22 0x79
 				MX6UL_PAD_CSI_DATA02__GPIO4_IO23 0x79
 				MX6UL_PAD_CSI_DATA03__GPIO4_IO24 0x79
-				MX6UL_PAD_UART4_RX_DATA__GPIO1_IO29 0x79
+				MX6UL_PAD_CSI_PIXCLK__GPIO4_IO18 0x79
 				MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02 0x79
+			>;
+		};
+
+		pinctrl_led: ledgrp {
+			fsl,pins = <
+				MX6UL_PAD_UART4_RX_DATA__GPIO1_IO29 0x79
 			>;
 		};
 	};

@@ -1312,6 +1312,8 @@ static int sdma_transfer_init(struct sdma_channel *sdmac,
 
 	sdmac->status = DMA_IN_PROGRESS;
 	sdmac->buf_tail = 0;
+	sdmac->buf_ptail = 0;
+	sdmac->chn_real_count = 0;
 	sdmac->flags = 0;
 	sdmac->direction = direction;
 	sdmac->flags = 0;
@@ -1674,7 +1676,7 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 	 */
 	if ((sdmac->flags & IMX_DMA_SG_LOOP) &&
 	    sdmac->peripheral_type != IMX_DMATYPE_UART)
-		residue = (sdmac->num_bd - sdmac->buf_tail) *
+		residue = (sdmac->num_bd - sdmac->buf_ptail) *
 			   sdmac->period_len - sdmac->chn_real_count;
 	else
 		residue = sdmac->chn_count - sdmac->chn_real_count;

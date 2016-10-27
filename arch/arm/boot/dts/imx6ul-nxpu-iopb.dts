@@ -159,6 +159,8 @@
 				     <&clks IMX6UL_CLK_SAI1>;
 		   assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
 		   assigned-clock-rates = <0>, <24576000>;
+		   /* set SAI1_MCLK_DIR to enable codec MCLK on imx6ul */
+		   gpr = <&gpr 4 0x80000 0x80000>;
 		   VDDA-supply = <&reg_3p3v>;
 		   VDDIO-supply = <&reg_3p3v>;
 	   };

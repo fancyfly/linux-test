@@ -201,6 +201,7 @@ void imx6q_enable_rbc(bool enable);
 void imx7d_low_power_idle(void);
 int imx7d_idle_secondary_finish(unsigned long val);
 bool imx_gpc_usb_wakeup_enabled(void);
+bool imx_gpc_enet_wakeup_enabled(void);
 
 void imx_cpu_die(unsigned int cpu);
 int imx_cpu_kill(unsigned int cpu);

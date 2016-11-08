@@ -1338,6 +1338,7 @@ static int sdhci_esdhc_imx_remove(struct platform_device *pdev)
 		clk_disable_unprepare(imx_data->clk_ipg);
 		clk_disable_unprepare(imx_data->clk_ahb);
 	}
+	release_bus_freq(BUS_FREQ_HIGH);
 
 	sdhci_pltfm_free(pdev);
 

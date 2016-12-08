@@ -27,9 +27,12 @@
 #define SUPPORT_RATE_NUM 10
 
 struct imx_xtor_data {
-	struct snd_soc_dai_link dai;
+	struct snd_soc_dai_link dai[3];
 	struct snd_soc_card card;
 	bool  is_stream_opened[2];
+	struct platform_device *asrc_pdev;
+	u32 asrc_rate;
+	u32 asrc_format;
 };
 
 static int imx_xtor_startup(struct snd_pcm_substream *substream)
@@ -105,6 +108,36 @@ static void imx_xtor_shutdown(struct snd_pcm_substream *substream)
 	data->is_stream_opened[tx] = false;
 }
 
+static int be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+				struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_card *card = rtd->card;
+	struct imx_xtor_data *data = snd_soc_card_get_drvdata(card);
+	struct snd_interval *rate;
+	struct snd_mask *mask;
+
+	if (!data->asrc_pdev)
+		return -EINVAL;
+
+	rate = hw_param_interval(params, SNDRV_PCM_HW_PARAM_RATE);
+	rate->max = rate->min = data->asrc_rate;
+
+	mask = hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT);
+	snd_mask_none(mask);
+	snd_mask_set(mask, data->asrc_format);
+
+	return 0;
+}
+
+static const struct snd_soc_dapm_route audio_map[] = {
+	/* Line out jack */
+	{"CPU-Playback",  NULL, "ASRC-Playback"},
+	{"Playback",  NULL, "CPU-Playback"},/* dai route for be and fe */
+	{"ASRC-Capture",  NULL, "CPU-Capture"},
+	{"CPU-Capture",  NULL, "Capture"},
+};
+
+
 static struct snd_soc_ops imx_xtor_ops = {
 	.startup = imx_xtor_startup,
 	.shutdown  = imx_xtor_shutdown,
@@ -112,23 +145,24 @@ static struct snd_soc_ops imx_xtor_ops = {
 	.hw_free = imx_xtor_hw_free,
 };
 
+static struct snd_soc_ops imx_xtor_be_ops = {
+	.hw_params = imx_xtor_hw_params,
+	.hw_free = imx_xtor_hw_free,
+};
+
 static int imx_xtor_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np, *xtor_np = NULL;
+	struct device_node *asrc_np = NULL;
+	struct platform_device *asrc_pdev = NULL;
 	struct platform_device *cpu_pdev;
 	struct imx_xtor_data *data;
 	int ret;
+	u32 width;
 
 	cpu_np = of_parse_phandle(pdev->dev.of_node, "cpu-dai", 0);
 	if (!cpu_np) {
 		dev_err(&pdev->dev, "cpu dai phandle missing or invalid\n");
-		ret = -EINVAL;
-		goto fail;
-	}
-
-	cpu_pdev = of_find_device_by_node(cpu_np);
-	if (!cpu_pdev) {
-		dev_err(&pdev->dev, "failed to find SAI platform device\n");
 		ret = -EINVAL;
 		goto fail;
 	}
@@ -139,26 +173,88 @@ static int imx_xtor_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	data->dai.name = "xtor hifi";
-	data->dai.stream_name = "xtor hifi";
-	data->dai.codec_dai_name = "snd-soc-dummy-dai";
-	data->dai.codec_name = "snd-soc-dummy";
-	data->dai.cpu_dai_name = dev_name(&cpu_pdev->dev);
-	data->dai.platform_of_node = cpu_np;
-	data->dai.ops = &imx_xtor_ops;
-	data->dai.playback_only = false;
-	data->dai.capture_only = false;
-	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S |
+	asrc_np = of_parse_phandle(pdev->dev.of_node, "asrc-controller", 0);
+	if (asrc_np) {
+		asrc_pdev = of_find_device_by_node(asrc_np);
+		data->asrc_pdev = asrc_pdev;
+	}
+
+	cpu_pdev = of_find_device_by_node(cpu_np);
+	if (!cpu_pdev) {
+		dev_err(&pdev->dev, "failed to find SAI platform device\n");
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	data->dai[0].name = "xtor hifi";
+	data->dai[0].stream_name = "xtor hifi";
+	data->dai[0].codec_dai_name = "snd-soc-dummy-dai";
+	data->dai[0].codec_name = "snd-soc-dummy";
+	data->dai[0].cpu_dai_name = dev_name(&cpu_pdev->dev);
+	data->dai[0].platform_of_node = cpu_np;
+	data->dai[0].ops = &imx_xtor_ops;
+	data->dai[0].playback_only = false;
+	data->dai[0].capture_only = false;
+	data->dai[0].dai_fmt = SND_SOC_DAIFMT_I2S |
 			    SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
+	data->card.num_links = 1;
+	data->card.dai_link = data->dai;
 
+	/*if there is no asrc controller, we only enable one device*/
+	if (asrc_pdev) {
+		data->dai[1].name = "HiFi-ASRC-FE";
+		data->dai[1].stream_name = "HiFi-ASRC-FE";
+		data->dai[1].codec_dai_name = "snd-soc-dummy-dai";
+		data->dai[1].codec_name = "snd-soc-dummy";
+		data->dai[1].cpu_of_node    = asrc_np;
+		data->dai[1].platform_of_node   = asrc_np;
+		data->dai[1].dynamic   = 1;
+		data->dai[1].dpcm_playback  = 1;
+		data->dai[1].dpcm_capture   = 1;
+
+		data->dai[2].name = "HiFi-ASRC-BE";
+		data->dai[2].stream_name = "HiFi-ASRC-BE";
+		data->dai[2].codec_dai_name  = "snd-soc-dummy-dai";
+		data->dai[2].codec_name      = "snd-soc-dummy";
+		data->dai[2].cpu_of_node     = cpu_np;
+		data->dai[2].platform_name   = "snd-soc-dummy";
+		data->dai[2].no_pcm   = 1;
+		data->dai[2].dpcm_playback  = 1;
+		data->dai[2].dpcm_capture   = 1;
+		data->dai[2].ops = &imx_xtor_be_ops,
+		data->dai[2].be_hw_params_fixup = be_hw_params_fixup,
+		data->card.num_links = 3;
+		data->card.dai_link = &data->dai[0];
+
+		ret = of_property_read_u32(asrc_np, "fsl,asrc-rate",
+						&data->asrc_rate);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to get output rate\n");
+			ret = -EINVAL;
+			goto fail;
+		}
+
+		ret = of_property_read_u32(asrc_np, "fsl,asrc-width", &width);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to get output rate\n");
+			ret = -EINVAL;
+			goto fail;
+		}
+
+		if (width == 24)
+			data->asrc_format = SNDRV_PCM_FORMAT_S24_LE;
+		else
+			data->asrc_format = SNDRV_PCM_FORMAT_S16_LE;
+	}
+
+	data->card.dapm_routes = audio_map,
+	data->card.num_dapm_routes = ARRAY_SIZE(audio_map),
 	data->card.dev = &pdev->dev;
 	data->card.owner = THIS_MODULE;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
 	if (ret)
 		goto fail;
-	data->card.num_links = 1;
-	data->card.dai_link = &data->dai;
 
 	platform_set_drvdata(pdev, &data->card);
 	snd_soc_card_set_drvdata(&data->card, data);

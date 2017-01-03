@@ -23,26 +23,27 @@
  *
  * $Id: dhd_linux_platdev.c 401742 2013-05-13 15:03:21Z $
  */
-#include <typedefs.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/platform_device.h>
 #include <bcmutils.h>
-#include <linux_osl.h>
 #include <dhd_dbg.h>
+#include <dhd_linux.h>
 #include <dngl_stats.h>
 #include <dhd.h>
 #include <dhd_bus.h>
-#include <dhd_linux.h>
-#include <wl_android.h>
+#include <linux/clk.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/platform_device.h>
+#include <linux_osl.h>
 #if defined(CONFIG_WIFI_CONTROL_FUNC)
 #include <linux/wlan_plat.h>
 #endif
 #ifdef CONFIG_DTS
-#include<linux/regulator/consumer.h>
 #include<linux/of_gpio.h>
+#include<linux/regulator/consumer.h>
 #endif /* CONFIG_DTS */
+#include <typedefs.h>
+#include <wl_android.h>
 
 #if !defined(CONFIG_WIFI_CONTROL_FUNC)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 58))
@@ -325,6 +326,14 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 		DHD_ERROR(("%s regulator is null\n", __FUNCTION__));
 		return -1;
 	}
+
+	struct clk *clk32k;
+	clk32k = devm_clk_get(&pdev->dev, NULL);
+	/* pico-7d board use CCM generated 32K clk */
+	if (!IS_ERR(clk32k)) {
+		clk_prepare_enable(clk32k);
+	}
+
 #if defined(OOB_INTR_ONLY) && defined (HW_OOB)
 	/* This is to get the irq for the OOB */
 	gpio = of_get_gpio(pdev->dev.of_node, 0);

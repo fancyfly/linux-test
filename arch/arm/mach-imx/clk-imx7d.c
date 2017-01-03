@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014-2016 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -367,7 +368,7 @@ static int const clks_init_on[] __initconst = {
 	IMX7D_PLL_SYS_MAIN_480M_CLK, IMX7D_NAND_USDHC_BUS_ROOT_CLK,
 	IMX7D_DRAM_PHYM_ROOT_CLK, IMX7D_DRAM_ROOT_CLK,
 	IMX7D_DRAM_PHYM_ALT_ROOT_CLK, IMX7D_DRAM_ALT_ROOT_CLK,
-	IMX7D_AHB_CHANNEL_ROOT_CLK, IMX7D_CLKO2_ROOT_DIV,
+	IMX7D_AHB_CHANNEL_ROOT_CLK,
 	};
 
 static struct clk_onecell_data clk_data;

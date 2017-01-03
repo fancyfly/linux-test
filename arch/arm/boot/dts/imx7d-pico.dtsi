@@ -69,6 +69,7 @@
 		pinctrl-0 = <&pinctrl_wifi_ctrl &pinctrl_bt_ctrl>;
 		status = "okay";
 		wlreg_on-supply = <&wlreg_on>;
+		clocks = <&clks IMX7D_CLKO2_ROOT_DIV>;
 	};
 
 	pxp_v4l2_out {

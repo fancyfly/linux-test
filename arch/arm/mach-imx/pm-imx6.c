@@ -628,6 +628,13 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
 		if (cpu_is_imx6sl() || cpu_is_imx6sx() || cpu_is_imx6ul())
 			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
+		else if (cpu_is_imx6q() &&
+		    imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2 &&
+		    imx_mmdc_get_lpddr2_2ch_mode() == IMX_LPDDR2_2CH_MODE) {
+			/* keep handshake enabled for lpddr2 2ch-mode */
+			val &= ~BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
+			val &= ~BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
+		}
 		else
 			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
 		break;
@@ -645,6 +652,13 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
 		if (cpu_is_imx6sl() || cpu_is_imx6sx() || cpu_is_imx6ul())
 			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
+		else if (cpu_is_imx6q() &&
+		    imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2 &&
+		    imx_mmdc_get_lpddr2_2ch_mode() == IMX_LPDDR2_2CH_MODE) {
+			/* keep handshake enabled for lpddr2 2ch-mode */
+			val &= ~BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
+			val &= ~BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
+		}
 		else
 			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
 		break;

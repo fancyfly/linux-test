@@ -1,0 +1,118 @@
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/dts-v1/;
+
+/* First 128KB is for PSCI ATF. */
+/memreserve/ 0x80000000 0x00020000;
+
+#include "fsl-imx8qm.dtsi"
+
+/ {
+	model = "Freescale i.MX8QM Zebu";
+	compatible = "fsl,imx8qm-zebu", "fsl,imx8qm";
+
+	chosen {
+		bootargs = "console=ttyLP0,115200 earlycon=lpuart32,0x5a060000,115200";
+		stdout-path = &lpuart0;
+	};
+};
+
+&iomuxc {
+	imx8qm-zebu {
+
+		pinctrl_lpuart0: lpuart0grp {
+			fsl,pins = <
+				SC_P_UART0_RX		0xc600004c
+				SC_P_UART0_TX		0xc600004c
+				SC_P_UART0_RTS_B	0xc600004c
+				SC_P_UART0_CTS_B	0xc600004c
+			>;
+		};
+
+		pinctrl_usdhc1: usdhc1grp {
+			fsl,pins = <
+				SC_P_EMMC0_CLK		0xc6000008
+				SC_P_EMMC0_CMD		0xc6000048
+				SC_P_EMMC0_DATA0	0xc6000048
+				SC_P_EMMC0_DATA1	0xc6000048
+				SC_P_EMMC0_DATA2	0xc6000048
+				SC_P_EMMC0_DATA3	0xc6000048
+				SC_P_EMMC0_DATA4	0xc6000048
+				SC_P_EMMC0_DATA5	0xc6000048
+				SC_P_EMMC0_DATA6	0xc6000048
+				SC_P_EMMC0_DATA7	0xc6000048
+			>;
+		};
+
+		pinctrl_lpi2c1: lpi2c1grp {
+			fsl,pins = <
+				SC_P_USB_SS3_TC1	0xc600004c
+				SC_P_USB_SS3_TC2	0xc600004c
+			>;
+		};
+
+		pinctrl_lpspi0: lpspi0grp {
+			fsl,pins = <
+				SC_P_SPI0_SCK		0xc600004c
+				SC_P_SPI0_SDO		0xc600004c
+				SC_P_SPI0_SDI		0xc600004c
+				SC_P_SPI0_CS0		0xc600004c
+				SC_P_SPI0_CS1		0xc600004c
+			>;
+		};
+	};
+};
+
+&i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lpi2c1>;
+	status = "okay";
+};
+
+&lpspi0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lpspi0>;
+	status = "okay";
+
+	spidev0: spi@0 {
+		reg = <0>;
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <4000000>;
+	};
+};
+
+&lpuart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lpuart0>;
+	status = "okay";
+};
+
+&lpuart1 {
+	status = "okay";
+};
+
+&sai0 {
+	assigned-clocks = <&clk IMX8QM_ACM_SAI0_MCLK_SEL>,
+			<&clk IMX8QM_AUD_PLL0_DIV>,
+			<&clk IMX8QM_AUD_ACM_AUD_PLL_CLK0_DIV>,
+			<&clk IMX8QM_AUD_SAI_0_MCLK>;
+	assigned-clock-parents = <&clk IMX8QM_AUD_ACM_AUD_PLL_CLK0_CLK>;
+	assigned-clock-rates = <0>, <786432000>, <24576000>, <24576000>;
+	fsl,sai-asynchronous;
+	status = "disabled";
+};

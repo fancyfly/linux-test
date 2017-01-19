@@ -598,6 +598,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usb_otg1_id>;
 	dr_mode = "otg";
+	hnp-disable;
+	srp-disable;
+	adp-disable;
 	disable-over-current;
 	status = "okay";
 };

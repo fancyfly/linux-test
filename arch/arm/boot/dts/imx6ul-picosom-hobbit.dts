@@ -61,15 +61,6 @@
 			enable-active-high;
 		};
 
-		bt_on: bt_on {
-			compatible = "regulator-fixed";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-name = "bt_on";
-			gpio = <&gpio5 9 GPIO_ACTIVE_HIGH>;
-			regulator-boot-on;
-		};
-
 		reg_2p5v: 2p5v {
 			compatible = "regulator-fixed";
 			regulator-name = "2P5V";
@@ -95,6 +86,12 @@
 			regulator-max-microvolt = <5000000>;
 			gpio = <&gpio1 6 0>;
 		};
+	};
+
+	bt_rfkill {
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = <&gpio5 9 0>;
+		status ="okay";
 	};
 
 	bcmdhd_wlan_0: bcmdhd_wlan@0 {

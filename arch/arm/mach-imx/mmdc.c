@@ -24,8 +24,11 @@
 #define	MMDC_MDMISC             0x18
 #define	BM_MMDC_MDMISC_DDR_TYPE 0x18
 #define	BP_MMDC_MDMISC_DDR_TYPE 0x3
+#define	BM_MMDC_MDMISC_LPDDR2_2CH 0x4
+#define	BP_MMDC_MDMISC_LPDDR2_2CH 0x2
 
 static int ddr_type;
+static int lpddr2_2ch_mode;
 
 static int imx_mmdc_probe(struct platform_device *pdev)
 {
@@ -40,9 +43,11 @@ static int imx_mmdc_probe(struct platform_device *pdev)
 	reg = mmdc_base + MMDC_MDMISC;
 	/* Get ddr type */
 	val = readl_relaxed(reg);
-	val &= BM_MMDC_MDMISC_DDR_TYPE;
-	val >>= BP_MMDC_MDMISC_DDR_TYPE;
-	ddr_type = val;
+	ddr_type = (val & BM_MMDC_MDMISC_DDR_TYPE) >>
+		 BP_MMDC_MDMISC_DDR_TYPE;
+	/* Get lpddr2 2ch-mode */
+	lpddr2_2ch_mode = (val & BM_MMDC_MDMISC_LPDDR2_2CH) >>
+			BP_MMDC_MDMISC_LPDDR2_2CH;
 
 	reg = mmdc_base + MMDC_MAPSR;
 
@@ -67,6 +72,11 @@ static int imx_mmdc_probe(struct platform_device *pdev)
 int imx_mmdc_get_ddr_type(void)
 {
 	return ddr_type;
+}
+
+int imx_mmdc_get_lpddr2_2ch_mode(void)
+{
+	return lpddr2_2ch_mode;
 }
 
 static struct of_device_id imx_mmdc_dt_ids[] = {

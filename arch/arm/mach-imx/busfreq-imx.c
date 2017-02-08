@@ -520,6 +520,21 @@ static void reduce_bus_freq(void)
 			else if (ddr_type == MMDC_MDMISC_DDR_TYPE_LPDDR2)
 				imx_clk_set_parent(periph_pre_clk, pll2_400);
 			imx_clk_set_parent(periph_clk, periph_pre_clk);
+
+			/*
+			 * As periph_pre_clk's parent is not changed from
+			 * high mode to audio mode on lpddr2, the clk framework
+			 * will not update its children's freq, but we
+			 * change the mmdc_ch0_axi podf in asm code, so here
+			 * need to update mmdc rate to make sure clk
+			 * tree is right, although it will not do any
+			 * change to hardware. Calling get_rate will only call
+			 * the .rate_recalc which is all we need.
+			 */
+			if (high_bus_freq_mode && mmdc_clk)
+				if (ddr_type == IMX_DDR_TYPE_LPDDR2)
+					clk_get_rate(mmdc_clk);
+
 			audio_bus_freq_mode = 1;
 			low_bus_freq_mode = 0;
 			cur_bus_freq_mode = BUS_FREQ_AUDIO;
@@ -652,6 +667,20 @@ static int set_high_bus_freq(int high_bus_freq)
 				imx_clk_set_parent(axi_alt_sel_clk, pll3_pfd1_540m);
 				imx_clk_set_parent(axi_sel_clk, axi_alt_sel_clk);
 			}
+			/*
+			 * As periph_pre_clk's parent is not changed from
+			 * high mode to audio mode on lpddr2, the clk framework
+			 * will not update its children's freq, but we
+			 * change the mmdc_ch0_axi podf in asm code, so here
+			 * need to update mmdc rate to make sure clk
+			 * tree is right, although it will not do any
+			 * change to hardware. Calling get_rate will only call
+			 * the .rate_recalc which is all we need.
+			 */
+			if (audio_bus_freq_mode && mmdc_clk)
+				if (ddr_type == IMX_DDR_TYPE_LPDDR2)
+					clk_get_rate(mmdc_clk);
+
 			clk_disable_unprepare(pll2_400);
 		} else {
 			if (ddr_type == MMDC_MDMISC_DDR_TYPE_DDR3)
@@ -1205,6 +1234,14 @@ static int busfreq_probe(struct platform_device *pdev)
 			return PTR_ERR(mmdc_clk);
 		}
 	}
+
+	if (cpu_is_imx6q()) {
+		mmdc_clk = devm_clk_get(&pdev->dev, "mmdc");
+		if (IS_ERR(mmdc_clk)) {
+			mmdc_clk = NULL;
+		}
+	}
+
 	if (cpu_is_imx6sx()) {
 		m4_clk = devm_clk_get(&pdev->dev, "m4");
 		if (IS_ERR(m4_clk)) {

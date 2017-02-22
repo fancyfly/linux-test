@@ -24,11 +24,3 @@
 &epdc {
 	status = "disabled";
 };
-
-&lcdif {
-	status = "disabled";
-};
-
-&mxcfb1{
-	status = "disabled";
-};

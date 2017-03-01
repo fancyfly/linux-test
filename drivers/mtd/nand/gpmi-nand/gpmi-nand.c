@@ -1335,6 +1335,11 @@ static int gpmi_ecc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
 	/* Loop over status bytes, accumulating ECC status. */
 	status = auxiliary_virt + nfc_geo->auxiliary_status_offset;
 
+	read_page_swap_end(this, buf, nfc_geo->payload_size,
+			this->payload_virt, this->payload_phys,
+			nfc_geo->payload_size,
+			payload_virt, payload_phys);
+
 	for (i = 0; i < nfc_geo->ecc_chunk_count; i++, status++) {
 		if (*status == STATUS_GOOD)
 			continue;
@@ -1351,8 +1356,8 @@ static int gpmi_ecc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
 					max_bitflips = max_t(unsigned int,
 							max_bitflips, 1);
 				} else if (debug1_value > 1) {
-					gpmi_erased_check(this, payload_virt,
-							i, page, &tmp_bitflips,
+					gpmi_erased_check(this, buf, i, page,
+							  &tmp_bitflips,
 							false);
 					max_bitflips = max_t(unsigned int,
 							max_bitflips,
@@ -1367,8 +1372,8 @@ static int gpmi_ecc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
 			/* platforms with DEBUG1 register don't need SW check */
 			if (!(GPMI_IS_MX6QP(this) || GPMI_IS_MX7(this) ||
 						GPMI_IS_MX6UL(this)))
-				if (gpmi_erased_check(this, payload_virt, i,
-							page, &max_bitflips,
+				if (gpmi_erased_check(this, buf, i, page,
+						      &max_bitflips,
 							true))
 					break;
 			mtd->ecc_stats.failed++;
@@ -1392,11 +1397,6 @@ static int gpmi_ecc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
 		memset(chip->oob_poi, ~0, mtd->oobsize);
 		chip->oob_poi[0] = ((uint8_t *) auxiliary_virt)[0];
 	}
-
-	read_page_swap_end(this, buf, nfc_geo->payload_size,
-			this->payload_virt, this->payload_phys,
-			nfc_geo->payload_size,
-			payload_virt, payload_phys);
 
 	/* if bitflip occurred in erased page, change data to all 0xff */
 	if (debug1_value) {

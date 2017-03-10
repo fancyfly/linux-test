@@ -2,7 +2,7 @@
 *
 *    The MIT License (MIT)
 *
-*    Copyright (c) 2014 - 2016 Vivante Corporation
+*    Copyright (c) 2014 - 2017 Vivante Corporation
 *
 *    Permission is hereby granted, free of charge, to any person obtaining a
 *    copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 *
 *    The GPL License (GPL)
 *
-*    Copyright (C) 2014 - 2016 Vivante Corporation
+*    Copyright (C) 2014 - 2017 Vivante Corporation
 *
 *    This program is free software; you can redistribute it and/or
 *    modify it under the terms of the GNU General Public License
@@ -269,7 +269,7 @@ _ShrinkMemory(
 }
 #endif
 
-#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+#if gcdENABLE_FSCALE_VAL_ADJUST && (defined(CONFIG_DEVICE_THERMAL) || defined(CONFIG_DEVICE_THERMAL_MODULE))
 static int thermal_hot_pm_notify(struct notifier_block *nb, unsigned long event,
        void *dummy)
 {
@@ -420,6 +420,7 @@ gckPLATFORM_AdjustParam(
         Args->baseAddress = res->start;
         Args->physSize = res->end - res->start + 1;
     }
+
 
     res = platform_get_resource_byname(pdev, IORESOURCE_IRQ, "irq_3d");
     if (res)
@@ -683,7 +684,7 @@ _GetPower(
     }
 
 
-#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+#if gcdENABLE_FSCALE_VAL_ADJUST && (defined(CONFIG_DEVICE_THERMAL) || defined(CONFIG_DEVICE_THERMAL_MODULE))
     pdevice = Platform->device;
     REG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
     {
@@ -747,7 +748,7 @@ _PutPower(
     }
 #endif
 
-#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+#if gcdENABLE_FSCALE_VAL_ADJUST && (defined(CONFIG_DEVICE_THERMAL) || defined(CONFIG_DEVICE_THERMAL_MODULE))
     UNREG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 
     driver_remove_file(pdevice->dev.driver, &driver_attr_gpu3DMinClock);
@@ -1091,6 +1092,16 @@ _GetPower_imx8x(
                 }
                 priv->sc_gpu_pid[j] = sc_gpu_pid[i];
 #endif
+#if defined(gcdANDROID)
+                clk_prepare(priv->clk_core_3d[j]);
+                clk_set_rate(priv->clk_core_3d[j], 800000000);
+                clk_unprepare(priv->clk_core_3d[j]);
+
+                clk_prepare(priv->clk_shader_3d[j]);
+                clk_set_rate(priv->clk_shader_3d[j], 800000000);
+                clk_unprepare(priv->clk_shader_3d[j]);
+#endif
+
                 j++;
             }
         } else {
@@ -1151,7 +1162,7 @@ _GetPower_imx8x(
     }
 #endif
 
-#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+#if gcdENABLE_FSCALE_VAL_ADJUST && (defined(CONFIG_DEVICE_THERMAL) || defined(CONFIG_DEVICE_THERMAL_MODULE))
     pdevice = Platform->device;
     REG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
     {
@@ -1187,7 +1198,7 @@ _PutPower_imx8x(
         }
     }
 
-#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
+#if gcdENABLE_FSCALE_VAL_ADJUST && (defined(CONFIG_DEVICE_THERMAL) || defined(CONFIG_DEVICE_THERMAL_MODULE))
     UNREG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 
     driver_remove_file(pdevice->dev.driver, &driver_attr_gpu3DMinClock);

@@ -32,6 +32,24 @@
 
 &iomuxc {
 	imx8qm-zebu {
+		pinctrl_fec1: fec1grp {
+			fsl,pins = <
+				SC_P_ENET0_MDC		0xc6000048
+				SC_P_ENET0_MDIO		0xc6000048
+				SC_P_ENET0_RGMII_TX_CTL	0xc6000048
+				SC_P_ENET0_RGMII_TXC	0xc6000048
+				SC_P_ENET0_RGMII_TXD0	0xc6000048
+				SC_P_ENET0_RGMII_TXD1	0xc6000048
+				SC_P_ENET0_RGMII_TXD2	0xc6000048
+				SC_P_ENET0_RGMII_TXD3	0xc6000048
+				SC_P_ENET0_RGMII_RXC	0xc6000048
+				SC_P_ENET0_RGMII_RX_CTL	0xc6000048
+				SC_P_ENET0_RGMII_RXD0	0xc6000048
+				SC_P_ENET0_RGMII_RXD1	0xc6000048
+				SC_P_ENET0_RGMII_RXD2	0xc6000048
+				SC_P_ENET0_RGMII_RXD3	0xc6000048
+			>;
+		};
 
 		pinctrl_lpuart0: lpuart0grp {
 			fsl,pins = <
@@ -73,6 +91,18 @@
 				SC_P_SPI0_CS1		0xc600004c
 			>;
 		};
+	};
+};
+
+&fec1 {
+	pinctrl-names = "default";
+	inctrl-0 = <&pinctrl_fec1>;
+	phy-mode = "rgmii";
+	status = "okay";
+
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
 	};
 };
 

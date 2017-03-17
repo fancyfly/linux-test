@@ -45,6 +45,8 @@
 #include "core.h"
 #include "common.h"
 
+#define slog(fmt, ...)  printk(KERN_INFO "%s: " fmt "\n", __func__, ##__VA_ARGS__)
+
 #define DCMD_RESP_TIMEOUT	msecs_to_jiffies(2500)
 #define CTL_DONE_TIMEOUT	msecs_to_jiffies(2500)
 
@@ -4084,6 +4086,7 @@ struct brcmf_sdio *brcmf_sdio_probe(struct brcmf_sdio_dev *sdiodev)
 	struct brcmf_sdio *bus;
 	struct workqueue_struct *wq;
 
+	slog();
 	brcmf_dbg(TRACE, "Enter\n");
 
 	/* Allocate private bus interface state */

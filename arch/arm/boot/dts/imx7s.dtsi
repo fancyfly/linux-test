@@ -996,6 +996,8 @@
 			};
 
 			usdhc2: usdhc@30b50000 {
+				#address-cells = <1>;
+				#size-cells = <0>;
 				compatible = "fsl,imx7d-usdhc", "fsl,imx6sl-usdhc";
 				reg = <0x30b50000 0x10000>;
 				interrupts = <GIC_SPI 23 IRQ_TYPE_LEVEL_HIGH>;

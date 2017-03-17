@@ -23,6 +23,8 @@
 #include "common.h"
 #include "of.h"
 
+#define slog(fmt, ...)  printk(KERN_INFO "%s: " fmt "\n", __func__, ##__VA_ARGS__)
+
 void brcmf_of_probe(struct device *dev, struct brcmfmac_sdio_pd *sdio)
 {
 	struct device_node *np = dev->of_node;
@@ -32,6 +34,7 @@ void brcmf_of_probe(struct device *dev, struct brcmfmac_sdio_pd *sdio)
 
 	if (!np || !of_device_is_compatible(np, "brcm,bcm4329-fmac"))
 		return;
+	slog("Compatible checked!");
 
 	if (of_property_read_u32(np, "brcm,drive-strength", &val) == 0)
 		sdio->drive_strength = val;
@@ -50,4 +53,6 @@ void brcmf_of_probe(struct device *dev, struct brcmfmac_sdio_pd *sdio)
 	sdio->oob_irq_supported = true;
 	sdio->oob_irq_nr = irq;
 	sdio->oob_irq_flags = irqf;
+
+	slog("SUCCESS!");
 }

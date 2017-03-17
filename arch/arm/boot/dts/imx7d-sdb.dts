@@ -110,16 +110,18 @@
 			startup-delay-us = <200000>;
 			enable-active-high;
 		};
+	};
 
-		wlreg_on: fixedregulator@6 {
-			compatible = "regulator-fixed";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			regulator-name = "wlreg_on";
-			gpio = <&gpio4 21 GPIO_ACTIVE_HIGH>;
-			startup-delay-us = <100>;
-			enable-active-high;
-		};
+	reg_brcm: regulator-brcm {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-name = "reg_brcm";
+		gpio = <&gpio4 21 GPIO_ACTIVE_HIGH>;
+		pinctrl-0 = <&pinctrl_brcm_reg>;
+		startup-delay-us = <100>;
+		enable-active-high;
+		regulator-always-on;
 	};
 
 	backlight {
@@ -128,12 +130,6 @@
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <6>;
 		status = "okay";
-	};
-
-	bcmdhd_wlan_0: bcmdhd_wlan@0 {
-		compatible = "android,bcmdhd_wlan";
-		gpios = <&gpio4 20 0>;		/* WL_HOST_WAKE */
-		wlreg_on-supply = <&wlreg_on>;
 	};
 
 	pxp_v4l2_out {
@@ -767,10 +763,12 @@
 	enable-sdio-wakeup;
 	keep-power-in-suspend;
 	non-removable;
-	cd-post;
-	pm-ignore-notify;
-	wifi-host;
 	status = "okay";
+
+	brcmf: brcmf@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+	};
 };
 
 &usdhc3 {
@@ -804,6 +802,13 @@
 	pinctrl-0 = <&pinctrl_hog_1>;
 
 	imx7d-sdb {
+
+		pinctrl_brcm_reg: brcmreggrp {
+			fsl,pins = <
+				MX7D_PAD_ECSPI2_MOSI__GPIO4_IO21	0x19 /* WL_REG_ON */
+				MX7D_PAD_ECSPI2_SCLK__GPIO4_IO20	0x19 /* WL_HOST_WAKE */
+			>;
+		};
 
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <

@@ -16,7 +16,7 @@
 #define PICO_AUD_I2S_CHANNEL sai1
 #define PICO_AUD_MUX_INT 3
 #define PICO_AUD_MUX_EXT 3
-#define PICO_AUD_CLK_SRC clks 201
+#define PICO_AUD_CLK_SRC sys_mclk 1
 
 /* GPIOs on PICO connector */
 #define PICO_EXT_GPIO_P24 gpio2 0

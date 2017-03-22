@@ -72,7 +72,7 @@ static int imx_xtor_hw_params(struct snd_pcm_substream *substream,
 	ret = snd_soc_dai_set_fmt(cpu_dai,
 			SND_SOC_DAIFMT_I2S |
 			SND_SOC_DAIFMT_NB_NF |
-			SND_SOC_DAIFMT_CBM_CFM);
+			SND_SOC_DAIFMT_CBS_CFS);
 	if (ret) {
 		dev_err(dev, "failed to set cpu dai fmt: %d\n", ret);
 		return ret;
@@ -197,7 +197,7 @@ static int imx_xtor_probe(struct platform_device *pdev)
 	data->dai[0].capture_only = false;
 	data->dai[0].dai_fmt = SND_SOC_DAIFMT_I2S |
 			    SND_SOC_DAIFMT_NB_NF |
-			    SND_SOC_DAIFMT_CBM_CFM;
+			    SND_SOC_DAIFMT_CBS_CFS;
 	data->card.num_links = 1;
 	data->card.dai_link = data->dai;
 

@@ -3,7 +3,7 @@ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1043a-rdb.dtb
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls2080a-qds.dtb
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls2080a-rdb.dtb
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls2080a-simu.dtb
-dtb-$(CONFIG_ARCH_FSL_IMX8QM) += fsl-imx8qm-zebu.dtb fsl-imx8qm-zebu_ca72.dtb
+dtb-$(CONFIG_ARCH_FSL_IMX8QM) += fsl-imx8qm-zebu.dtb fsl-imx8qm-zebu_ca72.dtb fsl-imx8qm-zebu_gpu.dtb
 dtb-$(CONFIG_ARCH_FSL_IMX8QXP) += fsl-imx8qxp-zebu.dtb fsl-imx8qxp-zebu_gpu.dtb
 
 always		:= $(dtb-y)

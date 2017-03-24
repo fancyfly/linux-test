@@ -666,8 +666,6 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <1>;
 			max-speed = <100>;
-			interrupt-parent = <&gpio5>;
-			interrupts = <6 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 	};
 };

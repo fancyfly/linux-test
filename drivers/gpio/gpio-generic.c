@@ -138,8 +138,15 @@ static unsigned long bgpio_pin2mask_be(struct bgpio_chip *bgc,
 static int bgpio_get(struct gpio_chip *gc, unsigned int gpio)
 {
 	struct bgpio_chip *bgc = to_bgpio_chip(gc);
+	int val;
 
-	return !!(bgc->read_reg(bgc->reg_dat) & bgc->pin2mask(bgc, gpio));
+	if (!(bgc->flags & BGPIOF_UNREADABLE_REG_DIR) &&
+		(bgc->read_reg(bgc->reg_dir) & bgc->pin2mask(bgc, gpio)))
+		val = !!(bgc->read_reg(bgc->reg_set) & bgc->pin2mask(bgc, gpio));
+	else
+		val = !!(bgc->read_reg(bgc->reg_dat) & bgc->pin2mask(bgc, gpio));
+
+	return val;
 }
 
 static void bgpio_set(struct gpio_chip *gc, unsigned int gpio, int val)
@@ -519,6 +526,8 @@ int bgpio_init(struct bgpio_chip *bgc, struct device *dev,
 		bgc->data = bgc->read_reg(bgc->reg_set);
 	if (bgc->reg_dir && !(flags & BGPIOF_UNREADABLE_REG_DIR))
 		bgc->dir = bgc->read_reg(bgc->reg_dir);
+
+	bgc->flags = flags;
 
 	return ret;
 }

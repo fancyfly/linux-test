@@ -24,3 +24,7 @@
 &epdc {
 	status = "disabled";
 };
+
+&usdhc1 {
+	status = "disabled";
+};

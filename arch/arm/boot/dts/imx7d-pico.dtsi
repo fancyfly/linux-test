@@ -44,6 +44,10 @@
 #define can2 flexcan2
 #define reg_1p8v reg_vref_1v8
 
+#define PICO_EXT_MIPI_CSI_OV5645_IOMUX &pinctrl_mipi_csi
+#define PICO_EXT_GPIO_P65 gpio1 5
+#define PICO_EXT_GPIO_P67 gpio1 4
+
 / {
 	aliases {
 		mxcfb0 = &mxcfb1;
@@ -191,7 +195,6 @@
 				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23		0x80000000  /* bt reg on */
 				MX7D_PAD_SD1_CD_B__GPIO5_IO0		0x59 /* baseboard sd cd pin */
 				MX7D_PAD_GPIO1_IO03__CCM_CLKO2		0x7d /* wifi LPO 32K Hz clock */
-				MX7D_PAD_GPIO1_IO02__CCM_CLKO1		0x7d /* mipi csi main clock */
 				MX7D_PAD_GPIO1_IO07__GPIO1_IO7		0x59 /* pmic sd_vel pin*/
 				MX7D_PAD_GPIO1_IO00__WDOD1_WDOG_B	0x74
 			>;
@@ -468,13 +471,6 @@
 				MX7D_PAD_SD3_DATA5__SD3_DATA5		0x5b
 				MX7D_PAD_SD3_DATA6__SD3_DATA6		0x5b
 				MX7D_PAD_SD3_DATA7__GPIO6_IO9		0x15 /* cpu module sd cd pin */
-			>;
-		};
-
-		pinctrl_mipi_csi: mipicsigrp-1 {
-			fsl,pins = <
-				MX7D_PAD_GPIO1_IO04__GPIO1_IO4 0x15 /*mipi csi reset*/
-				MX7D_PAD_GPIO1_IO05__GPIO1_IO5 0x15 /*mipi csi reset*/
 			>;
 		};
 
@@ -871,7 +867,13 @@
 				MX7D_PAD_GPIO1_IO06__GPIO1_IO6		0x14
 			>;
 		};
-
+		pinctrl_mipi_csi: mipicsigrp-1 {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO04__GPIO1_IO4 0x15 /*mipi csi power*/
+				MX7D_PAD_GPIO1_IO05__GPIO1_IO5 0x15 /*mipi csi reset*/
+				MX7D_PAD_GPIO1_IO02__CCM_CLKO1 0x7d /*mipi csi main clock */
+			>;
+		};
 	};
 };
 
@@ -905,6 +907,39 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
 	reset-gpio = <&gpio2 1 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&csi1 {
+	csi-mux-mipi = <&gpr 0x14 4>;
+	status = "okay";
+
+	port {
+		csi_ep: endpoint {
+		remote-endpoint = <&csi_mipi_ep>;
+		};
+	};
+};
+
+&mipi_csi {
+	clock-frequency = <240000000>;
+	status = "okay";
+	port {
+	mipi_sensor_ep: endpoint1 {
+	remote-endpoint = <&ov5645_mipi_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+
+		csi_mipi_ep: endpoint2 {
+			remote-endpoint = <&csi_ep>;
+		};
+	};
+};
+
+&epxp {
 	status = "okay";
 };
 

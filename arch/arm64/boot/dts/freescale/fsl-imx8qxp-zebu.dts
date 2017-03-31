@@ -37,8 +37,6 @@
 			fsl,pins = <
 				SC_P_UART0_RX		0xc600004c
 				SC_P_UART0_TX		0xc600004c
-				SC_P_UART0_RTS_B	0xc600004c
-				SC_P_UART0_CTS_B	0xc600004c
 			>;
 		};
 	};

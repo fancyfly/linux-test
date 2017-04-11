@@ -15,3 +15,11 @@
 
 #include "fsl-imx8qm-zebu.dts"
 #include "fsl-imx8-ca72.dtsi"
+
+&A72_0 {
+	operating-points = <
+		/* kHz    uV */
+		1800000 1150000
+	>;
+	clocks = <&clk IMX8QM_A72_DIV>;
+};

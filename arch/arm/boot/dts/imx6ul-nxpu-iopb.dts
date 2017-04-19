@@ -72,8 +72,13 @@
 		bcmdhd_wlan_0: bcmdhd_wlan@0 {
 				   compatible = "android,bcmdhd_wlan";
 				   wlreg_on-supply = <&wlreg_on>;
+		};
 	};
 
+	bt_rfkill {
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = <&gpio1 31 0>;
+		status ="okay";
 	};
 
 	clocks {

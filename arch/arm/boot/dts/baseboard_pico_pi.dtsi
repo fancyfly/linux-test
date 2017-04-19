@@ -98,26 +98,31 @@
 	};
 };
 
-&i2c2 {
+&i2c4 {
 	status = "okay";
 
-#ifdef PICO_EXT_MIPI_CSI_OV5640_IOMUX
-	ov5640_mipi: ov5640_mipi@3c {
-		compatible = "ovti,ov564x_mipi";
+#ifdef PICO_EXT_MIPI_CSI_OV5645_IOMUX
+        ov5645_mipi: ov5645_mipi@3c {
+		compatible = "ovti,ov5645_mipisubdev";
 		pinctrl-names = "default";
-		pinctrl-0 = <PICO_EXT_MIPI_CSI_OV5640_IOMUX>; /* GPIO_P69:mipi clock, GPIO_P67:power on, GPIO_P65:reset */
+		pinctrl-0 = <PICO_EXT_MIPI_CSI_OV5645_IOMUX>; /* GPIO_P69:mipi clock, GPIO_P67:power on, GPIO_P65:reset */
 		reg = <0x3c>;
-		clocks = <&clks 200>;
+		clocks = <&clks IMX7D_CLKO1_ROOT_DIV>;
 		clock-names = "csi_mclk";
 		DOVDD-supply = <&reg_1p8v>;
 		AVDD-supply = <&reg_2p5v>;
 		DVDD-supply = <&reg_1p8v>;
 		pwn-gpios = <&PICO_EXT_GPIO_P67 1>; /* GPIO_P67 */
 		rst-gpios = <&PICO_EXT_GPIO_P65 0>; /* GPIO_P65 */
-		ipu_id = <0>;
 		csi_id = <0>;
 		mclk = <24000000>;
 		mclk_source = <0>;
+		port {
+			ov5645_mipi_ep: endpoint {
+				remote-endpoint = <&mipi_sensor_ep>;
+			};
+		};
+
 	};
 #endif
 };

@@ -147,6 +147,16 @@
 	status = "disabled";
 };
 
+&esai0 {
+	assigned-clocks = <&clk IMX8QM_ACM_ESAI0_MCLK_SEL>,
+			<&clk IMX8QM_AUD_PLL0_DIV>,
+			<&clk IMX8QM_AUD_ACM_AUD_PLL_CLK0_DIV>,
+			<&clk IMX8QM_AUD_ESAI_0_EXTAL_IPG>;
+	assigned-clock-parents = <&clk IMX8QM_AUD_ACM_AUD_PLL_CLK0_CLK>;
+	assigned-clock-rates = <0>, <786432000>, <24576000>, <24576000>;
+	status = "disabled";
+};
+
 &A53_0 {
 	operating-points = <
 		/* kHz    uV */

@@ -165,7 +165,7 @@
 		sys_mclk: clock {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <24576000>;
+			clock-frequency = <24000000>;
 		};
 	};
 

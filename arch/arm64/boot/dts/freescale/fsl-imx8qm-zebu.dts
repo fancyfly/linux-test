@@ -144,6 +144,7 @@
 	assigned-clock-parents = <&clk IMX8QM_AUD_ACM_AUD_PLL_CLK0_CLK>;
 	assigned-clock-rates = <0>, <786432000>, <24576000>, <24576000>;
 	fsl,sai-asynchronous;
+	fsl,i2s-xtor;
 	status = "disabled";
 };
 

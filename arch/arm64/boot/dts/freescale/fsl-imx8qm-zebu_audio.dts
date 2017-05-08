@@ -54,7 +54,7 @@
 		compatible = "fsl,imx-audio-xtor";
 		model = "xtor-audio-sai";
 		cpu-dai = <&sai0>;
-/*		asrc-controller = <&asrc0>; */
+		asrc-controller = <&asrc0>;
 	};
 
 	sound-xtor-esai {
@@ -67,11 +67,11 @@
 &acm {
 	status = "okay";
 };
-/*
+
 &asrc0 {
 	status = "okay";
 };
-*/
+
 &sai0 {
 	status = "okay";
 };

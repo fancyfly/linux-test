@@ -211,6 +211,7 @@
 		pinctrl_ecspi3_cs: ecspi3_cs_grp {
 			fsl,pins = <
 				MX7D_PAD_I2C2_SDA__GPIO4_IO11	0x80000000
+				MX7D_PAD_UART3_CTS_B__GPIO4_IO7 0x80000000
 			>;
 		};
 
@@ -822,8 +823,9 @@
 };
 
 &ecspi3 {
-	fsl,spi-num-chipselects = <1>;
-	cs-gpios = <&gpio4 11 GPIO_ACTIVE_LOW>;
+	fsl,spi-num-chipselects = <2>;
+	cs-gpios = <&gpio4 11 GPIO_ACTIVE_LOW>,
+		   <&gpio4 7 GPIO_ACTIVE_LOW>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi3 &pinctrl_ecspi3_cs>;
 	status = "okay";
@@ -833,6 +835,12 @@
 		spi-max-frequency = <60000000>;
 		reg = <0>;
 	};
+
+        spidev@1 {
+                compatible = "rohm,dh2228fv";
+                spi-max-frequency = <60000000>;
+                reg = <1>;
+        };
 
 };
 

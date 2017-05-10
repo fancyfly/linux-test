@@ -62,6 +62,13 @@
 		model = "xtor-audio-esai";
 		cpu-dai = <&esai0>;
 	};
+
+	sound-imx-spdif {
+		compatible = "fsl,imx-audio-spdif";
+		model = "imx-audio-spdif";
+		spdif-controller = <&spdif0>;
+		spdif-out;
+	};
 };
 
 &acm {
@@ -77,6 +84,10 @@
 };
 
 &esai0 {
+	status = "okay";
+};
+
+&spdif0 {
 	status = "okay";
 };
 

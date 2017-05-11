@@ -660,8 +660,14 @@ static int fsl_ssi_set_bclk(struct snd_pcm_substream *substream,
 	/* Prefer the explicitly set bitclock frequency */
 	if (ssi_private->bitclk_freq)
 		freq = ssi_private->bitclk_freq;
-	else
-		freq = params_channels(hw_params) * 32 * params_rate(hw_params);
+	else {
+		if (params_channels(hw_params) == 1)
+			freq = 2 * params_width(hw_params) *
+					params_rate(hw_params);
+		else
+			freq = params_channels(hw_params) * 32 *
+					params_rate(hw_params);
+	}
 
 	/* Don't apply it to any non-baudclk circumstance */
 	if (IS_ERR(ssi_private->baudclk))
@@ -891,16 +897,16 @@ static int _fsl_ssi_set_dai_fmt(struct device *dev,
 	ssi_private->i2s_mode = CCSR_SSI_SCR_NET;
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
+		regmap_update_bits(regs, CCSR_SSI_STCCR,
+				   CCSR_SSI_SxCCR_DC_MASK,
+				   CCSR_SSI_SxCCR_DC(2));
+		regmap_update_bits(regs, CCSR_SSI_SRCCR,
+				   CCSR_SSI_SxCCR_DC_MASK,
+				   CCSR_SSI_SxCCR_DC(2));
 		switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 		case SND_SOC_DAIFMT_CBM_CFS:
 		case SND_SOC_DAIFMT_CBS_CFS:
 			ssi_private->i2s_mode |= CCSR_SSI_SCR_I2S_MODE_MASTER;
-			regmap_update_bits(regs, CCSR_SSI_STCCR,
-					CCSR_SSI_SxCCR_DC_MASK,
-					CCSR_SSI_SxCCR_DC(2));
-			regmap_update_bits(regs, CCSR_SSI_SRCCR,
-					CCSR_SSI_SxCCR_DC_MASK,
-					CCSR_SSI_SxCCR_DC(2));
 			break;
 		case SND_SOC_DAIFMT_CBM_CFM:
 			ssi_private->i2s_mode |= CCSR_SSI_SCR_I2S_MODE_SLAVE;

@@ -2,6 +2,7 @@
  * Freescale ESAI ALSA SoC Digital Audio Interface (DAI) driver
  *
  * Copyright (C) 2014-2016 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2. This program is licensed "as is" without any warranty of any
@@ -222,6 +223,21 @@ static int fsl_esai_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 	unsigned long clk_rate;
 	int ret;
 
+	if (esai_priv->synchronous && !tx) {
+		switch (clk_id) {
+		case ESAI_HCKR_FSYS:
+			fsl_esai_set_dai_sysclk(dai, ESAI_HCKT_FSYS,
+								freq, dir);
+			break;
+		case ESAI_HCKR_EXTAL:
+			fsl_esai_set_dai_sysclk(dai, ESAI_HCKT_EXTAL,
+								freq, dir);
+			break;
+		default:
+			return -EINVAL;
+		}
+	}
+
 	/* Bypass divider settings if the requirement doesn't change */
 	if (freq == esai_priv->hck_rate[tx] && dir == esai_priv->hck_dir[tx])
 		return 0;
@@ -384,7 +400,8 @@ static int fsl_esai_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 		break;
 	case SND_SOC_DAIFMT_RIGHT_J:
 		/* Data on rising edge of bclk, frame high, right aligned */
-		xccr |= ESAI_xCCR_xCKP | ESAI_xCCR_xHCKP | ESAI_xCR_xWA;
+		xccr |= ESAI_xCCR_xCKP | ESAI_xCCR_xHCKP;
+		xcr  |= ESAI_xCR_xWA;
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
 		/* Data on rising edge of bclk, frame high, 1clk before data */
@@ -441,12 +458,12 @@ static int fsl_esai_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 		return -EINVAL;
 	}
 
-	mask = ESAI_xCR_xFSL | ESAI_xCR_xFSR;
+	mask = ESAI_xCR_xFSL | ESAI_xCR_xFSR | ESAI_xCR_xWA;
 	regmap_update_bits(esai_priv->regmap, REG_ESAI_TCR, mask, xcr);
 	regmap_update_bits(esai_priv->regmap, REG_ESAI_RCR, mask, xcr);
 
 	mask = ESAI_xCCR_xCKP | ESAI_xCCR_xHCKP | ESAI_xCCR_xFSP |
-		ESAI_xCCR_xFSD | ESAI_xCCR_xCKD | ESAI_xCR_xWA;
+		ESAI_xCCR_xFSD | ESAI_xCCR_xCKD;
 	regmap_update_bits(esai_priv->regmap, REG_ESAI_TCCR, mask, xccr);
 	regmap_update_bits(esai_priv->regmap, REG_ESAI_RCCR, mask, xccr);
 
@@ -526,9 +543,20 @@ static int fsl_esai_hw_params(struct snd_pcm_substream *substream,
 
 	bclk = params_rate(params) * slot_width * esai_priv->slots;
 
-	ret = fsl_esai_set_bclk(dai, tx, bclk);
+	ret = fsl_esai_set_bclk(dai, esai_priv->synchronous ? true : tx, bclk);
 	if (ret)
 		return ret;
+
+	if (esai_priv->synchronous && !tx) {
+		/* Use Normal mode to support monaural audio */
+		regmap_update_bits(esai_priv->regmap, REG_ESAI_TCR,
+			   ESAI_xCR_xMOD_MASK, params_channels(params) > 1 ?
+			   ESAI_xCR_xMOD_NETWORK : 0);
+
+		mask = ESAI_xCR_xSWS_MASK | ESAI_xCR_PADC;
+		val = ESAI_xCR_xSWS(slot_width, width) | ESAI_xCR_PADC;
+		regmap_update_bits(esai_priv->regmap, REG_ESAI_TCR, mask, val);
+	}
 
 	/* Use Normal mode to support monaural audio */
 	regmap_update_bits(esai_priv->regmap, REG_ESAI_xCR(tx),
@@ -590,7 +618,7 @@ static int fsl_esai_trigger(struct snd_pcm_substream *substream, int cmd,
 				   ESAI_xFCR_xFEN_MASK, ESAI_xFCR_xFEN);
 
 		/* Write initial words reqiured by ESAI as normal procedure */
-		for (i = 0; tx && i < channels; i++)
+		for (i = 0; tx && i < pins * esai_priv->slots; i++)
 			regmap_write(esai_priv->regmap, REG_ESAI_ETDR, 0x0);
 
 		regmap_update_bits(esai_priv->regmap, REG_ESAI_xCR(tx),

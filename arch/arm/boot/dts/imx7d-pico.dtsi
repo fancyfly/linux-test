@@ -217,8 +217,8 @@
 
 		pinctrl_enet1: enet1grp { /* REF CLK is set under LPSR pins */
 			fsl,pins = <
-				MX7D_PAD_SD2_CD_B__ENET2_MDIO			0x3
-				MX7D_PAD_SD2_WP__ENET2_MDC			0x3
+				MX7D_PAD_SD2_CD_B__ENET1_MDIO			0x3
+				MX7D_PAD_SD2_WP__ENET1_MDC			0x3
 				MX7D_PAD_SD3_STROBE__GPIO6_IO10                 0x3  /* MDIO interrupt*/
 
 				MX7D_PAD_ENET1_RGMII_TXC__ENET1_RGMII_TXC	0x1
@@ -862,7 +862,7 @@
 
 &iomuxc_lpsr {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_enet_refclk &pinctrl_lcd_vdden>;
+	pinctrl-0 = <&pinctrl_lcd_vdden>;
 
 	imx7d-pico-miscpins {
 		pinctrl_enet_refclk: enet_refclk {
@@ -892,12 +892,6 @@
 	phy-handle = <&ethphy0>;
 	phy-reset-gpios = <&gpio6 11 0>;
 	status = "okay";
-};
-
-&fec2 {
-	status = "okay";
-	phy-mode = "";
-
 	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -908,6 +902,10 @@
 			status = "okay";
 		};
 	};
+};
+
+&fec2 {
+	status = "disabled";
 };
 
 

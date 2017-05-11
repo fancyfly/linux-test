@@ -16,10 +16,23 @@
 #include "fsl-imx8qxp-zebu.dts"
 
 / {
-
+	sound-xtor-sai {
+		compatible = "fsl,imx-audio-xtor";
+		model = "xtor-audio-sai";
+		cpu-dai = <&sai0>;
+		asrc-controller = <&asrc0>;
+	};
 };
 
 &acm {
+	status = "okay";
+};
+
+&sai0 {
+	status = "okay";
+};
+
+&asrc0 {
 	status = "okay";
 };
 

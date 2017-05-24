@@ -5692,9 +5692,9 @@ gckOS_CreateSignal(
 #if gcdANDROID_NATIVE_FENCE_SYNC
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
     signal->timeline = gcvNULL;
-#else
+#  else
     signal->fence = gcvNULL;
-#endif
+#  endif
 #endif
 
     gcmkONERROR(_AllocateIntegerId(&Os->signalDB, signal, &signal->id));
@@ -5816,9 +5816,9 @@ gckOS_Signal(
 #if gcdANDROID_NATIVE_FENCE_SYNC
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
     struct sync_timeline * timeline = gcvNULL;
-#else
+#  else
     struct fence * fence = gcvNULL;
-#endif
+#  endif
 #endif
 
     gcmkHEADER_ARG("Os=0x%X Signal=0x%X State=%d", Os, Signal, State);
@@ -5842,10 +5842,10 @@ gckOS_Signal(
 #if gcdANDROID_NATIVE_FENCE_SYNC
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
         timeline = signal->timeline;
-#else
+#  else
         fence = signal->fence;
         signal->fence = NULL;
-#endif
+#  endif
 #endif
     }
     else
@@ -5868,13 +5868,13 @@ gckOS_Signal(
     {
         sync_timeline_signal(timeline);
     }
-#else
+#  else
     if (fence)
     {
         fence_signal(fence);
         fence_put(fence);
     }
-#endif
+#  endif
 #endif
 
     /* Success. */
@@ -7221,7 +7221,7 @@ OnError:
     return status;
 }
 
-#else /* v4.9.0 */
+#  else /* v4.9.0 */
 
 gceSTATUS
 gckOS_CreateSyncTimeline(
@@ -7408,7 +7408,7 @@ OnError:
     return status;
 }
 
-#endif /* v4.9.0 */
+#  endif /* v4.9.0 */
 #endif
 
 #if gcdSECURITY

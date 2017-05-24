@@ -35,8 +35,8 @@
 
 		pinctrl_lpuart0: lpuart0grp {
 			fsl,pins = <
-				SC_P_UART0_RX		0xc600004c
-				SC_P_UART0_TX		0xc600004c
+				SC_P_UART0_RX_ADMA_UART0_RX	0x0600004c
+				SC_P_UART0_TX_ADMA_UART0_TX	0x0600004c
 			>;
 		};
 	};
@@ -47,3 +47,16 @@
 	pinctrl-0 = <&pinctrl_lpuart0>;
 	status = "okay";
 };
+
+&sai0 {
+	assigned-clocks = <&clk IMX8QXP_ACM_SAI0_MCLK_SEL>,
+			<&clk IMX8QXP_AUD_PLL0_DIV>,
+			<&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK0_DIV>,
+			<&clk IMX8QXP_AUD_SAI_0_MCLK>;
+	assigned-clock-parents = <&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK0_CLK>;
+	assigned-clock-rates = <0>, <786432000>, <24576000>, <24576000>;
+	fsl,sai-asynchronous;
+	fsl,i2s-xtor;
+	status = "disabled";
+};
+

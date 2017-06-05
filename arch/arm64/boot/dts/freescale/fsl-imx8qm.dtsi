@@ -15,6 +15,7 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include "fsl-imx8-ca53.dtsi"
+#include "fsl-imx8-ca72.dtsi"
 #include <dt-bindings/clock/imx8qm-clock.h>
 #include <dt-bindings/soc/imx_rsrc.h>
 #include <dt-bindings/soc/imx8_pd.h>
@@ -32,6 +33,7 @@
 		serial1 = &lpuart1;
 		mmc0 = &usdhc1;
 		mmc1 = &usdhc2;
+		mmc2 = &usdhc3;
 		ethernet1 = &fec1;
 		ethernet2 = &fec2;
 		usbphy0 = &usbphy1;

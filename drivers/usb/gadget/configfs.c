@@ -1569,7 +1569,9 @@ static int android_setup(struct usb_gadget *gadget,
 
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (!gi->connected) {
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
 		wake_lock(&wakelock);
+#endif
 		gi->connected = 1;
 		schedule_work(&gi->work);
 	}
@@ -1616,7 +1618,10 @@ static void android_disconnect(struct usb_gadget *gadget)
 	gi->connected = 0;
 	schedule_work(&gi->work);
 	composite_disconnect(gadget);
+
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
 	wake_unlock(&wakelock);
+#endif
 }
 #endif
 
@@ -1826,10 +1831,10 @@ static int __init gadget_cfs_init(void)
 
 	config_group_init(&gadget_subsys.su_group);
 
-	wake_lock_init(&wakelock, WAKE_LOCK_SUSPEND, "gadget");
 	ret = configfs_register_subsystem(&gadget_subsys);
 
 #ifdef CONFIG_USB_CONFIGFS_UEVENT
+	wake_lock_init(&wakelock, WAKE_LOCK_SUSPEND, "gadget");
 	android_class = class_create(THIS_MODULE, "android_usb");
 	if (IS_ERR(android_class))
 		return PTR_ERR(android_class);
@@ -1841,9 +1846,9 @@ module_init(gadget_cfs_init);
 
 static void __exit gadget_cfs_exit(void)
 {
-	wake_lock_destroy(&wakelock);
 	configfs_unregister_subsystem(&gadget_subsys);
 #ifdef CONFIG_USB_CONFIGFS_UEVENT
+	wake_lock_destroy(&wakelock);
 	if (!IS_ERR(android_class))
 		class_destroy(android_class);
 #endif

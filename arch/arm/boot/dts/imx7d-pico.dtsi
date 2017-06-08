@@ -193,7 +193,6 @@
 	imx7d-pico {
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
-				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23		0x80000000  /* bt reg on */
 				MX7D_PAD_SD1_CD_B__GPIO5_IO0		0x59 /* baseboard sd cd pin */
 				MX7D_PAD_GPIO1_IO03__CCM_CLKO2		0x7d /* wifi LPO 32K Hz clock */
 				MX7D_PAD_GPIO1_IO07__GPIO1_IO7		0x59 /* pmic sd_vel pin*/
@@ -643,7 +642,7 @@
 
 &uart7 { /* Bluetooth */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart7 &pinctrl_bt_ctrl>;
+	pinctrl-0 = <&pinctrl_uart7>;
 	assigned-clocks = <&clks IMX7D_UART7_ROOT_SRC>;
 	assigned-clock-parents = <&clks IMX7D_PLL_SYS_MAIN_240M_CLK>;
 	fsl,uart-has-rtscts;

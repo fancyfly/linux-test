@@ -21,6 +21,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of_gpio.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
@@ -113,7 +114,7 @@ static int usb_extcon_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	info->dev = dev;
-	info->id_gpiod = devm_gpiod_get(&pdev->dev, "id");
+	info->id_gpiod = devm_gpiod_get(&pdev->dev, "id", GPIOD_IN);
 	if (IS_ERR(info->id_gpiod)) {
 		dev_err(dev, "failed to get ID GPIO\n");
 		return PTR_ERR(info->id_gpiod);
@@ -155,7 +156,7 @@ static int usb_extcon_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, info);
-	device_init_wakeup(dev, 1);
+	device_set_wakeup_capable(&pdev->dev, true);
 
 	/* Perform initial detection */
 	usb_extcon_detect_cable(&info->wq_detcable.work);
@@ -190,6 +191,7 @@ static int usb_extcon_suspend(struct device *dev)
 	 * accessible until resume completes. So disable IRQ.
 	 */
 	disable_irq(info->id_irq);
+	pinctrl_pm_select_sleep_state(dev);
 
 	return ret;
 }
@@ -199,6 +201,7 @@ static int usb_extcon_resume(struct device *dev)
 	struct usb_extcon_info *info = dev_get_drvdata(dev);
 	int ret = 0;
 
+	pinctrl_pm_select_default_state(dev);
 	if (device_may_wakeup(dev)) {
 		ret = disable_irq_wake(info->id_irq);
 		if (ret)
@@ -206,6 +209,9 @@ static int usb_extcon_resume(struct device *dev)
 	}
 
 	enable_irq(info->id_irq);
+	if (!device_may_wakeup(dev))
+		queue_delayed_work(system_power_efficient_wq,
+				   &info->wq_detcable, 0);
 
 	return ret;
 }

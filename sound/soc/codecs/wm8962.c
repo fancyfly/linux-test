@@ -2,6 +2,7 @@
  * wm8962.c  --  WM8962 ALSA SoC Audio driver
  *
  * Copyright 2010-2 Wolfson Microelectronics plc
+ * Copyright 2017 NXP
  *
  * Author: Mark Brown <broonie@opensource.wolfsonmicro.com>
  *
@@ -365,8 +366,8 @@ static struct reg_default wm8962_reg[] = {
 	{ 16924, 0x0059 },   /* R16924 - HDBASS_PG_1 */
 	{ 16925, 0x999A },   /* R16925 - HDBASS_PG_0 */
 
-	{ 17048, 0x0083 },   /* R17408 - HPF_C_1 */
-	{ 17049, 0x98AD },   /* R17409 - HPF_C_0 */
+	{ 17408, 0x0083 },   /* R17408 - HPF_C_1 */
+	{ 17409, 0x98AD },   /* R17409 - HPF_C_0 */
 
 	{ 17920, 0x007F },   /* R17920 - ADCL_RETUNE_C1_1 */
 	{ 17921, 0xFFFF },   /* R17921 - ADCL_RETUNE_C1_0 */
@@ -2568,11 +2569,17 @@ static int wm8962_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_codec *codec = dai->codec;
 	struct wm8962_priv *wm8962 = snd_soc_codec_get_drvdata(codec);
+	snd_pcm_format_t sample_format = params_format(params);
 	int i;
 	int aif0 = 0;
 	int adctl3 = 0;
 
-	wm8962->bclk = snd_soc_params_to_bclk(params);
+	if (sample_format == SNDRV_PCM_FORMAT_S20_3LE)
+		wm8962->bclk = params_rate(params) *
+				params_channels(params) *
+				params_physical_width(params);
+	else
+		wm8962->bclk = snd_soc_params_to_bclk(params);
 	if (params_channels(params) == 1)
 		wm8962->bclk *= 2;
 

@@ -375,6 +375,10 @@ struct bufdesc_ex {
 
 #define FEC_ENET_ETHEREN	((uint)0x00000002)
 
+#define FEC_ENET_ETHEREN	((uint)0x00000002)
+
+#define FEC_ENET_ETHEREN	((uint)0x00000002)
+
 /* ENET interrupt coalescing macro define */
 #define FEC_ITR_CLK_SEL		(0x1 << 30)
 #define FEC_ITR_EN		(0x1 << 31)
@@ -530,6 +534,7 @@ struct fec_enet_private {
 	int	mii_timeout;
 	int	mii_bus_share;
 	bool	miibus_up_failed;
+	bool	mii_bus_active;
 	uint	phy_speed;
 	phy_interface_t	phy_interface;
 	struct device_node *phy_node;

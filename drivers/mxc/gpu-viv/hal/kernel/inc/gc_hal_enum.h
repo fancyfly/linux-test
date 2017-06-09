@@ -52,7 +52,6 @@
 *
 *****************************************************************************/
 
-
 #ifndef __gc_hal_enum_h_
 #define __gc_hal_enum_h_
 
@@ -447,7 +446,7 @@ typedef enum _gceFEATURE
     gcvFEATURE_BLT_64bpp_MASKED_CLEAR_FIX,
     gcvFEATURE_SH_PSO_MSAA1x_FIX,
     gcvFEATURE_USC_ATOMIC_FIX,
-    gcvFEATURE_SH_NO_INDEX_CONST_ON_A0,
+    gcvFEATURE_INDEX_CONST_ON_B0,
     gcvFEATURE_SH_NO_ONECONST_LIMIT,
     gcvFEATURE_EVIS_NO_ABSDIFF,
     gcvFEATURE_EVIS_NO_BITREPLACE,
@@ -473,15 +472,31 @@ typedef enum _gceFEATURE
     gcvFEATURE_COMPUTE_ONLY,
     gcvFEATURE_SH_IMG_LDST_CLAMP,
     gcvFEATURE_SH_ICACHE_ALLOC_COUNT_FIX,
-
     gcvFEATURE_MSAA_OQ_FIX,
-
     gcvFEATURE_PE_ENHANCEMENTS2,
     gcvFEATURE_PSIO_MSAA_CL_FIX,
     gcvFEATURE_FE_NEED_DUMMYDRAW,
+    gcvFEATURE_MULTI_CLUSTER,
+    gcvFEATURE_PSIO_INTERLOCK,
+    gcvFEATURE_BLIT_COMPRESS_DEST,
+    gcvFEATURE_SH_MULTI_WG_PACK,
+    gcvFEATURE_FE_ROBUST_FIX,
     gcvFEATURE_TX_ASTC_MULTISLICE_FIX,
     gcvFEATURE_PSIO_DUAL16_32bpc_FIX,
+    gcvFEATURE_LS_SUPPORT_PER_COMP_DEPENDENCY,
+    gcvFEATURE_COMPRESSION_DEC400,
+    gcvFEATURE_SH_TEXLD_U_FIX,
+    gcvFEATURE_TX_FLUSH_L1CACHE,
     gcvFEATURE_USC_DEFER_FILL_FIX,
+    gcvFEATURE_MC_FCCACHE_BYTEMASK,
+    gcvFEATURE_SH_MULTI_WG_PACK_FIX,
+    gcvFEATURE_FE_PATCHLIST_FETCH_FIX,
+    gcvFEATURE_RA_CG_FIX,
+    gcvFEATURE_SH_HALF_DEPENDENCY_FIX,
+    gcvFEATURE_SH_CLOCK_GATE_FIX,
+    gcvFEATURE_GPIPE_CLOCK_GATE_FIX,
+    gcvFEATURE_TX_BORDER_CLAMP_FIX,
+    gcvFEATURE_SH_IMAGE_LD_LAST_PIXEL_FIX,
     /* Insert features above this comment only. */
     gcvFEATURE_COUNT                /* Not a feature. */
 }
@@ -524,9 +539,10 @@ typedef enum _gceOPTION
     gcvOPTION_HW_NULL = 50,
     gcvOPTION_PRINT_OPTION = 51,
     gcvOPTION_KERNEL_FENCE = 52,
-    gcvOPTION_ASYNC_BLT = 53,
+    gcvOPTION_ASYNC_PIPE = 53,
     gcvOPTION_FBO_PREFER_MEM = 54,
     gcvOPTION_GPU_TEX_UPLOAD = 55,
+    gcvOPTION_GPU_BUFOBJ_UPLOAD = 56,
 
     /* Insert option above this comment only */
     gcvOPTION_COUNT                     /* Not a OPTION*/
@@ -638,6 +654,10 @@ typedef enum _gceSURF_TYPE
 
     gcvSURF_NO_HZ              = 0x100000,
 
+    gcvSURF_3D                  = 0x200000, /* It's 3d surface */
+
+    gcvSURF_CMA_LIMIT           = 0x400000,
+
     gcvSURF_TEXTURE_LINEAR               = gcvSURF_TEXTURE
                                          | gcvSURF_LINEAR,
 
@@ -650,7 +670,7 @@ typedef enum _gceSURF_TYPE
     gcvSURF_RENDER_TARGET_NO_COMPRESSION = gcvSURF_RENDER_TARGET
                                          | gcvSURF_NO_COMPRESSION,
 
-    gcvSURF_RENDER_TARGET_TS_DIRTY = gcvSURF_RENDER_TARGET
+    gcvSURF_RENDER_TARGET_TS_DIRTY       = gcvSURF_RENDER_TARGET
                                          | gcvSURF_TILE_STATUS_DIRTY,
 
     gcvSURF_DEPTH_NO_TILE_STATUS         = gcvSURF_DEPTH
@@ -672,6 +692,9 @@ typedef enum _gceSURF_TYPE
 
     gcvSURF_CACHEABLE_BITMAP             = gcvSURF_BITMAP
                                          | gcvSURF_CACHEABLE,
+
+    gcvSURF_TEXTURE_3D                  = gcvSURF_TEXTURE
+                                         | gcvSURF_3D
 }
 gceSURF_TYPE;
 
@@ -1177,7 +1200,8 @@ gceSURF_INFO_TYPE;
 /* Format modifiers. */
 typedef enum _gceSURF_FORMAT_MODE
 {
-    gcvSURF_FORMAT_OCL = 0x80000000
+    gcvSURF_FORMAT_OCL          = 0x80000000,
+    gcvSURF_FORMAT_PATCH_BORDER = 0x40000000,
 }
 gceSURF_FORMAT_MODE;
 
@@ -1563,7 +1587,7 @@ typedef enum _gceTILING
                         | gcvTILING_SPLIT_BUFFER,
 
     gcvYMAJOR_SUPERTILED = gcvSUPERTILED
-                        | gcvTILING_Y_MAJOR,
+                         | gcvTILING_Y_MAJOR,
 
     gcvTILED_8X4           = 0x0100,
     gcvTILED_4X8           = 0x0100 | gcvTILING_SWAP,
@@ -1574,6 +1598,9 @@ typedef enum _gceTILING
 
     gcvTILED_8X8_XMAJOR    = gcvTILED_8X8 | gcvTILING_X_MAJOR,
     gcvTILED_8X8_YMAJOR    = gcvTILED_8X8 | gcvTILING_Y_MAJOR,
+
+    gcvSUPERTILED_128B     = 0x10000 | gcvSUPERTILED,
+    gcvSUPERTILED_256B     = 0x20000 | gcvSUPERTILED,
 }
 gceTILING;
 
@@ -1647,15 +1674,6 @@ typedef enum _gceUSER_SIGNAL_COMMAND_CODES
     gcvUSER_SIGNAL_UNMAP,
 }
 gceUSER_SIGNAL_COMMAND_CODES;
-
-/* Sync point command codes. */
-typedef enum _gceSYNC_POINT_COMMAND_CODES
-{
-    gcvSYNC_POINT_CREATE,
-    gcvSYNC_POINT_DESTROY,
-    gcvSYNC_POINT_SIGNAL,
-}
-gceSYNC_POINT_COMMAND_CODES;
 
 /* Shared buffer command codes. */
 typedef enum _gceSHBUF_COMMAND_CODES
@@ -2044,7 +2062,8 @@ gceSECURE_MODE;
 #define gcvALLOC_FLAG_DMABUF_BIT            5
 #define gcvALLOC_FLAG_USERMEMORY_BIT        6
 #define gcvALLOC_FLAG_EXTERNAL_MEMORY_BIT   7
-
+#define gcvALLOC_FLAG_ALLOC_ON_FAULT_BIT    8
+#define gcvALLOC_FLAG_CMA_LIMIT_BIT         9
 /* No special needs. */
 #define gcvALLOC_FLAG_NONE              (0)
 /* Physical contiguous. */
@@ -2063,6 +2082,12 @@ gceSECURE_MODE;
 #define gcvALLOC_FLAG_USERMEMORY        (1 << gcvALLOC_FLAG_USERMEMORY_BIT)
 /* Import an External Buffer. */
 #define gcvALLOC_FLAG_EXTERNAL_MEMORY   (1 << gcvALLOC_FLAG_EXTERNAL_MEMORY_BIT)
+
+/* Real allocation happens when GPU page fault. */
+#define gcvALLOC_FLAG_ALLOC_ON_FAULT    (1 << gcvALLOC_FLAG_ALLOC_ON_FAULT_BIT)
+
+/* CMA allocator only */
+#define gcvALLOC_FLAG_CMA_LIMIT          (1 << gcvALLOC_FLAG_CMA_LIMIT_BIT)
 
 /* GL_VIV internal usage */
 #ifndef GL_MAP_BUFFER_OBJ_VIV

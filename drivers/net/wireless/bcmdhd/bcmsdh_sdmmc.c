@@ -64,7 +64,14 @@ static int sdioh_sdmmc_get_cisaddr(sdioh_info_t *sd, uint32 regaddr);
 extern int sdioh_get_oob_disable(sdioh_info_t *sd);
 #endif /* OOB_PRARM */
 
+#if defined(NO_SDIO_RESET)
+static int sdio_reset_comm(struct mmc_card *card)
+{
+	return 0;
+}
+#else
 extern int sdio_reset_comm(struct mmc_card *card);
+#endif /* NO_SDIO_RESET */
 
 #define DEFAULT_SDIO_F2_BLKSIZE		512
 #ifndef CUSTOM_SDIO_F2_BLKSIZE
@@ -312,7 +319,6 @@ sdioh_interrupt_register(sdioh_info_t *sd, sdioh_cb_fn_t fn, void *argh)
 		sd->intr_handler = fn;
 		sd->intr_handler_arg = argh;
 		sd->intr_handler_valid = TRUE;
-
 		/* register and unmask irq */
 		if (sd->func[2]) {
 			sdio_claim_host(sd->func[2]);

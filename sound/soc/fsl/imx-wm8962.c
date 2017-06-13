@@ -4,6 +4,7 @@
  * Based on imx-sgtl5000.c
  * Copyright (C) 2012 Freescale Semiconductor, Inc.
  * Copyright (C) 2012 Linaro Ltd.
+ * Copyright 2017 NXP
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -20,7 +21,7 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/clk.h>
-#include <linux/switch.h>
+#include <linux/extcon.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <sound/control.h>
@@ -58,8 +59,8 @@ struct imx_priv {
 	struct platform_device *asrc_pdev;
 	u32 asrc_rate;
 	u32 asrc_format;
-#ifdef CONFIG_SWITCH
-	struct switch_dev sdev;
+#ifdef CONFIG_EXTCON
+	struct extcon_dev sdev;
 #endif
 };
 static struct imx_priv card_priv;
@@ -117,16 +118,16 @@ static int hpjack_status_check(void *data)
 
 	if (hp_status != priv->hp_active_low) {
 		snprintf(buf, 32, "STATE=%d", 2);
-#ifdef CONFIG_SWITCH
-		switch_set_state(&priv->sdev, 2);
+#ifdef CONFIG_EXTCON
+		extcon_set_state(&priv->sdev, 2);
 #endif
 		snd_soc_dapm_disable_pin(&priv->codec->dapm, "Ext Spk");
 		ret = imx_hp_jack_gpio.report;
 		snd_kctl_jack_report(priv->snd_card, priv->headphone_kctl, 1);
 	} else {
 		snprintf(buf, 32, "STATE=%d", 0);
-#ifdef CONFIG_SWITCH
-		switch_set_state(&priv->sdev, 0);
+#ifdef CONFIG_EXTCON
+		extcon_set_state(&priv->sdev, 0);
 #endif
 		snd_soc_dapm_enable_pin(&priv->codec->dapm, "Ext Spk");
 		ret = 0;
@@ -273,7 +274,8 @@ static int imx_wm8962_set_bias_level(struct snd_soc_card *card,
 	switch (level) {
 	case SND_SOC_BIAS_PREPARE:
 		if (dapm->bias_level == SND_SOC_BIAS_STANDBY) {
-			if (sample_format == SNDRV_PCM_FORMAT_S24_LE)
+			if (sample_format == SNDRV_PCM_FORMAT_S24_LE
+				|| sample_format == SNDRV_PCM_FORMAT_S20_3LE)
 				pll_out = sample_rate * 384;
 			else
 				pll_out = sample_rate * 256;
@@ -363,7 +365,8 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	if (sample_format == SNDRV_PCM_FORMAT_S24_LE)
+	if (sample_format == SNDRV_PCM_FORMAT_S24_LE
+		|| sample_format == SNDRV_PCM_FORMAT_S20_3LE)
 		pll_out = sample_rate * 384;
 	else
 		pll_out = sample_rate * 256;
@@ -769,15 +772,14 @@ audmux_bypass:
 	platform_set_drvdata(pdev, &data->card);
 	snd_soc_card_set_drvdata(&data->card, data);
 
-#ifdef CONFIG_SWITCH
 	priv->sdev.name = "h2w";
-	ret = switch_dev_register(&priv->sdev);
+#ifdef CONFIG_EXTCON
+	ret = extcon_dev_register(&priv->sdev);
 	if (ret < 0) {
 		ret = -EINVAL;
 		goto fail;
 	}
 #endif
-
 	ret = devm_snd_soc_register_card(&pdev->dev, &data->card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
@@ -827,9 +829,8 @@ static int imx_wm8962_remove(struct platform_device *pdev)
 
 	driver_remove_file(pdev->dev.driver, &driver_attr_microphone);
 	driver_remove_file(pdev->dev.driver, &driver_attr_headphone);
-
-#ifdef CONFIG_SWITCH
-	switch_dev_unregister(&priv->sdev);
+#ifdef CONFIG_EXTCON
+	extcon_dev_unregister(&priv->sdev);
 #endif
 	return 0;
 }

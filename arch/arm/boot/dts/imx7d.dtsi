@@ -1,5 +1,6 @@
 /*
  * Copyright 2015-2016 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -53,6 +54,7 @@
 			reg = <0>;
 			operating-points = <
 				/* KHz	uV */
+				1200000	1225000
 				996000	1075000
 				792000	975000
 			>;
@@ -627,7 +629,7 @@
 					anatop-min-bit-val = <8>;
 					anatop-min-voltage = <800000>;
 					anatop-max-voltage = <1200000>;
-					anatop-enable-bit = <31>;
+					anatop-enable-bit = <0>;
 				};
 
 				reg_1p2: regulator-vdd1p2@220 {
@@ -831,6 +833,12 @@
 				reg = <0x306c0000 0x10000>;
 				interrupts = <GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
+				status = "disabled";
+			};
+
+			pcie_phy: pcie-phy@306d0000 {
+				compatible = "fsl,imx-pcie-phy";
+				reg = <0x306d0000 0x10000>;
 				status = "disabled";
 			};
 
@@ -1222,6 +1230,9 @@
 				fsl,usbphy = <&usbphy_nop1>;
 				fsl,usbmisc = <&usbmisc1 0>;
 				phy-clkgate-delay-us = <400>;
+				ahb-burst-config = <0x0>;
+				tx-burst-size-dword = <0x10>;
+				rx-burst-size-dword = <0x10>;
 				status = "disabled";
 			};
 
@@ -1233,6 +1244,9 @@
 				fsl,usbphy = <&usbphy_nop2>;
 				fsl,usbmisc = <&usbmisc2 0>;
 				phy-clkgate-delay-us = <400>;
+				ahb-burst-config = <0x0>;
+				tx-burst-size-dword = <0x10>;
+				rx-burst-size-dword = <0x10>;
 				status = "disabled";
 			};
 
@@ -1383,11 +1397,11 @@
 				interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>,
+				clocks = <&clks IMX7D_ENET1_IPG_ROOT_CLK>,
 					<&clks IMX7D_ENET_AXI_ROOT_CLK>,
 					<&clks IMX7D_ENET1_TIME_ROOT_CLK>,
 					<&clks IMX7D_PLL_ENET_MAIN_125M_CLK>,
-					<&clks IMX7D_ENET_PHY_REF_ROOT_CLK>;
+					<&clks IMX7D_ENET_PHY_REF_ROOT_DIV>;
 				clock-names = "ipg", "ahb", "ptp",
 					"enet_clk_ref", "enet_out";
 				stop-mode = <&gpr 0x10 3>;
@@ -1403,11 +1417,11 @@
 				interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>,
+				clocks = <&clks IMX7D_ENET2_IPG_ROOT_CLK>,
 					<&clks IMX7D_ENET_AXI_ROOT_CLK>,
 					<&clks IMX7D_ENET2_TIME_ROOT_CLK>,
 					<&clks IMX7D_PLL_ENET_MAIN_125M_CLK>,
-					<&clks IMX7D_ENET_PHY_REF_ROOT_CLK>;
+					<&clks IMX7D_ENET_PHY_REF_ROOT_DIV>;
 				clock-names = "ipg", "ahb", "ptp",
 					"enet_clk_ref", "enet_out";
 				stop-mode = <&gpr 0x10 4>;
@@ -1443,6 +1457,7 @@
 			pcie-phy-supply = <&reg_1p0d>;
 			status = "disabled";
 		};
+
 		imx_ion {
 			compatible = "fsl,mxc-ion";
 			fsl,heap-id = <0>;

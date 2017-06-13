@@ -99,7 +99,7 @@
  *     UART1	0x30860000+0x010000	->	0xf5860000+0x010000
  */
 #define IMX_IO_P2V(x)	(						\
-			(0xf4000000 +					\
+			(0xf8000000 +					\
 			(((x) & 0x50000000) >> 4) +			\
 			(((x) & 0x0a000000) >> 4) +			\
 			(((x) & 0x00ffffff))))
@@ -117,6 +117,7 @@
 #include "mx1.h"
 #include "mx6.h"
 #include "mx7.h"
+#include "mx7ulp.h"
 
 #define imx_map_entry(soc, name, _type)	{				\
 	.virtual = soc ## _IO_P2V(soc ## _ ## name ## _BASE_ADDR),	\

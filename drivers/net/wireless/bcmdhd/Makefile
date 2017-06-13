@@ -21,8 +21,6 @@ DHDCFLAGS += -DWL_CFG80211
 # Print out kernel panic point of file and line info when assertion happened
 DHDCFLAGS += -DBCMASSERT_LOG
 
-DHDCFLAGS += -DENABLE_INSMOD_NO_FW_LOAD
-
 # keepalive
 DHDCFLAGS += -DCUSTOM_KEEP_ALIVE_SETTING=28000
 
@@ -85,7 +83,6 @@ DHDCFLAGS += -DDHD_USE_IDLECOUNT
 
 # SKB TAILPAD to avoid out of boundary memory access
 DHDCFLAGS += -DDHDENABLE_TAILPAD
-
 
 # Wi-Fi Direct
 DHDCFLAGS += -DWL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST

@@ -48,7 +48,7 @@
 		wlreg_on-supply = <&wlreg_on>;
 	};
 
-	pwm-backlight {
+	backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <
@@ -847,6 +847,7 @@
 				MX6SL_PAD_EPDC_SDOE__GPIO1_IO25	 0x80000000
 			>;
 		};
+
 	};
 };
 
@@ -880,8 +881,9 @@
 	status = "okay";
 
 	display: display {
-		bits-per-pixel = <16>;
+		bits-per-pixel = <32>;
 		bus-width = <24>;
+		fbpix = "ABGR32";
 
 		display-timings {
 			native-mode = <&timing0>;

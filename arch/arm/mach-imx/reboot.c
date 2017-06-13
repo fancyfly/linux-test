@@ -12,22 +12,10 @@
 
 #include "hardware.h"
 
-#define MX6_AIPS1_ARB_BASE_ADDR			0x02000000
-#define MX6_ATZ1_BASE_ADDR		MX6_AIPS1_ARB_BASE_ADDR
-#define MX6_AIPS1_OFF_BASE_ADDR		(MX6_ATZ1_BASE_ADDR + 0x80000)
-#define MX6_SNVS_BASE_ADDR		(MX6_AIPS1_OFF_BASE_ADDR + 0x4C000)
-#define MX6_SNVS_LPGPR				0x68
-#define MX6_SNVS_SIZE				(1024*16)
-#define MX7_AIPS1_ARB_BASE_ADDR			0x30000000
-#define MX7_ATZ1_BASE_ADDR		MX7_AIPS1_ARB_BASE_ADDR
-#define MX7_AIPS1_OFF_BASE_ADDR		(MX7_ATZ1_BASE_ADDR + 0x200000)
-#define MX7_SNVS_BASE_ADDR		(MX7_AIPS1_OFF_BASE_ADDR + 0x170000)
-#define MX7_SNVS_LPGPR				0x68
-#define MX7_SNVS_SIZE				(1024*16)
+#define SNVS_LPGPR				0x68
+#define SNVS_SIZE				(1024*16)
 
 #define ANDROID_NORMAL_BOOT     6
-#define ANDROID_RECOVERY_BOOT   7
-#define ANDROID_FASTBOOT_BOOT   8
 
 void do_switch_mode(char mode)
 {
@@ -38,13 +26,16 @@ void do_switch_mode(char mode)
 	size_t snvs_size;
 	if (cpu_is_imx6()) {
 		snvs_base_addr = MX6_SNVS_BASE_ADDR;
-		snvs_size = MX6_SNVS_SIZE;
-		snvs_lpgpr = MX6_SNVS_LPGPR;
+	} else if (cpu_is_imx7d()) {
+		snvs_base_addr = MX7D_SNVS_BASE_ADDR;
+	} else if (cpu_is_imx7ulp()) {
+		snvs_base_addr = MX7ULP_SNVS_BASE_ADDR;
 	} else {
-		snvs_base_addr = MX7_SNVS_BASE_ADDR;
-		snvs_size = MX7_SNVS_SIZE;
-		snvs_lpgpr = MX7_SNVS_LPGPR;
+		pr_warn("do not support mode switch!\n");
+		return;
 	}
+	snvs_size = SNVS_SIZE;
+	snvs_lpgpr = SNVS_LPGPR;
 	addr = ioremap(snvs_base_addr, snvs_size);
 	if (!addr) {
 		pr_warn("SNVS ioremap failed!\n");
@@ -56,15 +47,6 @@ void do_switch_mode(char mode)
 	iounmap(addr);
 }
 
-void do_switch_recovery(void)
-{
-	do_switch_mode(ANDROID_RECOVERY_BOOT);
-}
-
-void do_switch_fastboot(void)
-{
-	do_switch_mode(ANDROID_FASTBOOT_BOOT);
-}
 
 void do_switch_normal(void)
 {
@@ -74,11 +56,7 @@ void do_switch_normal(void)
 
 static void restart_special_mode(const char *cmd)
 {
-	if (cmd && strcmp(cmd, "recovery") == 0)
-		do_switch_recovery();
-	else if (cmd && strcmp(cmd, "bootloader") == 0)
-		do_switch_fastboot();
-	else if (cmd && strcmp(cmd, "") == 0)
+	if (cmd && strcmp(cmd, "") == 0)
 		do_switch_normal();
 }
 

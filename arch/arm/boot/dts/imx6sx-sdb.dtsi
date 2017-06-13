@@ -24,7 +24,7 @@
 		reg = <0x80000000 0x40000000>;
 	};
 
-	pwm-backlight {
+	backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 50000>;
 		brightness-levels = <
@@ -250,6 +250,7 @@
 		status = "disabled";
 	};
 };
+
 
 &adc1 {
 	vref-supply = <&reg_vref_3v3>;
@@ -557,6 +558,7 @@
 	display0: display {
 		bits-per-pixel = <32>;
 		bus-width = <24>;
+		fbpix = "ABGR32";
 
 		display-timings {
 			native-mode = <&timing0>;
@@ -593,6 +595,7 @@
 	display1: display {
 		bits-per-pixel = <32>;
 		bus-width = <18>;
+		fbpix = "ABGR32";
 	};
 };
 &ldb {
@@ -653,6 +656,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
+	/* for DTE mode, add below change */
+	/* fsl,dte-mode;*/
+	/* pinctrl-0 = <&pinctrl_uart5dte_1>; */
 };
 
 &usbotg1 {

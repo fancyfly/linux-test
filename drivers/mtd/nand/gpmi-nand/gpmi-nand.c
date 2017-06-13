@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2010-2016 Freescale Semiconductor, Inc.
  * Copyright (C) 2008 Embedded Alley Solutions, Inc.
+ * Copyright 2017 NXP
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1215,7 +1216,7 @@ static void block_mark_swapping(struct gpmi_nand_data *this,
 
 static bool gpmi_erased_check(struct gpmi_nand_data *this,
 			unsigned char *data, unsigned int chunk, int page,
-			unsigned int *max_bitflips)
+			unsigned int *max_bitflips, bool whole_page_check)
 {
 	struct nand_chip *chip = &this->nand;
 	struct mtd_info	*mtd = &this->mtd;
@@ -1224,17 +1225,24 @@ static bool gpmi_erased_check(struct gpmi_nand_data *this,
 	unsigned int flip_bits = 0, flip_bits_noecc = 0;
 	uint64_t *buf = (uint64_t *)this->data_buffer_dma;
 	unsigned int threshold;
-	int i;
+	int i, j;
+	int acc_bitflips = 0;
 
-	threshold = geo->gf_len / 2;
-	if (threshold > geo->ecc_strength)
-		threshold = geo->ecc_strength;
+	threshold = geo->ecc_strength;
 
 	/* Count bitflips */
 	for (i = 0; i < geo->ecc_chunkn_size; i++) {
 		flip_bits += hweight8(~data[base + i]);
 		if (flip_bits > threshold)
 			return false;
+	}
+
+	if (!whole_page_check) {
+		*max_bitflips = flip_bits;
+		return true;
+	} else {
+		/* reset the flip_bits and count it by SW */
+		flip_bits = 0;
 	}
 
 	/*
@@ -1246,14 +1254,25 @@ static bool gpmi_erased_check(struct gpmi_nand_data *this,
 	chip->read_buf(mtd, (uint8_t *)buf, mtd->writesize);
 
 	/* Count the bitflips for the no ECC buffer */
+	j = geo->ecc_chunkn_size / 8;
+
 	for (i = 0; i < mtd->writesize / 8; i++) {
 		flip_bits_noecc += hweight64(~buf[i]);
 		if (flip_bits_noecc > threshold)
 			return false;
+		/* find out the max_bitflips */
+		if (!((i + 1) % j)) {
+			/* end of each chunk */
+			if (flip_bits < flip_bits_noecc - acc_bitflips) {
+				flip_bits = flip_bits_noecc - acc_bitflips;
+				chunk = i / j;
+			}
+			acc_bitflips = flip_bits_noecc;
+		}
 	}
 
 	/* Tell the upper layer the bitflips we corrected. */
-	mtd->ecc_stats.corrected += flip_bits;
+	mtd->ecc_stats.corrected += flip_bits_noecc;
 	*max_bitflips = max_t(unsigned int, *max_bitflips, flip_bits);
 
 	/*
@@ -1282,7 +1301,9 @@ static int gpmi_ecc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
 	unsigned char *status;
 	unsigned int  max_bitflips = 0;
 	int           ret;
-	int flag = 0;
+	unsigned int tmp_bitflips;
+	bool debug1_valid = false;
+	unsigned int debug1_value = 0;
 
 	dev_dbg(this->dev, "page number is : %d\n", page);
 	ret = read_page_prepare(this, buf, nfc_geo->payload_size,
@@ -1320,16 +1341,36 @@ static int gpmi_ecc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
 
 		if (*status == STATUS_ERASED) {
 			if (GPMI_IS_MX6QP(this) || GPMI_IS_MX7(this) ||
-						GPMI_IS_MX6UL(this))
-				if (readl(bch_regs + HW_BCH_DEBUG1))
-					flag = 1;
+						GPMI_IS_MX6UL(this)) {
+				if (!debug1_valid) {
+					debug1_value = readl(bch_regs +
+							HW_BCH_DEBUG1);
+					debug1_valid = true;
+				}
+				if (debug1_value == 1) {
+					max_bitflips = max_t(unsigned int,
+							max_bitflips, 1);
+				} else if (debug1_value > 1) {
+					gpmi_erased_check(this, payload_virt,
+							i, page, &tmp_bitflips,
+							false);
+					max_bitflips = max_t(unsigned int,
+							max_bitflips,
+							tmp_bitflips);
+
+				}
+			}
 			continue;
 		}
 
 		if (*status == STATUS_UNCORRECTABLE) {
-			if (gpmi_erased_check(this, payload_virt, i,
-						page, &max_bitflips))
-				break;
+			/* platforms with DEBUG1 register don't need SW check */
+			if (!(GPMI_IS_MX6QP(this) || GPMI_IS_MX7(this) ||
+						GPMI_IS_MX6UL(this)))
+				if (gpmi_erased_check(this, payload_virt, i,
+							page, &max_bitflips,
+							true))
+					break;
 			mtd->ecc_stats.failed++;
 			continue;
 		}
@@ -1358,9 +1399,12 @@ static int gpmi_ecc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
 			payload_virt, payload_phys);
 
 	/* if bitflip occurred in erased page, change data to all 0xff */
-	if (flag)
+	if (debug1_value) {
 		memset(buf, 0xff, nfc_geo->payload_size);
+		mtd->ecc_stats.corrected += debug1_value;
+	}
 
+	dev_dbg(this->dev, "max bitflips in the page: %d\n", max_bitflips);
 	return max_bitflips;
 }
 
@@ -2269,11 +2313,12 @@ static int gpmi_nand_init(struct gpmi_nand_data *this)
 	/* Set up swap_block_mark, must be set before the gpmi_set_geometry() */
 	this->swap_block_mark = !GPMI_IS_MX23(this);
 
-	if (of_get_nand_on_flash_bbt(this->dev->of_node)) {
-		chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
 	if (of_property_read_bool(this->dev->of_node,
 				"fsl,legacy-bch-geometry"))
 		this->legacy_bch_geometry = true;
+
+	if (of_get_nand_on_flash_bbt(this->dev->of_node)) {
+		chip->bbt_options |= NAND_BBT_USE_FLASH | NAND_BBT_NO_OOB;
 
 		if (of_property_read_bool(this->dev->of_node,
 						"fsl,no-blockmark-swap"))

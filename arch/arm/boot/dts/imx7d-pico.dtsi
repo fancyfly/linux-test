@@ -557,9 +557,8 @@
 	status = "okay";
 
 	display0: display {
-		bits-per-pixel = <32>;
+		bits-per-pixel = <16>;
 		bus-width = <24>;
-		fbpix = "ABGR32";
 
 		display-timings {
 			native-mode = <&timing0>;

@@ -54,6 +54,22 @@
 			"Line Out Jack", "LINEVOUTR";
 	};
 
+	sound-ak4458 {
+		compatible = "fsl,imx-audio-ak4458";
+		model = "ak4458-audio";
+		audio-cpu = <&sai1>;
+		audio-codec = <&ak4458>;
+		audio-routing =
+			"AOUTL1", "Playback",
+			"AOUTR1", "Playback",
+			"AOUTL2", "Playback",
+			"AOUTR2", "Playback",
+			"AOUTL3", "Playback",
+			"AOUTR3", "Playback",
+			"AOUTL4", "Playback",
+			"AOUTR4", "Playback";
+	};
+
 	pwmleds {
 		compatible = "pwm-leds";
 
@@ -152,6 +168,25 @@
 		pinctrl_usdhc2: usdhc2grp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12	0x16
+			>;
+		};
+
+		pinctrl_sai1: sai1grp {
+			fsl,pins = <
+				MX8MQ_IOMUXC_SAI1_MCLK_SAI5_MCLK	0xd6
+				MX8MQ_IOMUXC_SAI1_TXC_SAI1_TX_BCLK	0xd6
+				MX8MQ_IOMUXC_SAI1_RXD7_SAI1_RX_DATA7	0xd6
+				MX8MQ_IOMUXC_SAI1_TXFS_SAI1_TX_SYNC	0xd6
+				MX8MQ_IOMUXC_SAI1_TXD0_SAI1_TX_DATA0	0xd6
+				MX8MQ_IOMUXC_SAI1_TXD1_SAI1_TX_DATA1	0xd6
+				MX8MQ_IOMUXC_SAI1_TXD2_SAI1_TX_DATA2	0xd6
+				MX8MQ_IOMUXC_SAI1_TXD3_SAI1_TX_DATA3	0xd6
+				MX8MQ_IOMUXC_SAI1_TXD4_SAI1_TX_DATA4	0xd6
+				MX8MQ_IOMUXC_SAI1_TXD5_SAI1_TX_DATA5	0xd6
+				MX8MQ_IOMUXC_SAI1_TXD6_SAI1_TX_DATA6	0xd6
+				MX8MQ_IOMUXC_SAI1_TXD7_SAI1_TX_DATA7	0xd6
+				MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10	0xd6
+				MX8MQ_IOMUXC_GPIO1_IO11_GPIO1_IO11	0xd6
 			>;
 		};
 
@@ -306,7 +341,14 @@
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
-	status = "disabled";
+	status = "okay";
+
+	ak4458: ak4458@10 {
+		compatible = "asahi-kasei,ak4458";
+		reg = <0x10>;
+		asahi-kasei,pdn-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+		asahi-kasei,mute-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &pcie0{
@@ -416,6 +458,18 @@
 
 &usb1 {
 	dr_mode = "host";
+	status = "okay";
+};
+
+&sai1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai1>;
+	assigned-clocks = <&clk IMX8MQ_CLK_SAI1_SRC>,
+			<&clk IMX8MQ_AUDIO_PLL1>,
+			<&clk IMX8MQ_CLK_SAI1_PRE_DIV>,
+			<&clk IMX8MQ_CLK_SAI1_DIV>;
+	assigned-clock-parents = <&clk IMX8MQ_AUDIO_PLL1_OUT>;
+	assigned-clock-rates = <0>, <786432000>, <98306000>, <24576000>;
 	status = "okay";
 };
 

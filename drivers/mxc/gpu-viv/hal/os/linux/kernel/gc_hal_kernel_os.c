@@ -5052,6 +5052,10 @@ OnError:
                             kfree(pages);
                             pages = gcvNULL;
 
+                            if(ref != gcvNULL)
+                                kfree(ref);
+                            ref = gcvNULL;
+
                             info->pages = gcvNULL;
                             info->pageTable = gcvNULL;
 

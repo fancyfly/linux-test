@@ -165,3 +165,8 @@ int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 }
 
 EXPORT_SYMBOL_GPL(imx_drm_dpu_wait_ioctl);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("NXP Semiconductor");
+MODULE_DESCRIPTION("i.MX DRM DPU BLITENG");
+

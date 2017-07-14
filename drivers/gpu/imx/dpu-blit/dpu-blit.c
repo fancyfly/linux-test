@@ -134,7 +134,7 @@ out:
 
 	return dpu_be;
 }
-EXPORT_SYMBOL_GPL(dpu_be_get);
+EXPORT_SYMBOL(dpu_be_get);
 
 void dpu_be_put(struct dpu_bliteng *dpu_be)
 {
@@ -144,7 +144,7 @@ void dpu_be_put(struct dpu_bliteng *dpu_be)
 
 	mutex_unlock(&dpu_be->mutex);
 }
-EXPORT_SYMBOL_GPL(dpu_be_put);
+EXPORT_SYMBOL(dpu_be_put);
 
 int dpu_be_blit(struct dpu_bliteng *dpu_be,
 	uint32_t *cmdlist, uint32_t cmdnum)
@@ -158,7 +158,7 @@ int dpu_be_blit(struct dpu_bliteng *dpu_be,
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(dpu_be_blit);
+EXPORT_SYMBOL(dpu_be_blit);
 
 #define STORE9_SEQCOMPLETE_IRQ		2U
 #define STORE9_SEQCOMPLETE_IRQ_MASK	1U<<STORE9_SEQCOMPLETE_IRQ
@@ -178,7 +178,7 @@ int dpu_be_wait(struct dpu_bliteng *dpu_be)
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(dpu_be_wait);
+EXPORT_SYMBOL(dpu_be_wait);
 
 int dpu_be_init_units(struct dpu_bliteng *dpu_be)
 {
@@ -382,8 +382,10 @@ static int dpu_bliteng_probe(struct platform_device *pdev)
 
 	ret = imx_drm_subdrv_register(subdrv);
 	if (ret < 0) {
-		dev_err(dev, "failed to register dpu-blit device\n");
+		dev_err(dev, "failed to register dpu-blit engine\n");
 	}
+
+	dev_info(dev, "Successfully probed dpu-blit engine\n");
 
 	return 0;
 }
@@ -400,19 +402,26 @@ static int dpu_bliteng_remove(struct platform_device *pdev)
 		dev_err(dev, "failed to un-register dpu-blit engine\n");
 	}
 
+	devm_kfree(dev, dpu_bliteng);
+
+	dev_info(dev, "Successfully removed dpu-blit engine\n");
+
 	return 0;
 }
 
-static struct platform_driver dpu_bliteng_driver = {
+struct platform_driver dpu_bliteng_driver = {
 	.driver = {
 		.name = "imx-dpu-bliteng",
 	},
 	.probe = dpu_bliteng_probe,
 	.remove = dpu_bliteng_remove,
 };
-module_platform_driver(dpu_bliteng_driver);
 
+#if 0
+module_platform_driver(dpu_bliteng_driver);
+#endif
+
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("NXP Semiconductor");
 MODULE_DESCRIPTION("i.MX DPU BLITENG");
-MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:imx-dpu-bliteng");

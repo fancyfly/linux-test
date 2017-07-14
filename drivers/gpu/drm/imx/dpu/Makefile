@@ -2,3 +2,5 @@ ccflags-y += -Idrivers/gpu/drm/imx
 
 imx-dpu-crtc-objs := dpu-crtc.o dpu-plane.o dpu-kms.o
 obj-$(CONFIG_DRM_IMX_DPU) += imx-dpu-crtc.o
+
+obj-$(CONFIG_DRM_IMX_DPU) += imx-dpu-blit.o

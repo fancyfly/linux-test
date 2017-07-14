@@ -17,6 +17,7 @@
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <uapi/drm/imx_drm.h>
 #include <drm/drmP.h>
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
@@ -30,6 +31,7 @@
 #include <video/dpu.h>
 
 #include "imx-drm.h"
+#include "imx_drm_subdrv.h"
 
 struct imx_drm_component {
 	struct device_node *of_node;
@@ -45,6 +47,22 @@ struct imx_drm_crtc {
 static int legacyfb_depth = 16;
 module_param(legacyfb_depth, int, 0444);
 #endif
+
+static int imx_drm_open(struct drm_device *dev, struct drm_file *file)
+{
+	struct drm_imx_file_private *file_priv;
+	int ret;
+
+	file_priv = kzalloc(sizeof(*file_priv), GFP_KERNEL);
+	if (!file_priv)
+		return -ENOMEM;
+
+	file->driver_priv = file_priv;
+
+	ret = imx_drm_subdrv_open(dev, file);
+
+	return ret;
+}
 
 static void imx_drm_driver_lastclose(struct drm_device *drm)
 {
@@ -195,12 +213,14 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 EXPORT_SYMBOL_GPL(imx_drm_encoder_parse_of);
 
 static const struct drm_ioctl_desc imx_drm_ioctls[] = {
-	/* none so far */
+	DRM_IOCTL_DEF_DRV(IMX_DPU_BLIT, imx_drm_dpu_blit_ioctl, DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl, DRM_RENDER_ALLOW),
 };
 
 static struct drm_driver imx_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME |
-				  DRIVER_ATOMIC,
+				  DRIVER_ATOMIC | DRIVER_RENDER,
+	.open                   = imx_drm_open,
 	.lastclose		= imx_drm_driver_lastclose,
 	.gem_free_object_unlocked = drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,

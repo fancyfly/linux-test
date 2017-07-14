@@ -975,13 +975,15 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	if (rx) {
 		struct scatterlist *sgl_last = &rx->sgl[rx->nents - 1];
 		unsigned int	orig_length = sgl_last->length;
-		int	wml_mask = ~(spi_imx->rx_wml - 1);
+		int	wml_mask = ~(spi_imx->rx_wml *
+				     spi_imx->rx_config.src_addr_width - 1);
 		/*
 		 * Adjust the transfer lenth of the last scattlist if there are
 		 * some tail data, use PIO read to get the tail data since DMA
 		 * sometimes miss the last tail interrupt.
 		 */
-		left = transfer->len % spi_imx->rx_wml;
+		left = transfer->len % (spi_imx->rx_wml *
+					spi_imx->rx_config.src_addr_width);
 		if (left)
 			sgl_last->length = orig_length & wml_mask;
 

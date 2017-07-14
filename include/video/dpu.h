@@ -606,6 +606,13 @@ bool dpu_vproc_has_vscale_cap(u32 cap_mask);
 u32 dpu_vproc_get_hscale_cap(u32 cap_mask);
 u32 dpu_vproc_get_vscale_cap(u32 cap_mask);
 
+/* dpu blit engine */
+struct dpu_bliteng;
+struct dpu_bliteng *dpu_be_get(struct dpu_soc *dpu);
+void dpu_be_put(struct dpu_bliteng *dpu_be);
+int dpu_be_wait(struct dpu_bliteng *dpu_be);
+int dpu_be_blit(struct dpu_bliteng *dpu_be, uint32_t *cmdlist, uint32_t cmdnum);
+
 /*
  * to avoid on-the-fly/hot plane resource migration
  * between two display interfaces

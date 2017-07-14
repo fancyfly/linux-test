@@ -182,6 +182,7 @@ struct dpu_soc {
 	struct dpu_layerblend	*lb_priv[7];
 	struct dpu_tcon		*tcon_priv[2];
 	struct dpu_vscaler	*vs_priv[3];
+	struct dpu_bliteng	*bliteng;
 };
 
 #define DECLARE_DPU_UNIT_INIT_FUNC(block)			\

@@ -2,11 +2,11 @@
 
 
 struct imx_drm_dpu_private {
-        struct device           *dev;
+        struct device *dev;
 };
 
 struct drm_imx_file_private {
-        struct imx_drm_dpu_private   *dpu_priv;
+        struct imx_drm_dpu_private *dpu_priv;
 };
 
 struct imx_drm_subdrv {

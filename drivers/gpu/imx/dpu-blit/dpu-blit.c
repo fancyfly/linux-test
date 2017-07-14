@@ -300,7 +300,6 @@ int dpu_bliteng_init(struct dpu_bliteng *dpu_bliteng)
 	struct resource *res;
 	unsigned long dpu_base;
 	void __iomem *base;
-	int ret = -1;
 
 	res = platform_get_resource(dpu_pdev, IORESOURCE_MEM, 0);
 	if (!res)

@@ -327,18 +327,6 @@ int dpu_bliteng_init(struct dpu_bliteng *dpu_bliteng)
 	return 0;	
 }
 
-static int
-dpu_bliteng_subdrv_probe(struct drm_device *drm_dev, struct device *dev)
-{
-	return 0;
-}
-
-static void
-dpu_bliteng_subdrv_remove(struct drm_device *drm_dev, struct device *dev)
-{
-	;
-}
-
 static int dpu_bliteng_open(struct drm_device *drm_dev, struct device *dev,
 		struct drm_file *file)
 {
@@ -358,7 +346,8 @@ static int dpu_bliteng_open(struct drm_device *drm_dev, struct device *dev,
 static void dpu_bliteng_close(struct drm_device *drm_dev, struct device *dev,
 			struct drm_file *file)
 {
-	;
+	struct drm_imx_file_private *file_priv = file->driver_priv;
+	kfree(file_priv->dpu_priv);
 }
 
 static int dpu_bliteng_probe(struct platform_device *pdev)
@@ -386,14 +375,14 @@ static int dpu_bliteng_probe(struct platform_device *pdev)
 	/* register dpu blit device as imx_drm subdrv */
 	subdrv = &dpu_bliteng->subdrv;
 	subdrv->dev = dev;
-	subdrv->probe = dpu_bliteng_subdrv_probe;
-	subdrv->remove = dpu_bliteng_subdrv_remove;
+	subdrv->probe = NULL;
+	subdrv->remove = NULL;
 	subdrv->open = dpu_bliteng_open;
 	subdrv->close = dpu_bliteng_close;
 
 	ret = imx_drm_subdrv_register(subdrv);
 	if (ret < 0) {
-		dev_err(dev, "failed to register drm sub device\n");
+		dev_err(dev, "failed to register dpu-blit device\n");
 	}
 
 	return 0;
@@ -401,6 +390,16 @@ static int dpu_bliteng_probe(struct platform_device *pdev)
 
 static int dpu_bliteng_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct dpu_bliteng *dpu_bliteng = dev_get_drvdata(dev);
+	int ret;
+
+	/* un-register from imx-drv-subdrv */
+	ret = imx_drm_subdrv_unregister(&dpu_bliteng->subdrv);
+	if (ret) {
+		dev_err(dev, "failed to un-register dpu-blit engine\n");
+	}
+
 	return 0;
 }
 

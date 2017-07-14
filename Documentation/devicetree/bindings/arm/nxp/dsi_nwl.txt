@@ -1,0 +1,48 @@
+Northwest Logic MIPI-DSI controller for MX8
+
+The MIPI-DSI IP found on MX8 platforms drives the video signal from
+Display Controller to video peripherals using DSI protocol.
+
+Required properties:
+- compatible: 		"nxp,imx8qm-mipi-dsi"
+			"nxp,imx8qxp-mipi-dsi"
+			"nxp,imx8mq-mipi-dsi"
+- reg: 			The register range of the MIPI-DSI controller
+- interrupts: 		The interrupt number for this module
+- clocks: 		Array of clocks needed by this module
+- phys: 		The phy module representing the DPHY inside
+			MIPI-DSI IP block
+- instance: 		If there are multiple MIPI-DSI IP blocks,
+			define the instance number
+- port: 		The remote-enpoint to which this module is connected
+			Usually, this is the Display Interface of the Display
+			Controller
+
+Example:
+	mipi0_dsi: mipi0_dsi@56228000 {
+                compatible = "nxp,imx8qm-mipi-dsi";
+                reg = <0x0 0x56228000 0x0 0x1000>;
+                interrupts = <16 IRQ_TYPE_LEVEL_HIGH>;
+                interrupt-parent = <&irqsteer_dsi0>;
+                clocks =
+                        <&clk IMX8QM_MIPI0_PXL_CLK>,
+                        <&clk IMX8QM_MIPI0_BYPASS_CLK>,
+                        <&clk IMX8QM_MIPI0_DSI_TX_ESC_CLK>,
+                        <&clk IMX8QM_MIPI0_DSI_RX_ESC_CLK>;
+                clock-names = "pixel", "bypass", "tx_esc", "rx_esc";
+                power-domains = <&pd_mipi0>;
+                csr = <&mipi0_csr>;
+                phys = <&mipi0_phy>;
+                phy-names = "dphy";
+                instance = <0>;
+                data_lanes = <4>;
+                status = "disabled";
+
+                port@0 {
+                        mipi0_in: endpoint {
+                                remote-endpoint = <&dpu1_disp0_mipi_dsi>;
+                        };
+                };
+
+        };
+

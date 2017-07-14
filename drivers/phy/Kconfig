@@ -507,4 +507,11 @@ config PHY_FSL_IMX8MQ_USB
 	depends on OF
 	select GENERIC_PHY
 	default ARCH_FSL_IMX8MQ
+
+config PHY_MIXEL_MIPI
+	bool
+	depends on OF
+	select GENERIC_PHY
+	default ARCH_FSL_IMX8QM
+
 endmenu

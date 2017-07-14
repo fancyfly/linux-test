@@ -14,8 +14,10 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <video/dpu.h>
+
 #include "dpu-kms.h"
 #include "dpu-plane.h"
+
 #include "imx-drm.h"
 #include "imx_drm_subdrv.h"
 
@@ -129,6 +131,8 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 	return 0;
 }
 
+EXPORT_SYMBOL_GPL(imx_drm_dpu_blit_ioctl);
+
 int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
                           struct drm_file *file)
 
@@ -160,3 +164,5 @@ int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 
 	return ret;
 }
+
+EXPORT_SYMBOL_GPL(imx_drm_dpu_wait_ioctl);

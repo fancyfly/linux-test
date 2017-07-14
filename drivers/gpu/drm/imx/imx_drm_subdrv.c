@@ -13,6 +13,7 @@ int imx_drm_subdrv_register(struct imx_drm_subdrv *subdrv)
 
 	return 0;
 }
+EXPORT_SYMBOL(imx_drm_subdrv_register);
 
 int imx_drm_subdrv_unregister(struct imx_drm_subdrv *subdrv)
 {
@@ -23,6 +24,7 @@ int imx_drm_subdrv_unregister(struct imx_drm_subdrv *subdrv)
 
 	return 0;
 }
+EXPORT_SYMBOL(imx_drm_subdrv_unregister);
 
 int imx_drm_device_subdrv_probe(struct drm_device *dev)
 {
@@ -92,6 +94,8 @@ err:
 	}
 	return ret;
 }
+
+EXPORT_SYMBOL(imx_drm_subdrv_open);
 
 void imx_drm_subdrv_close(struct drm_device *dev, struct drm_file *file)
 {

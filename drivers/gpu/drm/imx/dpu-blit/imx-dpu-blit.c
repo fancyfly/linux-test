@@ -25,12 +25,13 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 		struct drm_file *file)
 
 {
-	int ret;
 	struct device *dev;
 	struct drm_imx_file_private *file_priv = file->driver_priv;
 	struct imx_drm_dpu_private *dpu_priv = file_priv->dpu_priv;
 	struct dpu_soc *dpu;
 	struct dpu_bliteng *dpu_be;
+	uint32_t *cmdlist;
+	uint32_t cmdnum = 100;
 
 	dev = dpu_priv->dev;
 	if (!dev)
@@ -44,8 +45,6 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 	if (!dpu)
 		return -ENODEV;
 
-	uint32_t *cmdlist;
-	uint32_t cmdnum = 100;
 
 	cmdlist = devm_kzalloc(drm_dev->dev,
 		sizeof(uint32_t)*cmdnum, GFP_KERNEL);

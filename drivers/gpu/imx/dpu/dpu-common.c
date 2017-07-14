@@ -737,6 +737,9 @@ static struct dpu_platform_reg client_reg[] = {
 			.stream_id = 1,
 		},
 		.name = "imx-dpu-crtc",
+	}, {
+		.pdata = { },
+		.name = "imx-dpu-bliteng",
 	},
 };
 
@@ -872,20 +875,25 @@ static int dpu_add_client_devices(struct dpu_soc *dpu)
 	for (i = 0; i < client_num; i++) {
 		struct platform_device *pdev;
 		struct device_node *of_node;
-		bool is_disp;
+		bool is_disp, is_bliteng;
 
-		if (devtype->has_capture)
+		if (devtype->has_capture) {
 			is_disp = (i / 2) ? true : false;
-		else
+			is_bliteng = (i == 4) ? true : false;
+		} else {
 			is_disp = true;
+			is_bliteng = (i == 2) ? true : false;
+		}
 
 		/* Associate subdevice with the corresponding port node */
 		of_node = of_graph_get_port_by_id(dev->of_node, i);
 		if (!of_node) {
-			dev_info(dev, "no port@%d node in %s, not using %s%d\n",
-				 i, dev->of_node->full_name,
-				 is_disp ? "DISP" : "CSI", i % 2);
-			continue;
+			if (!is_bliteng) {
+				dev_info(dev, "no port@%d node in %s, not using %s%d\n",
+					i, dev->of_node->full_name,
+					is_disp ? "DISP" : "CSI", i % 2);
+				continue;
+			}
 		}
 
 		if (is_disp)

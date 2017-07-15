@@ -15,40 +15,100 @@
 #include <linux/platform_device.h>
 #include <video/dpu.h>
 
+#include "imx_drm_subdrv.h"
 #include "dpu-kms.h"
 #include "dpu-plane.h"
+#include "dpu-blit.h"
 
 #include "imx-drm.h"
-#include "imx_drm_subdrv.h"
+
+int dpu_bliteng_open(struct drm_device *drm_dev, struct device *dev,
+		     struct drm_file *file)
+{
+	struct drm_imx_file_private *file_priv = file->driver_priv;
+	struct imx_drm_dpu_private *dpu_priv;
+
+	dpu_priv = kzalloc(sizeof(*dpu_priv), GFP_KERNEL);
+	if (!dpu_priv)
+		return -ENOMEM;
+
+	dpu_priv->dev = dev;
+	file_priv->dpu_priv = dpu_priv;
+
+	dev_info(dev, "dpu_bliteng_open()\n");
+
+	return 0;
+}
+
+void dpu_bliteng_close(struct drm_device *drm_dev, struct device *dev,
+		       struct drm_file *file)
+{
+	struct drm_imx_file_private *file_priv = file->driver_priv;
+	kfree(file_priv->dpu_priv);
+
+	dev_info(dev, "dpu_bliteng_close()\n");
+}
 
 int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 		struct drm_file *file)
 
 {
 	struct device *dev;
-	struct drm_imx_file_private *file_priv = file->driver_priv;
-	struct imx_drm_dpu_private *dpu_priv = file_priv->dpu_priv;
+	struct drm_imx_file_private *file_priv;
+	struct imx_drm_dpu_private *dpu_priv;
 	struct dpu_soc *dpu;
 	struct dpu_bliteng *dpu_be;
 	uint32_t *cmdlist;
 	uint32_t cmdnum = 100;
 
-	dev = dpu_priv->dev;
-	if (!dev)
+	if (!file) {
+		printk(KERN_DEBUG "Failed to get struct drm_file\n");
 		return -ENODEV;
+	}
+
+	file_priv = file->driver_priv;
+	
+	if (!file_priv) {
+		printk(KERN_DEBUG "Failed to get struct drm_imx_file_private\n");
+		return -ENODEV;
+	}
+
+	dpu_priv = file_priv->dpu_priv;
+
+	if (!dpu_priv) {
+		printk(KERN_DEBUG "Failed to get imx_drm_dpu_private\n");
+		return -ENODEV;
+	}
+
+	printk(KERN_DEBUG "OK1\n");
+
+	dev = dpu_priv->dev;
+	if (!dev) {
+		printk(KERN_DEBUG "Failed to get struct device\n");
+		return -ENODEV;
+	}
+
+
+	printk(KERN_DEBUG "OK2\n");
 
 	dpu_be = dev_get_drvdata(dev);
-	if (!dpu_be)
+	if (!dpu_be) {
+		printk(KERN_DEBUG "Failed to get struct dpu_bliteng\n");
 		return -ENODEV;
+	}
+
+	printk(KERN_DEBUG "OK2\n");
 
 	dpu = dev_get_drvdata(dev->parent);
-	if (!dpu)
+	if (!dpu) {
+		printk(KERN_DEBUG "Failed to get struct device\n");
 		return -ENODEV;
+	}
 
 
 	cmdlist = devm_kzalloc(drm_dev->dev,
 		sizeof(uint32_t)*cmdnum, GFP_KERNEL);
-	if(!cmdlist)
+	if (!cmdlist)
 		return -ENOMEM;
 	
 	cmdlist[0] = 0x14000001;
@@ -138,10 +198,25 @@ int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 {
 	int ret;
 	struct device *dev;
-	struct drm_imx_file_private *file_priv = file->driver_priv;
-        struct imx_drm_dpu_private *dpu_priv = file_priv->dpu_priv;
-	struct dpu_soc *dpu;	
+	struct drm_imx_file_private *file_priv;
+	struct imx_drm_dpu_private *dpu_priv;
+	struct dpu_soc *dpu;
 	struct dpu_bliteng *dpu_be;
+
+	if (!file) {
+		return -ENODEV;
+	}
+
+	file_priv = file->driver_priv;
+
+	if (!file_priv)
+		return -ENODEV;
+
+	dpu_priv = file_priv->dpu_priv;
+
+	if (!dpu_priv) {
+		return -ENODEV;
+	}
 
 	dev = dpu_priv->dev;
         if (!dev)
@@ -164,8 +239,76 @@ int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 	return ret;
 }
 
+int dpu_bliteng_remove(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct dpu_bliteng *dpu_bliteng = dev_get_drvdata(dev);
+	int ret;
+
+	/* un-register from imx-drv-subdrv */
+	ret = imx_drm_subdrv_unregister(&dpu_bliteng->subdrv);
+	if (ret) {
+		dev_err(dev, "failed to un-register dpu-blit engine\n");
+	}
+
+	devm_kfree(dev, dpu_bliteng);
+
+	dev_info(dev, "Successfully removed dpu-blit engine\n");
+
+	return 0;
+}
+
+int dpu_bliteng_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct dpu_bliteng *dpu_bliteng;
+	struct imx_drm_subdrv *subdrv;
+	int ret;
+
+	if (!dev->platform_data)
+		return -EINVAL;
+
+	dpu_bliteng = devm_kzalloc(dev, sizeof(*dpu_bliteng), GFP_KERNEL);
+	if (!dpu_bliteng)
+		return -ENOMEM;
+
+	dpu_bliteng->dev = dev;
+
+	ret = dpu_bliteng_init(dpu_bliteng);
+	if (ret)
+		return ret;
+
+	dev_set_drvdata(dev, dpu_bliteng);
+
+	/* register dpu blit device as imx_drm subdrv */
+	subdrv = &dpu_bliteng->subdrv;
+	subdrv->dev = dev;
+	subdrv->probe = NULL;
+	subdrv->remove = NULL;
+	subdrv->open = dpu_bliteng_open;
+	subdrv->close = dpu_bliteng_close;
+
+	ret = imx_drm_subdrv_register(subdrv);
+	if (ret < 0) {
+		dev_err(dev, "failed to register dpu-blit engine\n");
+	}
+
+	dev_info(dev, "Successfully probed dpu-blit engine\n");
+
+	return 0;
+}
+
+struct platform_driver dpu_bliteng_driver = {
+	.driver = {
+		.name = "imx-dpu-bliteng",
+	},
+	.probe = dpu_bliteng_probe,
+	.remove = dpu_bliteng_remove,
+};
+
 EXPORT_SYMBOL_GPL(imx_drm_dpu_wait_ioctl);
 
+module_platform_driver(dpu_bliteng_driver);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("NXP Semiconductor");
 MODULE_DESCRIPTION("i.MX DRM DPU BLITENG");

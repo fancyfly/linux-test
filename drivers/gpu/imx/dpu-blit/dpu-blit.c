@@ -6,39 +6,12 @@
 #include <linux/delay.h>
 #include <linux/types.h>
 #include <video/dpu.h>
+
 #include "dpu-prv.h"
 #include "imx_drm_subdrv.h"
 #include "dpu-registers.h"
+#include "dpu-blit.h"
 
-#define COMCTRL_INTERRUPTSTATUS0	((uint32_t)(0x68))
-#define COMCTRL_INTERRUPTCLEAR0		((uint32_t)(0x60))
-#define PIXENGCFG_STORE9_TRIGGER	((uint32_t)(0x954))
-#define CMDSEQ_HIF			((uint32_t)(0x400))
-
-#define USE_COMMAND_SEQUENCER	1
-#define COMMAND_BUFFER_SIZE	65536 /* up to 64k bytes */
-#define CMDSEQ_FIFO_SPACE_THRESHOLD   192
-#define WORD_SIZE   4
-
-struct dpu_bliteng {
-	struct device		*dev;
-	void __iomem *base;
-	int32_t id;
-	struct mutex mutex;
-	bool inuse;
-	int32_t irq_store9_shdload;
-	int32_t irq_store9_framecomplete;
-	int32_t irq_store9_seqcomplete;
-
-#if USE_COMMAND_SEQUENCER
-	void *buffer_addr_virt;
-	dma_addr_t buffer_addr_phy;
-#endif
-
-	struct imx_drm_subdrv	     subdrv;
-
-	struct dpu_soc *dpu;
-};
 
 static inline uint32_t dpu_be_read(struct dpu_bliteng *dpu_be, uint32_t offset)
 {
@@ -327,99 +300,7 @@ int dpu_bliteng_init(struct dpu_bliteng *dpu_bliteng)
 	return 0;	
 }
 
-static int dpu_bliteng_open(struct drm_device *drm_dev, struct device *dev,
-		struct drm_file *file)
-{
-	struct drm_imx_file_private *file_priv = file->driver_priv;
-	struct imx_drm_dpu_private *dpu_priv;
-
-	dpu_priv = kzalloc(sizeof(*dpu_priv), GFP_KERNEL);
-	if (!dpu_priv)
-		return -ENOMEM;
-
-	dpu_priv->dev = dev;
-	file_priv->dpu_priv = dpu_priv;
-
-	return 0;
-}
-
-static void dpu_bliteng_close(struct drm_device *drm_dev, struct device *dev,
-			struct drm_file *file)
-{
-	struct drm_imx_file_private *file_priv = file->driver_priv;
-	kfree(file_priv->dpu_priv);
-}
-
-static int dpu_bliteng_probe(struct platform_device *pdev)
-{
-	struct device *dev = &pdev->dev;
-	struct dpu_bliteng *dpu_bliteng;
-	struct imx_drm_subdrv *subdrv;
-	int ret;
-
-	if (!dev->platform_data)
-		return -EINVAL;
-
-	dpu_bliteng = devm_kzalloc(dev, sizeof(*dpu_bliteng), GFP_KERNEL);
-	if (!dpu_bliteng)
-		return -ENOMEM;
-
-	dpu_bliteng->dev = dev;
-
-	ret = dpu_bliteng_init(dpu_bliteng);
-	if (ret)
-		return ret;
-
-	dev_set_drvdata(dev, dpu_bliteng);
-
-	/* register dpu blit device as imx_drm subdrv */
-	subdrv = &dpu_bliteng->subdrv;
-	subdrv->dev = dev;
-	subdrv->probe = NULL;
-	subdrv->remove = NULL;
-	subdrv->open = dpu_bliteng_open;
-	subdrv->close = dpu_bliteng_close;
-
-	ret = imx_drm_subdrv_register(subdrv);
-	if (ret < 0) {
-		dev_err(dev, "failed to register dpu-blit engine\n");
-	}
-
-	dev_info(dev, "Successfully probed dpu-blit engine\n");
-
-	return 0;
-}
-
-static int dpu_bliteng_remove(struct platform_device *pdev)
-{
-	struct device *dev = &pdev->dev;
-	struct dpu_bliteng *dpu_bliteng = dev_get_drvdata(dev);
-	int ret;
-
-	/* un-register from imx-drv-subdrv */
-	ret = imx_drm_subdrv_unregister(&dpu_bliteng->subdrv);
-	if (ret) {
-		dev_err(dev, "failed to un-register dpu-blit engine\n");
-	}
-
-	devm_kfree(dev, dpu_bliteng);
-
-	dev_info(dev, "Successfully removed dpu-blit engine\n");
-
-	return 0;
-}
-
-struct platform_driver dpu_bliteng_driver = {
-	.driver = {
-		.name = "imx-dpu-bliteng",
-	},
-	.probe = dpu_bliteng_probe,
-	.remove = dpu_bliteng_remove,
-};
-
-#if 0
-module_platform_driver(dpu_bliteng_driver);
-#endif
+EXPORT_SYMBOL_GPL(dpu_bliteng_init);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("NXP Semiconductor");

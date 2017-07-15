@@ -1,6 +1,6 @@
 config IMX_DPU_BLIT
 	tristate
 	depends on IMX_DPU_CORE
-	depends on DRM_IMX
-	default y if DRM_IMX=y
-	default m if DRM_IMX=m
+	default y if IMX_DPU_CORE=y
+	default m if IMX_DPU_CORE=m
+

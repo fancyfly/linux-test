@@ -1,6 +1,6 @@
 config DRM_IMX_DPU_BLIT
-	tristate
-	depends on DRM_IMX
-	depends on IMX_DPU_BLIT
-	default y if DRM_IMX=y
-	default m if DRM_IMX=m
+	tristate "DRM DPU BLIT"
+	depends on IMX_DPU_BLIT=y
+	depends on DRM_IMX_SUBDRV=m
+	help
+		i.MX8QXP and i.MX8QM BLIT ENGINE

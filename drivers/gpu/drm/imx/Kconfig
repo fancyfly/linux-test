@@ -9,6 +9,10 @@ config DRM_IMX
 	help
 	  enable i.MX graphics support
 
+if DRM_IMX
+
+comment "Bridges and Encoders"
+
 config DRM_IMX_PARALLEL_DISPLAY
 	tristate "Support for parallel displays"
 	select DRM_PANEL
@@ -38,6 +42,18 @@ config DRM_IMX_HDMI
 	help
 	  Choose this if you want to use HDMI on i.MX6.
 
+
+comment "Sub-drivers"
+
 source "drivers/gpu/drm/imx/ipuv3/Kconfig"
 source "drivers/gpu/drm/imx/dpu/Kconfig"
+
+config DRM_IMX_SUBDRV
+	tristate "DRM IMX SUBDRV"
+	depends on DRM_IMX=m
+
+if DRM_IMX_SUBDRV
 source "drivers/gpu/drm/imx/dpu-blit/Kconfig"
+endif
+
+endif

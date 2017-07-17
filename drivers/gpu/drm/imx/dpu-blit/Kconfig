@@ -1,0 +1,6 @@
+config DRM_IMX_DPU_BLIT
+	tristate "DRM DPU BLIT"
+	depends on IMX_DPU_BLIT
+	default y
+	help
+		i.MX8QXP and i.MX8QM BLIT ENGINE

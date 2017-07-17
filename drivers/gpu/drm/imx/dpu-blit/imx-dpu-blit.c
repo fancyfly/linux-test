@@ -22,32 +22,6 @@
 
 #include "imx-drm.h"
 
-int dpu_bliteng_open(struct drm_device *drm_dev, struct device *dev,
-		     struct drm_file *file)
-{
-	struct drm_imx_file_private *file_priv = file->driver_priv;
-	struct imx_drm_dpu_private *dpu_priv;
-
-	dpu_priv = kzalloc(sizeof(*dpu_priv), GFP_KERNEL);
-	if (!dpu_priv)
-		return -ENOMEM;
-
-	dpu_priv->dev = dev;
-	file_priv->dpu_priv = dpu_priv;
-
-	dev_info(dev, "dpu_bliteng_open()\n");
-
-	return 0;
-}
-
-void dpu_bliteng_close(struct drm_device *drm_dev, struct device *dev,
-		       struct drm_file *file)
-{
-	struct drm_imx_file_private *file_priv = file->driver_priv;
-	kfree(file_priv->dpu_priv);
-
-	dev_info(dev, "dpu_bliteng_close()\n");
-}
 
 int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 		struct drm_file *file)
@@ -80,7 +54,6 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 		return -ENODEV;
 	}
 
-	printk(KERN_DEBUG "OK1\n");
 
 	dev = dpu_priv->dev;
 	if (!dev) {
@@ -89,19 +62,15 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 	}
 
 
-	printk(KERN_DEBUG "OK2\n");
-
 	dpu_be = dev_get_drvdata(dev);
 	if (!dpu_be) {
 		printk(KERN_DEBUG "Failed to get struct dpu_bliteng\n");
 		return -ENODEV;
 	}
 
-	printk(KERN_DEBUG "OK2\n");
-
 	dpu = dev_get_drvdata(dev->parent);
 	if (!dpu) {
-		printk(KERN_DEBUG "Failed to get struct device\n");
+		printk(KERN_DEBUG "Failed to get struct dpu_soc\n");
 		return -ENODEV;
 	}
 
@@ -189,7 +158,6 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 
 	return 0;
 }
-
 EXPORT_SYMBOL_GPL(imx_drm_dpu_blit_ioctl);
 
 int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
@@ -237,6 +205,30 @@ int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 	dpu_be_put(dpu_be);
 
 	return ret;
+}
+EXPORT_SYMBOL_GPL(imx_drm_dpu_wait_ioctl);
+
+int dpu_bliteng_open(struct drm_device *drm_dev, struct device *dev,
+		     struct drm_file *file)
+{
+	struct drm_imx_file_private *file_priv = file->driver_priv;
+	struct imx_drm_dpu_private *dpu_priv;
+
+	dpu_priv = kzalloc(sizeof(*dpu_priv), GFP_KERNEL);
+	if (!dpu_priv)
+		return -ENOMEM;
+
+	dpu_priv->dev = dev;
+	file_priv->dpu_priv = dpu_priv;
+
+	return 0;
+}
+
+void dpu_bliteng_close(struct drm_device *drm_dev, struct device *dev,
+		       struct drm_file *file)
+{
+	struct drm_imx_file_private *file_priv = file->driver_priv;
+	kfree(file_priv->dpu_priv);
 }
 
 int dpu_bliteng_remove(struct platform_device *pdev)
@@ -306,10 +298,8 @@ struct platform_driver dpu_bliteng_driver = {
 	.remove = dpu_bliteng_remove,
 };
 
-EXPORT_SYMBOL_GPL(imx_drm_dpu_wait_ioctl);
 
 module_platform_driver(dpu_bliteng_driver);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("NXP Semiconductor");
 MODULE_DESCRIPTION("i.MX DRM DPU BLITENG");
-

@@ -17,6 +17,7 @@ extern "C" {
 struct fetch_unit {
 	uint32_t in_pipeline;
 	uint32_t control;
+	uint32_t tiling;
 	uint32_t burst_buf;
 	uint32_t buf_address;
 	uint32_t buf_attributes;

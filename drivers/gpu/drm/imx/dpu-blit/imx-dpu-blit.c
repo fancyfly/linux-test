@@ -27,13 +27,20 @@ int dpu_bliteng_open(struct drm_device *drm_dev, struct device *dev,
 {
 	struct drm_imx_file_private *file_priv = file->driver_priv;
 	struct imx_drm_dpu_private *dpu_priv;
+	int i;
 
 	dpu_priv = kzalloc(sizeof(*dpu_priv), GFP_KERNEL);
 	if (!dpu_priv)
 		return -ENOMEM;
 
 	dpu_priv->dev = dev;
-	file_priv->dpu_priv = dpu_priv;
+
+	for (i = 0; i < 2; i++) {
+		if (!file_priv->dpu_priv[i])
+			break;
+	}
+
+	file_priv->dpu_priv[i] = dpu_priv;
 
 	dev_info(dev, "dpu_bliteng_open()\n");
 
@@ -44,7 +51,14 @@ void dpu_bliteng_close(struct drm_device *drm_dev, struct device *dev,
 		       struct drm_file *file)
 {
 	struct drm_imx_file_private *file_priv = file->driver_priv;
-	kfree(file_priv->dpu_priv);
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		if (file_priv->dpu_priv[i]) {
+			kfree(file_priv->dpu_priv[i]);
+			file_priv->dpu_priv[i] = NULL;
+		}
+	}
 
 	dev_info(dev, "dpu_bliteng_close()\n");
 }
@@ -60,6 +74,7 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 	struct dpu_bliteng *dpu_be;
 	uint32_t *cmdlist;
 	uint32_t cmdnum = 100;
+	int id = 0;
 
 	if (!file) {
 		printk(KERN_DEBUG "Failed to get struct drm_file\n");
@@ -73,7 +88,7 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 		return -ENODEV;
 	}
 
-	dpu_priv = file_priv->dpu_priv;
+	dpu_priv = file_priv->dpu_priv[id];
 
 	if (!dpu_priv) {
 		printk(KERN_DEBUG "Failed to get imx_drm_dpu_private\n");
@@ -202,6 +217,7 @@ int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 	struct imx_drm_dpu_private *dpu_priv;
 	struct dpu_soc *dpu;
 	struct dpu_bliteng *dpu_be;
+	int id = 0;
 
 	if (!file) {
 		return -ENODEV;
@@ -212,7 +228,7 @@ int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 	if (!file_priv)
 		return -ENODEV;
 
-	dpu_priv = file_priv->dpu_priv;
+	dpu_priv = file_priv->dpu_priv[id];
 
 	if (!dpu_priv) {
 		return -ENODEV;

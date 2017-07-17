@@ -6,7 +6,7 @@ struct imx_drm_dpu_private {
 };
 
 struct drm_imx_file_private {
-        struct imx_drm_dpu_private *dpu_priv;
+        struct imx_drm_dpu_private *dpu_priv[2];
 };
 
 struct imx_drm_subdrv {

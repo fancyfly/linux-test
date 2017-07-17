@@ -64,6 +64,11 @@ static int imx_drm_open(struct drm_device *dev, struct drm_file *file)
 	return ret;
 }
 
+static void imx_drm_preclose(struct drm_device *dev, struct drm_file *file)
+{
+	imx_drm_subdrv_close(dev, file);
+}
+
 static void imx_drm_driver_lastclose(struct drm_device *drm)
 {
 	struct imx_drm_device *imxdrm = drm->dev_private;
@@ -221,6 +226,7 @@ static struct drm_driver imx_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME |
 				  DRIVER_ATOMIC | DRIVER_RENDER,
 	.open                   = imx_drm_open,
+	.preclose		= imx_drm_preclose,
 	.lastclose		= imx_drm_driver_lastclose,
 	.gem_free_object_unlocked = drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,

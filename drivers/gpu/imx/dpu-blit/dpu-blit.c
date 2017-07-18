@@ -3,6 +3,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
+#include <uapi/drm/imx_drm.h>
 #include <linux/delay.h>
 #include <linux/types.h>
 #include <video/dpu.h>
@@ -119,11 +120,126 @@ void dpu_be_put(struct dpu_bliteng *dpu_be)
 }
 EXPORT_SYMBOL(dpu_be_put);
 
+void dpu_be_setup_decode(struct dpu_bliteng *dpu_be,
+		struct fetch_unit *fetch)
+{
+	if (fetch->in_pipeline) {
+		dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, FETCHDECODE9_CONTROL, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->control, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+		dpu_be_write(dpu_be,
+			FETCHDECODE9_BURSTBUFFERMANAGEMENT, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->burst_buf, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x1400000C, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, FETCHDECODE9_BASEADDRESS0, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->buf_address, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->buf_attributes, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->buf_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->color_bits, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->color_shift, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->layer_offset, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->clip_offset, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->clip_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->const_color, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->layer_property, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->frame_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->frame_resample, CMDSEQ_HIF);
+	}
+}
+
+void dpu_be_setup_store(struct dpu_bliteng *dpu_be,
+		struct store_unit *store)
+{
+	if (store->in_pipeline) {
+		dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, STORE9_CONTROL, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, store->control, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, STORE9_BURSTBUFFERMANAGEMENT, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, store->burst_buf, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x14000006, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, STORE9_BASEADDRESS, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, store->buf_address, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, store->buf_attributes, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, store->buf_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, store->frame_offset, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, store->color_bits, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, store->color_shift, CMDSEQ_HIF);
+	}
+}
+
+void dpu_be_setup_engcfg(struct dpu_bliteng *dpu_be,
+		struct engcfg_unit *engcfg)
+{
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, PIXENGCFG_FETCHWARP9_DYNAMIC, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, engcfg->fetchpersp9_dynamic, CMDSEQ_HIF);
+
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, PIXENGCFG_FETCHDECODE9_DYNAMIC, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, engcfg->fetchdecode9_dynamic, CMDSEQ_HIF);
+
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, PIXENGCFG_ROP9_DYNAMIC, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, engcfg->rop9_dynamic, CMDSEQ_HIF);
+
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, PIXENGCFG_MATRIX9_DYNAMIC, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, engcfg->matrix9_dynamic, CMDSEQ_HIF);
+
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, PIXENGCFG_HSCALER9_DYNAMIC, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, engcfg->hscaler9_dynamic, CMDSEQ_HIF);
+
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, PIXENGCFG_VSCALER9_DYNAMIC, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, engcfg->vscaler9_dynamic, CMDSEQ_HIF);
+
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, PIXENGCFG_BLITBLEND9_DYNAMIC, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, engcfg->blitblend9_dynamic, CMDSEQ_HIF);
+
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, PIXENGCFG_STORE9_DYNAMIC, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, engcfg->store9_dynamic, CMDSEQ_HIF);
+}
+
+int dpu_be_blit_cfg(struct dpu_bliteng *dpu_be,
+		struct drm_imx_dpu_blit *blit)
+{
+	dpu_be_setup_decode(dpu_be, &blit->fetch_decode);
+	dpu_be_setup_store(dpu_be, &blit->store);
+	dpu_be_setup_engcfg(dpu_be, &blit->engcfg);
+
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, PIXENGCFG_STORE9_TRIGGER, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, 0x00000001, CMDSEQ_HIF);
+
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, STORE9_START, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, 0x00000001, CMDSEQ_HIF);
+
+	/* Use SYNC, Wait for hardware event */
+	dpu_be_write(dpu_be, 0x20000100, CMDSEQ_HIF);
+
+	/* clear shadow load irq */
+	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, COMCTRL_INTERRUPTCLEAR0, CMDSEQ_HIF);
+	dpu_be_write(dpu_be, 0x00000001, CMDSEQ_HIF);
+
+	return 0;
+}
+EXPORT_SYMBOL(dpu_be_blit_cfg);
+
 int dpu_be_blit(struct dpu_bliteng *dpu_be,
 	uint32_t *cmdlist, uint32_t cmdnum)
 {
 	int i;
-	printk("!!! %s(%d), !!!\n", __func__, __LINE__);
 
 	for (i = 0; i < cmdnum; i++) {
 		dpu_be_write(dpu_be, cmdlist[i], CMDSEQ_HIF);
@@ -137,8 +253,6 @@ EXPORT_SYMBOL(dpu_be_blit);
 #define STORE9_SEQCOMPLETE_IRQ_MASK	1U<<STORE9_SEQCOMPLETE_IRQ
 int dpu_be_wait(struct dpu_bliteng *dpu_be)
 {
-	printk("!!! %s(%d), !!!\n", __func__, __LINE__);
-
 	dpu_be_write(dpu_be, 0x10, PIXENGCFG_STORE9_TRIGGER);
 
 	while ((dpu_be_read(dpu_be, COMCTRL_INTERRUPTSTATUS0) &

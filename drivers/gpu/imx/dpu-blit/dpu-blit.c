@@ -150,6 +150,63 @@ void dpu_be_setup_decode(struct dpu_bliteng *dpu_be,
 	}
 }
 
+void dpu_be_setup_persp(struct dpu_bliteng *dpu_be,
+		struct fetch_unit *fetch)
+{
+	if (fetch->in_pipeline) {
+		dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, FETCHWARP9_CONTROL, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->control, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x1400000b, CMDSEQ_HIF);
+		dpu_be_write(dpu_be,
+			FETCHWARP9_BURSTBUFFERMANAGEMENT, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->burst_buf, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->buf_address, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->buf_attributes, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->buf_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->color_bits, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->color_shift, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->layer_offset, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->clip_offset, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->clip_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->const_color, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->layer_property, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x14000002, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, FETCHWARP9_FRAMEDIMENSIONS, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->frame_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->frame_resample, CMDSEQ_HIF);
+	}
+}
+
+void dpu_be_setup_eco(struct dpu_bliteng *dpu_be,
+		struct fetch_unit *fetch)
+{
+	if (fetch->in_pipeline) {
+		dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, FETCHECO9_CONTROL, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->control, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x1400000D, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, FETCHECO9_BURSTBUFFERMANAGEMENT,
+			CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->burst_buf, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->buf_address, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->buf_attributes, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->buf_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->color_bits, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->color_shift, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->layer_offset, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->clip_offset, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->clip_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->const_color, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->layer_property, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->frame_dimension, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, fetch->frame_resample, CMDSEQ_HIF);
+	}
+}
+
 void dpu_be_setup_store(struct dpu_bliteng *dpu_be,
 		struct store_unit *store)
 {
@@ -170,6 +227,59 @@ void dpu_be_setup_store(struct dpu_bliteng *dpu_be,
 		dpu_be_write(dpu_be, store->frame_offset, CMDSEQ_HIF);
 		dpu_be_write(dpu_be, store->color_bits, CMDSEQ_HIF);
 		dpu_be_write(dpu_be, store->color_shift, CMDSEQ_HIF);
+	}
+}
+
+void dpu_be_setup_hscaler(struct dpu_bliteng *dpu_be,
+		struct hscaler_unit *hscaler)
+{
+	if (hscaler->in_pipeline) {
+		dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, HSCALER9_CONTROL, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, hscaler->control, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x14000002, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, HSCALER9_SETUP1, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, hscaler->setup1, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, hscaler->setup2, CMDSEQ_HIF);
+	}
+}
+
+void dpu_be_setup_vscaler(struct dpu_bliteng *dpu_be,
+		struct vscaler_unit *vscaler)
+{
+	if (vscaler->in_pipeline) {
+		dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, VSCALER9_CONTROL, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, vscaler->control, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x14000005, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, VSCALER9_SETUP1, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, vscaler->setup1, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, vscaler->setup2, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, vscaler->setup3, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, vscaler->setup4, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, vscaler->setup5, CMDSEQ_HIF);
+	}
+}
+
+void dpu_be_setup_blitblend(struct dpu_bliteng *dpu_be,
+		struct blitblend_unit *bb)
+{
+	if (bb->in_pipeline) {
+		dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, BLITBLEND9_CONTROL, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, bb->control, CMDSEQ_HIF);
+
+		dpu_be_write(dpu_be, 0x14000007, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, BLITBLEND9_CONSTANTCOLOR, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, bb->const_color, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, bb->red_func, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, bb->green_func, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, bb->blue_func, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, bb->alpha_func, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, bb->blend_mode1, CMDSEQ_HIF);
+		dpu_be_write(dpu_be, bb->blend_mode2, CMDSEQ_HIF);
 	}
 }
 
@@ -213,7 +323,12 @@ int dpu_be_blit_cfg(struct dpu_bliteng *dpu_be,
 		struct drm_imx_dpu_blit *blit)
 {
 	dpu_be_setup_decode(dpu_be, &blit->fetch_decode);
+	dpu_be_setup_persp(dpu_be, &blit->fetch_persp);
+	dpu_be_setup_eco(dpu_be, &blit->fetch_eco);
 	dpu_be_setup_store(dpu_be, &blit->store);
+	dpu_be_setup_hscaler(dpu_be, &blit->hscaler);
+	dpu_be_setup_vscaler(dpu_be, &blit->vscaler);
+	dpu_be_setup_blitblend(dpu_be, &blit->blitblend);
 	dpu_be_setup_engcfg(dpu_be, &blit->engcfg);
 
 	dpu_be_write(dpu_be, 0x14000001, CMDSEQ_HIF);

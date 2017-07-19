@@ -98,14 +98,15 @@ struct dpu_bliteng *dpu_be_get(struct dpu_soc *dpu)
 
 	mutex_lock(&dpu_be->mutex);
 	if (dpu_be->inuse) {
+		mutex_unlock(&dpu_be->mutex);
 		dpu_be = ERR_PTR(-EBUSY);
 		goto out;
 	}
 
 	dpu_be->inuse = true;
-out:
 	mutex_unlock(&dpu_be->mutex);
 
+out:
 	return dpu_be;
 }
 EXPORT_SYMBOL(dpu_be_get);

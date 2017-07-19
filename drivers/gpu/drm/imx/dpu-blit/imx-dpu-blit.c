@@ -108,7 +108,6 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 		return -ENODEV;
 	}
 
-
 	printk(KERN_DEBUG "OK2\n");
 
 	dpu_be = dev_get_drvdata(dev);
@@ -125,7 +124,11 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 		return -ENODEV;
 	}
 
+retry:
 	dpu_be = dpu_be_get(dpu);
+	if (dpu_be == ERR_PTR(-EBUSY)) {
+		goto retry;
+	}
 
 	dpu_be_blit_cfg(dpu_be, blit);
 	/*dpu_be_blit(dpu_be, cmdlist, cmdnum);*/
@@ -183,7 +186,11 @@ int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 	if (!dpu)
 		return -ENODEV;
 
+retry:
 	dpu_be = dpu_be_get(dpu);
+	if (dpu_be == ERR_PTR(-EBUSY)) {
+		goto retry;
+	}
 
 	ret = dpu_be_wait(dpu_be);
 

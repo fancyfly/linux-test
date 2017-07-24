@@ -10,9 +10,14 @@ extern "C" {
 
 #define DRM_IMX_DPU_BLIT                        0x00
 #define DRM_IMX_DPU_WAIT                        0x01
+#define DRM_IMX_DPU_GET_PARAM                   0x02
 
-#define DRM_IOCTL_IMX_DPU_BLIT          DRM_IOWR(DRM_COMMAND_BASE + DRM_IMX_DPU_BLIT, struct drm_imx_dpu_blit)
-#define DRM_IOCTL_IMX_DPU_WAIT          DRM_IOWR(DRM_COMMAND_BASE + DRM_IMX_DPU_WAIT, struct drm_imx_dpu_wait)
+#define DRM_IOCTL_IMX_DPU_BLIT          DRM_IOWR(DRM_COMMAND_BASE + \
+		DRM_IMX_DPU_BLIT, struct drm_imx_dpu_blit)
+#define DRM_IOCTL_IMX_DPU_WAIT          DRM_IOWR(DRM_COMMAND_BASE + \
+		DRM_IMX_DPU_WAIT, struct drm_imx_dpu_wait)
+#define DRM_IOCTL_IMX_DPU_GET_PARAM     DRM_IOWR(DRM_COMMAND_BASE + \
+		DRM_IMX_DPU_GET_PARAM, enum drm_imx_dpu_param)
 
 struct fetch_unit {
 	uint32_t in_pipeline;
@@ -112,7 +117,7 @@ struct drm_imx_dpu_blit {
 	struct blitblend_unit blitblend;
 	struct engcfg_unit engcfg;
 
-	int imxdpuv1_id;
+	int imxdpu_id;
 };
 
 /**
@@ -121,7 +126,11 @@ struct drm_imx_dpu_blit {
  *
  */
 struct drm_imx_dpu_wait {
-	int imxdpuv1_id;
+	int imxdpu_id;
+};
+
+enum drm_imx_dpu_param {
+	DRM_IMX_MAX_DPUS		= 0,
 };
 
 #if defined(__cplusplus)

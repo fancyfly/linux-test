@@ -22,6 +22,8 @@
 
 #include "imx-drm.h"
 
+static int imx_dpu_num;
+
 int dpu_bliteng_open(struct drm_device *drm_dev, struct device *dev,
 		     struct drm_file *file)
 {
@@ -88,7 +90,7 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 	}
 
 	blit = data;
-	id = blit->imxdpuv1_id;
+	id = blit->imxdpu_id;
 	if (!(id == 0 || id == 1)) {
 		return -EINVAL;
 	}
@@ -141,7 +143,7 @@ retry:
 EXPORT_SYMBOL_GPL(imx_drm_dpu_blit_ioctl);
 
 int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
-                          struct drm_file *file)
+		struct drm_file *file)
 
 {
 	int ret;
@@ -163,7 +165,7 @@ int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 		return -ENODEV;
 
 	wait = data;
-	id = wait->imxdpuv1_id;
+	id = wait->imxdpu_id;
 	if (!(id == 0 || id == 1)) {
 		return -EINVAL;
 	}
@@ -195,6 +197,25 @@ retry:
 	ret = dpu_be_wait(dpu_be);
 
 	dpu_be_put(dpu_be);
+
+	return ret;
+}
+
+int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
+		struct drm_file *file)
+{
+	int ret;
+	enum drm_imx_dpu_param *param = data;
+
+	switch (*param) {
+	case (DRM_IMX_MAX_DPUS):
+		ret = imx_dpu_num;
+		break;
+	default:
+		ret = -EINVAL;
+		DRM_ERROR("Unknown param![%d]\n", *param);
+		break;
+	}
 
 	return ret;
 }
@@ -253,6 +274,7 @@ int dpu_bliteng_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to register dpu-blit engine\n");
 	}
 
+	imx_dpu_num++;
 	dev_info(dev, "Successfully probed dpu-blit engine\n");
 
 	return 0;

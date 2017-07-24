@@ -66,5 +66,7 @@ int imx_drm_dpu_blit_ioctl(struct drm_device *drm_dev, void *data,
 	struct drm_file *file);
 int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 	struct drm_file *file);
+int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
+	struct drm_file *file);
 
 #endif /* _IMX_DRM_H_ */

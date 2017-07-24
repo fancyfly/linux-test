@@ -9,7 +9,6 @@
 #include <video/dpu.h>
 
 #include "dpu-prv.h"
-#include "imx_drm_subdrv.h"
 #include "dpu-registers.h"
 #include "dpu-blit.h"
 

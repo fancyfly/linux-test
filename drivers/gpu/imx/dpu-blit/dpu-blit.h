@@ -28,7 +28,7 @@ struct dpu_bliteng {
 	dma_addr_t buffer_addr_phy;
 #endif
 
-	struct imx_drm_subdrv subdrv;
+	struct list_head list;
 	struct dpu_soc *dpu;
 };
 

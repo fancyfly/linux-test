@@ -1,7 +1,7 @@
 
 imxdrm-objs := imx-drm-core.o
 
-obj-$(CONFIG_DRM_IMX) += imxdrm.o imx_drm_subdrv.o
+obj-$(CONFIG_DRM_IMX) += imxdrm.o
 
 obj-$(CONFIG_DRM_IMX_PARALLEL_DISPLAY) += parallel-display.o
 obj-$(CONFIG_DRM_IMX_TVE) += imx-tve.o

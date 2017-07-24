@@ -31,7 +31,6 @@
 #include <video/dpu.h>
 
 #include "imx-drm.h"
-#include "imx_drm_subdrv.h"
 
 struct imx_drm_component {
 	struct device_node *of_node;
@@ -48,6 +47,7 @@ static int legacyfb_depth = 16;
 module_param(legacyfb_depth, int, 0444);
 #endif
 
+#if 0
 static int imx_drm_open(struct drm_device *dev, struct drm_file *file)
 {
 	struct drm_imx_file_private *file_priv;
@@ -68,6 +68,7 @@ static void imx_drm_preclose(struct drm_device *dev, struct drm_file *file)
 {
 	imx_drm_subdrv_close(dev, file);
 }
+#endif
 
 static void imx_drm_driver_lastclose(struct drm_device *drm)
 {
@@ -229,8 +230,8 @@ static const struct drm_ioctl_desc imx_drm_ioctls[] = {
 static struct drm_driver imx_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME |
 				  DRIVER_ATOMIC | DRIVER_RENDER,
-	.open                   = imx_drm_open,
-	.preclose		= imx_drm_preclose,
+	//.open                   = imx_drm_open,
+	//.preclose		= imx_drm_preclose,
 	.lastclose		= imx_drm_driver_lastclose,
 	.gem_free_object_unlocked = drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,

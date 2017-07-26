@@ -29,6 +29,7 @@
 #include <linux/seqlock.h>
 #include <linux/swait.h>
 #include <linux/stop_machine.h>
+#include <trace/events/mydbg.h>
 
 /*
  * Define shape of hierarchy based on NR_CPUS, CONFIG_RCU_FANOUT, and
@@ -142,6 +143,8 @@ struct rcu_dynticks {
 #define RCU_KTHREAD_YIELDING 4
 #define RCU_KTHREAD_MAX      4
 
+//#define MYDBG_RCU_LOCKBY
+
 /*
  * Definition for node within the RCU grace-period-detection hierarchy.
  */
@@ -149,6 +152,9 @@ struct rcu_node {
 	raw_spinlock_t __private lock;	/* Root rcu_node's lock protects */
 					/*  some rcu_state fields as well as */
 					/*  following. */
+#ifdef MYDBG_RCU_LOCKBY
+	int mydbg_lockby_cpu;
+#endif
 	unsigned long gpnum;	/* Current grace period for this node. */
 				/*  This will either be equal to or one */
 				/*  behind the root rcu_node's gpnum. */
@@ -698,6 +704,30 @@ static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
 #define smp_mb__after_unlock_lock()	do { } while (0)
 #endif /* #else #ifdef CONFIG_PPC */
 
+static inline void mydbg_rcu_lock_get(struct rcu_node *rnp, int irqmode)
+{
+	trace_mydbg_lock_rcu_node_rcuidle(rnp, true, irqmode);
+
+#ifdef MYDBG_RCU_LOCKBY
+	WARN_ON(rnp->mydbg_lockby_cpu >= 0);
+	rnp->mydbg_lockby_cpu = raw_smp_processor_id();
+
+	WARN_ON(preemptible());
+#endif
+}
+
+static inline void mydbg_rcu_lock_put(struct rcu_node *rnp, int irqmode)
+{
+	trace_mydbg_lock_rcu_node_rcuidle(rnp, false, irqmode);
+
+#ifdef MYDBG_RCU_LOCKBY
+	WARN_ON(preemptible());
+
+	WARN_ON(rnp->mydbg_lockby_cpu != raw_smp_processor_id());
+	rnp->mydbg_lockby_cpu = -1;
+#endif
+}
+
 /*
  * Wrappers for the rcu_node::lock acquire and release.
  *
@@ -716,10 +746,14 @@ static inline void raw_spin_lock_rcu_node(struct rcu_node *rnp)
 {
 	raw_spin_lock(&ACCESS_PRIVATE(rnp, lock));
 	smp_mb__after_unlock_lock();
+
+	mydbg_rcu_lock_get(rnp, MYDBG_LOCK_IRQMODE_NO);
 }
 
 static inline void raw_spin_unlock_rcu_node(struct rcu_node *rnp)
 {
+	mydbg_rcu_lock_put(rnp, MYDBG_LOCK_IRQMODE_NO);
+
 	raw_spin_unlock(&ACCESS_PRIVATE(rnp, lock));
 }
 
@@ -727,10 +761,14 @@ static inline void raw_spin_lock_irq_rcu_node(struct rcu_node *rnp)
 {
 	raw_spin_lock_irq(&ACCESS_PRIVATE(rnp, lock));
 	smp_mb__after_unlock_lock();
+
+	mydbg_rcu_lock_get(rnp, MYDBG_LOCK_IRQMODE_YES);
 }
 
 static inline void raw_spin_unlock_irq_rcu_node(struct rcu_node *rnp)
 {
+	mydbg_rcu_lock_put(rnp, MYDBG_LOCK_IRQMODE_YES);
+
 	raw_spin_unlock_irq(&ACCESS_PRIVATE(rnp, lock));
 }
 
@@ -739,10 +777,12 @@ do {									\
 	typecheck(unsigned long, flags);				\
 	raw_spin_lock_irqsave(&ACCESS_PRIVATE(rnp, lock), flags);	\
 	smp_mb__after_unlock_lock();					\
+	mydbg_rcu_lock_get(rnp, MYDBG_LOCK_IRQMODE_SAVE); \
 } while (0)
 
 #define raw_spin_unlock_irqrestore_rcu_node(rnp, flags)			\
 do {									\
+	mydbg_rcu_lock_put(rnp, MYDBG_LOCK_IRQMODE_SAVE); \
 	typecheck(unsigned long, flags);				\
 	raw_spin_unlock_irqrestore(&ACCESS_PRIVATE(rnp, lock), flags);	\
 } while (0)
@@ -751,7 +791,9 @@ static inline bool raw_spin_trylock_rcu_node(struct rcu_node *rnp)
 {
 	bool locked = raw_spin_trylock(&ACCESS_PRIVATE(rnp, lock));
 
-	if (locked)
+	if (locked) {
 		smp_mb__after_unlock_lock();
+		mydbg_rcu_lock_get(rnp, MYDBG_LOCK_IRQMODE_NO);
+	}
 	return locked;
 }

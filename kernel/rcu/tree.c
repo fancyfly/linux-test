@@ -59,6 +59,9 @@
 #include "tree.h"
 #include "rcu.h"
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/mydbg.h>
+
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
 #endif
@@ -4072,6 +4075,9 @@ static void __init rcu_init_one(struct rcu_state *rsp)
 		rnp = rsp->level[i];
 		for (j = 0; j < levelcnt[i]; j++, rnp++) {
 			raw_spin_lock_init(&ACCESS_PRIVATE(rnp, lock));
+#ifdef MYDBG_RCU_LOCKBY
+			rnp->mydbg_lockby_cpu = -1;
+#endif
 			lockdep_set_class_and_name(&ACCESS_PRIVATE(rnp, lock),
 						   &rcu_node_class[i], buf[i]);
 			raw_spin_lock_init(&rnp->fqslock);

@@ -75,6 +75,22 @@
 			"Line Out Jack", "LINEVOUTR";
 	};
 
+	sound-ak5558 {
+		compatible = "fsl,imx-audio-ak5558";
+		model = "ak5558-audio";
+		audio-cpu = <&sai1>;
+		audio-codec = <&ak5558>;
+		audio-routing =
+			"AIN1", "Capture",
+			"AIN2", "Capture",
+			"AIN3", "Capture",
+			"AIN4", "Capture",
+			"AIN5", "Capture",
+			"AIN6", "Capture",
+			"AIN7", "Capture",
+			"AIN8", "Capture";
+	};
+
 	pwmleds {
 		compatible = "pwm-leds";
 
@@ -270,6 +286,19 @@
 			>;
 		};
 
+		pinctrl_sai1: sai1grp {
+			fsl,pins = <
+				MX8MQ_IOMUXC_SAI5_MCLK_SAI5_MCLK	0xd6
+				MX8MQ_IOMUXC_SAI5_RXC_SAI5_RX_BCLK	0xd6
+				MX8MQ_IOMUXC_SAI5_RXFS_SAI5_RX_SYNC	0xd6
+				MX8MQ_IOMUXC_SAI5_RXD0_SAI5_RX_DATA0	0xd6
+				MX8MQ_IOMUXC_SAI5_RXD1_SAI5_RX_DATA1	0xd6
+				MX8MQ_IOMUXC_SAI5_RXD2_SAI5_RX_DATA2	0xd6
+				MX8MQ_IOMUXC_SAI5_RXD3_SAI5_RX_DATA3	0xd6
+				MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10	0xd6
+			>;
+		};
+
 		pinctrl_sai2: sai2grp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_SAI2_TXFS_SAI2_TX_SYNC	0xd6
@@ -421,7 +450,13 @@
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
-	status = "disabled";
+	status = "ok";
+
+	ak5558: ak5558@10 {
+		compatible = "asahi-kasei,ak5558";
+		reg = <0x10>;
+		asahi-kasei,pdn-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &pcie0{
@@ -551,6 +586,18 @@
 
 &usb1 {
 	dr_mode = "host";
+	status = "okay";
+};
+
+&sai1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai1>;
+	assigned-clocks = <&clk IMX8MQ_CLK_SAI1_SRC>,
+			<&clk IMX8MQ_AUDIO_PLL1>,
+			<&clk IMX8MQ_CLK_SAI1_PRE_DIV>,
+			<&clk IMX8MQ_CLK_SAI1_DIV>;
+	assigned-clock-parents = <&clk IMX8MQ_AUDIO_PLL1_OUT>;
+	assigned-clock-rates = <0>, <786432000>, <98306000>, <24576000>;
 	status = "okay";
 };
 

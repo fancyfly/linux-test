@@ -322,6 +322,8 @@ void dpu_be_setup_engcfg(struct dpu_bliteng *dpu_be,
 int dpu_be_blit_cfg(struct dpu_bliteng *dpu_be,
 		struct drm_imx_dpu_blit *blit)
 {
+	dpu_cs_wait_fifo_space(dpu_be);
+
 	dpu_be_setup_decode(dpu_be, &blit->fetch_decode);
 	dpu_be_setup_persp(dpu_be, &blit->fetch_persp);
 	dpu_be_setup_eco(dpu_be, &blit->fetch_eco);
@@ -356,9 +358,13 @@ int dpu_be_blit(struct dpu_bliteng *dpu_be,
 {
 	int i;
 
-	for (i = 0; i < cmdnum; i++) {
+	dpu_cs_wait_fifo_space(dpu_be);
+	if (cmdnum > CMDSEQ_FIFO_SPACE_THRESHOLD)
+		pr_err("The cmdnum[%d] of each blit should be less than %d\n",
+			cmdnum, CMDSEQ_FIFO_SPACE_THRESHOLD);
+
+	for (i = 0; i < cmdnum; i++)
 		dpu_be_write(dpu_be, cmdlist[i], CMDSEQ_HIF);
-	}
 
 	return 0;
 }

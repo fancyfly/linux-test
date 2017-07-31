@@ -75,6 +75,18 @@
 			"Line Out Jack", "LINEVOUTR";
 	};
 
+	sound-ak4497 {
+		compatbile = "fsl,imx-audio-ak4497";
+		model = "ak4497-audio";
+		audio-cpu = <&sai3>;
+		audio-codec = <&ak4497>;
+		audio-routing =
+			"AOUTLN", "Playback",
+			"AOUTLP", "Playback",
+			"AOUTRN", "Playback",
+			"AOUTRP", "Playback";
+	};
+
 	pwmleds {
 		compatible = "pwm-leds";
 
@@ -280,6 +292,14 @@
 			>;
 		};
 
+		pinctrl_sai3: sai3grp {
+			fsl,pins = <
+				MX8MQ_IOMUXC_SAI3_TXFS_SAI3_TX_SYNC	0xd6
+				MX8MQ_IOMUXC_SAI3_TXC_SAI3_TX_BCLK	0xd6
+				MX8MQ_IOMUXC_SAI3_MCLK_SAI3_MCLK	0xd6
+				MX8MQ_IOMUXC_SAI3_TXD_SAI3_TX_DATA0	0xd6
+			>;
+		};
 		pinctrl_wdog: wdoggrp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B 0xc6
@@ -422,6 +442,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "disabled";
+
+	ak4497: ak4497@11 {
+		compatible = "asahi-kasei,ak4497";
+		reg = <0x11>;
+		asahi-kasei,pdn-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+		asahi-kasei,mute-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &pcie0{
@@ -577,6 +604,18 @@
 			<&clk IMX8MQ_AUDIO_PLL1>,
 			<&clk IMX8MQ_CLK_SAI2_PRE_DIV>,
 			<&clk IMX8MQ_CLK_SAI2_DIV>;
+	assigned-clock-parents = <&clk IMX8MQ_AUDIO_PLL1_OUT>;
+	assigned-clock-rates = <0>, <786432000>, <98306000>, <24576000>;
+	status = "okay";
+};
+
+&sai3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai3>;
+	assigned-clocks = <&clk IMX8MQ_CLK_SAI3_SRC>,
+			<&clk IMX8MQ_AUDIO_PLL1>,
+			<&clk IMX8MQ_CLK_SAI3_PRE_DIV>,
+			<&clk IMX8MQ_CLK_SAI3_DIV>;
 	assigned-clock-parents = <&clk IMX8MQ_AUDIO_PLL1_OUT>;
 	assigned-clock-rates = <0>, <786432000>, <98306000>, <24576000>;
 	status = "okay";

@@ -18,9 +18,9 @@ struct rcu_node;
 
 TRACE_EVENT(mydbg_lock_rcu_node,
 
-	TP_PROTO(struct rcu_node* rnp, bool lock, int irqmode),
+	TP_PROTO(struct rcu_node* rnp, bool lock, int irqmode, raw_spinlock_t *lockval),
 
-	TP_ARGS(rnp, lock, irqmode),
+	TP_ARGS(rnp, lock, irqmode, lockval),
 
 	TP_STRUCT__entry(
 		__field(struct rcu_node*, rnp)
@@ -28,6 +28,7 @@ TRACE_EVENT(mydbg_lock_rcu_node,
 		__field(int, irqmode)
 		__field(bool, were_irqs_disabled)
 		__field(bool, bad)
+		__field(u32, lockval)
 	),
 
 	TP_fast_assign(
@@ -35,16 +36,18 @@ TRACE_EVENT(mydbg_lock_rcu_node,
 		__entry->lock = lock;
 		__entry->irqmode = irqmode;
 		__entry->were_irqs_disabled = irqs_disabled();
+		__entry->lockval = lockval->raw_lock.slock;
 	),
 
-	TP_printk("%slock%s rnp=%p irqs_disabled()=%d",
+	TP_printk("%slock%s rnp=%p irqs_disabled()=%d lockval=0x%08x",
 		__entry->lock ? "" : "un",
 		((__entry->irqmode == MYDBG_LOCK_IRQMODE_SAVE)
-			? (__entry->lock ? "save" : "rest")
+			? (__entry->lock ? "_irqsave" : "_irqrestore")
 			: ((__entry->irqmode == MYDBG_LOCK_IRQMODE_YES)
-				? "irq" : "")),
+				? "_irq" : "")),
 		__entry->rnp,
-		!!__entry->were_irqs_disabled)
+		!!__entry->were_irqs_disabled,
+		__entry->lockval)
 );
 
 #endif /* _TRACE_MYDBG_H */

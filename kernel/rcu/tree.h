@@ -706,7 +706,8 @@ static inline void rcu_nocb_q_lengths(struct rcu_data *rdp, long *ql, long *qll)
 
 static inline void mydbg_rcu_lock_get(struct rcu_node *rnp, int irqmode)
 {
-	trace_mydbg_lock_rcu_node_rcuidle(rnp, true, irqmode);
+	trace_mydbg_lock_rcu_node_rcuidle(rnp, true, irqmode,
+			&ACCESS_PRIVATE(rnp, lock));
 
 #ifdef MYDBG_RCU_LOCKBY
 	WARN_ON(rnp->mydbg_lockby_cpu >= 0);
@@ -718,7 +719,8 @@ static inline void mydbg_rcu_lock_get(struct rcu_node *rnp, int irqmode)
 
 static inline void mydbg_rcu_lock_put(struct rcu_node *rnp, int irqmode)
 {
-	trace_mydbg_lock_rcu_node_rcuidle(rnp, false, irqmode);
+	trace_mydbg_lock_rcu_node_rcuidle(rnp, false, irqmode,
+			&ACCESS_PRIVATE(rnp, lock));
 
 #ifdef MYDBG_RCU_LOCKBY
 	WARN_ON(preemptible());

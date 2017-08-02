@@ -70,6 +70,10 @@ static inline void arch_spin_unlock_wait(arch_spinlock_t *lock)
 
 #define arch_spin_lock_flags(lock, flags) arch_spin_lock(lock)
 
+void mydbg_arch_spin_lock_bigspin(
+		arch_spinlock_t *stack_lockval,
+		arch_spinlock_t *real_lockval);
+
 static inline void arch_spin_lock(arch_spinlock_t *lock)
 {
 	unsigned long tmp;
@@ -90,6 +94,11 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	while (lockval.tickets.next != lockval.tickets.owner) {
 		wfe();
 		lockval.tickets.owner = ACCESS_ONCE(lock->tickets.owner);
+#if 1
+		if (((0x10000 + lockval.tickets.next - lockval.tickets.owner) & 0xffff) > 100) {
+			mydbg_arch_spin_lock_bigspin(&lockval, lock);
+		}
+#endif
 	}
 
 	smp_mb();

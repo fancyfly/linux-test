@@ -1741,6 +1741,17 @@ static void tracing_start_tr(struct trace_array *tr)
 	raw_spin_unlock_irqrestore(&tr->start_lock, flags);
 }
 
+void mydbg_arch_spin_lock_bigspin(
+		arch_spinlock_t *stack_lockval,
+		arch_spinlock_t *real_lockval)
+{
+	WARN_ONCE(1, "bigspin! stack 0x%08x mem 0x%08x ptr=%p",
+			stack_lockval->slock, real_lockval->slock, real_lockval);
+	trace_printk("trace STOP now, stack 0x%08x mem 0x%08x ptr=%p\n",
+			stack_lockval->slock, real_lockval->slock, real_lockval);
+	tracing_stop();
+}
+
 /**
  * tracing_stop - quick stop of the tracer
  *

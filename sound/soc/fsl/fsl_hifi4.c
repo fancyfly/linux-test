@@ -2,7 +2,7 @@
  * Freescale HIFI 4 driver
  *
  * Copyright (c) 2012-2013 by Tensilica Inc. ALL RIGHTS RESERVED.
- * Copyright (C) 2017 NXP.
+ * Copyright 2017 NXP.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,20 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
+ *
+ * Copyright (c) 2001 William L. Pitts
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms are freely
+ * permitted provided that the above copyright notice and this
+ * paragraph and the following disclaimer are duplicated in all
+ * such forms.
+ *
+ * This software is provided "AS IS" and without any express or
+ * implied warranties, including, without limitation, the implied
+ * warranties of merchantability and fitness for a particular
+ * purpose.
+ *
  */
 
 #include <linux/clk.h>
@@ -939,7 +953,7 @@ static long fsl_hifi4_load_codec(struct fsl_hifi4 *hifi4_priv,
 
 	hifi4_priv->ret_status = 0;
 
-	dev_err(dev, "code binary is loaded\n");
+	dev_dbg(dev, "code binary is loaded\n");
 
 	return ret;
 }
@@ -977,7 +991,7 @@ static long fsl_hifi4_load_codec_compat32(struct fsl_hifi4 *hifi4_priv,
 
 	hifi4_priv->ret_status = 0;
 
-	dev_err(dev, "code binary is loaded\n");
+	dev_dbg(dev, "code binary is loaded\n");
 
 	return ret;
 }
@@ -1142,6 +1156,26 @@ static int fsl_hifi4_open(struct inode *inode, struct file *file)
 	hifi4_engine->hifi4_priv = hifi4_priv;
 
 	file->private_data = hifi4_engine;
+
+	if (!hifi4_priv->is_ready) {
+		init_completion(&hifi4_priv->cmd_complete);
+
+		ret = request_firmware_nowait(THIS_MODULE,
+				FW_ACTION_HOTPLUG, hifi4_priv->fw_name,
+				dev,
+				GFP_KERNEL, hifi4_priv, hifi4_load_firmware);
+
+		if (ret) {
+			dev_err(dev, "failed to load firmware\n");
+			return ret;
+		}
+
+		ret = icm_ack_wait(hifi4_priv, 0);
+		if (ret)
+			return ret;
+		dev_info(dev, "hifi driver registered\n");
+	}
+
 	return ret;
 }
 
@@ -1416,8 +1450,14 @@ static void hifi4_load_firmware(const struct firmware *fw, void *context)
 	unsigned char *strtab = 0; /* String table pointer */
 	unsigned char *image; /* Binary image pointer */
 	int i; /* Loop counter */
-	unsigned long addr = (unsigned long)fw->data;
+	unsigned long addr;
 
+	if (!fw) {
+		dev_info(dev, "external firmware not found\n");
+		return;
+	}
+
+	addr = (unsigned long)fw->data;
 	ehdr = (Elf32_Ehdr *)addr;
 
 	/* Find the section header string table for output info */
@@ -1677,23 +1717,6 @@ static int fsl_hifi4_probe(struct platform_device *pdev)
 	hifi4_priv->scratch_buf_phys = buf_phys + offset;
 	hifi4_priv->scratch_buf_size = SCRATCH_DATA_BUF_SIZE;
 
-	init_completion(&hifi4_priv->cmd_complete);
-	hifi4_priv->is_ready = 0;
-
-	ret = request_firmware_nowait(THIS_MODULE,
-			FW_ACTION_HOTPLUG, fw_name, hifi4_priv->dev,
-			GFP_KERNEL, hifi4_priv, hifi4_load_firmware);
-
-	if (ret) {
-		dev_err(&pdev->dev, "failed to load firmware\n");
-		return ret;
-	}
-
-	ret = icm_ack_wait(hifi4_priv, 0);
-	if (ret)
-		return ret;
-
-	dev_info(&pdev->dev, "hifi driver registered\n");
 	return 0;
 }
 
@@ -1762,4 +1785,4 @@ module_platform_driver(fsl_hifi4_driver);
 
 MODULE_DESCRIPTION("Freescale HIFI 4 driver");
 MODULE_ALIAS("platform:fsl-hifi4");
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("Dual BSD/GPL");

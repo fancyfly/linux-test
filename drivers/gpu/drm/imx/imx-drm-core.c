@@ -26,6 +26,7 @@
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_plane_helper.h>
 #include <drm/drm_of.h>
+#include <drm/imx_drm.h>
 #include <video/imx-ipu-v3.h>
 #include <video/dpu.h>
 
@@ -195,12 +196,17 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 EXPORT_SYMBOL_GPL(imx_drm_encoder_parse_of);
 
 static const struct drm_ioctl_desc imx_drm_ioctls[] = {
-	/* none so far */
+	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl,
+			DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl,
+			DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_GET_PARAM, imx_drm_dpu_get_param_ioctl,
+			DRM_RENDER_ALLOW),
 };
 
 static struct drm_driver imx_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME |
-				  DRIVER_ATOMIC,
+				  DRIVER_ATOMIC | DRIVER_RENDER,
 	.lastclose		= imx_drm_driver_lastclose,
 	.gem_free_object_unlocked = drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,
@@ -253,6 +259,140 @@ static int compare_of(struct device *dev, void *data)
 	}
 
 	return dev->of_node == np;
+}
+
+static int compare_str(struct device *dev, void *data)
+{
+	/* for dpu bliteng, use its parent device's info */
+	if (strcmp(dev->driver->name, "imx-drm-dpu-bliteng") == 0 &&
+		strstr((char *)data, "dpu") != NULL) {
+		return (!strcmp(dev->parent->of_node->full_name, (char *)data));
+	} else
+		return 0;
+}
+
+static int add_display_components(struct device *dev,
+				  struct component_match **matchptr)
+{
+	struct device_node *ep, *port, *remote;
+	int i;
+
+	if (!dev->of_node)
+		return -EINVAL;
+
+	/*
+	 * Bind the crtc's ports first, so that drm_of_find_possible_crtcs()
+	 * called from encoder's .bind callbacks works as expected
+	 */
+	for (i = 0; ; i++) {
+		port = of_parse_phandle(dev->of_node, "ports", i);
+		if (!port)
+			break;
+
+		if (!of_device_is_available(port->parent)) {
+			of_node_put(port);
+			continue;
+		}
+
+		component_match_add(dev, matchptr, compare_of, port);
+		of_node_put(port);
+	}
+
+	if (i == 0) {
+		dev_err(dev, "missing 'ports' property\n");
+		return -ENODEV;
+	}
+
+	if (!(*matchptr)) {
+		dev_err(dev, "no available port\n");
+		return -ENODEV;
+	}
+
+	/*
+	 * For bound crtcs, bind the encoders attached to their remote endpoint
+	 */
+	for (i = 0; ; i++) {
+		port = of_parse_phandle(dev->of_node, "ports", i);
+		if (!port)
+			break;
+
+		if (!of_device_is_available(port->parent)) {
+			of_node_put(port);
+			continue;
+		}
+
+		for_each_child_of_node(port, ep) {
+			remote = of_graph_get_remote_port_parent(ep);
+			if (!remote || !of_device_is_available(remote)) {
+				of_node_put(remote);
+				continue;
+			} else if (!of_device_is_available(remote->parent)) {
+				dev_warn(dev, "parent device of %s is not available\n",
+					remote->full_name);
+				of_node_put(remote);
+				continue;
+			}
+
+			component_match_add(dev, matchptr, compare_of, remote);
+			of_node_put(remote);
+		}
+		of_node_put(port);
+	}
+
+	return 0;
+}
+
+static int add_dpu_bliteng_components(struct device *dev,
+				      struct component_match **matchptr)
+{
+	/*
+	 * As there may be two dpu bliteng device,
+	 * so need add something in compare data to distinguish.
+	 * Use its parent dpu device's info as the data here.
+	 */
+	struct device_node *port;
+	char *dpu_name[MAX_DPU];
+	int dpu_num;
+	int i;
+	int ret = 0;
+
+	for (i = 0; i < MAX_DPU; i++) {
+		dpu_name[i] = kzalloc(sizeof(char)*DPU_NAME_LEN, GFP_KERNEL);
+		if (!dpu_name[i]) {
+			ret = -ENOMEM;
+			goto err;
+		}
+	}
+
+	for (i = 0; ; i++) {
+		port = of_parse_phandle(dev->of_node, "ports", i);
+		if (!port)
+			break;
+
+		if (strstr(port->parent->full_name, "dpu") == NULL) {
+			/* no dpu */
+			of_node_put(port);
+			break;
+		}
+
+		if (i % 2)
+			strcpy(dpu_name[i/2], port->parent->full_name);
+
+		of_node_put(port);
+	}
+
+	dpu_num = i / 2;
+
+	for (i = 0; i < dpu_num; i++)
+		component_match_add(dev, matchptr, compare_str, dpu_name[i]);
+
+err:
+	for (i = 0; i < MAX_DPU; i++) {
+		if (!dpu_name[i])
+			kfree(dpu_name[i]);
+	}
+
+	return ret;
 }
 
 static int imx_drm_bind(struct device *dev)
@@ -382,7 +522,18 @@ static const struct component_master_ops imx_drm_ops = {
 
 static int imx_drm_platform_probe(struct platform_device *pdev)
 {
-	int ret = drm_of_component_probe(&pdev->dev, compare_of, &imx_drm_ops);
+	struct component_match *match = NULL;
+	int ret;
+
+	ret = add_display_components(&pdev->dev, &match);
+	if (ret)
+		return ret;
+
+	ret = add_dpu_bliteng_components(&pdev->dev, &match);
+	if (ret)
+		return ret;
+
+	ret = component_master_add_with_match(&pdev->dev, &imx_drm_ops, match);
 
 	if (!ret)
 		ret = dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));

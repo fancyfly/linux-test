@@ -2,6 +2,8 @@
 #define _IMX_DRM_H_
 
 #define MAX_CRTC	4
+#define MAX_DPU		2
+#define DPU_NAME_LEN	16
 
 struct device_node;
 struct drm_crtc;
@@ -61,5 +63,35 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 
 void imx_drm_connector_destroy(struct drm_connector *connector);
 void imx_drm_encoder_destroy(struct drm_encoder *encoder);
+
+#if IS_ENABLED(CONFIG_DRM_IMX_DPU)
+extern int imx_drm_dpu_set_cmdlist_ioctl(struct drm_device *drm_dev, void *data,
+	struct drm_file *file);
+extern int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
+	struct drm_file *file);
+extern int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
+	struct drm_file *file);
+#else
+static inline int imx_drm_dpu_set_cmdlist_ioctl(struct drm_device *drm_dev,
+						void *data,
+						struct drm_file *file)
+{
+	return -ENODEV;
+}
+
+static inline int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev,
+					 void *data,
+					 struct drm_file *file)
+{
+	return -ENODEV;
+}
+
+static inline int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev,
+					      void *data,
+					      struct drm_file *file)
+{
+	return -ENODEV;
+}
+#endif
 
 #endif /* _IMX_DRM_H_ */

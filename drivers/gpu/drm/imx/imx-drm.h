@@ -62,4 +62,11 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 void imx_drm_connector_destroy(struct drm_connector *connector);
 void imx_drm_encoder_destroy(struct drm_encoder *encoder);
 
+int imx_drm_dpu_set_cmdlist_ioctl(struct drm_device *drm_dev, void *data,
+	struct drm_file *file);
+int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
+	struct drm_file *file);
+int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
+	struct drm_file *file);
+
 #endif /* _IMX_DRM_H_ */

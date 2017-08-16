@@ -48,6 +48,8 @@ static inline u32 name1(const struct cm_reg_ofs *ofs,	\
 
 DPU_CM_REG_DEFINE1(IPIDENTIFIER, ipidentifier);
 
+#define IMX_DPU_BLITENG_NAME "imx-drm-dpu-bliteng"
+
 #define DESIGNDELIVERYID_MASK		0xF0U
 #define DESIGNDELIVERYID_SHIFT		4U
 
@@ -818,6 +820,7 @@ struct dpu_platform_reg {
 	const char *name;
 };
 
+
 static struct dpu_platform_reg client_reg[] = {
 	{
 		/* placeholder */
@@ -839,7 +842,7 @@ static struct dpu_platform_reg client_reg[] = {
 		.name = "imx-dpu-crtc",
 	}, {
 		.pdata = { },
-		.name = "imx-drm-dpu-bliteng",
+		.name = IMX_DPU_BLITENG_NAME,
 	},
 };
 
@@ -988,10 +991,10 @@ static int dpu_add_client_devices(struct dpu_soc *dpu)
 		bool is_disp, is_bliteng;
 
 		if (devtype->has_capture) {
-			is_bliteng = (i == 4) ? true : false;
+			is_bliteng = !strcmp(reg[i].name, IMX_DPU_BLITENG_NAME);
 			is_disp = (!is_bliteng) && ((i / 2) ? true : false);
 		} else {
-			is_bliteng = (i == 2) ? true : false;
+			is_bliteng = !strcmp(reg[i].name, IMX_DPU_BLITENG_NAME);
 			is_disp = !is_bliteng;
 		}
 
@@ -1012,7 +1015,13 @@ static int dpu_add_client_devices(struct dpu_soc *dpu)
 		if (is_disp)
 			reg[i].pdata.plane_grp = plane_grp;
 
-		pdev = platform_device_alloc(reg[i].name, id++);
+		if (!is_bliteng)
+			pdev = platform_device_alloc(reg[i].name, id++);
+		else {
+			/* don't use a device id, makes matching easier */
+			pdev = platform_device_alloc(reg[i].name, PLATFORM_DEVID_NONE);
+		}
+
 		if (!pdev) {
 			ret = -ENOMEM;
 			goto err_register;
@@ -1020,10 +1029,18 @@ static int dpu_add_client_devices(struct dpu_soc *dpu)
 
 		pdev->dev.parent = dev;
 
-		if (!is_bliteng)
+		if (!is_bliteng) {
 			reg[i].pdata.of_node = of_node;
-		ret = platform_device_add_data(pdev, &reg[i].pdata,
-					       sizeof(reg[i].pdata));
+			ret = platform_device_add_data(pdev, &reg[i].pdata,
+						       sizeof(reg[i].pdata));
+		} else {
+			/* even if we use the name it won't help us. This is for
+			 * debugging purpose. dev->platform_data is not set in
+			 * drm core in order to compare it, but only in
+			 * component driver */
+			ret = platform_device_add_data(pdev, &reg[i].name,
+						       strlen(reg[i].name));
+		}
 		if (!ret)
 			ret = platform_device_add(pdev);
 		if (ret) {

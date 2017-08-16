@@ -195,17 +195,6 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 }
 EXPORT_SYMBOL_GPL(imx_drm_encoder_parse_of);
 
-static const struct drm_ioctl_desc imx_drm_ioctls[] = {
-#if IS_ENABLED(CONFIG_DRM_IMX_DPU)
-	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl,
-			DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl,
-			DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(IMX_DPU_GET_PARAM, imx_drm_dpu_get_param_ioctl,
-			DRM_RENDER_ALLOW),
-#endif
-};
-
 static struct drm_driver imx_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME |
 				  DRIVER_ATOMIC | DRIVER_RENDER,
@@ -228,8 +217,8 @@ static struct drm_driver imx_drm_driver = {
 	.get_vblank_counter	= drm_vblank_no_hw_counter,
 	.enable_vblank		= imx_drm_enable_vblank,
 	.disable_vblank		= imx_drm_disable_vblank,
-	.ioctls			= imx_drm_ioctls,
-	.num_ioctls		= ARRAY_SIZE(imx_drm_ioctls),
+	.ioctls			= NULL,
+	.num_ioctls		= 0,
 	.fops			= &imx_drm_driver_fops,
 	.name			= "imx-drm",
 	.desc			= "i.MX DRM graphics",
@@ -242,6 +231,8 @@ static struct drm_driver imx_drm_driver = {
 static int compare_of(struct device *dev, void *data)
 {
 	struct device_node *np = data;
+
+	dev_info(dev, "dev->driver->name %s\n", dev->driver->name);
 
 	/* Special case for DI, dev->of_node may not be set yet */
 	if (strcmp(dev->driver->name, "imx-ipuv3-crtc") == 0) {
@@ -261,6 +252,89 @@ static int compare_of(struct device *dev, void *data)
 	}
 
 	return dev->of_node == np;
+}
+
+static int compare_str(struct device *dev, void *data)
+{
+	return !strcmp(dev_name(dev), (char *) data);
+}
+
+static int add_display_components(struct device *dev,
+				  struct component_match **matchptr)
+{
+	struct device_node *ep, *port, *remote;
+	int i;
+
+	if (!dev->of_node)
+		return -EINVAL;
+
+	/*
+	 * Bind the crtc's ports first, so that drm_of_find_possible_crtcs()
+	 * called from encoder's .bind callbacks works as expected
+	 */
+	for (i = 0; ; i++) {
+		port = of_parse_phandle(dev->of_node, "ports", i);
+		if (!port)
+			break;
+
+		if (!of_device_is_available(port->parent)) {
+			of_node_put(port);
+			continue;
+		}
+
+		component_match_add(dev, matchptr, compare_of, port);
+		of_node_put(port);
+	}
+
+	if (i == 0) {
+		dev_err(dev, "missing 'ports' property\n");
+		return -ENODEV;
+	}
+
+	if (!(*matchptr)) {
+		dev_err(dev, "no available port\n");
+		return -ENODEV;
+	}
+
+	/*
+	 * For bound crtcs, bind the encoders attached to their remote endpoint
+	 */
+	for (i = 0; ; i++) {
+		port = of_parse_phandle(dev->of_node, "ports", i);
+		if (!port)
+			break;
+
+		if (!of_device_is_available(port->parent)) {
+			of_node_put(port);
+			continue;
+		}
+
+		for_each_child_of_node(port, ep) {
+			remote = of_graph_get_remote_port_parent(ep);
+			if (!remote || !of_device_is_available(remote)) {
+				of_node_put(remote);
+				continue;
+			} else if (!of_device_is_available(remote->parent)) {
+				dev_warn(dev, "parent device of %s is not available\n",
+					remote->full_name);
+				of_node_put(remote);
+				continue;
+			}
+
+			component_match_add(dev, matchptr, compare_of, remote);
+			of_node_put(remote);
+		}
+		of_node_put(port);
+	}
+
+	return 0;
+}
+
+static int add_dpu_bliteng_components(struct device *dev,
+				      struct component_match **matchptr)
+{
+	component_match_add(dev, matchptr, compare_str, "imx-drm-dpu-bliteng");
+	return 0;
 }
 
 static int imx_drm_bind(struct device *dev)
@@ -390,10 +464,27 @@ static const struct component_master_ops imx_drm_ops = {
 
 static int imx_drm_platform_probe(struct platform_device *pdev)
 {
-	int ret = drm_of_component_probe(&pdev->dev, compare_of, &imx_drm_ops);
+	struct device *dev = &pdev->dev;
+	struct component_match *match = NULL;
+	int ret;
 
+
+	dev_info(dev, "imx_drm_platform_probe()\n");
+	ret = add_display_components(dev, &match);
+	if (ret) {
+		dev_err(dev, "Failed to add display components\n");
+		return ret;
+	}
+
+	ret = add_dpu_bliteng_components(dev, &match);
+	if (ret) {
+		dev_err(dev, "Failed to add bliteng components\n");
+		return ret;
+	}
+
+	ret = component_master_add_with_match(dev, &imx_drm_ops, match);
 	if (!ret)
-		ret = dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));
+		ret = dma_set_coherent_mask(dev, DMA_BIT_MASK(32));
 
 	return ret;
 }

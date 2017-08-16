@@ -14,6 +14,7 @@
 
 #include <drm/drmP.h>
 #include <drm/imx_drm.h>
+#include <linux/component.h>
 #include <linux/device.h>
 #include <linux/errno.h>
 #include <linux/export.h>
@@ -165,34 +166,38 @@ int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
 }
 EXPORT_SYMBOL_GPL(imx_drm_dpu_get_param_ioctl);
 
-int dpu_bliteng_remove(struct platform_device *pdev)
+static const struct drm_ioctl_desc imx_drm_dpu_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl,
+			DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl,
+			DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_GET_PARAM, imx_drm_dpu_get_param_ioctl,
+			DRM_RENDER_ALLOW),
+};
+
+static int dpu_bliteng_bind(struct device *dev, struct device *master,
+				void *data)
 {
-	struct device *dev = &pdev->dev;
-	struct imx_drm_dpu_bliteng *bliteng;
-	struct dpu_bliteng *dpu_bliteng = dev_get_drvdata(dev);
-	s32 id = dpu_bliteng_get_id(dpu_bliteng);
-
-	bliteng = imx_drm_dpu_bliteng_find_by_of_id(id);
-	list_del(&bliteng->list);
-	devm_kfree(dev, bliteng);
-
-	dpu_bliteng_fini(dpu_bliteng);
-	devm_kfree(dev, dpu_bliteng);
-
-	dev_info(dev, "Successfully removed dpu-blit engine\n");
-
-	return 0;
-}
-
-int dpu_bliteng_probe(struct platform_device *pdev)
-{
-	struct device *dev = &pdev->dev;
 	struct imx_drm_dpu_bliteng *bliteng;
 	struct dpu_bliteng *dpu_bliteng = NULL;
+	struct drm_ioctl_desc *ioctls = NULL;
+	int i;
 	int ret;
 
-	if (!dev->platform_data)
-		return -EINVAL;
+	struct drm_device *drm = (struct drm_device *) data;
+
+	int num_dpu_ioctls = ARRAY_SIZE(imx_drm_dpu_ioctls);
+
+	/* these have to allocated dynamically for building as module */
+	ioctls = kzalloc(num_dpu_ioctls * sizeof(struct drm_ioctl_desc), GFP_KERNEL);
+
+	/* the last 3 drm ioctl is reserved for dpu */
+	for (i = 0; i < num_dpu_ioctls; i++)
+		ioctls[num_dpu_ioctls - i - 1] =
+			imx_drm_dpu_ioctls[num_dpu_ioctls - i - 1];
+
+	drm->driver->ioctls = ioctls;
+	drm->driver->num_ioctls = num_dpu_ioctls;
 
 	bliteng = devm_kzalloc(dev, sizeof(*bliteng), GFP_KERNEL);
 	if (!bliteng)
@@ -221,6 +226,60 @@ int dpu_bliteng_probe(struct platform_device *pdev)
 	imx_dpu_num++;
 	dev_info(dev, "Successfully probed dpu-blit engine\n");
 
+	return 0;
+}
+
+static void dpu_bliteng_unbind(struct device *dev, struct device *master,
+				void *data)
+{
+	struct imx_drm_dpu_bliteng *bliteng;
+	struct dpu_bliteng *dpu_bliteng = dev_get_drvdata(dev);
+	struct drm_device *drm = (struct drm_device *) data;
+
+	s32 id = dpu_bliteng_get_id(dpu_bliteng);
+
+	drm->driver->num_ioctls -= ARRAY_SIZE(imx_drm_dpu_ioctls);
+	kfree(drm->driver->ioctls);
+
+	dev_info(dev, "Getting an instance of bliteng\n");
+	bliteng = imx_drm_dpu_bliteng_find_by_of_id(id);
+
+	list_del(&bliteng->list);
+	dev_info(dev, "Freeing bliteng\n");
+	devm_kfree(dev, bliteng);
+
+	dpu_bliteng_fini(dpu_bliteng);
+	dev_info(dev, "Freeing dpu_bliteng\n");
+	devm_kfree(dev, dpu_bliteng);
+
+	dev_info(dev, "Successfully removed dpu-blit engine\n");
+}
+
+static const struct component_ops dpu_bliteng_ops = {
+	.bind = dpu_bliteng_bind,
+	.unbind = dpu_bliteng_unbind,
+};
+
+static int dpu_bliteng_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	char **names;
+	unsigned int i;
+
+	if (!dev->platform_data)
+		return -EINVAL;
+
+	names = dev->platform_data;
+	for (i = 0; names[i]; i++) {
+		dev_info(dev, "dpu_bliteng_probe(), names[%u]=%s\n", i, names[i]);
+	}
+
+	return component_add(dev, &dpu_bliteng_ops);
+}
+
+static int dpu_bliteng_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &dpu_bliteng_ops);
 	return 0;
 }
 

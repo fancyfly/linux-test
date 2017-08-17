@@ -195,12 +195,14 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 }
 EXPORT_SYMBOL_GPL(imx_drm_encoder_parse_of);
 
-static const struct drm_ioctl_desc imx_drm_ioctls[3] = {
+struct drm_ioctl_desc imx_drm_ioctls[3] = {
 	/* the last 3 ioctl is reserved for dpu */
 	{  /* place holder */	},
 	{  /* place holder */	},
 	{  /* place holder */	},
 };
+
+EXPORT_SYMBOL_GPL(imx_drm_ioctls);
 
 static struct drm_driver imx_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME |

@@ -263,20 +263,10 @@ static int compare_of(struct device *dev, void *data)
 
 static int compare_str(struct device *dev, void *data)
 {
-	/*
-	 * dev->parent = 56180000.dpu, data = /dpu@56180000
-	 * dev->parent = 57180000.dpu, data = /dpu@57180000
-	 */
+	/* for dpu bliteng, use its parent device's info */
 	if (strcmp(dev->driver->name, "imx-drm-dpu-bliteng") == 0 &&
 		strstr((char *)data, "dpu") != NULL) {
-		char parent[9], cmp_data[9];
-
-		strncpy(parent, dev_name(dev->parent), 8);
-		parent[8] = '\0';
-		strncpy(cmp_data, (char *)data + 5, 8);
-		cmp_data[8] = '\0';
-
-		return (strcmp(parent, cmp_data) == 0);
+		return (!strcmp(dev->parent->of_node->full_name, (char *)data));
 	} else
 		return 0;
 }
@@ -358,6 +348,7 @@ static int add_dpu_bliteng_components(struct device *dev,
 	/*
 	 * As there may be two dpu bliteng device,
 	 * so need add something in compare data to distinguish.
+	 * Use its parent dpu device's info as the data here.
 	 */
 	struct device_node *port;
 	char *dpu_name[MAX_DPU];

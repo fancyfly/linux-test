@@ -166,26 +166,11 @@ int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
 }
 EXPORT_SYMBOL_GPL(imx_drm_dpu_get_param_ioctl);
 
-static const struct drm_ioctl_desc imx_drm_dpu_ioctls[] = {
-	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl,
-			DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl,
-			DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(IMX_DPU_GET_PARAM, imx_drm_dpu_get_param_ioctl,
-			DRM_RENDER_ALLOW),
-};
-
 static int dpu_bliteng_bind(struct device *dev, struct device *master,
 				void *data)
 {
-	struct drm_device *drm = (struct drm_device *)data;
-	struct drm_ioctl_desc *ioctls =
-			(struct drm_ioctl_desc *)drm->driver->ioctls;
-	int num_ioctls = drm->driver->num_ioctls;
-	int num_dpu_ioctls = ARRAY_SIZE(imx_drm_dpu_ioctls);
 	struct imx_drm_dpu_bliteng *bliteng;
 	struct dpu_bliteng *dpu_bliteng = NULL;
-	int i;
 	int ret;
 
 	bliteng = devm_kzalloc(dev, sizeof(*bliteng), GFP_KERNEL);
@@ -212,13 +197,6 @@ static int dpu_bliteng_bind(struct device *dev, struct device *master,
 
 	dev_set_drvdata(dev, dpu_bliteng);
 
-	/* the last 3 drm ioctl is reserved for dpu */
-	if (imx_dpu_num == 0) {
-		for (i = 0; i < num_dpu_ioctls; i++)
-			ioctls[num_ioctls-i-1] =
-				imx_drm_dpu_ioctls[num_dpu_ioctls-i-1];
-	}
-
 	imx_dpu_num++;
 
 	return 0;
@@ -227,15 +205,9 @@ static int dpu_bliteng_bind(struct device *dev, struct device *master,
 static void dpu_bliteng_unbind(struct device *dev, struct device *master,
 				void *data)
 {
-	struct drm_device *drm = (struct drm_device *)data;
-	struct drm_ioctl_desc *ioctls =
-			(struct drm_ioctl_desc *)drm->driver->ioctls;
-	int num_ioctls = drm->driver->num_ioctls;
-	int num_dpu_ioctls = ARRAY_SIZE(imx_drm_dpu_ioctls);
 	struct imx_drm_dpu_bliteng *bliteng;
 	struct dpu_bliteng *dpu_bliteng = dev_get_drvdata(dev);
 	s32 id = dpu_bliteng_get_id(dpu_bliteng);
-	int i;
 
 	bliteng = imx_drm_dpu_bliteng_find_by_of_id(id);
 	list_del(&bliteng->list);
@@ -245,12 +217,6 @@ static void dpu_bliteng_unbind(struct device *dev, struct device *master,
 	devm_kfree(dev, dpu_bliteng);
 
 	imx_dpu_num--;
-
-	if (imx_dpu_num == 0) {
-		for (i = 0; i < num_dpu_ioctls; i++)
-			memset(&ioctls[num_ioctls-i-1], 0,
-				sizeof(struct drm_ioctl_desc));
-	}
 }
 
 static const struct component_ops dpu_bliteng_ops = {

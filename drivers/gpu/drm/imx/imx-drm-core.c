@@ -195,11 +195,13 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 }
 EXPORT_SYMBOL_GPL(imx_drm_encoder_parse_of);
 
-struct drm_ioctl_desc imx_drm_ioctls[3] = {
-	/* the last 3 ioctl is reserved for dpu */
-	{  /* place holder */	},
-	{  /* place holder */	},
-	{  /* place holder */	},
+static const struct drm_ioctl_desc imx_drm_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl,
+		DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl,
+		DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_GET_PARAM, imx_drm_dpu_get_param_ioctl,
+		DRM_RENDER_ALLOW),
 };
 
 EXPORT_SYMBOL_GPL(imx_drm_ioctls);

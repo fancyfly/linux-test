@@ -166,7 +166,7 @@ int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
 }
 EXPORT_SYMBOL_GPL(imx_drm_dpu_get_param_ioctl);
 
-static const struct drm_ioctl_desc imx_drm_dpu_ioctls[] = {
+static struct drm_ioctl_desc imx_drm_dpu_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl,
 			DRM_RENDER_ALLOW),
 	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl,
@@ -180,24 +180,12 @@ static int dpu_bliteng_bind(struct device *dev, struct device *master,
 {
 	struct imx_drm_dpu_bliteng *bliteng;
 	struct dpu_bliteng *dpu_bliteng = NULL;
-	struct drm_ioctl_desc *ioctls = NULL;
-	int i;
-	int ret;
+	int ret, i;
 
 	struct drm_device *drm = (struct drm_device *) data;
 
-	int num_dpu_ioctls = ARRAY_SIZE(imx_drm_dpu_ioctls);
-
-	/* these have to allocated dynamically for building as module */
-	ioctls = kzalloc(num_dpu_ioctls * sizeof(struct drm_ioctl_desc), GFP_KERNEL);
-
-	/* the last 3 drm ioctl is reserved for dpu */
-	for (i = 0; i < num_dpu_ioctls; i++)
-		ioctls[num_dpu_ioctls - i - 1] =
-			imx_drm_dpu_ioctls[num_dpu_ioctls - i - 1];
-
-	drm->driver->ioctls = ioctls;
-	drm->driver->num_ioctls = num_dpu_ioctls;
+	for (i = 0; i < ARRAY_SIZE(imx_drm_dpu_ioctls); i++)
+		drm->driver->add_ioctl(drm, &imx_drm_dpu_ioctls[i]);
 
 	bliteng = devm_kzalloc(dev, sizeof(*bliteng), GFP_KERNEL);
 	if (!bliteng)
@@ -235,11 +223,13 @@ static void dpu_bliteng_unbind(struct device *dev, struct device *master,
 	struct imx_drm_dpu_bliteng *bliteng;
 	struct dpu_bliteng *dpu_bliteng = dev_get_drvdata(dev);
 	struct drm_device *drm = (struct drm_device *) data;
+	int i;
 
 	s32 id = dpu_bliteng_get_id(dpu_bliteng);
 
-	drm->driver->num_ioctls -= ARRAY_SIZE(imx_drm_dpu_ioctls);
-	kfree(drm->driver->ioctls);
+	/* remove ioctls */
+	for (i = 0; i < ARRAY_SIZE(imx_drm_dpu_ioctls); i++)
+		drm->driver->remove_ioctl(drm, &imx_drm_dpu_ioctls[i]);
 
 	dev_info(dev, "Getting an instance of bliteng\n");
 	bliteng = imx_drm_dpu_bliteng_find_by_of_id(id);

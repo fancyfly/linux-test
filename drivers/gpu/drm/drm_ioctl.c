@@ -667,10 +667,22 @@ long drm_ioctl(struct file *filp,
 	is_driver_ioctl = nr >= DRM_COMMAND_BASE && nr < DRM_COMMAND_END;
 
 	if (is_driver_ioctl) {
-		/* driver ioctl */
-		if (nr - DRM_COMMAND_BASE >= dev->driver->num_ioctls)
-			goto err_i1;
-		ioctl = &dev->driver->ioctls[nr - DRM_COMMAND_BASE];
+		/* driver ioctl, first check if there any dynamically created */
+		if (dev->driver->add_ioctl && dev->driver->remove_ioctl) {
+			struct drm_ioctl_desc *pos;
+			mutex_lock(&drm_global_mutex);
+			list_for_each_entry(pos, &dev->driver->list_ioctls, next) {
+				if (pos->cmd == nr) {
+					ioctl = pos;
+					break;
+				}
+			}
+			mutex_unlock(&drm_global_mutex);
+		} else {
+			if (nr - DRM_COMMAND_BASE >= dev->driver->num_ioctls)
+				goto err_i1;
+			ioctl = &dev->driver->ioctls[nr - DRM_COMMAND_BASE];
+		}
 	} else {
 		/* core ioctl */
 		if (nr >= DRM_CORE_IOCTL_COUNT)
@@ -775,3 +787,46 @@ bool drm_ioctl_flags(unsigned int nr, unsigned int *flags)
 	return true;
 }
 EXPORT_SYMBOL(drm_ioctl_flags);
+
+int
+drm_add_ioctl(struct drm_device *drm, struct drm_ioctl_desc *ioctl)
+{
+	mutex_lock(&drm_global_mutex);
+	list_add_tail(&ioctl->next, &drm->driver->list_ioctls);
+	mutex_unlock(&drm_global_mutex);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(drm_add_ioctl);
+
+int
+drm_remove_ioctl(struct drm_device *drm, struct drm_ioctl_desc *ioctl)
+{
+	struct drm_ioctl_desc *pos, *ppos;
+
+	mutex_lock(&drm_global_mutex);
+	list_for_each_entry_safe(pos, ppos, &drm->driver->list_ioctls, next) {
+		if (pos->cmd == ioctl->cmd) {
+			list_del(&pos->next);
+			return 0;
+		}
+	}
+	mutex_unlock(&drm_global_mutex);
+	return -ENOENT;
+}
+EXPORT_SYMBOL_GPL(drm_remove_ioctl);
+
+size_t
+drm_get_num_ioctls(struct drm_device *drm)
+{
+	size_t cnt = 0;
+	struct list_head *pos;
+
+	mutex_lock(&drm_global_mutex);
+	list_for_each(pos, &drm->driver->list_ioctls)
+		cnt++;
+	mutex_unlock(&drm_global_mutex);
+
+	return cnt;
+}
+
+EXPORT_SYMBOL_GPL(drm_get_num_ioctls);

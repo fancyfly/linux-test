@@ -343,6 +343,8 @@ struct drm_ioctl_desc {
 	int flags;
 	drm_ioctl_t *func;
 	const char *name;
+
+	struct list_head next;
 };
 
 /**
@@ -707,8 +709,16 @@ struct drm_driver {
 
 	u32 driver_features;
 	int dev_priv_size;
+
+	int (*add_ioctl)(struct drm_device *drm, struct drm_ioctl_desc *ioctl);
+	int (*remove_ioctl)(struct drm_device *drm, struct drm_ioctl_desc *ioctl);
+	size_t (*get_ioctl_num)(struct drm_device *drm);
+
+	struct list_head list_ioctls;
+
 	const struct drm_ioctl_desc *ioctls;
 	int num_ioctls;
+
 	const struct file_operations *fops;
 
 	/* List of devices hanging off this driver with stealth attach. */
@@ -944,6 +954,9 @@ extern long drm_ioctl(struct file *filp,
 extern long drm_compat_ioctl(struct file *filp,
 			     unsigned int cmd, unsigned long arg);
 extern bool drm_ioctl_flags(unsigned int nr, unsigned int *flags);
+extern int drm_add_ioctl(struct drm_device *drm, struct drm_ioctl_desc *ioctl);
+extern int drm_remove_ioctl(struct drm_device *drm, struct drm_ioctl_desc *ioctl);
+extern size_t drm_get_num_ioctls(struct drm_device *drm);
 
 /* File Operations (drm_fops.c) */
 int drm_open(struct inode *inode, struct file *filp);

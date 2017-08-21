@@ -134,7 +134,6 @@ imx_drm_unregister_ioctl(struct drm_ioctl_desc *ioctl_desc)
 }
 EXPORT_SYMBOL_GPL(imx_drm_unregister_ioctl);
 
-#define MAX_DATA_STACK 128
 
 long
 imx_drm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
@@ -142,6 +141,7 @@ imx_drm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	struct drm_file *file_priv = NULL;
 	struct drm_device *dev = NULL;
 
+#define MAX_DATA_STACK 128
 	char data[MAX_DATA_STACK];
 	unsigned int in_size;
 	struct imx_drm_ioctl *pos;
@@ -170,8 +170,7 @@ imx_drm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return ret;
 		}
 	}
-
-
+	/* call drm ioctl in case we haven't found our own */
 	return drm_ioctl(filp, cmd, arg);
 }
 
@@ -285,10 +284,11 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 EXPORT_SYMBOL_GPL(imx_drm_encoder_parse_of);
 
 static const struct drm_ioctl_desc imx_drm_ioctls[] = {
-	/* none */
+	/*
+	 * none, use imx_drm_register_ioctl() to add your own and modify
+	 * imx_drm_ioctls() to select it
+	 * */
 };
-
-EXPORT_SYMBOL_GPL(imx_drm_ioctls);
 
 static struct drm_driver imx_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME |

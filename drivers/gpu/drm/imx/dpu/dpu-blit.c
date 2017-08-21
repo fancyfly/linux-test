@@ -29,15 +29,6 @@ struct imx_drm_dpu_bliteng {
 	struct list_head list;
 };
 
-int imx_drm_dpu_set_cmdlist_ioctl(struct drm_device *drm_dev, void *data, struct drm_file *file);
-int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data, struct drm_file *file);
-int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data, struct drm_file *file);
-
-static struct drm_ioctl_desc imx_drm_ioctls[] = {
-	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl, DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl, DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(IMX_DPU_GET_PARAM, imx_drm_dpu_get_param_ioctl, DRM_RENDER_ALLOW),
-};
 
 static DEFINE_MUTEX(imx_drm_dpu_bliteng_lock);
 static LIST_HEAD(imx_drm_dpu_bliteng_list);
@@ -62,7 +53,7 @@ static struct imx_drm_dpu_bliteng *imx_drm_dpu_bliteng_find_by_of_id(s32 id)
 	return NULL;
 }
 
-int imx_drm_dpu_set_cmdlist_ioctl(struct drm_device *drm_dev, void *data,
+static int imx_drm_dpu_set_cmdlist_ioctl(struct drm_device *drm_dev, void *data,
 		struct drm_file *file)
 {
 	struct drm_imx_dpu_set_cmdlist *req;
@@ -113,9 +104,8 @@ err:
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(imx_drm_dpu_set_cmdlist_ioctl);
 
-int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
+static int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 		struct drm_file *file)
 {
 	struct drm_imx_dpu_wait *wait;
@@ -154,9 +144,8 @@ retry:
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(imx_drm_dpu_wait_ioctl);
 
-int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
+static int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
 		struct drm_file *file)
 {
 	enum drm_imx_dpu_param *param = data;
@@ -174,7 +163,12 @@ int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(imx_drm_dpu_get_param_ioctl);
+
+static struct drm_ioctl_desc imx_drm_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl, DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl, DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_GET_PARAM, imx_drm_dpu_get_param_ioctl, DRM_RENDER_ALLOW),
+};
 
 static int dpu_bliteng_bind(struct device *dev, struct device *master,
 				void *data)

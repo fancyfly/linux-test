@@ -1059,9 +1059,8 @@ int dpu_add_feature_devices(struct dpu_soc *dpu)
 	for (i = 0; i < ARRAY_SIZE(features_reg); i++, id++) {
 
 		pdev = platform_device_alloc(features_reg[i].name, id);
-		if (!pdev) {
+		if (!pdev)
 			return -ENOMEM;
-		}
 
 		pdev->dev.parent = dev;
 		ret = platform_device_add_data(pdev, &features_reg[i].name,

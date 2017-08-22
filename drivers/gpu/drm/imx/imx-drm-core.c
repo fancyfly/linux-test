@@ -349,12 +349,10 @@ static int compare_of(struct device *dev, void *data)
 
 static int compare_str(struct device *dev, void *data)
 {
-	/* for dpu bliteng, use its parent device's info */
-	if (strcmp(dev->driver->name, "imx-drm-dpu-bliteng") == 0 &&
-		strstr((char *)data, "dpu") != NULL) {
-		return (!strcmp(dev->parent->of_node->full_name, (char *)data));
-	} else
-		return 0;
+	/* ignore device id and compare against driver name */
+	return !strncmp("imx-drm-dpu-bliteng", dev_name(dev),
+			strlen("imx-drm-dpu-bliteng"));
+
 }
 
 static int add_display_components(struct device *dev,
@@ -431,54 +429,16 @@ static int add_display_components(struct device *dev,
 static int add_dpu_bliteng_components(struct device *dev,
 				      struct component_match **matchptr)
 {
-	/*
-	 * As there may be two dpu bliteng device,
-	 * so need add something in compare data to distinguish.
-	 * Use its parent dpu device's info as the data here.
-	 */
-	struct device_node *port;
-	char *dpu_name[MAX_DPU];
-	int dpu_num;
 	int i;
-	int ret = 0;
+	char buf[128];
 
+	/* we assume that the platform device id starts from 0 */
 	for (i = 0; i < MAX_DPU; i++) {
-		dpu_name[i] = kzalloc(sizeof(char)*DPU_NAME_LEN, GFP_KERNEL);
-		if (!dpu_name[i]) {
-			ret = -ENOMEM;
-			goto err;
-		}
+		snprintf(buf, sizeof(buf), "%s.%d", "imx-drm-dpu-bliteng", i);
+		component_match_add(dev, matchptr, compare_str, (void *) &buf[i]);
 	}
 
-	for (i = 0; ; i++) {
-		port = of_parse_phandle(dev->of_node, "ports", i);
-		if (!port)
-			break;
-
-		if (strstr(port->parent->full_name, "dpu") == NULL) {
-			/* no dpu */
-			of_node_put(port);
-			break;
-		}
-
-		if (i % 2)
-			strcpy(dpu_name[i/2], port->parent->full_name);
-
-		of_node_put(port);
-	}
-
-	dpu_num = i / 2;
-
-	for (i = 0; i < dpu_num; i++)
-		component_match_add(dev, matchptr, compare_str, dpu_name[i]);
-
-err:
-	for (i = 0; i < MAX_DPU; i++) {
-		if (!dpu_name[i])
-			kfree(dpu_name[i]);
-	}
-
-	return ret;
+	return 0;
 }
 
 static int imx_drm_bind(struct device *dev)

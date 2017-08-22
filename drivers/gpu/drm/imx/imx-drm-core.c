@@ -349,10 +349,7 @@ static int compare_of(struct device *dev, void *data)
 
 static int compare_str(struct device *dev, void *data)
 {
-	/* ignore device id and compare against driver name */
-	return !strncmp("imx-drm-dpu-bliteng", dev_name(dev),
-			strlen("imx-drm-dpu-bliteng"));
-
+	return !strncmp(dev_name(dev), (char *) data, strlen(dev_name(dev)));
 }
 
 static int add_display_components(struct device *dev,
@@ -426,19 +423,21 @@ static int add_display_components(struct device *dev,
 	return 0;
 }
 
-static int add_dpu_bliteng_components(struct device *dev,
+static void add_dpu_bliteng_components(struct device *dev,
 				      struct component_match **matchptr)
 {
 	int i;
-	char buf[128];
+	char blit[128];
+	void *tmp_blit;
 
 	/* we assume that the platform device id starts from 0 */
 	for (i = 0; i < MAX_DPU; i++) {
-		snprintf(buf, sizeof(buf), "%s.%d", "imx-drm-dpu-bliteng", i);
-		component_match_add(dev, matchptr, compare_str, (void *) &buf[i]);
-	}
+		memset(blit, 0, sizeof(blit));
+		snprintf(blit, sizeof(blit), "%s.%d", "imx-drm-dpu-bliteng", i);
 
-	return 0;
+		tmp_blit = kmemdup(blit, sizeof(blit), GFP_KERNEL);
+		component_match_add(dev, matchptr, compare_str, tmp_blit);
+	}
 }
 
 static int imx_drm_bind(struct device *dev)
@@ -575,9 +574,7 @@ static int imx_drm_platform_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = add_dpu_bliteng_components(&pdev->dev, &match);
-	if (ret)
-		return ret;
+	add_dpu_bliteng_components(&pdev->dev, &match);
 
 	ret = component_master_add_with_match(&pdev->dev, &imx_drm_ops, match);
 

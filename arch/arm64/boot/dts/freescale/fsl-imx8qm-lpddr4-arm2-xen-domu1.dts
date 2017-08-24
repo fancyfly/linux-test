@@ -1,0 +1,56 @@
+/*
+ * Copyright 2017 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/imx8qm-clock.h>
+
+/dts-v1/;
+
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	aliases {
+		serial1 = &lpuart1;
+	};
+
+	passthrough {
+		compatible = "simple-bus";
+		ranges;
+		#address-cells = <2>;
+		#size-cells = <2>;
+
+		clk: clk {
+			compatible = "fsl,imx8qm-clk";
+			#clock-cells = <1>;
+			fsl,lpcg_base_offset = <0x00000001 0x00000000>;
+		};
+
+		lpuart1: serial@15a070000 {
+			compatible = "fsl,imx8qm-lpuart";
+			reg = <0x1 0x5a070000 0x0 0x1000>;
+			interrupts = <GIC_SPI 346 IRQ_TYPE_LEVEL_HIGH>;
+			//interrupt-parent = <&gic>;
+			clocks = <&clk IMX8QM_UART1_CLK>,
+				<&clk IMX8QM_UART1_IPG_CLK>;
+			clock-names = "per", "ipg";
+			assigned-clocks = <&clk IMX8QM_UART1_CLK>;
+			assigned-clock-rates = <80000000>;
+			//power-domains = <&pd_dma_lpuart1>;
+			//dma-names = "tx","rx";
+			//dmas = <&edma0 15 0 0>,
+			//	<&edma0 14 0 1>;
+		};
+	};
+};

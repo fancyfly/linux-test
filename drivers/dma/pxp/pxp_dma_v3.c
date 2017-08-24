@@ -196,7 +196,6 @@ static struct kmem_cache *tx_desc_cache;
 static struct kmem_cache *edge_node_cache;
 static struct pxp_collision_info col_info;
 static dma_addr_t paddr;
-static bool v3p_flag;
 
 struct pxp_dma {
 	struct dma_device dma;
@@ -321,9 +320,6 @@ struct pxps {
 #define to_tx_desc(tx) container_of(tx, struct pxp_tx_desc, txd)
 #define to_pxp_channel(d) container_of(d, struct pxp_channel, dma_chan)
 #define to_pxp(id) container_of(id, struct pxps, pxp_dma)
-
-#define to_pxp_task_info(op) container_of((op), struct pxp_task_info, op_info)
-#define to_pxp_from_task(task) container_of((task), struct pxps, task)
 
 #define PXP_DEF_BUFS	2
 #define PXP_MIN_PIX	8
@@ -641,7 +637,7 @@ struct path_node {
 static struct vetex_node adj_list[PXP_2D_NUM];
 static struct path_node path_table[PXP_2D_NUM][PXP_2D_NUM];
 
-static bool adj_array_v3[PXP_2D_NUM][PXP_2D_NUM] = {
+static bool adj_array[PXP_2D_NUM][PXP_2D_NUM] = {
       /* 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 */
 	{0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 0  */
 	{0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, /* 1  */
@@ -661,8 +657,7 @@ static bool adj_array_v3[PXP_2D_NUM][PXP_2D_NUM] = {
 	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 15 */
 };
 
-
-static struct mux muxes_v3[16] = {
+static struct mux muxes[16] = {
 	{
 		/* mux0 */
 		.id = 0,
@@ -743,110 +738,6 @@ static struct mux muxes_v3[16] = {
 		.id = 15,
 		.mux_inputs = {PXP_2D_INPUT_FETCH0, PXP_2D_MUX_MUX10, 0xff, 0xff},
 		.mux_outputs = {PXP_2D_INPUT_STORE0, 0xff},
-	},
-};
-
-static bool adj_array_v3p[PXP_2D_NUM][PXP_2D_NUM] = {
-      /* 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 */
-	{0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 0  */
-	{0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, /* 1  */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 2  */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 3  */
-	{0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 4  */
-	{0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 5  */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, /* 6  */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, /* 7  */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 8  */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 9  */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0}, /* 10 */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0}, /* 11 */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0}, /* 12 */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 13 */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 14 */
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 15 */
-};
-
-static struct mux muxes_v3p[16] = {
-	{
-		/* mux0 */
-		.id = 0,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
-	}, {
-		/* mux1 */
-		.id = 1,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
-	}, {
-		/* mux2 */
-		.id = 2,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
-	}, {
-		/* mux3 */
-		.id = 3,
-		.mux_inputs = {PXP_2D_CSC1, PXP_2D_ROTATION1, 0xff, 0xff},
-		.mux_outputs = {PXP_2D_ALPHA0_S0, 0xff},
-	}, {
-		/* mux4 is not used in ULT1 */
-		.id = 4,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
-	}, {
-		/* mux5 */
-		.id = 5,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
-	}, {
-		/* mux6 */
-		.id = 6,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
-	},  {
-		/* mux7 */
-		.id = 7,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
-	}, {
-		/* mux8 */
-		.id = 8,
-		.mux_inputs = {PXP_2D_CSC2, PXP_2D_ALPHA0_S0_S1, 0xff, 0xff},
-		.mux_outputs = {PXP_2D_MUX_MUX9, PXP_2D_MUX_MUX11},
-	}, {
-		/* mux9 */
-		.id = 9,
-		.mux_inputs = {0xff, PXP_2D_MUX_MUX8, 0xff, 0xff},
-		.mux_outputs = {PXP_2D_LUT, 0xff},
-	}, {
-		/* mux10 */
-		.id = 10,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
-	}, {
-		/* mux11 */
-		.id = 11,
-		.mux_inputs = {PXP_2D_LUT, PXP_2D_MUX_MUX8, 0xff, 0xff},
-		.mux_outputs = {PXP_2D_MUX_MUX12, PXP_2D_ROTATION0},
-	}, {
-		/* mux12 */
-		.id = 12,
-		.mux_inputs = {PXP_2D_ROTATION0, PXP_2D_MUX_MUX11, 0xff, 0xff},
-		.mux_outputs = {PXP_2D_MUX_MUX14, 0xff},
-	}, {
-		/* mux13 */
-		.id = 13,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
-	}, {
-		/* mux14 */
-		.id = 14,
-		.mux_inputs = {0xff, PXP_2D_MUX_MUX12, 0xff, 0xff},
-		.mux_outputs = {PXP_2D_OUT, 0xff},
-	}, {
-		/* mux15 */
-		.id = 15,
-		.mux_inputs = {0xff, 0xff, 0xff, 0xff},
-		.mux_outputs = {0xff, 0xff},
 	},
 };
 
@@ -1359,22 +1250,6 @@ static uint32_t pxp_parse_out_fmt(uint32_t format)
 	return fmt_ctrl;
 }
 
-static void set_mux(struct mux_config *path_ctrl)
-{
-	struct mux_config *mux = path_ctrl;
-
-	*(uint32_t *)path_ctrl = 0xFFFFFFFF;
-
-	mux->mux0_sel = 0;
-	mux->mux3_sel = 1;
-	mux->mux6_sel = 1;
-	mux->mux8_sel = 0;
-	mux->mux9_sel = 1;
-	mux->mux11_sel = 0;
-	mux->mux12_sel = 1;
-	mux->mux14_sel = 0;
-}
-
 static void set_mux_val(struct mux_config *muxes,
 			uint32_t mux_id,
 			uint32_t mux_val)
@@ -1816,10 +1691,7 @@ static uint32_t pxp_fetch_shift_calc(uint32_t in_fmt, uint32_t out_fmt,
 
 static int pxp_start(struct pxps *pxp)
 {
-	__raw_writel(BM_PXP_CTRL_ENABLE_ROTATE1 | BM_PXP_CTRL_ENABLE |
-		BM_PXP_CTRL_ENABLE_CSC2 | BM_PXP_CTRL_ENABLE_LUT |
-		BM_PXP_CTRL_ENABLE_PS_AS_OUT | BM_PXP_CTRL_ENABLE_ROTATE0,
-			pxp->base + HW_PXP_CTRL_SET);
+	__raw_writel(BM_PXP_CTRL_ENABLE, pxp->base + HW_PXP_CTRL_SET);
 	dump_pxp_reg(pxp);
 
 	return 0;
@@ -2768,134 +2640,6 @@ static int pxp_alpha_config(struct pxp_op_info *op,
 	return 0;
 }
 
-static void pxp_lut_config(struct pxp_op_info *op)
-{
-	struct pxp_task_info *task = to_pxp_task_info(op);
-	struct pxps *pxp = to_pxp_from_task(task);
-	struct pxp_proc_data *proc_data = &pxp->pxp_conf_state.proc_data;
-	int lut_op = proc_data->lut_transform;
-	u32 reg_val;
-	int i;
-	bool use_cmap = (lut_op & PXP_LUT_USE_CMAP) ? true : false;
-	u8 *cmap = proc_data->lut_map;
-	u32 entry_src;
-	u32 pix_val;
-	u8 entry[4];
-
-	/*
-	 * If LUT already configured as needed, return...
-	 * Unless CMAP is needed and it has been updated.
-	 */
-	if ((pxp->lut_state == lut_op) &&
-		!(use_cmap && proc_data->lut_map_updated))
-		return;
-
-	if (lut_op == PXP_LUT_NONE) {
-		__raw_writel(BM_PXP_LUT_CTRL_BYPASS,
-			     pxp->base + HW_PXP_LUT_CTRL);
-	} else if (((lut_op & PXP_LUT_INVERT) != 0)
-		&& ((lut_op & PXP_LUT_BLACK_WHITE) != 0)) {
-		/* Fill out LUT table with inverted monochromized values */
-
-		/* clear bypass bit, set lookup mode & out mode */
-		__raw_writel(BF_PXP_LUT_CTRL_LOOKUP_MODE
-				(BV_PXP_LUT_CTRL_LOOKUP_MODE__DIRECT_Y8) |
-				BF_PXP_LUT_CTRL_OUT_MODE
-				(BV_PXP_LUT_CTRL_OUT_MODE__Y8),
-				pxp->base + HW_PXP_LUT_CTRL);
-
-		/* Initialize LUT address to 0 and set NUM_BYTES to 0 */
-		__raw_writel(0, pxp->base + HW_PXP_LUT_ADDR);
-
-		/* LUT address pointer auto-increments after each data write */
-		for (pix_val = 0; pix_val < 256; pix_val += 4) {
-			for (i = 0; i < 4; i++) {
-				entry_src = use_cmap ?
-					cmap[pix_val + i] : pix_val + i;
-				entry[i] = (entry_src < 0x80) ? 0xFF : 0x00;
-			}
-			reg_val = (entry[3] << 24) | (entry[2] << 16) |
-				(entry[1] << 8) | entry[0];
-			__raw_writel(reg_val, pxp->base + HW_PXP_LUT_DATA);
-		}
-	} else if ((lut_op & PXP_LUT_INVERT) != 0) {
-		/* Fill out LUT table with 8-bit inverted values */
-
-		/* clear bypass bit, set lookup mode & out mode */
-		__raw_writel(BF_PXP_LUT_CTRL_LOOKUP_MODE
-				(BV_PXP_LUT_CTRL_LOOKUP_MODE__DIRECT_Y8) |
-				BF_PXP_LUT_CTRL_OUT_MODE
-				(BV_PXP_LUT_CTRL_OUT_MODE__Y8),
-				pxp->base + HW_PXP_LUT_CTRL);
-
-		/* Initialize LUT address to 0 and set NUM_BYTES to 0 */
-		__raw_writel(0, pxp->base + HW_PXP_LUT_ADDR);
-
-		/* LUT address pointer auto-increments after each data write */
-		for (pix_val = 0; pix_val < 256; pix_val += 4) {
-			for (i = 0; i < 4; i++) {
-				entry_src = use_cmap ?
-					cmap[pix_val + i] : pix_val + i;
-				entry[i] = ~entry_src & 0xFF;
-			}
-			reg_val = (entry[3] << 24) | (entry[2] << 16) |
-				(entry[1] << 8) | entry[0];
-			__raw_writel(reg_val, pxp->base + HW_PXP_LUT_DATA);
-		}
-	} else if ((lut_op & PXP_LUT_BLACK_WHITE) != 0) {
-		/* Fill out LUT table with 8-bit monochromized values */
-
-		/* clear bypass bit, set lookup mode & out mode */
-		__raw_writel(BF_PXP_LUT_CTRL_LOOKUP_MODE
-				(BV_PXP_LUT_CTRL_LOOKUP_MODE__DIRECT_Y8) |
-				BF_PXP_LUT_CTRL_OUT_MODE
-				(BV_PXP_LUT_CTRL_OUT_MODE__Y8),
-				pxp->base + HW_PXP_LUT_CTRL);
-
-		/* Initialize LUT address to 0 and set NUM_BYTES to 0 */
-		__raw_writel(0, pxp->base + HW_PXP_LUT_ADDR);
-
-		/* LUT address pointer auto-increments after each data write */
-		for (pix_val = 0; pix_val < 256; pix_val += 4) {
-			for (i = 0; i < 4; i++) {
-				entry_src = use_cmap ?
-					cmap[pix_val + i] : pix_val + i;
-				entry[i] = (entry_src < 0x80) ? 0x00 : 0xFF;
-			}
-			reg_val = (entry[3] << 24) | (entry[2] << 16) |
-				(entry[1] << 8) | entry[0];
-			__raw_writel(reg_val, pxp->base + HW_PXP_LUT_DATA);
-		}
-	} else if (use_cmap) {
-		/* Fill out LUT table using colormap values */
-
-		/* clear bypass bit, set lookup mode & out mode */
-		__raw_writel(BF_PXP_LUT_CTRL_LOOKUP_MODE
-				(BV_PXP_LUT_CTRL_LOOKUP_MODE__DIRECT_Y8) |
-				BF_PXP_LUT_CTRL_OUT_MODE
-				(BV_PXP_LUT_CTRL_OUT_MODE__Y8),
-				pxp->base + HW_PXP_LUT_CTRL);
-
-		/* Initialize LUT address to 0 and set NUM_BYTES to 0 */
-		__raw_writel(0, pxp->base + HW_PXP_LUT_ADDR);
-
-		/* LUT address pointer auto-increments after each data write */
-		for (pix_val = 0; pix_val < 256; pix_val += 4) {
-			for (i = 0; i < 4; i++)
-				entry[i] = cmap[pix_val + i];
-			reg_val = (entry[3] << 24) | (entry[2] << 16) |
-				(entry[1] << 8) | entry[0];
-			__raw_writel(reg_val, pxp->base + HW_PXP_LUT_DATA);
-		}
-	}
-
-	pxp_writel(BM_PXP_CTRL_ENABLE_ROTATE1 | BM_PXP_CTRL_ENABLE_ROTATE0 |
-			BM_PXP_CTRL_ENABLE_CSC2 | BM_PXP_CTRL_ENABLE_LUT,
-			HW_PXP_CTRL_SET);
-
-	pxp->lut_state = lut_op;
-}
-
 static int pxp_2d_task_config(struct pxp_pixmap *input,
 			      struct pxp_pixmap *output,
 			      struct pxp_op_info *op,
@@ -2937,7 +2681,7 @@ static int pxp_2d_task_config(struct pxp_pixmap *input,
 			pxp_csc2_config(output);
 			break;
 		case PXP_2D_LUT:
-			pxp_lut_config(op);
+			pxp_writel(BF_PXP_CTRL_ENABLE_LUT(1), HW_PXP_CTRL_SET);
 			break;
 		case PXP_2D_ROTATION0:
 			pxp_rotation0_config(input);
@@ -3022,7 +2766,6 @@ static void pxp_2d_calc_mux(uint32_t nodes, struct mux_config *path_ctrl)
 static int pxp_2d_op_handler(struct pxps *pxp)
 {
 	struct mux_config path_ctrl0;
-	struct pxp_proc_data *proc_data = &pxp->pxp_conf_state.proc_data;
 	struct pxp_task_info *task = &pxp->task;
 	struct pxp_op_info *op = &task->op_info;
 	struct pxp_pixmap *input, *output, *input_s0, *input_s1;
@@ -3101,9 +2844,6 @@ reparse:
 			dev_err(&pxp->pdev->dev, "unsupport 2d operation\n");
 			return -EINVAL;
 		}
-
-		if (proc_data->lut_transform)
-			nodes_used |= (1 << PXP_2D_LUT);
 
 		nodes_in_path = find_best_path(possible_inputs,
 					       possible_outputs,
@@ -3337,9 +3077,6 @@ config:
 		break;
 	}
 
-	if (proc_data->lut_transform && pxp_is_v3(pxp))
-		set_mux(&path_ctrl0);
-
 	pr_debug("%s: path_ctrl0 = 0x%x\n",
 		 __func__, *(uint32_t *)&path_ctrl0);
 	pxp_writel(*(uint32_t *)&path_ctrl0, HW_PXP_DATA_PATH_CTRL0);
@@ -3498,13 +3235,13 @@ static int convert_param_to_pixmap(struct pxp_pixmap *pixmap,
 	pixmap->height = param->height;
 	pixmap->format = param->pixel_fmt;
 	pixmap->paddr  = param->paddr;
+	pixmap->pitch  = param->stride;
 	pixmap->bpp    = get_bpp_from_fmt(pixmap->format);
-	pixmap->pitch  = param->width * pixmap->bpp >> 3;
 
-	pixmap->crop.x = param->crop.left;
-	pixmap->crop.y = param->crop.top;
-	pixmap->crop.width  = param->crop.width;
-	pixmap->crop.height = param->crop.height;
+	pixmap->crop.x = param->left;
+	pixmap->crop.y = param->top;
+	pixmap->crop.width  = param->width;
+	pixmap->crop.height = param->height;
 
 	return 0;
 }
@@ -3688,12 +3425,6 @@ static void __pxpdma_dostart(struct pxp_channel *pxp_chan)
 		 pxp->pxp_conf_state.s0_param.width,
 		 pxp->pxp_conf_state.s0_param.height,
 		 pxp->pxp_conf_state.s0_param.paddr);
-	pr_debug("%s:%d S0 crop (top, left)=(%d, %d), (width, height)=(%d, %d)\n",
-		__func__, __LINE__,
-		pxp->pxp_conf_state.s0_param.crop.top,
-		pxp->pxp_conf_state.s0_param.crop.left,
-		pxp->pxp_conf_state.s0_param.crop.width,
-		pxp->pxp_conf_state.s0_param.crop.height);
 	pr_debug("%s:%d OUT w/h %d/%d paddr %08x\n", __func__, __LINE__,
 		 pxp->pxp_conf_state.out_param.width,
 		 pxp->pxp_conf_state.out_param.height,
@@ -7473,9 +7204,6 @@ static bool search_mux_chain(uint32_t mux_id,
 	bool found = false;
 	uint32_t i, j, next_mux = 0;
 	uint32_t output;
-	struct mux *muxes;
-
-	muxes = (v3p_flag) ? muxes_v3p : muxes_v3;
 
 	for (i = 0; i < 2; i++) {
 		output = muxes[mux_id].mux_outputs[i];
@@ -7512,12 +7240,9 @@ static void enode_mux_config(unsigned int vnode_id,
 {
 	uint32_t i, j;
 	bool via_mux = false, need_search = false;
-	struct mux *muxes;
 
 	BUG_ON(vnode_id >= PXP_2D_NUM);
 	BUG_ON(enode->adjvex >= PXP_2D_NUM);
-
-	muxes = (v3p_flag) ? muxes_v3p : muxes_v3;
 
 	for (i = 0; i < 16; i++) {
 		for (j = 0; j < 4; j++) {
@@ -7554,10 +7279,7 @@ static void enode_mux_config(unsigned int vnode_id,
 static int pxp_create_initial_graph(struct platform_device *pdev)
 {
 	int i, j, first;
-	static bool (*adj_array)[PXP_2D_NUM];
 	struct edge_node *enode, *curr = NULL;
-
-	adj_array = (v3p_flag) ? adj_array_v3p : adj_array_v3;
 
 	for (i = 0; i < PXP_2D_NUM; i++) {
 		switch (i) {
@@ -7725,8 +7447,6 @@ static int pxp_probe(struct platform_device *pdev)
 
 	pxp->pdev = pdev;
 	pxp->devdata = &pxp_devdata[pdev->id_entry->driver_data];
-
-	v3p_flag = (pxp_is_v3p(pxp)) ? true : false;
 
 	pxp->ipg_clk = devm_clk_get(&pdev->dev, "pxp_ipg");
 	pxp->axi_clk = devm_clk_get(&pdev->dev, "pxp_axi");

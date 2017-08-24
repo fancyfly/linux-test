@@ -20,10 +20,13 @@
 #include <linux/sys_soc.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/pm_domain.h>
+#include <linux/clk.h>
 
 #include <soc/imx8/sc/sci.h>
 #include <soc/imx8/soc.h>
 #include <soc/imx/revision.h>
+#include <dt-bindings/clock/imx8qm-clock.h>
 
 #define ANADIG_DIGPROG		0x6c
 
@@ -260,3 +263,41 @@ static int __init imx8_register_cpufreq(void)
 	return 0;
 }
 late_initcall(imx8_register_cpufreq);
+
+struct device_node *ccm_np;
+
+static struct clk *hack_clk_get(int clkid)
+{
+	struct of_phandle_args clkspec;
+	clkspec.np = ccm_np;
+	clkspec.args_count = 1;
+	clkspec.args[0] = clkid;
+
+	return of_clk_get_from_provider(&clkspec);
+}
+
+static int __init imx8_xen_dom0_hack(void)
+{
+	struct generic_pm_domain *pd;
+	struct clk *clk;
+
+	if (!xen_initial_domain()) {
+		return 0;
+	}
+	printk("imx xen dom0 hack init\n");
+
+	ccm_np = of_find_node_by_path("/clk");
+	BUG_ON(!ccm_np);
+
+	/* lpuart1 */
+	clk = hack_clk_get(IMX8QM_UART1_CLK);
+	clk_prepare_enable(clk);
+	clk_set_rate(clk, 80000000);
+	clk = hack_clk_get(IMX8QM_UART1_IPG_CLK);
+	clk_prepare_enable(clk);
+
+	printk("imx xen dom0 hack done\n");
+
+	return 0;
+}
+late_initcall(imx8_xen_dom0_hack);

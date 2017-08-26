@@ -52,7 +52,7 @@ static struct imx_drm_dpu_bliteng *imx_drm_dpu_bliteng_find_by_of_id(s32 id)
 	return NULL;
 }
 
-int imx_drm_dpu_set_cmdlist_ioctl(struct drm_device *drm_dev, void *data,
+static int imx_drm_dpu_set_cmdlist_ioctl(struct drm_device *drm_dev, void *data,
 		struct drm_file *file)
 {
 	struct drm_imx_dpu_set_cmdlist *req;
@@ -103,9 +103,8 @@ err:
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(imx_drm_dpu_set_cmdlist_ioctl);
 
-int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
+static int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 		struct drm_file *file)
 {
 	struct drm_imx_dpu_wait *wait;
@@ -144,9 +143,8 @@ retry:
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(imx_drm_dpu_wait_ioctl);
 
-int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
+static int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
 		struct drm_file *file)
 {
 	enum drm_imx_dpu_param *param = data;
@@ -164,14 +162,22 @@ int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(imx_drm_dpu_get_param_ioctl);
+
+static struct drm_ioctl_desc imx_drm_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl,
+			DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl,
+			DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(IMX_DPU_GET_PARAM, imx_drm_dpu_get_param_ioctl,
+			DRM_RENDER_ALLOW),
+};
 
 static int dpu_bliteng_bind(struct device *dev, struct device *master,
 				void *data)
 {
 	struct imx_drm_dpu_bliteng *bliteng;
 	struct dpu_bliteng *dpu_bliteng = NULL;
-	int ret;
+	int ret, i;
 
 	bliteng = devm_kzalloc(dev, sizeof(*bliteng), GFP_KERNEL);
 	if (!bliteng)
@@ -197,6 +203,14 @@ static int dpu_bliteng_bind(struct device *dev, struct device *master,
 
 	dev_set_drvdata(dev, dpu_bliteng);
 
+	if (imx_dpu_num == 0) {
+		for (i = 0; i < ARRAY_SIZE(imx_drm_ioctls); i++) {
+			dev_info(dev, "Registering ioctl %s\n",
+				imx_drm_ioctls[i].name);
+			imx_drm_register_ioctl(&imx_drm_ioctls[i]);
+		}
+	}
+
 	imx_dpu_num++;
 
 	return 0;
@@ -208,6 +222,7 @@ static void dpu_bliteng_unbind(struct device *dev, struct device *master,
 	struct imx_drm_dpu_bliteng *bliteng;
 	struct dpu_bliteng *dpu_bliteng = dev_get_drvdata(dev);
 	s32 id = dpu_bliteng_get_id(dpu_bliteng);
+	int i;
 
 	bliteng = imx_drm_dpu_bliteng_find_by_of_id(id);
 	list_del(&bliteng->list);
@@ -217,6 +232,14 @@ static void dpu_bliteng_unbind(struct device *dev, struct device *master,
 	devm_kfree(dev, dpu_bliteng);
 
 	imx_dpu_num--;
+
+	if (imx_dpu_num == 0) {
+		for (i = 0; i < ARRAY_SIZE(imx_drm_ioctls); i++) {
+			dev_info(dev, "Unregistering ioctl %s\n",
+				imx_drm_ioctls[i].name);
+			imx_drm_unregister_ioctl(&imx_drm_ioctls[i]);
+		}
+	}
 }
 
 static const struct component_ops dpu_bliteng_ops = {

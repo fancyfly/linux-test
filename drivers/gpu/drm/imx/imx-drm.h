@@ -2,6 +2,7 @@
 #define _IMX_DRM_H_
 
 #define MAX_CRTC	4
+#define MAX_DPU		2
 
 struct device_node;
 struct drm_crtc;
@@ -29,6 +30,12 @@ struct imx_crtc_state {
 	u32					bus_flags;
 	int					di_hsync_pin;
 	int					di_vsync_pin;
+};
+
+/* useful structure to embedded a drm_ioctl_desc */
+struct imx_drm_ioctl {
+       struct drm_ioctl_desc *ioctl;
+       struct list_head next;
 };
 
 static inline struct imx_crtc_state *to_imx_crtc_state(struct drm_crtc_state *s)
@@ -61,5 +68,8 @@ int imx_drm_encoder_parse_of(struct drm_device *drm,
 
 void imx_drm_connector_destroy(struct drm_connector *connector);
 void imx_drm_encoder_destroy(struct drm_encoder *encoder);
+
+int imx_drm_register_ioctl(struct drm_ioctl_desc *ioctl);
+int imx_drm_unregister_ioctl(struct drm_ioctl_desc *ioctl);
 
 #endif /* _IMX_DRM_H_ */

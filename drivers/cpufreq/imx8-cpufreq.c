@@ -6,6 +6,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/arm-smccc.h>
 #include <linux/clk.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
@@ -15,8 +16,11 @@
 #include <linux/pm_opp.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
+#include <soc/imx/fsl_sip.h>
 
 #define MAX_CLUSTER_NUM	2
+
+static DEFINE_SPINLOCK(cpufreq_psci_lock);
 
 struct imx8_cpufreq {
 	struct clk	*cpu_clk;
@@ -25,9 +29,35 @@ struct imx8_cpufreq {
 struct imx8_cpufreq cluster_freq[MAX_CLUSTER_NUM];
 static struct cpufreq_frequency_table *freq_table[MAX_CLUSTER_NUM];
 static unsigned int transition_latency[MAX_CLUSTER_NUM];
+struct device *cpu_dev;
 
 static int imx8_set_target(struct cpufreq_policy *policy, unsigned int index)
 {
+	struct arm_smccc_res res;
+	unsigned int old_freq, new_freq;
+	unsigned int cluster_id = topology_physical_package_id(policy->cpu);
+
+	new_freq = freq_table[cluster_id][index].frequency;
+	old_freq = policy->cur;
+
+	dev_dbg(cpu_dev, "%u MHz --> %u MHz\n",
+		old_freq / 1000, new_freq / 1000);
+
+	spin_lock(&cpufreq_psci_lock);
+	arm_smccc_smc(FSL_SIP_CPUFREQ, FSL_SIP_SET_CPUFREQ,
+		cluster_id, new_freq * 1000, 0, 0, 0, 0, &res);
+	spin_unlock(&cpufreq_psci_lock);
+
+	/*
+	 * As we can only set CPU clock rate in ATF, clock
+	 * framework does NOT know CPU clock rate is changed,
+	 * so here do clk_get_rate once to update CPU clock
+	 * rate, otherwise cat /sys/kernel/debug/clk/xxx/clk_rate
+	 * will return incorrect rate as it does NOT do a
+	 * recalculation.
+	 */
+	clk_get_rate(cluster_freq[cluster_id].cpu_clk);
+
 	return 0;
 }
 
@@ -38,9 +68,6 @@ static int imx8_cpufreq_init(struct cpufreq_policy *policy)
 
 	policy->clk = cluster_freq[cluster_id].cpu_clk;
 	policy->cur = clk_get_rate(cluster_freq[cluster_id].cpu_clk) / 1000;
-
-	pr_info("%s: cluster %d running at freq %d MHz\n",
-		__func__, cluster_id, policy->cur / 1000);
 	/*
 	 * The driver only supports the SMP configuartion where all processors
 	 * share the clock and voltage and clock.
@@ -54,6 +81,11 @@ static int imx8_cpufreq_init(struct cpufreq_policy *policy)
 	}
 
 	policy->cpuinfo.transition_latency = transition_latency[cluster_id];
+	policy->suspend_freq = policy->max;
+
+	pr_info("%s: cluster %d running at freq %d MHz, suspend freq %d MHz\n",
+		__func__, cluster_id, policy->cur / 1000,
+		policy->suspend_freq / 1000);
 
 	return ret;
 }
@@ -66,14 +98,17 @@ static struct cpufreq_driver imx8_cpufreq_driver = {
 	.init = imx8_cpufreq_init,
 	.name = "imx8-cpufreq",
 	.attr = cpufreq_generic_attr,
+#ifdef CONFIG_PM
+	.suspend = cpufreq_generic_suspend,
+#endif
 };
 
 static int imx8_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device_node *np;
-	struct device *cpu_dev;
 	int ret = 0;
 	int i, cluster_id;
+	struct device *first_cpu_dev = NULL;
 
 	cpu_dev = get_cpu_device(0);
 
@@ -105,7 +140,7 @@ static int imx8_cpufreq_probe(struct platform_device *pdev)
 	ret = dev_pm_opp_init_cpufreq_table(cpu_dev, &freq_table[cluster_id]);
 	if (ret) {
 		dev_err(cpu_dev, "failed to init cpufreq table: %d\n", ret);
-		goto put_node;
+		goto out_free_opp;
 	}
 
 	if (of_property_read_u32(np, "clock-latency", &transition_latency[cluster_id]))
@@ -115,6 +150,7 @@ static int imx8_cpufreq_probe(struct platform_device *pdev)
 	for (i = 1; i < num_online_cpus(); i++) {
 		if (topology_physical_package_id(i) == topology_physical_package_id(0))
 			continue;
+		first_cpu_dev = cpu_dev;
 		cpu_dev = get_cpu_device(i);
 		if (!cpu_dev) {
 			pr_err("failed to get cpu device %d\n", i);
@@ -128,12 +164,6 @@ static int imx8_cpufreq_probe(struct platform_device *pdev)
 			goto put_node;
 		}
 
-		ret = dev_pm_opp_of_add_table(cpu_dev);
-		if (ret < 0) {
-			dev_err(cpu_dev, "failed to add OPP table for cpu %d\n", i);
-			goto put_node;
-		}
-
 		cluster_id = topology_physical_package_id(i);
 		cluster_freq[cluster_id].cpu_clk = devm_clk_get(cpu_dev, NULL);
 		if (IS_ERR(cluster_freq[cluster_id].cpu_clk)) {
@@ -142,10 +172,16 @@ static int imx8_cpufreq_probe(struct platform_device *pdev)
 			goto put_node;
 		}
 
+		ret = dev_pm_opp_of_add_table(cpu_dev);
+		if (ret < 0) {
+			dev_err(cpu_dev, "failed to init OPP table: %d\n", ret);
+			goto put_node;
+		}
+
 		ret = dev_pm_opp_init_cpufreq_table(cpu_dev, &freq_table[cluster_id]);
 		if (ret) {
 			dev_err(cpu_dev, "failed to init cpufreq table: %d\n", ret);
-			goto put_node;
+			goto out_free_opp;
 		}
 
 		if (of_property_read_u32(np, "clock-latency", &transition_latency[cluster_id]))
@@ -154,9 +190,23 @@ static int imx8_cpufreq_probe(struct platform_device *pdev)
 	}
 
 	ret = cpufreq_register_driver(&imx8_cpufreq_driver);
-	if (ret)
+	if (ret) {
 		dev_err(cpu_dev, "failed register driver: %d\n", ret);
+		if (cluster_id > 0 && first_cpu_dev != NULL) {
+			dev_pm_opp_free_cpufreq_table(first_cpu_dev, &freq_table[0]);
+			dev_pm_opp_of_remove_table(first_cpu_dev);
+		}
+		goto free_freq_table;
+	}
 
+	of_node_put(np);
+
+	return 0;
+
+free_freq_table:
+	dev_pm_opp_free_cpufreq_table(cpu_dev, &freq_table[cluster_id]);
+out_free_opp:
+	dev_pm_opp_of_remove_table(cpu_dev);
 put_node:
 	of_node_put(np);
 	return ret;

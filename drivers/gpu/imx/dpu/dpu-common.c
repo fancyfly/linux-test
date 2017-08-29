@@ -995,7 +995,10 @@ static int dpu_add_client_devices(struct dpu_soc *dpu)
 			is_disp = !is_bliteng;
 		}
 
-		if (!is_bliteng) {
+		if (is_bliteng)
+			/* As bliteng has no of_node, so to use dpu's. */
+			of_node = dev->of_node;
+		else {
 			/*
 			 * Associate subdevice with the
 			 * corresponding port node.
@@ -1020,8 +1023,7 @@ static int dpu_add_client_devices(struct dpu_soc *dpu)
 
 		pdev->dev.parent = dev;
 
-		if (!is_bliteng)
-			reg[i].pdata.of_node = of_node;
+		reg[i].pdata.of_node = of_node;
 		ret = platform_device_add_data(pdev, &reg[i].pdata,
 					       sizeof(reg[i].pdata));
 		if (!ret)

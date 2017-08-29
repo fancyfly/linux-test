@@ -43,7 +43,7 @@ struct drm_imx_dpu_set_cmdlist {
 	__u64	cmd;
 	__u32	cmd_nr;
 
-	/* reserverd */
+	/* reserved */
 	__u64	user_data;
 };
 
@@ -53,7 +53,7 @@ struct drm_imx_dpu_set_cmdlist {
  *
  */
 struct drm_imx_dpu_wait {
-	/* reserverd */
+	/* reserved */
 	__u64   user_data;
 };
 

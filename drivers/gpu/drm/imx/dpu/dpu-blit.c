@@ -34,7 +34,7 @@ static LIST_HEAD(imx_drm_dpu_bliteng_list);
 
 static int imx_dpu_num;
 
-static struct imx_drm_dpu_bliteng *imx_drm_dpu_bliteng_find_by_of_id(s32 id)
+static struct imx_drm_dpu_bliteng *imx_drm_dpu_bliteng_find_by_id(s32 id)
 {
 	struct imx_drm_dpu_bliteng *bliteng;
 
@@ -73,7 +73,7 @@ static int imx_drm_dpu_set_cmdlist_ioctl(struct drm_device *drm_dev, void *data,
 	if (id != 0 && id != 1)
 		return -EINVAL;
 
-	bliteng = imx_drm_dpu_bliteng_find_by_of_id(id);
+	bliteng = imx_drm_dpu_bliteng_find_by_id(id);
 	if (!bliteng) {
 		DRM_ERROR("Failed to get dpu_bliteng\n");
 		return -ENODEV;
@@ -124,7 +124,7 @@ static int imx_drm_dpu_wait_ioctl(struct drm_device *drm_dev, void *data,
 	if (id != 0 && id != 1)
 		return -EINVAL;
 
-	bliteng = imx_drm_dpu_bliteng_find_by_of_id(id);
+	bliteng = imx_drm_dpu_bliteng_find_by_id(id);
 	if (!bliteng) {
 		DRM_ERROR("Failed to get dpu_bliteng\n");
 		return -ENODEV;
@@ -163,7 +163,7 @@ static int imx_drm_dpu_get_param_ioctl(struct drm_device *drm_dev, void *data,
 	return ret;
 }
 
-static struct drm_ioctl_desc imx_drm_ioctls[] = {
+static struct drm_ioctl_desc imx_drm_dpu_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(IMX_DPU_SET_CMDLIST, imx_drm_dpu_set_cmdlist_ioctl,
 			DRM_RENDER_ALLOW),
 	DRM_IOCTL_DEF_DRV(IMX_DPU_WAIT, imx_drm_dpu_wait_ioctl,
@@ -175,9 +175,10 @@ static struct drm_ioctl_desc imx_drm_ioctls[] = {
 static int dpu_bliteng_bind(struct device *dev, struct device *master,
 				void *data)
 {
+	struct drm_device *drm = (struct drm_device *)data;
 	struct imx_drm_dpu_bliteng *bliteng;
 	struct dpu_bliteng *dpu_bliteng = NULL;
-	int ret, i;
+	int ret;
 
 	bliteng = devm_kzalloc(dev, sizeof(*bliteng), GFP_KERNEL);
 	if (!bliteng)
@@ -203,15 +204,12 @@ static int dpu_bliteng_bind(struct device *dev, struct device *master,
 
 	dev_set_drvdata(dev, dpu_bliteng);
 
-	if (imx_dpu_num == 0) {
-		for (i = 0; i < ARRAY_SIZE(imx_drm_ioctls); i++) {
-			dev_info(dev, "Registering ioctl %s\n",
-				imx_drm_ioctls[i].name);
-			imx_drm_register_ioctl(&imx_drm_ioctls[i]);
-		}
-	}
-
 	imx_dpu_num++;
+
+	if (drm->driver->num_ioctls == 0) {
+		drm->driver->ioctls = imx_drm_dpu_ioctls;
+		drm->driver->num_ioctls = ARRAY_SIZE(imx_drm_dpu_ioctls);
+	}
 
 	return 0;
 }
@@ -219,12 +217,12 @@ static int dpu_bliteng_bind(struct device *dev, struct device *master,
 static void dpu_bliteng_unbind(struct device *dev, struct device *master,
 				void *data)
 {
+	struct drm_device *drm = (struct drm_device *)data;
 	struct imx_drm_dpu_bliteng *bliteng;
 	struct dpu_bliteng *dpu_bliteng = dev_get_drvdata(dev);
 	s32 id = dpu_bliteng_get_id(dpu_bliteng);
-	int i;
 
-	bliteng = imx_drm_dpu_bliteng_find_by_of_id(id);
+	bliteng = imx_drm_dpu_bliteng_find_by_id(id);
 	list_del(&bliteng->list);
 	devm_kfree(dev, bliteng);
 
@@ -233,12 +231,9 @@ static void dpu_bliteng_unbind(struct device *dev, struct device *master,
 
 	imx_dpu_num--;
 
-	if (imx_dpu_num == 0) {
-		for (i = 0; i < ARRAY_SIZE(imx_drm_ioctls); i++) {
-			dev_info(dev, "Unregistering ioctl %s\n",
-				imx_drm_ioctls[i].name);
-			imx_drm_unregister_ioctl(&imx_drm_ioctls[i]);
-		}
+	if (drm->driver->num_ioctls != 0) {
+		drm->driver->ioctls = NULL;
+		drm->driver->num_ioctls = 0;
 	}
 }
 

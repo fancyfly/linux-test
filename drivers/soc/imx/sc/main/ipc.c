@@ -328,7 +328,13 @@ int __init imx8_mu_init(void)
 		for (i = 0; i < MU_RR_COUNT; i++)
 			MU_EnableGeneralInt(mu_base_virtaddr, i);
 #endif
-		gIPCport = scu_mu_id;
+		/*
+		 * HACK: Always map a single port for virtualization.
+		 *
+		 * gIPCport != 0 is for when mu_base_virtaddr points to the
+		 * based of all the MUs
+		 */
+		gIPCport = 0;
 		scu_mu_init = true;
 	}
 

@@ -200,7 +200,7 @@ static const struct drm_ioctl_desc imx_drm_ioctls[] = {
 
 static struct drm_driver imx_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME |
-				  DRIVER_ATOMIC | DRIVER_RENDER,
+				  DRIVER_ATOMIC,
 	.lastclose		= imx_drm_driver_lastclose,
 	.gem_free_object_unlocked = drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,
@@ -331,8 +331,26 @@ static int add_display_components(struct device *dev,
 	return 0;
 }
 
-static int add_dpu_bliteng_components(struct device *dev,
-				      struct component_match **matchptr)
+static bool has_dpu(struct device *dev)
+{
+	struct device_node *port;
+	bool ret = false;
+
+	port = of_parse_phandle(dev->of_node, "ports", 0);
+	if (!port)
+		return ret;
+
+	if (strstr(port->parent->full_name, "dpu") != NULL)
+		/* has dpu */
+		ret = true;
+
+	of_node_put(port);
+
+	return ret;
+}
+
+static void add_dpu_bliteng_components(struct device *dev,
+				       struct component_match **matchptr)
 {
 	/*
 	 * As there may be two dpu bliteng device,
@@ -341,19 +359,11 @@ static int add_dpu_bliteng_components(struct device *dev,
 	 */
 	struct device_node *port;
 	int i;
-	int ret = 0;
 
 	for (i = 0; ; i++) {
 		port = of_parse_phandle(dev->of_node, "ports", i);
 		if (!port)
 			break;
-
-		if (strstr(port->parent->full_name, "dpu") == NULL) {
-			/* no dpu */
-			of_node_put(port);
-			ret = -ENODEV;
-			break;
-		}
 
 		/* One dpu has two ports */
 		if (i % 2)
@@ -362,8 +372,6 @@ static int add_dpu_bliteng_components(struct device *dev,
 
 		of_node_put(port);
 	}
-
-	return ret;
 }
 
 static int imx_drm_bind(struct device *dev)
@@ -371,6 +379,9 @@ static int imx_drm_bind(struct device *dev)
 	struct drm_device *drm;
 	struct imx_drm_device *imxdrm;
 	int ret;
+
+	if (has_dpu(dev))
+		imx_drm_driver.driver_features |= DRIVER_RENDER;
 
 	drm = drm_dev_alloc(&imx_drm_driver, dev);
 	if (IS_ERR(drm))
@@ -471,6 +482,9 @@ static void imx_drm_unbind(struct device *dev)
 	struct drm_device *drm = dev_get_drvdata(dev);
 	struct imx_drm_device *imxdrm = drm->dev_private;
 
+	if (has_dpu(dev))
+		imx_drm_driver.driver_features &= ~DRIVER_RENDER;
+
 	drm_dev_unregister(drm);
 
 	drm_kms_helper_poll_fini(drm);
@@ -496,11 +510,10 @@ static int imx_drm_platform_probe(struct platform_device *pdev)
 	struct component_match *match = NULL;
 	int ret;
 
-	ret = add_display_components(&pdev->dev, &match);
-	if (ret)
-		return ret;
+	if (has_dpu(&pdev->dev))
+		add_dpu_bliteng_components(&pdev->dev, &match);
 
-	ret = add_dpu_bliteng_components(&pdev->dev, &match);
+	ret = add_display_components(&pdev->dev, &match);
 	if (ret)
 		return ret;
 

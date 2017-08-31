@@ -31,6 +31,15 @@
 			reg = <0x00000000 0x83800000 0x00000000 0x10000>;
 		};
 	};
+
+	/* MU for guest */
+	mu2: mu@5d1d0000 {
+		compatible = "fsl,imx8-mu";
+		reg = <0x0 0x5d1d0000 0x0 0x10000>;
+		interrupts = <GIC_SPI 178 IRQ_TYPE_LEVEL_HIGH>;
+		fsl,scu_ap_mu_id = <2>;
+		xen,passthrough;
+	};
 };
 
 &lpuart1 {

@@ -2028,6 +2028,49 @@ static int pm_genpd_summary_show(struct seq_file *s, void *data)
 	return ret;
 }
 
+struct generic_pm_domain *__hack_genpd_get_by_name(const char *name)
+{
+	struct generic_pm_domain *genpd, *result = NULL;
+
+	mutex_lock(&gpd_list_lock);
+	list_for_each_entry(genpd, &gpd_list, gpd_list_node) {
+		if (!strcmp(genpd->name, name)) {
+			result = genpd;
+			break;
+		}
+	}
+	mutex_unlock(&gpd_list_lock);
+
+	return result;
+}
+EXPORT_SYMBOL(__hack_genpd_get_by_name);
+
+int __hack_genpd_poweron(struct generic_pm_domain *pd)
+{
+	int ret = 0;
+
+	mutex_lock(&pd->lock);
+	genpd_sd_counter_inc(pd);
+	genpd_sync_poweron(pd);
+	mutex_unlock(&pd->lock);
+
+	return ret;
+}
+EXPORT_SYMBOL(__hack_genpd_poweron);
+
+int __hack_genpd_poweroff(struct generic_pm_domain *pd)
+{
+	int ret = 0;
+
+	mutex_lock(&pd->lock);
+	genpd_sd_counter_dec(pd);
+	genpd_sync_poweroff(pd);
+	mutex_unlock(&pd->lock);
+
+	return ret;
+}
+EXPORT_SYMBOL(__hack_genpd_poweroff);
+
 static int pm_genpd_summary_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, pm_genpd_summary_show, NULL);

@@ -269,4 +269,8 @@ static inline void dev_pm_domain_set(struct device *dev,
 				     struct dev_pm_domain *pd) {}
 #endif
 
+struct generic_pm_domain *__hack_genpd_get_by_name(const char *name);
+int __hack_genpd_poweron(struct generic_pm_domain *pd);
+int __hack_genpd_poweroff(struct generic_pm_domain *pd);
+
 #endif /* _LINUX_PM_DOMAIN_H */

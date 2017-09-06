@@ -289,13 +289,6 @@ static int __init imx8_xen_dom0_hack(void)
 	ccm_np = of_find_node_by_path("/clk");
 	BUG_ON(!ccm_np);
 
-	/* lpuart1 */
-	clk = hack_clk_get(IMX8QM_UART1_CLK);
-	clk_prepare_enable(clk);
-	clk_set_rate(clk, 80000000);
-	clk = hack_clk_get(IMX8QM_UART1_IPG_CLK);
-	clk_prepare_enable(clk);
-
 	printk("imx xen dom0 hack done\n");
 
 	return 0;

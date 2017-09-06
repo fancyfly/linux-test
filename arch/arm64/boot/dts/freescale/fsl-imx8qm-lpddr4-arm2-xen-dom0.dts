@@ -40,6 +40,12 @@
 		fsl,scu_ap_mu_id = <2>;
 		xen,passthrough;
 	};
+
+	lpuart1_lpcg: lpcg@5a470000 {
+		compatible = "fsl,imx8qm-lpuart-lpcg";
+		reg = <0x0 0x5a470000 0x0 0x10000>;
+		xen,passthrough;
+	};
 };
 
 &lpuart1 {

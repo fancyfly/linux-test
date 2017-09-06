@@ -31,6 +31,11 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 
+		clk: clk {
+			compatible = "fsl,imx8qm-clk";
+			#clock-cells = <1>;
+		};
+
 		/* MU for guest */
 		mu2: mu@15d1d0000 {
 			compatible = "fsl,imx8-mu";
@@ -39,38 +44,16 @@
 			fsl,scu_ap_mu_id = <2>;
 		};
 
-		clk_dummy: clk-dummy@0 {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <24000000>;
-			clock-output-names = "dummy";
-		};
-
-		clk_dummy_uart1_per: clk_dummy_uart1_per {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <80000000>;
-			clock-output-names = "uart1_per";
-		};
-
-		clk_dummy_uart1_ipg: clk_dummy_uart1_ipg {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <80000000>;
-			clock-output-names = "uart1_ipg";
-		};
-
 		lpuart1: serial@15a070000 {
 			compatible = "fsl,imx8qm-lpuart";
 			reg = <0x1 0x5a070000 0x0 0x1000>;
 			interrupts = <GIC_SPI 346 IRQ_TYPE_LEVEL_HIGH>;
 			//interrupt-parent = <&gic>;
-			//clocks = <&clk IMX8QM_UART1_CLK>,
-			//	<&clk IMX8QM_UART1_IPG_CLK>;
-			clocks = <&clk_dummy_uart1_per>, <&clk_dummy_uart1_ipg>;
+			clocks = <&clk IMX8QM_UART1_CLK>,
+				<&clk IMX8QM_UART1_IPG_CLK>;
 			clock-names = "per", "ipg";
-			//assigned-clocks = <&clk IMX8QM_UART1_CLK>;
-			//assigned-clock-rates = <80000000>;
+			assigned-clocks = <&clk IMX8QM_UART1_CLK>;
+			assigned-clock-rates = <80000000>;
 			//power-domains = <&pd_dma_lpuart1>;
 			//dma-names = "tx","rx";
 			//dmas = <&edma0 15 0 0>,

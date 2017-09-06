@@ -289,6 +289,20 @@ static int __init imx8_xen_dom0_hack(void)
 	ccm_np = of_find_node_by_path("/clk");
 	BUG_ON(!ccm_np);
 
+	if (1) {
+		/* lvds0 PD */
+		pd = __hack_genpd_get_by_name("lvds0_power_domain");
+		__hack_genpd_poweron(pd);
+		pd = __hack_genpd_get_by_name("lvds0_i2c0");
+		__hack_genpd_poweron(pd);
+		pd = __hack_genpd_get_by_name("lvds0_pwm");
+		__hack_genpd_poweron(pd);
+
+		/* dpu1 PD */
+		pd = __hack_genpd_get_by_name("dc0_power_domain");
+		__hack_genpd_poweron(pd);
+	}
+
 	printk("imx xen dom0 hack done\n");
 
 	return 0;

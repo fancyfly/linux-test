@@ -15,9 +15,6 @@
 #include "fsl-imx8qm-lpddr4-arm2-it6263.dts"
 
 / {
-	/delete-node/ gpu_3d0;
-	/delete-node/ gpu_3d1;
-	/delete-node/ imx_gpu_ss;
 	/delete-node/ rtc;
 
 	chosen {
@@ -29,6 +26,17 @@
 			compatible = "xen,linux-zimage", "xen,multiboot-module";
 			bootargs = "earlycon=xen console=hvc0 clk_ignore_unused";
 			reg = <0x00000000 0x83800000 0x00000000 0x10000>;
+		};
+	};
+
+	reserved-memory {
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0 0x14000000>;
+			alloc-ranges = <0 0xd0000000 0 0x14000000>;
+			linux,cma-default;
 		};
 	};
 
@@ -71,7 +79,7 @@
 /* SMMU */
 &smmu {
 	#iommu-cells = <0>;
-	mmu-masters = <&dpu1 0x13>;
+	mmu-masters = <&dpu1 0x13>, <&gpu_3d0 0x15>;
 };
 
 
@@ -108,4 +116,22 @@
 	xen,passthrough;
 	#stream-id-cells = <1>;
 	iommus = <&smmu>;
+};
+
+
+/* GPU */
+&pd_gpu0 {
+	xen,passthrough;
+};
+
+&gpu_3d0 {
+	xen,passthrough;
+	#stream-id-cells = <1>;
+	iommus = <&smmu>;
+};
+
+&imx8_gpu_ss {
+	cores = <&gpu_3d1>;
+	/delete-property/ reg;
+	/delete-property/ reg-names;
 };

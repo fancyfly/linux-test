@@ -38,6 +38,54 @@
 			#clock-cells = <1>;
 		};
 
+		clk_dummy: clk-dummy@0 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <2400000>;
+		};
+
+		clk_dummy_lvds0_phy: clk_dummy_lvds0_phy {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			//clock-frequency = <74250000>;
+			clock-frequency = <65000000>;
+		};
+
+		clk_dummy_lvds0_pixel: clk_dummy_lvds0_pixel {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			//clock-frequency = <74250000>;
+			clock-frequency = <65000000>;
+		};
+
+		clk_dummy_lvds0_bypass: clk_dummy_lvds0_bypass {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			//clock-frequency = <74250000>;
+			clock-frequency = <65000000>;
+		};
+		clk_dummy_dpu1_pll: clk_dummy_dpu1_pll {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <520000000>;
+		};
+		clk_dummy_dpu1_disp: clk_dummy_dpu1_disp {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <65000000>;
+		};
+
+		clk_dummy_lvds0_i2c0: clk_dummy_lvds0_i2c0 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24000000>;
+		};
+		clk_dummy_lvds0_i2c0_ipg: clk_dummy_lvds0_i2c0_ipg {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24000000>;
+		};
+
 		/* MU for guest */
 		mu2: mu@15d1d0000 {
 			compatible = "fsl,imx8-mu";
@@ -76,7 +124,8 @@
 			interrupt-controller;
 			/*interrupt-parent = <&gic>;*/
 			#interrupt-cells = <2>;
-			clocks = <&clk IMX8QM_LVDS0_LIS_IPG_CLK>;
+			//clocks = <&clk IMX8QM_LVDS0_LIS_IPG_CLK>;
+			clocks = <&clk_dummy>;
 			clock-names = "ipg";
 			//power-domains = <&pd_lvds0>;
 		};
@@ -88,11 +137,13 @@
 			reg = <0x1 0x56247000 0x0 0x1000>;
 			interrupts = <9 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-parent = <&irqsteer_lvds0>;
-			clocks = <&clk IMX8QM_LVDS0_I2C0_CLK>,
-				 <&clk IMX8QM_LVDS0_I2C0_IPG_CLK>;
+			//clocks = <&clk IMX8QM_LVDS0_I2C0_CLK>,
+			//	 <&clk IMX8QM_LVDS0_I2C0_IPG_CLK>;
+			clocks = <&clk_dummy_lvds0_i2c0>,
+				<&clk_dummy_lvds0_i2c0>;
 			clock-names = "per", "ipg";
-			assigned-clocks = <&clk IMX8QM_LVDS0_I2C0_CLK>;
-			assigned-clock-rates = <24000000>;
+			//assigned-clocks = <&clk IMX8QM_LVDS0_I2C0_CLK>;
+			//assigned-clock-rates = <24000000>;
 			//power-domains = <&pd_lvds0_i2c0>;
 
 			clock-frequency = <100000>;
@@ -118,7 +169,8 @@
 			#size-cells = <0>;
 			compatible = "mixel,lvds-phy";
 			reg = <0x1 0x56241000 0x0 0x100>;
-			clocks = <&clk IMX8QM_LVDS0_PHY_CLK>;
+			//clocks = <&clk IMX8QM_LVDS0_PHY_CLK>;
+			clocks = <&clk_dummy_lvds0_phy>;
 			clock-names = "phy";
 			//power-domains = <&pd_lvds0>;
 			//status = "disabled";
@@ -138,8 +190,10 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			compatible = "fsl,imx8qm-ldb";
-			clocks = <&clk IMX8QM_LVDS0_PIXEL_CLK>,
-				 <&clk IMX8QM_LVDS0_BYPASS_CLK>;
+			//clocks = <&clk IMX8QM_LVDS0_PIXEL_CLK>,
+			//	 <&clk IMX8QM_LVDS0_BYPASS_CLK>;
+			clocks = <&clk_dummy_lvds0_pixel>,
+				<&clk_dummy_lvds0_bypass>;
 			clock-names = "pixel", "bypass";
 			//power-domains = <&pd_lvds0>;
 			gpr = <&lvds_region1>;
@@ -217,10 +271,17 @@
 					  "irq_reserved0",
 					  "irq_reserved1",
 					  "irq_blit";
+			/*
 			clocks = <&clk IMX8QM_DC0_PLL0_CLK>,
 				 <&clk IMX8QM_DC0_PLL1_CLK>,
 				 <&clk IMX8QM_DC0_DISP0_CLK>,
 				 <&clk IMX8QM_DC0_DISP1_CLK>;
+			 */
+			//clocks = <&clk_dummy>, <&clk_dummy>, <&clk_dummy>, <&clk_dummy>;
+			clocks = <&clk_dummy_dpu1_pll>,
+			       <&clk_dummy_dpu1_pll>,
+			       <&clk_dummy_dpu1_disp>,
+			       <&clk_dummy_dpu1_disp>;
 			clock-names = "pll0", "pll1", "disp0", "disp1";
 			//power-domains = <&pd_dc0>;
 

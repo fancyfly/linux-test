@@ -303,6 +303,13 @@ static int __init imx8_xen_dom0_hack(void)
 		__hack_genpd_poweron(pd);
 	}
 
+	if (1) {
+		pd = __hack_genpd_get_by_name("PD_GPU0");
+		if (pd) {
+			__hack_genpd_poweron(pd);
+		}
+	}
+
 	printk("imx xen dom0 hack done\n");
 
 	return 0;

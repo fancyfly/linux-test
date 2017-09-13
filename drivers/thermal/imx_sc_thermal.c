@@ -11,15 +11,21 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/device_cooling.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
 #include <linux/slab.h>
 #include <linux/thermal.h>
 #include <soc/imx8/sc/sci.h>
 
+#include "thermal_core.h"
+
 struct imx_sc_sensor {
 	struct thermal_zone_device *tzd;
+	struct thermal_cooling_device *cdev;
 	sc_rsrc_t hw_id;
+	int temp_passive;
+	int temp_critical;
 };
 
 struct imx_sc_tsens_device {
@@ -58,11 +64,12 @@ static int imx_sc_tsens_get_temp(void *data, int *temp)
 			SC_C_TEMP, &celsius, &tenths);
 	/*
 	 * if the SS power domain is down, read temp will fail, so
-	 * we can return the temp of A53 CPU domain instead.
+	 * we can return the temp of CPU domain instead.
 	 */
 	if (sciErr != SC_ERR_NONE) {
-		sciErr = sc_misc_get_temp(tsens_ipcHandle, sensor_hw_id[0],
-				SC_C_TEMP, &celsius, &tenths);
+		sciErr = sc_misc_get_temp(tsens_ipcHandle,
+			sensor_hw_id[topology_physical_package_id(smp_processor_id())],
+			SC_C_TEMP, &celsius, &tenths);
 		if (sciErr != SC_ERR_NONE) {
 			pr_err("read temp sensor:%d failed\n", sensor->hw_id);
 			return -EINVAL;
@@ -75,13 +82,41 @@ static int imx_sc_tsens_get_temp(void *data, int *temp)
 
 static int imx_sc_tsens_get_trend(void *p, int trip, enum thermal_trend *trend)
 {
+	int trip_temp;
+	struct imx_sc_sensor *sensor = p;
+
+	if (!sensor->tzd)
+		return 0;
+
+	trip_temp = (trip == IMX_TRIP_PASSIVE) ? sensor->temp_passive :
+					     sensor->temp_critical;
+
+	if (sensor->tzd->temperature >= trip_temp)
+		*trend = THERMAL_TREND_RAISE_FULL;
+	else
+		*trend = THERMAL_TREND_DROP_FULL;
+
 	return 0;
 }
 
+static int imx_sc_set_trip_temp(void *p, int trip,
+			     int temp)
+{
+	struct imx_sc_sensor *sensor = p;
+
+	if (trip == IMX_TRIP_CRITICAL)
+		sensor->temp_critical = temp;
+
+	if (trip == IMX_TRIP_PASSIVE)
+		sensor->temp_passive = temp;
+
+	return 0;
+}
 
 static const struct thermal_zone_of_device_ops imx_sc_tsens_ops = {
 	.get_temp = imx_sc_tsens_get_temp,
 	.get_trend = imx_sc_tsens_get_trend,
+	.set_trip_temp = imx_sc_set_trip_temp,
 };
 
 static const struct of_device_id imx_sc_tsens_table[] = {
@@ -97,6 +132,7 @@ static int imx_sc_tsens_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct imx_sc_tsens_device *tsens_dev;
 	struct imx_sc_sensor *sensor;
+	const struct thermal_trip *trip;
 	struct thermal_zone_device *tzd;
 	sc_err_t sciErr;
 	uint32_t mu_id;
@@ -141,6 +177,31 @@ static int imx_sc_tsens_probe(struct platform_device *pdev)
 			goto failed;
 		}
 		sensor->tzd = tzd;
+		trip = of_thermal_get_trip_points(sensor->tzd);
+		sensor->temp_passive = trip[0].temperature;
+		sensor->temp_critical = trip[1].temperature;
+
+		sensor->cdev = devfreq_cooling_register();
+		if (IS_ERR(sensor->cdev)) {
+			dev_err(&pdev->dev,
+				"failed to register devfreq cooling device: %d\n",
+				ret);
+			goto failed;
+		}
+
+		ret = thermal_zone_bind_cooling_device(sensor->tzd,
+			IMX_TRIP_PASSIVE,
+			sensor->cdev,
+			THERMAL_NO_LIMIT,
+			THERMAL_NO_LIMIT,
+			THERMAL_WEIGHT_DEFAULT);
+		if (ret) {
+			dev_err(&sensor->tzd->device,
+				"binding zone %s with cdev %s failed:%d\n",
+				sensor->tzd->type, sensor->cdev->type, ret);
+			devfreq_cooling_unregister(sensor->cdev);
+			goto failed;
+		}
 	}
 
 	return 0;

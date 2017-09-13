@@ -12,8 +12,8 @@
  * for more details.
  */
 
-#ifndef __IMXDPU_REGISTERS_H__
-#define __IMXDPU_REGISTERS_H__
+#ifndef __DPU_BLIT_REGISTERS_H__
+#define __DPU_BLIT_REGISTERS_H__
 
 /* Registers Defination */
 #define COMCTRL_IPIDENTIFIER                       ((uint32_t)(0))

@@ -99,6 +99,12 @@ static int usb_ss_gadget_udc_stop(struct usb_gadget *gadget);
 static int usb_ss_init_ep(struct usb_ss_dev *usb_ss);
 static int usb_ss_init_ep0(struct usb_ss_dev *usb_ss);
 
+static struct usb_endpoint_descriptor cdns3_gadget_ep0_desc = {
+	.bLength	= USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
+	.bmAttributes	= USB_ENDPOINT_XFER_CONTROL,
+};
+
 static u32 gadget_readl(struct usb_ss_dev *usb_ss, uint32_t __iomem *reg)
 {
 	return cdns_readl(reg);
@@ -200,30 +206,44 @@ static void cdns_ep0_config(struct usb_ss_dev *usb_ss)
 	switch (usb_ss->gadget.speed) {
 	case USB_SPEED_UNKNOWN:
 		max_packet_size = ENDPOINT_MAX_PACKET_SIZE_0;
+		usb_ss->gadget.ep0->maxpacket = ENDPOINT_MAX_PACKET_SIZE_0;
+		cdns3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(0);
 		break;
 
 	case USB_SPEED_LOW:
 		max_packet_size = ENDPOINT_MAX_PACKET_SIZE_8;
+		usb_ss->gadget.ep0->maxpacket = ENDPOINT_MAX_PACKET_SIZE_8;
+		cdns3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(8);
 		break;
 
 	case USB_SPEED_FULL:
 		max_packet_size = ENDPOINT_MAX_PACKET_SIZE_64;
+		usb_ss->gadget.ep0->maxpacket = ENDPOINT_MAX_PACKET_SIZE_64;
+		cdns3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(64);
 		break;
 
 	case USB_SPEED_HIGH:
 		max_packet_size = ENDPOINT_MAX_PACKET_SIZE_64;
+		usb_ss->gadget.ep0->maxpacket = ENDPOINT_MAX_PACKET_SIZE_64;
+		cdns3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(64);
 		break;
 
 	case USB_SPEED_WIRELESS:
 		max_packet_size = ENDPOINT_MAX_PACKET_SIZE_64;
+		usb_ss->gadget.ep0->maxpacket = ENDPOINT_MAX_PACKET_SIZE_64;
+		cdns3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(64);
 		break;
 
 	case USB_SPEED_SUPER:
 		max_packet_size = ENDPOINT_MAX_PACKET_SIZE_512;
+		usb_ss->gadget.ep0->maxpacket = ENDPOINT_MAX_PACKET_SIZE_512;
+		cdns3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(512);
 		break;
 
 	case USB_SPEED_SUPER_PLUS:
 		dev_warn(&usb_ss->dev, "USB 3.1 is not supported\n");
+		usb_ss->gadget.ep0->maxpacket = ENDPOINT_MAX_PACKET_SIZE_512;
+		cdns3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(512);
 		max_packet_size = ENDPOINT_MAX_PACKET_SIZE_512;
 		break;
 	}
@@ -1440,6 +1460,24 @@ static int usb_ss_gadget_ep_enable(struct usb_ep *ep,
 	return 0;
 }
 
+static void usb_ss_free_trb_pool(struct usb_ss_endpoint *usb_ss_ep)
+{
+	struct usb_ss_dev *usb_ss = usb_ss_ep->usb_ss;
+
+	if (usb_ss_ep->trb_pool) {
+		dma_free_coherent(usb_ss->sysdev,
+			sizeof(struct usb_ss_trb) * USB_SS_TRBS_NUM,
+			usb_ss_ep->trb_pool, usb_ss_ep->trb_pool_dma);
+		usb_ss_ep->trb_pool = NULL;
+	}
+
+	if (usb_ss_ep->cpu_addr) {
+		dma_free_coherent(usb_ss->sysdev, 4096, usb_ss_ep->cpu_addr,
+			usb_ss_ep->dma_addr);
+		usb_ss_ep->cpu_addr = NULL;
+	}
+}
+
 /**
  * usb_ss_gadget_ep_disable Disable endpoint
  * @ep: endpoint object
@@ -1738,7 +1776,18 @@ static int usb_ss_gadget_pullup(struct usb_gadget *gadget, int is_on)
 {
 	struct usb_ss_dev *usb_ss = gadget_to_usb_ss(gadget);
 
+	if (!usb_ss->start_gadget)
+		return 0;
+
 	dev_dbg(&usb_ss->dev, "usb_ss_gadget_pullup: %d\n", is_on);
+
+	if (is_on)
+		gadget_writel(usb_ss, &usb_ss->regs->usb_conf,
+				USB_CONF__DEVEN__MASK);
+	else
+		gadget_writel(usb_ss, &usb_ss->regs->usb_conf,
+				USB_CONF__DEVDS__MASK);
+
 	return 0;
 }
 
@@ -1835,11 +1884,23 @@ static int usb_ss_gadget_udc_stop(struct usb_gadget *gadget)
 {
 	struct usb_ss_dev *usb_ss = gadget_to_usb_ss(gadget);
 	unsigned long flags;
+	int i;
 
 	spin_lock_irqsave(&usb_ss->lock, flags);
 	usb_ss->gadget_driver = NULL;
+	if (!usb_ss->start_gadget)
+		goto quit;
 	/* disable interrupt for device */
 	gadget_writel(usb_ss, &usb_ss->regs->usb_ien, 0);
+	gadget_writel(usb_ss, &usb_ss->regs->usb_conf, USB_CONF__DEVDS__MASK);
+	spin_unlock_irqrestore(&usb_ss->lock, flags);
+
+	for (i = 0; i < usb_ss->ep_nums ; i++)
+		usb_ss_free_trb_pool(usb_ss->eps[i]);
+
+	return 0;
+
+quit:
 	spin_unlock_irqrestore(&usb_ss->lock, flags);
 
 	return 0;
@@ -1965,6 +2026,7 @@ static int usb_ss_init_ep0(struct usb_ss_dev *usb_ss)
 	ep0->endpoint.caps.dir_in = 1;
 	ep0->endpoint.caps.dir_out = 1;
 	ep0->endpoint.name = ep0->name;
+	ep0->endpoint.desc = &cdns3_gadget_ep0_desc;
 
 	usb_ss->gadget.ep0 = &ep0->endpoint;
 
@@ -2008,6 +2070,7 @@ static int __cdns3_gadget_init(struct cdns3 *cdns)
 	usb_ss->gadget.name = "usb-ss-gadget";
 	usb_ss->gadget.sg_supported = 1;
 	usb_ss->is_connected = 0;
+	spin_lock_init(&usb_ss->lock);
 
 	usb_ss->in_standby_mode = 1;
 
@@ -2163,6 +2226,7 @@ static void cdns3_gadget_stop(struct cdns3 *cdns)
 
 	/* disable interrupt for device */
 	gadget_writel(usb_ss, &usb_ss->regs->usb_ien, 0);
+	gadget_writel(usb_ss, &usb_ss->regs->usb_conf, USB_CONF__DEVDS__MASK);
 	usb_ss->start_gadget = 0;
 	spin_unlock_irqrestore(&usb_ss->lock, flags);
 }

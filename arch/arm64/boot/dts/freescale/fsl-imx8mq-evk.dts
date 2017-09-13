@@ -439,14 +439,14 @@
 		};
 	};
 
-	ptn5110@50 {
+	typec_ptn5100: ptn5110@50 {
 		compatible = "usb,tcpci";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_typec>;
 		reg = <0x50>;
 		interrupt-parent = <&gpio3>;
 		interrupts = <3 8>;
-		ss-sel-gpios = <&gpio3 15 GPIO_ACTIVE_LOW>;
+		ss-sel-gpios = <&gpio3 15 GPIO_ACTIVE_HIGH>;
 		src-pdos = <0x380190c8>;
 		snk-pdos = <0x380190c8 0x3802d0c8>;
 		max-snk-mv = <9000>;
@@ -603,7 +603,8 @@
 
 &usb_dwc3_0 {
 	status = "okay";
-	dr_mode = "peripheral";
+	extcon = <&typec_ptn5100>;
+	dr_mode = "otg";
 };
 
 &usb3_phy1 {

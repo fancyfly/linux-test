@@ -197,9 +197,28 @@ static struct kmem_cache *edge_node_cache;
 static struct pxp_collision_info col_info;
 static dma_addr_t paddr;
 static bool v3p_flag;
+static int alpha_blending_version;
+static bool pxp_legacy;
 
 struct pxp_dma {
 	struct dma_device dma;
+};
+
+enum pxp_alpha_blending_version {
+	PXP_ALPHA_BLENDING_NONE	 = 0x0,
+	PXP_ALPHA_BLENDING_V1	 = 0x1,
+	PXP_ALPHA_BLENDING_V2	 = 0x2,
+};
+
+struct pxp_alpha_global {
+	unsigned int color_key_enable;
+	bool combine_enable;
+	bool global_alpha_enable;
+	bool global_override;
+	bool alpha_invert;
+	bool local_alpha_enable;
+	unsigned char global_alpha;
+	int comp_mask;
 };
 
 struct rectangle {
@@ -271,6 +290,7 @@ struct pxp_pixmap {
 	uint32_t flags;
 	bool valid;
 	dma_addr_t paddr;
+	struct pxp_alpha_global g_alpha;
 };
 
 struct pxp_task_info {
@@ -939,6 +959,7 @@ static void pxp_histogram_disable(struct pxps *pxp);
 static void pxp_lut_cleanup_multiple(struct pxps *pxp, u64 lut, bool set);
 static void pxp_lut_cleanup_multiple_v3p(struct pxps *pxp, u64 lut, bool set);
 static void pxp_luts_deactivate(struct pxps *pxp, u64 lut_status);
+static void pxp_set_colorkey(struct pxps *pxp);
 
 enum {
 	DITHER0_LUT = 0x0,	/* Select the LUT memory for access */
@@ -1082,6 +1103,10 @@ static void dump_pxp_reg(struct pxps *pxp)
 		__raw_readl(pxp->base + HW_PXP_LUT_EXTMEM));
 	dev_dbg(pxp->dev, "PXP_CFA 0x%x",
 		__raw_readl(pxp->base + HW_PXP_CFA));
+	dev_dbg(pxp->dev, "PXP_ALPHA_A_CTRL 0x%x",
+		__raw_readl(pxp->base + HW_PXP_ALPHA_A_CTRL));
+	dev_dbg(pxp->dev, "PXP_ALPHA_B_CTRL 0x%x",
+		__raw_readl(pxp->base + HW_PXP_ALPHA_B_CTRL));
 	dev_dbg(pxp->dev, "PXP_POWER_REG0 0x%x",
 		__raw_readl(pxp->base + HW_PXP_POWER_REG0));
 	dev_dbg(pxp->dev, "PXP_NEXT 0x%x",
@@ -1263,11 +1288,38 @@ static uint32_t pxp_parse_ps_fmt(uint32_t format)
 	return fmt_ctrl;
 }
 
+static void pxp_set_colorkey(struct pxps *pxp)
+{
+	struct pxp_config_data *pxp_conf = &pxp->pxp_conf_state;
+	struct pxp_layer_param *s0_params = &pxp_conf->s0_param;
+	struct pxp_layer_param *ol_params = &pxp_conf->ol_param[0];
+
+	/* Low and high are set equal. V4L does not allow a chromakey range */
+	if (s0_params->color_key_enable == 0 || s0_params->color_key == -1) {
+		/* disable color key */
+		pxp_writel(0xFFFFFF, HW_PXP_PS_CLRKEYLOW_0);
+		pxp_writel(0, HW_PXP_PS_CLRKEYHIGH_0);
+	} else {
+		pxp_writel(s0_params->color_key, HW_PXP_PS_CLRKEYLOW_0);
+		pxp_writel(s0_params->color_key, HW_PXP_PS_CLRKEYHIGH_0);
+	}
+
+	if (ol_params->color_key_enable != 0 && ol_params->color_key != -1) {
+		pxp_writel(ol_params->color_key, HW_PXP_AS_CLRKEYLOW_0);
+		pxp_writel(ol_params->color_key, HW_PXP_AS_CLRKEYHIGH_0);
+	} else {
+		/* disable color key */
+		pxp_writel(0xFFFFFF, HW_PXP_AS_CLRKEYLOW_0);
+		pxp_writel(0, HW_PXP_AS_CLRKEYHIGH_0);
+	}
+}
+
 static uint32_t pxp_parse_as_fmt(uint32_t format)
 {
 	uint32_t fmt_ctrl;
 
 	switch (format) {
+	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_ARGB32:
 		fmt_ctrl = BV_PXP_AS_CTRL_FORMAT__ARGB8888;
 		break;
@@ -1312,6 +1364,7 @@ static uint32_t pxp_parse_out_fmt(uint32_t format)
 	uint32_t fmt_ctrl;
 
 	switch (format) {
+	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_ARGB32:
 		fmt_ctrl = BV_PXP_OUT_CTRL_FORMAT__ARGB8888;
 		break;
@@ -1869,6 +1922,7 @@ static bool fmt_as_support(uint32_t format)
 	case PXP_PIX_FMT_ARGB32:
 	case PXP_PIX_FMT_RGBA32:
 	case PXP_PIX_FMT_XRGB32:
+	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_ARGB555:
 	case PXP_PIX_FMT_ARGB444:
 	case PXP_PIX_FMT_RGBA555:
@@ -1887,6 +1941,7 @@ static bool fmt_out_support(uint32_t format)
 	switch (format) {
 	case PXP_PIX_FMT_ARGB32:
 	case PXP_PIX_FMT_XRGB32:
+	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_RGB24:
 	case PXP_PIX_FMT_ARGB555:
 	case PXP_PIX_FMT_ARGB444:
@@ -2315,8 +2370,8 @@ static int pxp_ps_config(struct pxp_pixmap *input,
 	case 0:
 		out_ps_ulc.x = output->crop.x;
 		out_ps_ulc.y = output->crop.y;
-		out_ps_lrc.x = output->crop.width - 1;
-		out_ps_lrc.y = output->crop.height - 1;
+		out_ps_lrc.x = out_ps_ulc.x + output->crop.width - 1;
+		out_ps_lrc.y = out_ps_ulc.y + output->crop.height - 1;
 		break;
 	case 90:
 		out_ps_ulc.x = output->crop.y;
@@ -2386,6 +2441,7 @@ static int pxp_ps_config(struct pxp_pixmap *input,
 			U = V + ((input->pitch / (input->bpp >> 3)) * input->height >> 2);
 			pxp_writel(U + (offset >> 2), HW_PXP_PS_UBUF);
 		}
+
 		break;
 	default:
 		break;
@@ -2412,9 +2468,40 @@ static int pxp_as_config(struct pxp_pixmap *input,
 	memset((void*)&ctrl, 0x0, sizeof(ctrl));
 
 	ctrl.format = pxp_parse_as_fmt(input->format);
+
+	if (alpha_blending_version == PXP_ALPHA_BLENDING_V1) {
+		if (input->format == PXP_PIX_FMT_BGRA32) {
+			if (!input->g_alpha.combine_enable) {
+				ctrl.alpha_ctrl = BV_PXP_AS_CTRL_ALPHA_CTRL__ROPs;
+				ctrl.rop = 0x3;
+			}
+		}
+
+		if (input->g_alpha.global_alpha_enable) {
+			if (input->g_alpha.global_override)
+				ctrl.alpha_ctrl = BV_PXP_AS_CTRL_ALPHA_CTRL__Override;
+			else
+				ctrl.alpha_ctrl = BV_PXP_AS_CTRL_ALPHA_CTRL__Multiply;
+
+			if (input->g_alpha.alpha_invert)
+				ctrl.alpha0_invert = 0x1;
+		}
+
+		if (input->g_alpha.color_key_enable) {
+			ctrl.enable_colorkey = 1;
+		}
+
+		ctrl.alpha = input->g_alpha.global_alpha;
+	}
+
 	out_as_ulc.x = out_as_ulc.y = 0;
-	out_as_lrc.x = output->crop.width - 1;
-	out_as_lrc.y = output->crop.height - 1;
+	if (input->g_alpha.combine_enable) {
+		out_as_lrc.x = input->width - 1;
+		out_as_lrc.y = input->height - 1;
+	} else {
+		out_as_lrc.x = output->crop.width - 1;
+		out_as_lrc.y = output->crop.height - 1;
+	}
 
 	offset = input->crop.y * input->pitch +
 		 input->crop.x * (input->bpp >> 3);
@@ -2636,7 +2723,7 @@ static int pxp_out_config(struct pxp_pixmap *output)
 
 	pxp_writel(*(uint32_t *)&ctrl, HW_PXP_OUT_CTRL);
 
-	pxp_writel(output->paddr + offset, HW_PXP_OUT_BUF);
+	pxp_writel(output->paddr, HW_PXP_OUT_BUF);
 	if (is_yuv(output->format) == 2) {
 		UV = output->paddr + output->pitch * output->height / (output->bpp >> 3);
 		if ((output->format == PXP_PIX_FMT_NV16) ||
@@ -2657,6 +2744,12 @@ static int pxp_out_config(struct pxp_pixmap *output)
 	pxp_writel(*(uint32_t *)&out_lrc, HW_PXP_OUT_LRC);
 
 	pxp_writel(output->pitch, HW_PXP_OUT_PITCH);
+
+	/* set global alpha if necessary */
+	if (output->g_alpha.global_alpha_enable) {
+		pxp_writel(output->g_alpha.global_alpha << 24, HW_PXP_OUT_CTRL_SET);
+		pxp_writel(BM_PXP_OUT_CTRL_ALPHA_OUTPUT, HW_PXP_OUT_CTRL_SET);
+	}
 
 	pxp_writel(BF_PXP_CTRL_ENABLE_PS_AS_OUT(1) |
 		   BF_PXP_CTRL_IRQ_ENABLE(1),
@@ -2749,54 +2842,57 @@ static int pxp_alpha_config(struct pxp_op_info *op,
 
 	memset((void*)&alpha_ctrl, 0x0, sizeof(alpha_ctrl));
 
-	if (alpha->alpha_mode == ALPHA_MODE_ROP) {
+	if (alpha_blending_version != PXP_ALPHA_BLENDING_V1) {
+		if (alpha->alpha_mode == ALPHA_MODE_ROP) {
+			switch (alpha_node) {
+			case PXP_2D_ALPHA0_S0:
+				as_ctrl = __raw_readl(pxp_reg_base + HW_PXP_AS_CTRL);
+				as_ctrl |= BF_PXP_AS_CTRL_ALPHA_CTRL(BV_PXP_AS_CTRL_ALPHA_CTRL__ROPs);
+				as_ctrl |= BF_PXP_AS_CTRL_ROP(alpha->rop_type);
+				pxp_writel(as_ctrl, HW_PXP_AS_CTRL);
+				break;
+			case PXP_2D_ALPHA1_S0:
+				pxp_writel(BM_PXP_ALPHA_B_CTRL_1_ROP_ENABLE |
+					   BF_PXP_ALPHA_B_CTRL_1_ROP(alpha->rop_type),
+					   HW_PXP_ALPHA_B_CTRL_1);
+				pxp_writel(BF_PXP_CTRL_ENABLE_ALPHA_B(1), HW_PXP_CTRL_SET);
+				break;
+			default:
+				break;
+			}
+
+			return 0;
+		}
+
+		s0_alpha = &alpha->s0_alpha;
+		s1_alpha = &alpha->s1_alpha;
+
+		alpha_ctrl.poter_duff_enable = 1;
+
+		alpha_ctrl.s0_s1_factor_mode = s1_alpha->factor_mode;
+		alpha_ctrl.s0_global_alpha_mode = s0_alpha->global_alpha_mode;
+		alpha_ctrl.s0_alpha_mode = s0_alpha->alpha_mode;
+		alpha_ctrl.s0_color_mode = s0_alpha->color_mode;
+
+		alpha_ctrl.s1_s0_factor_mode = s0_alpha->factor_mode;
+		alpha_ctrl.s1_global_alpha_mode = s1_alpha->global_alpha_mode;
+		alpha_ctrl.s1_alpha_mode = s1_alpha->alpha_mode;
+		alpha_ctrl.s1_color_mode = s1_alpha->color_mode;
+
+		alpha_ctrl.s0_global_alpha = s0_alpha->global_alpha_value;
+		alpha_ctrl.s1_global_alpha = s1_alpha->global_alpha_value;
+
 		switch (alpha_node) {
 		case PXP_2D_ALPHA0_S0:
-			as_ctrl = __raw_readl(pxp_reg_base + HW_PXP_AS_CTRL);
-			as_ctrl |= BF_PXP_AS_CTRL_ALPHA_CTRL(BV_PXP_AS_CTRL_ALPHA_CTRL__ROPs);
-			as_ctrl |= BF_PXP_AS_CTRL_ROP(alpha->rop_type);
-			pxp_writel(as_ctrl, HW_PXP_AS_CTRL);
+			pxp_writel(*(uint32_t *)&alpha_ctrl, HW_PXP_ALPHA_A_CTRL);
 			break;
 		case PXP_2D_ALPHA1_S0:
-			pxp_writel(BM_PXP_ALPHA_B_CTRL_1_ROP_ENABLE |
-				   BF_PXP_ALPHA_B_CTRL_1_ROP(alpha->rop_type),
-				   HW_PXP_ALPHA_B_CTRL_1);
+			pxp_writel(*(uint32_t *)&alpha_ctrl, HW_PXP_ALPHA_B_CTRL);
 			pxp_writel(BF_PXP_CTRL_ENABLE_ALPHA_B(1), HW_PXP_CTRL_SET);
 			break;
 		default:
 			break;
 		}
-
-		return 0;
-	}
-
-	s0_alpha = &alpha->s0_alpha;
-	s1_alpha = &alpha->s1_alpha;
-	alpha_ctrl.poter_duff_enable = 1;
-
-	alpha_ctrl.s0_s1_factor_mode = s1_alpha->factor_mode;
-	alpha_ctrl.s0_global_alpha_mode = s0_alpha->global_alpha_mode;
-	alpha_ctrl.s0_alpha_mode = s0_alpha->alpha_mode;
-	alpha_ctrl.s0_color_mode = s0_alpha->color_mode;
-
-	alpha_ctrl.s1_s0_factor_mode = s0_alpha->factor_mode;
-	alpha_ctrl.s1_global_alpha_mode = s1_alpha->global_alpha_mode;
-	alpha_ctrl.s1_alpha_mode = s1_alpha->alpha_mode;
-	alpha_ctrl.s1_color_mode = s1_alpha->color_mode;
-
-	alpha_ctrl.s0_global_alpha = s0_alpha->global_alpha_value;
-	alpha_ctrl.s1_global_alpha = s1_alpha->global_alpha_value;
-
-	switch (alpha_node) {
-	case PXP_2D_ALPHA0_S0:
-		pxp_writel(*(uint32_t *)&alpha_ctrl, HW_PXP_ALPHA_A_CTRL);
-		break;
-	case PXP_2D_ALPHA1_S0:
-		pxp_writel(*(uint32_t *)&alpha_ctrl, HW_PXP_ALPHA_B_CTRL);
-		pxp_writel(BF_PXP_CTRL_ENABLE_ALPHA_B(1), HW_PXP_CTRL_SET);
-		break;
-	default:
-		break;
 	}
 
 	return 0;
@@ -3219,8 +3315,11 @@ reparse:
 		possible_outputs   = (1 << PXP_2D_OUT) |
 				     (1 << PXP_2D_INPUT_STORE0);
 
-		if (input_s0->rotate || input_s0->flip)
+		if (input_s0->rotate || input_s0->flip) {
 			input_s0->flags |= IN_NEED_ROTATE_FLIP;
+			output->rotate = input_s0->rotate;
+			output->flip = input_s0->flip;
+		}
 		if (input_s1->rotate || input_s1->flip) {
 			input_s1->flags |= IN_NEED_ROTATE_FLIP;
 			clear_bit(PXP_2D_AS,
@@ -3368,6 +3467,11 @@ alpha1:
 		/* To workaround an IC bug */
 		path_ctrl0.mux4_sel = 0x0;
 config:
+		if (nodes_in_path_s0 & (1 << PXP_2D_ROTATION1)) {
+			clear_bit(PXP_2D_ROTATION1, (unsigned long *)&nodes_in_path_s0);
+			set_bit(PXP_2D_ROTATION0, (unsigned long *)&nodes_in_path_s0);
+		}
+
 		pr_debug("%s: nodes_in_path_s0 = 0x%x, nodes_used_s0 = 0x%x, nodes_in_path_s1 = 0x%x, nodes_used_s1 = 0x%x\n",
 			 __func__, nodes_in_path_s0, nodes_used_s0, nodes_in_path_s1, nodes_used_s1);
 		pxp_2d_calc_mux(nodes_in_path_s0, &path_ctrl0);
@@ -3375,12 +3479,22 @@ config:
 
 		pr_debug("%s: s0 paddr = 0x%x, s1 paddr = 0x%x, out paddr = 0x%x\n",
 			 __func__, input_s0->paddr, input_s1->paddr, output->paddr);
+
+		if (nodes_used_s0 & (1 << PXP_2D_ROTATION1)) {
+			clear_bit(PXP_2D_ROTATION1, (unsigned long *)&nodes_used_s0);
+			set_bit(PXP_2D_ROTATION0, (unsigned long *)&nodes_used_s0);
+		}
+
 		pxp_2d_task_config(input_s0, output, op, nodes_used_s0);
 		pxp_2d_task_config(input_s1, output, op, nodes_used_s1);
 		break;
 	default:
 		break;
 	}
+
+	__raw_writel(proc_data->bgcolor,
+			 pxp->base + HW_PXP_PS_BACKGROUND_0);
+	pxp_set_colorkey(pxp);
 
 	if (proc_data->lut_transform && pxp_is_v3(pxp))
 		set_mux(&path_ctrl0);
@@ -3544,12 +3658,30 @@ static int convert_param_to_pixmap(struct pxp_pixmap *pixmap,
 	pixmap->format = param->pixel_fmt;
 	pixmap->paddr  = param->paddr;
 	pixmap->bpp    = get_bpp_from_fmt(pixmap->format);
-	pixmap->pitch  = param->width * pixmap->bpp >> 3;
+
+	if (pxp_legacy) {
+		pixmap->pitch = (param->stride) ? (param->stride * pixmap->bpp >> 3) :
+						(param->width * pixmap->bpp >> 3);
+	} else {
+		if (!param->stride || (param->stride == param->width))
+			pixmap->pitch  = param->width * pixmap->bpp >> 3;
+		else
+			pixmap->pitch = param->stride;
+	}
 
 	pixmap->crop.x = param->crop.left;
 	pixmap->crop.y = param->crop.top;
 	pixmap->crop.width  = param->crop.width;
 	pixmap->crop.height = param->crop.height;
+
+	pixmap->g_alpha.color_key_enable = param->color_key_enable;
+	pixmap->g_alpha.combine_enable = param->combine_enable;
+	pixmap->g_alpha.global_alpha_enable = param->global_alpha_enable;
+	pixmap->g_alpha.global_override = param->global_override;
+	pixmap->g_alpha.global_alpha = param->global_alpha;
+	pixmap->g_alpha.alpha_invert = param->alpha_invert;
+	pixmap->g_alpha.local_alpha_enable = param->local_alpha_enable;
+	pixmap->g_alpha.comp_mask = param->comp_mask;
 
 	return 0;
 }
@@ -3569,6 +3701,7 @@ static void __pxpdma_dostart(struct pxp_channel *pxp_chan)
 	struct pxp_layer_param *param = NULL;
 	struct pxp_pixmap *input, *output;
 	int i = 0, ret;
+	bool combine_enable = false;
 
 	memset(&pxp->pxp_conf_state.s0_param, 0,  sizeof(struct pxp_layer_param));
 	memset(&pxp->pxp_conf_state.out_param, 0,  sizeof(struct pxp_layer_param));
@@ -3583,6 +3716,13 @@ static void __pxpdma_dostart(struct pxp_channel *pxp_chan)
 	memcpy(&pxp->pxp_conf_state.proc_data,
 	       &desc->proc_data, sizeof(struct pxp_proc_data));
 
+	if (proc_data->combine_enable)
+		alpha_blending_version = PXP_ALPHA_BLENDING_V2;
+	else
+		alpha_blending_version = PXP_ALPHA_BLENDING_NONE;
+
+	pxp_legacy = (proc_data->pxp_legacy) ? true : false;
+
 	/* Save PxP configuration */
 	list_for_each_entry(child, &desc->tx_list, list) {
 		if (i == 0) {	/* Output */
@@ -3593,6 +3733,11 @@ static void __pxpdma_dostart(struct pxp_channel *pxp_chan)
 			memcpy(&pxp->pxp_conf_state.ol_param[i - 1],
 			       &child->layer_param.ol_param,
 			       sizeof(struct pxp_layer_param));
+			if (pxp->pxp_conf_state.ol_param[i - 1].width != 0 &&
+				pxp->pxp_conf_state.ol_param[i - 1].height != 0) {
+				if (pxp->pxp_conf_state.ol_param[i - 1].combine_enable)
+					alpha_blending_version = PXP_ALPHA_BLENDING_V1;
+			}
 		}
 
 		if (proc_data->engine_enable & PXP_ENABLE_DITHER) {
@@ -3660,7 +3805,12 @@ static void __pxpdma_dostart(struct pxp_channel *pxp_chan)
 
 	if (!op->op_type) {
 		op->op_type = PXP_OP_TYPE_2D;
-		if (proc_data->combine_enable)
+
+		if ((alpha_blending_version == PXP_ALPHA_BLENDING_V1) ||
+			(alpha_blending_version == PXP_ALPHA_BLENDING_V2))
+			combine_enable = true;
+
+		if (combine_enable)
 			task->input_num = 2;
 		else if (proc_data->fill_en)
 			task->input_num = 0;
@@ -3694,6 +3844,7 @@ static void __pxpdma_dostart(struct pxp_channel *pxp_chan)
 				      (proc_data->vflip) ? PXP_V_FLIP : 0;
 			break;
 		case 2:
+			/* s0 */
 			param = &pxp->pxp_conf_state.s0_param;
 			input = &task->input[0];
 
@@ -3705,17 +3856,18 @@ static void __pxpdma_dostart(struct pxp_channel *pxp_chan)
 			input->crop.height = proc_data->srect.height;
 			alpha->s0_alpha = param->alpha;
 
+			input->rotate = proc_data->rotate;
+			input->flip   = (proc_data->hflip) ? PXP_H_FLIP :
+					(proc_data->vflip) ? PXP_V_FLIP : 0;
+
+			/* overlay */
 			param = &pxp->pxp_conf_state.ol_param[0];
 			input = &task->input[1];
 
 			ret = convert_param_to_pixmap(input, param);
 			BUG_ON(ret < 0);
 			alpha->s1_alpha = param->alpha;
-
 			alpha->alpha_mode = proc_data->alpha_mode;
-			input->rotate = proc_data->rotate;
-			input->flip   = (proc_data->hflip) ? PXP_H_FLIP :
-					(proc_data->vflip) ? PXP_V_FLIP : 0;
 			break;
 		}
 

@@ -1498,9 +1498,10 @@ static int dcss_dpr_config(uint32_t dpr_ch, struct dcss_info *info)
 			/* TODO: configure resolve */
 			;
 		}
+		pitch = var->xres * (var->bits_per_pixel >> 3);
 		break;
 	case 1:         /* TODO: YUV 1P */
-		break;
+		return -EINVAL;
 	case 2:         /* YUV 2P */
 		/* Two planes YUV format */
 		num_pix_y = dpr_pix_y_calc(0, input->height, input->tile_type);
@@ -1509,9 +1510,11 @@ static int dcss_dpr_config(uint32_t dpr_ch, struct dcss_info *info)
 
 		fill_sb(cb, chan_info->dpr_addr + 0x50, 0xc1);
 		fill_sb(cb, chan_info->dpr_addr + 0xe0, 0x2);
+
+		/* TODO: VPU always has 16bytes alignment in width */
+		pitch = ALIGN(var->xres * (var->bits_per_pixel >> 3), 16);
 		fill_sb(cb, chan_info->dpr_addr + 0x110,
-			fix->smem_start +
-			var->xres * var->yres * (var->bits_per_pixel >> 3));
+			fix->smem_start + pitch * var->yres);
 		fill_sb(cb, chan_info->dpr_addr + 0xf0, num_pix_x);
 
 		/* TODO: Require alignment handling:
@@ -1528,9 +1531,9 @@ static int dcss_dpr_config(uint32_t dpr_ch, struct dcss_info *info)
 		return -EINVAL;
 	}
 
+	/* TODO: calculate pitch for different formats */
 	/* config pitch */
-	pitch = (num_pix_x * (var->bits_per_pixel >> 3)) << 16;
-	fill_sb(cb, chan_info->dpr_addr + 0x70, pitch);
+	fill_sb(cb, chan_info->dpr_addr + 0x70, pitch << 16);
 
 	fill_sb(cb, chan_info->dpr_addr + 0x200, 0x38);
 
@@ -1551,7 +1554,7 @@ static int dcss_scaler_config(uint32_t scaler_ch, struct dcss_info *info)
 	struct dcss_pixmap *input;
 	struct cbuffer *cb;
 	int scale_v_luma_inc, scale_h_luma_inc;
-	uint32_t aligned_width, aligned_height;
+	uint32_t align_width, align_height;
 	const struct fb_videomode *dmode = info->dft_disp_mode;
 
 	if (scaler_ch > 2) {
@@ -1824,26 +1827,33 @@ static int dcss_scaler_config(uint32_t scaler_ch, struct dcss_info *info)
 	fill_sb(cb, chan_info->scaler_addr + 0x14, 0x2);
 
 	/* Scaler Input Luma Resolution
-	 * Alighment: WIDTH and HEIGHT divisable by 4.
+	 * Alighment Workaround for YUV420:
+	 * 'width' divisable by 16, 'height' divisable by 8.
 	 */
-	aligned_width  = ALIGN(input->width, 4);
-	aligned_height = ALIGN(input->height, 4);
+
+	if (fmt_is_yuv(input->format) == 2) {
+		align_width  = round_down(input->width, 16);
+		align_height = round_down(input->height, 8);
+	} else {
+		align_width  = input->width;
+		align_height = input->height;
+	}
+
 	fill_sb(cb, chan_info->scaler_addr + 0x18,
-		(aligned_height - 1) << 16 | (aligned_width - 1));
+		(align_height - 1) << 16 | (align_width - 1));
 
 	/* Scaler Input Chroma Resolution */
 	switch (fmt_is_yuv(input->format)) {
 	case 0:         /* ARGB8888 */
 		fill_sb(cb, chan_info->scaler_addr + 0x1c,
-			(aligned_height - 1) << 16 |
-			(aligned_width - 1));
+			(align_height - 1) << 16 | (align_width - 1));
 		break;
 	case 1:         /* TODO: YUV422 or YUV444 */
 		break;
 	case 2:         /* YUV420 */
 		fill_sb(cb, chan_info->scaler_addr + 0x1c,
-			((aligned_height >> 1) - 1) << 16 |
-			((aligned_width >> 1) - 1));
+			((align_height >> 1) - 1) << 16 |
+			((align_width >> 1) - 1));
 		break;
 	default:
 		return -EINVAL;
@@ -1872,9 +1882,9 @@ static int dcss_scaler_config(uint32_t scaler_ch, struct dcss_info *info)
 
 	/* scale ratio: ###.#_####_####_#### */
 	/* vertical ratio */
-	scale_v_luma_inc = ((aligned_height << 13) + (dmode->yres >> 1)) / dmode->yres;
+	scale_v_luma_inc = ((align_height << 13) + (dmode->yres >> 1)) / dmode->yres;
 	/* horizontal ratio */
-	scale_h_luma_inc = ((aligned_width << 13) + (dmode->xres >> 1)) / dmode->xres;
+	scale_h_luma_inc = ((align_width << 13) + (dmode->xres >> 1)) / dmode->xres;
 
 	fill_sb(cb, chan_info->scaler_addr + 0x48, 0x0);
 	fill_sb(cb, chan_info->scaler_addr + 0x4c, scale_v_luma_inc);
@@ -2410,12 +2420,15 @@ static int dcss_check_var(struct fb_var_screeninfo *var,
 			  struct fb_info *fbi)
 {
 	uint32_t fb_size;
+	uint32_t scale_ratio_mode_x, scale_ratio_mode_y;
+	uint32_t scale_ratio_x, scale_ratio_y;
 	struct dcss_channel_info *cinfo = fbi->par;
 	struct dcss_info *info = cinfo->dev_data;
 	struct platform_device *pdev = info->pdev;
 	const struct fb_bitfield *rgb = NULL;
 	const struct pix_fmt_info *format = NULL;
 	struct fb_fix_screeninfo *fix = &fbi->fix;
+	const struct fb_videomode *dmode = info->dft_disp_mode;
 
 	if (var->xres > MAX_WIDTH || var->yres > MAX_HEIGHT) {
 		dev_err(&pdev->dev, "unsupport display resolution\n");
@@ -2434,7 +2447,6 @@ static int dcss_check_var(struct fb_var_screeninfo *var,
 
 	switch (var->grayscale) {
 	case 0:		/* TODO: color */
-		break;
 	case 1:		/* grayscale */
 		return -EINVAL;
 	default:	/* fourcc */
@@ -2445,6 +2457,69 @@ static int dcss_check_var(struct fb_var_screeninfo *var,
 		}
 		var->bits_per_pixel = format->bpp;
 	}
+
+	/* Add alignment check for scaler */
+	switch (fmt_is_yuv(var->grayscale)) {
+	case 0:         /* ARGB8888 */
+	case 2:         /* YUV420 */
+		if (ALIGN(var->xres, 4) != var->xres ||
+		    ALIGN(var->yres, 4) != var->yres) {
+			dev_err(&pdev->dev, "width or height is not aligned\n");
+			return -EINVAL;
+		}
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	/* Add scale ratio check:
+	 * Maximum scale down ratio is 1/7;
+	 * Maximum scale up   ratio is 8;
+	 */
+	if (dmode->xres > var->xres) {
+		/* upscaling */
+		scale_ratio_mode_x = dmode->xres % var->xres;
+		scale_ratio_mode_y = dmode->yres % var->yres;
+		scale_ratio_x = (dmode->xres - scale_ratio_mode_x) / var->xres;
+		scale_ratio_y = (dmode->yres - scale_ratio_mode_y) / var->yres;
+		if (scale_ratio_x >= 8) {
+			if ((scale_ratio_x == 8 && scale_ratio_mode_x > 0) ||
+			    (scale_ratio_x > 8)) {
+				dev_err(&pdev->dev, "unsupport scaling ration for width\n");
+				return -EINVAL;
+			}
+		}
+
+		if (scale_ratio_y >= 8) {
+			if ((scale_ratio_y == 8 && scale_ratio_mode_y > 0) ||
+			    (scale_ratio_y > 8)) {
+				dev_err(&pdev->dev, "unsupport scaling ration for height\n");
+				return -EINVAL;
+			}
+		}
+	} else {
+		/* downscaling */
+		scale_ratio_mode_x = var->xres % dmode->xres;
+		scale_ratio_mode_y = var->yres % dmode->yres;
+		scale_ratio_x = (var->xres - scale_ratio_mode_x) / dmode->xres;
+		scale_ratio_y = (var->yres - scale_ratio_mode_y) / dmode->yres;
+		if (scale_ratio_x >= 7) {
+			if ((scale_ratio_x == 7 && scale_ratio_mode_x > 0) ||
+			    (scale_ratio_x > 7)) {
+				dev_err(&pdev->dev, "unsupport scaling ration for width\n");
+				return -EINVAL;
+			}
+		}
+
+		if (scale_ratio_y >= 7) {
+			if ((scale_ratio_y == 7 && scale_ratio_mode_y > 0) ||
+			    (scale_ratio_y > 7)) {
+				dev_err(&pdev->dev, "unsupport scaling ration for height\n");
+				return -EINVAL;
+			}
+		}
+	}
+
 	fix->line_length = var->xres * (var->bits_per_pixel >> 3);
 	fb_size = var->yres_virtual * fix->line_length;
 
@@ -2638,7 +2713,7 @@ static int dcss_pan_display(struct fb_var_screeninfo *var,
 			    struct fb_info *fbi)
 {
 	int ret = 0;
-	uint32_t offset, luma_addr, chroma_addr = 0;
+	uint32_t offset, pitch, luma_addr, chroma_addr = 0;
 	struct dcss_channel_info *cinfo = fbi->par;
 	struct dcss_info *info = cinfo->dev_data;
 	struct platform_device *pdev = info->pdev;
@@ -2666,8 +2741,8 @@ static int dcss_pan_display(struct fb_var_screeninfo *var,
 
 	/* Two planes YUV format */
 	if (fmt_is_yuv(input->format) == 2) {
-		chroma_addr = luma_addr +
-			      var->xres * var->yres * (var->bits_per_pixel >> 3);
+		pitch = ALIGN(var->xres * (var->bits_per_pixel >> 3), 16);
+		chroma_addr = luma_addr + pitch * var->yres;
 		fill_sb(cb,
 			cinfo->dpr_addr + 0x110,
 			chroma_addr + (offset >> 1));
@@ -3191,7 +3266,8 @@ static int dcss_probe(struct platform_device *pdev)
 	if (ret)
 		goto kfree_info;
 
-	/* TODO: reset DCSS to make it clean */
+	/* reset DCSS to make sure in reset state*/
+	writel(0xffffffff, info->blkctl_base + 0x8);
 
 	/* Clocks select: before dcss de-resets */
 	if (!strcmp(info->disp_dev, "hdmi_disp"))

@@ -1080,18 +1080,23 @@ static int gpu_resume(struct platform_device *dev)
             {
                 return -1;
             }
-
             /* Convert global state to crossponding internal state. */
             switch(device->statesStored[i])
             {
             case gcvPOWER_OFF:
                 statesStored = gcvPOWER_OFF_BROADCAST;
+                if(device->kernels[i]->hardware)
+                    device->kernels[i]->hardware->forcePowerOff = gcvTRUE;
                 break;
             case gcvPOWER_IDLE:
                 statesStored = gcvPOWER_IDLE_BROADCAST;
+                if(device->kernels[i]->hardware)
+                    device->kernels[i]->hardware->forcePowerOff = gcvTRUE;
                 break;
             case gcvPOWER_SUSPEND:
                 statesStored = gcvPOWER_SUSPEND_BROADCAST;
+                if(device->kernels[i]->hardware)
+                    device->kernels[i]->hardware->forcePowerOff = gcvTRUE;
                 break;
             case gcvPOWER_ON:
                 statesStored = gcvPOWER_ON_AUTO;

@@ -22,9 +22,9 @@
 #include <linux/types.h>
 #include <video/dpu.h>
 
-#include "dpu-prv.h"
 #include "dpu-blit.h"
-#include "imxdpu-registers.h"
+#include "dpu-blit-registers.h"
+#include "dpu-prv.h"
 
 static inline u32 dpu_be_read(struct dpu_bliteng *dpu_be, unsigned int offset)
 {
@@ -37,21 +37,21 @@ static inline void dpu_be_write(struct dpu_bliteng *dpu_be, u32 value,
 	writel(value, dpu_be->base + offset);
 }
 
-void dpu_cs_wait_fifo_space(struct dpu_bliteng *dpu_be)
+static void dpu_cs_wait_fifo_space(struct dpu_bliteng *dpu_be)
 {
 	while ((dpu_be_read(dpu_be, CMDSEQ_STATUS) &
 		CMDSEQ_STATUS_FIFOSPACE_MASK) < CMDSEQ_FIFO_SPACE_THRESHOLD)
 		usleep_range(1000, 2000);
 }
 
-void dpu_cs_wait_idle(struct dpu_bliteng *dpu_be)
+static void dpu_cs_wait_idle(struct dpu_bliteng *dpu_be)
 {
 	while ((dpu_be_read(dpu_be, CMDSEQ_STATUS) &
 		CMDSEQ_STATUS_IDLE_MASK) == 0x0)
 		mdelay(1);
 }
 
-int dpu_cs_alloc_command_buffer(struct dpu_bliteng *dpu_be)
+static int dpu_cs_alloc_command_buffer(struct dpu_bliteng *dpu_be)
 {
 	/* command buffer need 32 bit address */
 	dpu_be->buffer_addr_virt =
@@ -68,7 +68,7 @@ int dpu_cs_alloc_command_buffer(struct dpu_bliteng *dpu_be)
 	return 0;
 }
 
-void dpu_cs_static_setup(struct dpu_bliteng *dpu_be)
+static void dpu_cs_static_setup(struct dpu_bliteng *dpu_be)
 {
 	dpu_cs_wait_idle(dpu_be);
 
@@ -185,7 +185,7 @@ void dpu_be_wait(struct dpu_bliteng *dpu_be)
 }
 EXPORT_SYMBOL(dpu_be_wait);
 
-void dpu_be_init_units(struct dpu_bliteng *dpu_be)
+static void dpu_be_init_units(struct dpu_bliteng *dpu_be)
 {
 	u32 staticcontrol;
 	u32 pixengcfg_unit_static, pixengcfg_unit_dynamic;

@@ -949,6 +949,7 @@
 			};
 
 			dpu_disp0_mipi_dsi: mipi-dsi-endpoint {
+				remote-endpoint = <&mipi0_in>;
 			};
 		};
 
@@ -964,6 +965,7 @@
 			};
 
 			dpu_disp1_mipi_dsi: mipi-dsi-endpoint {
+				remote-endpoint = <&mipi1_in>;
 			};
 		};
 	};
@@ -978,6 +980,52 @@
 		clocks = <&clk IMX8QXP_MIPI0_LIS_IPG_CLK>;
 		clock-names = "ipg";
 		power-domains = <&pd_mipi_dsi0>;
+	};
+
+	mipi0_csr: csr@56221000 {
+		compatible = "syscon";
+		reg = <0x0 0x56221000 0x0 0x1000>;
+	};
+
+	mipi0_phy: mipi0_phy@56220300 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "mixel,mipi-phy";
+		reg = <0x0 0x56220300 0x0 0x100>;
+		power-domains = <&pd_mipi_dsi0>;
+		use_sc;
+		id = <0>;
+		status = "disabled";
+		#phy-cells = <0>;
+	};
+
+	mipi0_dsi: mipi0_dsi@56220000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "nxp,imx8qxp-mipi-dsi";
+		reg = <0x0 0x56220000 0x0 0x1000>;
+		interrupts = <16 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-parent = <&irqsteer_mipi_lvds0>;
+		clocks =
+			<&clk IMX8QXP_MIPI0_PIXEL_CLK>,
+			<&clk IMX8QXP_MIPI0_BYPASS_CLK>,
+			<&clk IMX8QXP_MIPI0_DSI_TX_ESC_CLK>,
+			<&clk IMX8QXP_MIPI0_DSI_RX_ESC_CLK>;
+		clock-names = "pixel", "bypass", "tx_esc", "rx_esc";
+		power-domains = <&pd_mipi_dsi0>;
+		csr = <&mipi0_csr>;
+		phys = <&mipi0_phy>;
+		phy-names = "dphy";
+		instance = <0>;
+		data_lanes = <4>;
+		status = "disabled";
+
+		port@0 {
+			mipi0_in: endpoint {
+				remote-endpoint = <&dpu_disp0_mipi_dsi>;
+			};
+		};
+
 	};
 
 	lvds_region1: lvds_region@56220000 {
@@ -1066,6 +1114,53 @@
 		clock-names = "ipg";
 		power-domains = <&pd_mipi_dsi1>;
 	};
+
+	mipi1_csr: csr@56241000 {
+		compatible = "syscon";
+		reg = <0x0 0x56241000 0x0 0x1000>;
+	};
+
+	mipi1_phy: mipi1_phy@56240300 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "mixel,mipi-phy";
+		reg = <0x0 0x56240300 0x0 0x100>;
+		power-domains = <&pd_mipi_dsi1>;
+		use_sc;
+		id = <0>;
+		status = "disabled";
+		#phy-cells = <0>;
+	};
+
+	mipi1_dsi: mipi1_dsi@56240000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "nxp,imx8qxp-mipi-dsi";
+		reg = <0x0 0x56240000 0x0 0x1000>;
+		interrupts = <16 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-parent = <&irqsteer_mipi_lvds1>;
+		clocks =
+			<&clk IMX8QXP_MIPI1_PIXEL_CLK>,
+			<&clk IMX8QXP_MIPI1_BYPASS_CLK>,
+			<&clk IMX8QXP_MIPI1_DSI_TX_ESC_CLK>,
+			<&clk IMX8QXP_MIPI1_DSI_RX_ESC_CLK>;
+		clock-names = "pixel", "bypass", "tx_esc", "rx_esc";
+		power-domains = <&pd_mipi_dsi1>;
+		csr = <&mipi1_csr>;
+		phys = <&mipi1_phy>;
+		phy-names = "dphy";
+		instance = <1>;
+		data_lanes = <4>;
+		status = "disabled";
+
+		port@0 {
+			mipi1_in: endpoint {
+				remote-endpoint = <&dpu_disp1_mipi_dsi>;
+			};
+		};
+
+	};
+
 
 	lvds_region2: lvds_region@56240000 {
 		compatible = "fsl,imx8qxp-lvds-region", "syscon";

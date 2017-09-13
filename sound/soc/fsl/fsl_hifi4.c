@@ -708,8 +708,13 @@ static long fsl_hifi4_decode_frame(struct fsl_hifi4 *hifi4_priv,
 	}
 
 	if (decode_info.in_buf_off == 0) {
-		memcpy(hifi4_priv->in_buf_virt, decode_info.in_buf_addr,
-						decode_info.in_buf_size);
+		ret = copy_from_user(hifi4_priv->in_buf_virt,
+					(void __user *)decode_info.in_buf_addr,
+					decode_info.in_buf_size);
+		if (ret) {
+			dev_err(dev, "failed to copy from user\n");
+			return ret;
+		}
 		codec_iobuf_info->inp_cur_offset   = 0;
 	}
 
@@ -742,8 +747,13 @@ static long fsl_hifi4_decode_frame(struct fsl_hifi4 *hifi4_priv,
 	if (ret)
 		return ret;
 
-	memcpy(decode_info.out_buf_addr, hifi4_priv->out_buf_virt,
-					codec_iobuf_info->out_cur_offset);
+	ret = copy_to_user((void __user *)decode_info.out_buf_addr,
+				hifi4_priv->out_buf_virt,
+				codec_iobuf_info->out_cur_offset);
+	if (ret) {
+		dev_err(dev, "failed to copy to user\n");
+		return ret;
+	}
 
 	decode_info.in_buf_off = codec_iobuf_info->inp_cur_offset;
 	decode_info.out_buf_off = codec_iobuf_info->out_cur_offset;
@@ -785,8 +795,13 @@ static long fsl_hifi4_decode_frame_compat32(struct fsl_hifi4 *hifi4_priv,
 	}
 
 	if (decode_info.in_buf_off == 0) {
-		memcpy(hifi4_priv->in_buf_virt, decode_info.in_buf_addr,
-						decode_info.in_buf_size);
+		ret = copy_from_user(hifi4_priv->in_buf_virt,
+					(void __user *)decode_info.in_buf_addr,
+					decode_info.in_buf_size);
+		if (ret) {
+			dev_err(dev, "failed to copy from user\n");
+			return ret;
+		}
 		codec_iobuf_info->inp_cur_offset   = 0;
 	}
 
@@ -819,8 +834,13 @@ static long fsl_hifi4_decode_frame_compat32(struct fsl_hifi4 *hifi4_priv,
 	if (ret)
 		return ret;
 
-	memcpy(decode_info.out_buf_addr, hifi4_priv->out_buf_virt,
-					codec_iobuf_info->out_cur_offset);
+	ret = copy_to_user((void __user *)decode_info.out_buf_addr,
+				hifi4_priv->out_buf_virt,
+				codec_iobuf_info->out_cur_offset);
+	if (ret) {
+		dev_err(dev, "failed to copy to user\n");
+		return ret;
+	}
 
 	decode_info.in_buf_off = codec_iobuf_info->inp_cur_offset;
 	decode_info.out_buf_off = codec_iobuf_info->out_cur_offset;
@@ -1181,6 +1201,13 @@ static int fsl_hifi4_open(struct inode *inode, struct file *file)
 
 static int fsl_hifi4_close(struct inode *inode, struct file *file)
 {
+	struct fsl_hifi4 *hifi4_priv = dev_get_drvdata(hifi4_miscdev.parent);
+	struct device *dev = hifi4_priv->dev;
+	struct fsl_hifi4_engine *hifi4_engine;
+
+	hifi4_engine = file->private_data;
+	devm_kfree(dev, hifi4_engine);
+
 	return 0;
 }
 

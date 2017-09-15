@@ -83,22 +83,27 @@
 
 &irqsteer_lvds0 {
 	xen,passthrough;
+	/delete-property/ power-domains;
 };
 
 &i2c1_lvds0 {
 	xen,passthrough;
+	/delete-property/ power-domains;
 };
 
 &ldb1_phy {
 	xen,passthrough;
+	/delete-property/ power-domains;
 };
 
 &ldb1 {
 	xen,passthrough;
+	/delete-property/ power-domains;
 };
 
 &dpu1_intsteer {
 	xen,passthrough;
+	/delete-property/ power-domains;
 };
 
 &smmu {
@@ -109,5 +114,28 @@
 &dpu1 {
 	xen,passthrough;
 	#stream-id-cells = <1>;
+	/delete-property/ power-domains;
 	iommus = <&smmu>;
+};
+
+/ {
+	imx8qm-pm {
+		/delete-node/ PD_DC_0;
+	};
+};
+
+&irqsteer_hdmi {
+	/delete-property/ power-domains;
+};
+&i2c0_hdmi {
+	/delete-property/ power-domains;
+};
+&irqsteer_dsi0 {
+	/delete-property/ power-domains;
+};
+&i2c0_mipi_dsi0 {
+	/delete-property/ power-domains;
+};
+&mipi0 {
+	/delete-property/ power-domains;
 };

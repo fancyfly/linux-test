@@ -31,7 +31,32 @@
 
 #include "pm-domain-imx8.h"
 
+static bool pm_ipc_initdone;
 static sc_ipc_t pm_ipc_handle;
+
+static int imx8_pm_init_ipc(void)
+{
+	sc_err_t sci_err;
+	uint32_t mu_id;
+
+	if (pm_ipc_initdone)
+		return 0;
+
+	sci_err = sc_ipc_getMuID(&mu_id);
+	if (sci_err != SC_ERR_NONE) {
+		pr_info("%s: Cannot obtain MU ID\n", __func__);
+		return -EPROBE_DEFER;
+	}
+
+	sci_err = sc_ipc_open(&pm_ipc_handle, mu_id);
+	if (sci_err != SC_ERR_NONE) {
+		pr_info("%s: Cannot obtain IPC handle\n", __func__);
+		return -EPROBE_DEFER;
+	}
+
+	pm_ipc_initdone = true;
+	return 0;
+}
 
 static int imx8_pd_power(struct generic_pm_domain *domain, bool power_on)
 {
@@ -145,6 +170,18 @@ static int imx8_attach_dev(struct generic_pm_domain *genpd, struct device *dev)
 	int rc, index = 0;
 	u32 rate;
 
+	/*
+	 * If SC is not yet available return an error on attach.
+	 *
+	 * PM core should handle deferral.
+	 */
+	rc = imx8_pm_init_ipc();
+	if (rc) {
+		pr_debug("%s: pd=%s dev=%s SC not yet available, defer\n",
+				__func__, genpd->name, dev_name(dev));
+		return rc;
+	}
+
 	pd = container_of(genpd, struct imx8_pm_domain, pd);
 
 	INIT_LIST_HEAD(&pd->clks);
@@ -241,9 +278,7 @@ static int __init imx8_add_pm_domains(struct device_node *parent,
 static int __init imx8_init_pm_domains(void)
 {
 	struct device_node *np;
-	sc_err_t sci_err;
 	sc_rsrc_t rsrc_id;
-	uint32_t mu_id;
 
 	/* skip pm domains for non-SCFW system */
 	if (!of_find_compatible_node(NULL, NULL, "nxp,imx8-pd"))
@@ -276,14 +311,6 @@ static int __init imx8_init_pm_domains(void)
 		of_genpd_add_provider_simple(np, &imx8_pd->pd);
 		imx8_add_pm_domains(np, &imx8_pd->pd);
 	}
-
-	sci_err = sc_ipc_getMuID(&mu_id);
-	if (sci_err != SC_ERR_NONE) {
-		pr_info("Cannot obtain MU ID\n");
-		return sci_err;
-	}
-
-	sci_err = sc_ipc_open(&pm_ipc_handle, mu_id);
 
 	return 0;
 }

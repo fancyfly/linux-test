@@ -41,4 +41,16 @@ config HAVE_IMX_RPMSG
 	select RPMSG_VIRTIO
 	select RPMSG
 	bool
+
+config XEN_IMX_SCMUBACK
+	bool
+	depends on XEN_BACKEND
+	default y
+
+config XEN_IMX_SCMUFRONT
+	bool
+	depends on XEN
+	default y
+	select XEN_XENBUS_FRONTEND
+
 endmenu

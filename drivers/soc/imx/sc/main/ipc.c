@@ -22,9 +22,13 @@
 #include <soc/imx8/sc/sci.h>
 
 #include "rpc.h"
+#include "../../xen-scmufront.h"
 
 /* Local Defines */
 #define MU_SIZE 0x10000
+
+#define XEN_SCMU_ID		0x1234
+#define XEN_SCMU_IPC_HANDLE	0x1234
 
 /* Local Types */
 unsigned int scu_mu_id;
@@ -89,6 +93,10 @@ static uint32_t *sc_ipc_get_mu_base(uint32_t id)
 /*--------------------------------------------------------------------------*/
 int sc_ipc_getMuID(uint32_t *mu_id)
 {
+	if (g_xen_scmufront) {
+		*mu_id = XEN_SCMU_ID;
+		return SC_ERR_NONE;
+	}
 	if (scu_mu_init) {
 		*mu_id = scu_mu_id;
 		return SC_ERR_NONE;
@@ -112,6 +120,13 @@ sc_err_t sc_ipc_requestInt(sc_ipc_t *handle, uint32_t id)
 sc_err_t sc_ipc_open(sc_ipc_t *handle, uint32_t id)
 {
 	uint32_t *base;
+
+	if (id == XEN_SCMU_ID) {
+		if (!g_xen_scmufront)
+			return SC_ERR_UNAVAILABLE;
+		*handle = XEN_SCMU_IPC_HANDLE;
+		return SC_ERR_NONE;
+	}
 
 	mutex_lock(&scu_mu_mutex);
 
@@ -143,6 +158,11 @@ void sc_ipc_close(sc_ipc_t handle)
 
 	mutex_lock(&scu_mu_mutex);
 
+	if (handle == XEN_SCMU_IPC_HANDLE) {
+		mutex_unlock(&scu_mu_mutex);
+		return;
+	}
+
 	if (!scu_mu_init) {
 		mutex_unlock(&scu_mu_mutex);
 		return;
@@ -169,6 +189,9 @@ void sc_ipc_read(sc_ipc_t handle, void *data)
 	uint32_t *base;
 	uint8_t count = 0;
 	sc_rpc_msg_t *msg = (sc_rpc_msg_t *) data;
+
+	if (handle == XEN_SCMU_IPC_HANDLE)
+		return xen_scmufront_read(g_xen_scmufront, msg);
 
 	/* Get MU base associated with IPC channel */
 	base = sc_ipc_get_mu_base(gIPCport);
@@ -207,6 +230,9 @@ void sc_ipc_write(sc_ipc_t handle, void *data)
 	uint32_t *base;
 	uint8_t count = 0;
 	sc_rpc_msg_t *msg = (sc_rpc_msg_t *) data;
+
+	if (handle == XEN_SCMU_IPC_HANDLE)
+		return xen_scmufront_write(g_xen_scmufront, msg);
 
 	/* Get MU base associated with IPC channel */
 	base = sc_ipc_get_mu_base(gIPCport);

@@ -62,6 +62,10 @@ static unsigned long clk_divider_scu_recalc_rate(struct clk_hw *hw,
 	sci_err = sc_pm_get_clock_rate(ccm_ipc_handle, clk->rsrc_id,
 		clk->clk_type, &rate);
 
+	if (sci_err)
+		pr_warn("sci_err=%d on get_clock_rate %s rsrc_id=%d\n",
+				sci_err, clk_hw_get_name(hw), clk->rsrc_id);
+
 	return sci_err ? 0 : rate;
 }
 
@@ -164,6 +168,9 @@ static unsigned long clk_divider3_scu_recalc_rate(struct clk_hw *hw,
 
 	sci_err = sc_misc_get_control(ccm_ipc_handle, clk->rsrc_id,
 		clk->gpr_id, &val);
+	if (sci_err)
+		pr_warn("sci_err=%d on recalc_rate clk=%s rsrc_id=%d\n",
+				sci_err, clk_hw_get_name(hw), clk->rsrc_id);
 
 	rate  = (val) ? parent_rate / 2 : parent_rate;
 

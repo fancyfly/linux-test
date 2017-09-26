@@ -291,13 +291,17 @@ void clk_unregister_mux_scu(struct clk *clk)
 static u8 clk_mux_gpr_scu_get_parent(struct clk_hw *hw)
 {
 	struct clk_mux_gpr_scu *gpr_mux = to_clk_mux_gpr_scu(hw);
+	sc_err_t sci_err;
 	u32 val = 0;
 
 	if (!ccm_ipc_handle)
 		return 0;
 
-	sc_misc_get_control(ccm_ipc_handle,
+	sci_err = sc_misc_get_control(ccm_ipc_handle,
 		gpr_mux->rsrc_id, gpr_mux->gpr_id, &val);
+	if (sci_err)
+		pr_warn("sci_err=%d on get_parent clk=%s rsrc_id=%d\n",
+				sci_err, clk_hw_get_name(hw), gpr_mux->rsrc_id);
 
 	return (u8)val;
 }

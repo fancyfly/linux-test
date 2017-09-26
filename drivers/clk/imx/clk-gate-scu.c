@@ -397,12 +397,18 @@ static void clk_gate3_scu_unprepare(struct clk_hw *hw)
 static int clk_gate3_scu_is_prepared(struct clk_hw *hw)
 {
 	struct clk_gate3_scu *gate = to_clk_gate3_scu(hw);
+	sc_err_t sci_err;
 	uint32_t val;
 
 	if (!ccm_ipc_handle)
 		return -1;
 
-	sc_misc_get_control(ccm_ipc_handle, gate->rsrc_id, gate->gpr_id, &val);
+	sci_err = sc_misc_get_control(ccm_ipc_handle, gate->rsrc_id, gate->gpr_id, &val);
+	if (sci_err) {
+		pr_warn("sci_err=%d on is_prepared clk=%s rsrc_id=%d\n",
+				sci_err, clk_hw_get_name(hw), gate->rsrc_id);
+		return -1;
+	}
 	val &= 1;
 
 	if (gate->invert)

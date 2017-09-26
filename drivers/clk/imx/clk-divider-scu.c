@@ -107,6 +107,11 @@ struct clk *imx_clk_divider_scu(const char *name,
 	struct clk *clk;
 	struct clk_init_data init;
 
+	if (!imx8_clk_is_resource_owned(rsrc_id)) {
+		pr_debug("skip clk %s rsrc %d not owned\n", name, rsrc_id);
+		return ERR_PTR(-ENODEV);
+	}
+
 	div_clk = kzalloc(sizeof(*div_clk), GFP_KERNEL);
 	if (!div_clk)
 		return ERR_PTR(-ENOMEM);
@@ -133,6 +138,11 @@ struct clk *imx_clk_divider2_scu(const char *name, const char *parent_name,
 	struct clk_divider_scu *div_clk;
 	struct clk *clk;
 	struct clk_init_data init;
+
+	if (!imx8_clk_is_resource_owned(rsrc_id)) {
+		pr_debug("skip clk %s rsrc %d not owned\n", name, rsrc_id);
+		return ERR_PTR(-ENODEV);
+	}
 
 	div_clk = kzalloc(sizeof(*div_clk), GFP_KERNEL);
 	if (!div_clk)
@@ -218,6 +228,11 @@ struct clk *imx_clk_divider3_scu(const char *name, const char *parent_name,
 	struct clk_divider3_scu *div;
 	struct clk *clk;
 	struct clk_init_data init;
+
+	if (!imx8_clk_is_resource_owned(rsrc_id)) {
+		pr_debug("skip clk %s rsrc %d not owned\n", name, rsrc_id);
+		return ERR_PTR(-ENODEV);
+	}
 
 	div = kzalloc(sizeof(struct clk_divider3_scu), GFP_KERNEL);
 	if (!div)

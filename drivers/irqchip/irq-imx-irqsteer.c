@@ -253,7 +253,7 @@ static int __init irq_imx_irqsteer_init(void)
 {
 	return platform_driver_register(&imx_irqsteer_driver);
 }
-arch_initcall(irq_imx_irqsteer_init);
+device_initcall(irq_imx_irqsteer_init);
 
 MODULE_AUTHOR("NXP Semiconductor");
 MODULE_DESCRIPTION("NXP i.MX8 irq steering driver");

@@ -23,6 +23,12 @@
 #include <soc/imx8/soc.h>
 #include "xen-scmufront.h"
 
+#include <soc/imx8/sc/types.h>
+#include <soc/imx8/sc/svc/rm/api.h>
+#include "sc/svc/pm/rpc.h"
+#include "sc/svc/irq/rpc.h"
+#include "sc/svc/misc/rpc.h"
+
 #define XEN_SCMUFRONT_TIMEOUT_MS 10000
 
 /* only one */
@@ -65,6 +71,9 @@ void xen_scmufront_read(struct xen_scmufront *priv, sc_rpc_msg_t *msg)
 {
 	unsigned long timeout = jiffies + msecs_to_jiffies(XEN_SCMUFRONT_TIMEOUT_MS);
 	unsigned long sleep_us = 1000;
+#ifdef DEBUG
+	uint8_t func = RPC_FUNC(msg);
+#endif
 	u8 size;
 
 	if ((!priv->shared->have_b2a))
@@ -87,6 +96,32 @@ void xen_scmufront_read(struct xen_scmufront *priv, sc_rpc_msg_t *msg)
 		size = SC_RPC_MAX_MSG;
 	memcpy(msg, &priv->shared->b2a, size * sizeof(u32));
 	priv->shared->have_b2a = 0;
+
+#ifdef DEBUG
+	/* This indicates guest misconfiguration so be verbose: */
+	if (RPC_R8(msg) == SC_ERR_NOACCESS) {
+		if (RPC_SVC(msg) == SC_RPC_SVC_MISC && func == MISC_FUNC_GET_CONTROL) {
+			pr_warn("got SC_ERR_NOACCESS on sc_misc_get_control\n");
+			dump_stack();
+		} else if (RPC_SVC(msg) == SC_RPC_SVC_PM && func == PM_FUNC_GET_RESOURCE_POWER_MODE) {
+			pr_warn("got SC_ERR_NOACCESS on sc_pm_get_resource_power_mode\n");
+		} else if (RPC_SVC(msg) == SC_RPC_SVC_PM && func == PM_FUNC_GET_CLOCK_RATE) {
+			pr_warn("got SC_ERR_NOACCESS on sc_pm_get_clock_rate resource=%d\n",
+					(int)RPC_U16(msg, 0));
+		} else if (RPC_SVC(msg) == SC_RPC_SVC_PM && func == PM_FUNC_SET_CLOCK_RATE) {
+			pr_warn("got SC_ERR_NOACCESS on sc_pm_set_clock_rate resource=%d\n",
+					(int)RPC_U16(msg, 4));
+		} else if (RPC_SVC(msg) == SC_RPC_SVC_PM && func == PM_FUNC_CLOCK_ENABLE) {
+			pr_warn("got SC_ERR_NOACCESS on sc_pm_clock_enable resource=%d\n",
+					(int)RPC_U16(msg, 0));
+			dump_stack();
+		} else {
+			pr_warn("got SC_ERR_NOACCESS svc=%d func=%hhu\n",
+					(int)RPC_SVC(msg), func);
+			dump_stack();
+		}
+	}
+#endif
 	/* notify? */
 }
 

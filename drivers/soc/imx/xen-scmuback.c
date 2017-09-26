@@ -20,7 +20,14 @@
 #include <xen/events.h>
 #include <xen/xenbus.h>
 #include <soc/imx8/soc.h>
+
+#include <soc/imx8/sc/types.h>
+#include <soc/imx8/sc/svc/rm/api.h>
 #include "sc/main/rpc.h"
+#include "sc/svc/pm/rpc.h"
+#include "sc/svc/rm/rpc.h"
+#include "sc/svc/irq/rpc.h"
+#include "sc/svc/misc/rpc.h"
 
 struct xen_scmu_shared {
 	u32 have_a2b;
@@ -32,11 +39,102 @@ struct xen_scmu_shared {
 struct xen_scmuback {
 	struct xenbus_device *dev;
 	struct xen_scmu_shared *shared;
+	DECLARE_BITMAP(allowed_resources, SC_R_LAST);
 	struct work_struct work;
+	struct xenbus_watch watch;
 	grant_ref_t gref;
 	int evtchn;
 	int irq;
 };
+
+/*
+ * Determines which resource a message is about.
+ *
+ * Returns positive rsrc_t or -errno when not applicable or for unsupported calls.
+ */
+static int sc_msg_get_resource_target(sc_rpc_msg_t *msg)
+{
+	/*
+	 * It would have been nice if this was a standardized field,
+	 * but switch statements are required instead.
+	 */
+	switch (RPC_SVC(msg))
+	{
+	case SC_RPC_SVC_PM:
+		switch (RPC_FUNC(msg))
+		{
+		case PM_FUNC_SET_RESOURCE_POWER_MODE:
+		case PM_FUNC_GET_RESOURCE_POWER_MODE:
+		case PM_FUNC_GET_CLOCK_RATE:
+		case PM_FUNC_SET_CLOCK_PARENT:
+		case PM_FUNC_GET_CLOCK_PARENT:
+		case PM_FUNC_CLOCK_ENABLE:
+			return RPC_U16(msg, 0);
+
+		case PM_FUNC_SET_CLOCK_RATE:
+			return RPC_U16(msg, 4);
+		}
+		return -ENOENT;
+
+	case SC_RPC_SVC_MISC:
+		switch (RPC_FUNC(msg))
+		{
+		case MISC_FUNC_SET_CONTROL:
+			return RPC_U16(msg, 8);
+		case MISC_FUNC_GET_CONTROL:
+			return RPC_U16(msg, 4);
+		}
+		return -ENOENT;
+
+	case SC_RPC_SVC_IRQ:
+		switch (RPC_FUNC(msg))
+		{
+		case IRQ_FUNC_ENABLE:
+			return RPC_U16(msg, 4);
+		}
+		return -ENOENT;
+	}
+
+	return -ENOENT;
+}
+
+static void xen_scmuback_handle(struct xen_scmuback *priv, sc_rpc_msg_t *msg)
+{
+	int resource = -ENOSYS;
+
+	if (RPC_VER(msg) != SC_RPC_VERSION) {
+		dev_dbg(&priv->dev->dev, "SC_ERR_VERSION got %d instead of %d\n",
+				RPC_VER(msg), SC_RPC_VERSION);
+		RPC_R8(msg) = SC_ERR_VERSION;
+		return;
+	}
+
+	/* Special handling for rm_is_resource_owned */
+	if (RPC_SVC(msg) == SC_RPC_SVC_RM && RPC_FUNC(msg) == RM_FUNC_IS_RESOURCE_OWNED) {
+		resource = RPC_U16(msg, 0);
+		if (resource < 0 || resource >= SC_R_LAST)
+			goto err_noaccess;
+		/* Return value is not a sc_err_t */
+		RPC_R8(msg) = !!test_bit(resource, priv->allowed_resources);
+		return;
+	}
+
+	/* Determine resource and check access */
+	resource = sc_msg_get_resource_target(msg);
+	if (resource < 0 || resource >= SC_R_LAST)
+		goto err_noaccess;
+	if (!test_bit(resource, priv->allowed_resources))
+		goto err_noaccess;
+
+	sc_call_rpc(0, msg, false);
+	return;
+
+err_noaccess:
+	dev_dbg(&priv->dev->dev, "sent SC_ERR_NOACCESS svc=%d func=%d resource=%d\n",
+			(int)RPC_SVC(msg), (int)RPC_FUNC(msg), resource);
+	RPC_R8(msg) = SC_ERR_NOACCESS;
+	return;
+}
 
 static void xen_scmuback_reply(struct xen_scmuback *priv, sc_rpc_msg_t *msg)
 {
@@ -46,13 +144,6 @@ static void xen_scmuback_reply(struct xen_scmuback *priv, sc_rpc_msg_t *msg)
 	memcpy(&priv->shared->b2a, msg, msg->size * sizeof(u32));
 	virt_wmb();
 	priv->shared->have_b2a = 1;
-}
-
-static void xen_scmuback_handle(struct xen_scmuback *priv, sc_rpc_msg_t *msg)
-{
-	/* TODO: security instead of passthrough */
-	sc_call_rpc(0, msg, false);
-	xen_scmuback_reply(priv, msg);
 }
 
 static void xen_scmuback_read(struct xen_scmuback *priv)
@@ -73,6 +164,7 @@ static void xen_scmuback_read(struct xen_scmuback *priv)
 	priv->shared->have_a2b = 0;
 
 	xen_scmuback_handle(priv, &msg);
+	xen_scmuback_reply(priv, &msg);
 }
 
 static void xen_scmuback_workfunc(struct work_struct *work)
@@ -143,22 +235,55 @@ static int xen_scmuback_disconnect(struct xen_scmuback *priv)
 	return 0;
 }
 
+static void xen_scmuback_watch(struct xenbus_watch *watch,
+			       const char **vec, unsigned int len)
+{
+	struct xen_scmuback *priv = container_of(watch, struct xen_scmuback, watch);
+	int err;
+	unsigned int buflen;
+	char *buf;
+
+	buf = xenbus_read(XBT_NIL, priv->dev->nodename, "allowed-resources", &buflen);
+	if (IS_ERR(buf)) {
+		dev_warn(&priv->dev->dev, "failed xenbus_read allowed-resources: %ld\n", PTR_ERR(buf));
+		return;
+	}
+	pr_err("buf=%s\n", buf);
+	err = bitmap_parselist(buf, priv->allowed_resources, SC_R_LAST);
+	if (err != 0)
+		dev_warn(&priv->dev->dev, "failed bitmap_parselist allowed-resources: %d\n", err);
+	kfree(buf);
+
+	dev_info(&priv->dev->dev, "allowed-resources: %*pbl\n",
+			SC_R_LAST, priv->allowed_resources);
+}
+
 static int xen_scmuback_probe(struct xenbus_device *dev,
 			      const struct xenbus_device_id *id)
 {
-	struct xen_scmuback *priv = kzalloc(sizeof(struct xen_scmuback),
-					    GFP_KERNEL);
+	int err;
+	struct xen_scmuback *priv;
 
 	pr_debug("%s %p %d\n", __func__, dev, dev->otherend_id);
 
+	priv = kzalloc(sizeof(struct xen_scmuback), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
+	priv->watch.node = dev->nodename;
+	priv->watch.callback = xen_scmuback_watch;
+	err = register_xenbus_watch(&priv->watch);
+	if (err)
+		goto fail_watch;
 
 	INIT_WORK(&priv->work, xen_scmuback_workfunc);
 	priv->dev = dev;
 	dev_set_drvdata(&dev->dev, priv);
-
 	return 0;
+
+fail_watch:
+	kfree(priv);
+	return err;
 }
 
 static int xen_scmuback_remove(struct xenbus_device *dev)

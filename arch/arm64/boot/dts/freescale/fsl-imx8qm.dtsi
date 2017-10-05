@@ -1122,6 +1122,15 @@
 				  <&clk IMX8QM_DC0_DISP1_SEL>;
 		assigned-clock-parents = <&clk IMX8QM_DC0_PLL0_CLK>,
 					 <&clk IMX8QM_DC0_PLL1_CLK>;
+		fsl,sc_rsrc_id = <SC_R_DC_0_BLIT0>,
+				 <SC_R_DC_0_BLIT1>,
+				 <SC_R_DC_0_BLIT2>,
+				 <SC_R_DC_0_BLIT_OUT>,
+				 <SC_R_DC_0_WARP>,
+				 <SC_R_DC_0_VIDEO0>,
+				 <SC_R_DC_0_VIDEO1>,
+				 <SC_R_DC_0_FRAC0>,
+				 <SC_R_DC_0>;
 		power-domains = <&pd_dc0>;
 		status = "disabled";
 
@@ -1253,6 +1262,15 @@
 				  <&clk IMX8QM_DC1_DISP1_SEL>;
 		assigned-clock-parents = <&clk IMX8QM_DC1_PLL0_CLK>,
 					 <&clk IMX8QM_DC1_PLL1_CLK>;
+		fsl,sc_rsrc_id = <SC_R_DC_1_BLIT0>,
+				 <SC_R_DC_1_BLIT1>,
+				 <SC_R_DC_1_BLIT2>,
+				 <SC_R_DC_1_BLIT_OUT>,
+				 <SC_R_DC_1_WARP>,
+				 <SC_R_DC_1_VIDEO0>,
+				 <SC_R_DC_1_VIDEO1>,
+				 <SC_R_DC_1_FRAC0>,
+				 <SC_R_DC_1>;
 		power-domains = <&pd_dc1>;
 		status = "disabled";
 
